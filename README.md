@@ -17,6 +17,7 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
+  - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — plan de feuille de route pour une version « prod ready »
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
