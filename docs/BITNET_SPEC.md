@@ -1,37 +1,37 @@
-# BitNet (b1.58) — spécification pour Rbitnet
+# BitNet (b1.58) — interoperability spec for Rbitnet
 
-Ce document fixe les attentes d’interopérabilité avec les modèles issus de [microsoft/BitNet](https://github.com/microsoft/BitNet) et les conversions Hugging Face → GGUF.
+This document describes how Rbitnet interoperates with models produced by [microsoft/BitNet](https://github.com/microsoft/BitNet) and Hugging Face → GGUF conversion pipelines.
 
-## Quantifications GGUF courantes
+## Common GGUF quantization labels
 
-| Nom BitNet / outil | Rôle |
-|--------------------|------|
-| `i2_s`, `tl1` | Types utilisés par `setup_env.py` et les scripts de conversion officiels. |
-| Poids 1.58-bit | Ternaires {-1, 0, +1} (parfois packés avec scales par bloc). |
+| BitNet / tooling name | Role |
+|----------------------|------|
+| `i2_s`, `tl1` | Quantization kinds used by `setup_env.py` and official conversion scripts. |
+| 1.58-bit weights | Ternary {-1, 0, +1} values (often packed per block with scales). |
 
-Les fichiers `.gguf` décrivent les tenseurs avec un `ggml_type` (`u32`). Rbitnet conserve la valeur brute pour accepter les types étendus ou futurs sans casser le parseur.
+GGUF tensors store `ggml_type` as a raw `u32`. Rbitnet keeps that value uninterpreted so extended or future types still parse.
 
-## Métadonnées GGUF utiles
+## Useful GGUF metadata keys
 
-Clés usuelles (préfixe `llama.*` ou équivalent selon l’architecture déclarée dans `general.architecture`) :
+Typical keys (prefix `llama.*` when `general.architecture` declares a Llama-compatible model):
 
-- `general.architecture` — ex. `llama`
-- `llama.context_length` — taille de contexte
-- `llama.embedding_length` — dimension des embeddings
-- `llama.block_count` — nombre de blocs transformer
-- `general.alignment` — alignement des tenseurs (souvent 32)
+- `general.architecture` — e.g. `llama`
+- `llama.context_length` — context size
+- `llama.embedding_length` — hidden size
+- `llama.block_count` — number of transformer blocks
+- `general.alignment` — tensor data alignment (often 32)
 
-BitNet peut ajouter des clés propres au layout des poids ; le chargeur les expose via `GgufArchive::metadata`.
+BitNet may add layout-specific keys; the loader exposes everything via `GgufArchive::metadata`.
 
-## Tenseurs (noms indicatifs)
+## Tensor naming (indicative)
 
-Les noms exacts suivent le fork llama.cpp / BitNet. Exemples fréquents :
+Exact names follow the llama.cpp / BitNet fork conventions, for example:
 
 - `token_embd.*`, `blk.N.attn_*`, `blk.N.ffn_*`, `output.*`
 
-Pour la validation golden, on compare couche par couche ou logits finaux avec la sortie de **bitnet.cpp** (référence) sur les mêmes entrées.
+For golden validation, compare per-layer activations or final logits against **bitnet.cpp** on identical inputs.
 
-## Références
+## References
 
-- Rapports et noyaux : dépôt Microsoft BitNet, dossiers `preset_kernels/`, `src/`.
-- Format GGUF : [ggml GGUF](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md).
+- Kernels and reports: Microsoft BitNet repo (`preset_kernels/`, `src/`).
+- GGUF format: [ggml GGUF](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md).

@@ -1,25 +1,25 @@
-# Tests golden (non-régression numérique)
+# Golden tests (numerical regression)
 
-## Objectif
+## Goal
 
-Garantir que les noyaux Rust et, plus tard, le graphe complet, restent alignés sur la **référence bitnet.cpp** (ou le script Python d’inférence BitNet).
+Keep Rust kernels and, later, the full graph aligned with the **bitnet.cpp** reference (or the official Python inference scripts).
 
-## Pipeline recommandé
+## Recommended pipeline
 
-1. Choisir un modèle petit (ex. dummy généré par `utils/generate-dummy-bitnet-model.py` dans BitNet) ou un GGUF officiel léger.
-2. Fixer une **graine**, un **prompt** et une **longueur** de génération.
-3. Exporter depuis la référence :
-   - soit les **logits** du premier pas (fichier binaire ou JSON limité),
-   - soit le texte généré complet pour un test bout-en-bout.
-4. Placer les artefacts attendus sous `tests/data/golden/` (ou générés en CI à partir d’un cache).
-5. Les tests Rust dans `crates/bitnet-core/tests/` chargent ces fichiers et comparent avec une tolérance (`eps` sur floats).
+1. Pick a small model (e.g. dummy from BitNet `utils/generate-dummy-bitnet-model.py`) or a lightweight official GGUF.
+2. Fix a **seed**, **prompt**, and **generation length**.
+3. Export from the reference:
+   - either **logits** for the first step (binary or compact JSON), or
+   - full generated text for an end-to-end check.
+4. Store expected artifacts under `tests/data/golden/` (or CI cache).
+5. Rust tests load those files and compare with a documented tolerance (`eps` on floats).
 
-## État dans Rbitnet
+## Current state in Rbitnet
 
-- Des tests **sans fichier externe** vérifient déjà les noyaux de référence (matvec ternaire) avec des valeurs attendues embarquées.
-- L’extension vers des vecteurs exportés depuis bitnet.cpp est documentée ici pour les itérations suivantes.
+- Kernel tests **without external files** already validate reference matmul (ternary) with embedded expected values.
+- Extending to vectors exported from bitnet.cpp is documented here for follow-up work.
 
-## Tolérance
+## Tolerance guidelines
 
-- Opérations FP32 : `1e-5` relatif ou absolu selon l’accumulation.
-- Poids quantifiés : comparer plutôt les entiers déquantifiés ou les logits avec tolérance plus large au début.
+- FP32 ops: `1e-5` relative or absolute depending on accumulation depth.
+- Quantized weights: compare dequantized values or logits with a looser tolerance initially.
