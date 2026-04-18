@@ -1,0 +1,110 @@
+# Build release binaries for tags v* and attach them to a GitHub Release.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            package: unix
+          - os: windows-latest
+            package: windows
+          - os: macos-latest
+            package: unix
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.os }}
+
+      - name: Build rbitnet-server (release)
+        run: cargo build -p bitnet-server --bin rbitnet-server --release --locked
+
+      - name: Package (Unix)
+        if: matrix.package == 'unix'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target/release
+          ARCH="$(uname -m)"
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            NAME="rbitnet-server-${{ github.ref_name }}-linux-${ARCH}"
+          else
+            NAME="rbitnet-server-${{ github.ref_name }}-macos-${ARCH}"
+          fi
+          tar czvf "../../${NAME}.tar.gz" rbitnet-server
+          cd ../..
+          ls -la "${NAME}.tar.gz"
+
+      - name: Package (Windows)
+        if: matrix.package == 'windows'
+        shell: pwsh
+        run: |
+          $arch = $env:PROCESSOR_ARCHITECTURE.ToLower()
+          if ($arch -eq "amd64") { $arch = "x86_64" }
+          $name = "rbitnet-server-${{ github.ref_name }}-windows-${arch}"
+          Compress-Archive -Path "target/release/rbitnet-server.exe" -DestinationPath "${name}.zip" -Force
+          Get-ChildItem "${name}.zip"
+
+      - name: Upload artifact (Unix)
+        if: matrix.package == 'unix'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ github.run_id }}
+          path: rbitnet-server-*.tar.gz
+          if-no-files-found: error
+
+      - name: Upload artifact (Windows)
+        if: matrix.package == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ github.run_id }}
+          path: rbitnet-server-*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: binary-*-${{ github.run_id }}
+          merge-multiple: true
+
+      - name: Collect release files
+        run: |
+          mkdir -p upload
+          find dist -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp -v {} upload/ \;
+          ls -la upload/
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: upload/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
