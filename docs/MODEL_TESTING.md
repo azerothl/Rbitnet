@@ -4,11 +4,11 @@ This guide uses **[1bitLLM/bitnet_b1_58-large](https://huggingface.co/1bitLLM/bi
 
 ## What works today
 
-- **Parse** a BitNet-produced GGUF: metadata, tensor table, mmap’d weight blob.
-- **HTTP server**: `GET /v1/models` shows `rbitnet-<architecture>` (e.g. `rbitnet-llama` when `general.architecture` is `llama`).
-- **Generation** from real BitNet weights is still **not implemented**; `POST /v1/chat/completions` returns **501 Not Implemented** once a GGUF is loaded (unless you use `RBITNET_STUB=1` or `RBITNET_TOY=1` for smoke tests).
+- **Parse** a BitNet- or llama-compatible GGUF: metadata, tensor table, mmap’d weight blob.
+- **Inference** in pure Rust: dequantize + Llama-shaped forward + tokenizer-driven generation (see **[USAGE.md](USAGE.md)**).
+- **HTTP server**: `GET /v1/models` shows `rbitnet-<architecture>` (e.g. `rbitnet-llama` when `general.architecture` is `llama`); `POST /v1/chat/completions` runs real generation when `RBITNET_MODEL` and a tokenizer are set (use `RBITNET_STUB=1` or `RBITNET_TOY=1` only for smoke tests without weights).
 
-Use this flow to verify that **your GGUF builds correctly** and Rbitnet **reads it** before investing in full inference.
+Use this flow to **convert** HF / Safetensors checkpoints to GGUF (Python upstream), then run Rbitnet **without Python** at runtime.
 
 ## Prerequisites
 
@@ -82,7 +82,7 @@ curl -s http://127.0.0.1:8080/v1/chat/completions \
   -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
 ```
 
-Expect **501** on chat until full inference lands; **200** on `/v1/models`.
+Expect **200** on chat when the tokenizer is available and weights load; otherwise see error messages from the server. **200** on `/v1/models` if the server started correctly.
 
 ## Automated test against a local GGUF (optional)
 

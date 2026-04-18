@@ -31,6 +31,11 @@ Exact names follow the llama.cpp / BitNet fork conventions, for example:
 
 For golden validation, compare per-layer activations or final logits against **bitnet.cpp** on identical inputs.
 
+## See also
+
+- **[USAGE.md](USAGE.md)** — running Rbitnet with a GGUF and tokenizer (Rust-only at runtime).
+- **[TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)** — training elsewhere and exporting checkpoints Rbitnet can load.
+
 ## References
 
 - Kernels and reports: Microsoft BitNet repo (`preset_kernels/`, `src/`).

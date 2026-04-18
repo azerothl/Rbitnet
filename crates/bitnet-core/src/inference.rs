@@ -2,13 +2,14 @@
 //!
 //! - `RBITNET_STUB=1` — HTTP integration text (Akasha `BitNetProvider`).
 //! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
-//! - `RBITNET_MODEL` — load GGUF (full BitNet forward still WIP).
+//! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `RBITNET_TOKENIZER`.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
+use crate::llama::LlamaRuntime;
 use crate::model::ToyLlm;
 
 /// Whether stub responses are enabled (no model required).
@@ -39,6 +40,24 @@ pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
 }
 
+fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
+    if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
+        let pb = PathBuf::from(p);
+        if pb.is_file() {
+            return Ok(pb);
+        }
+    }
+    if let Some(dir) = model_path.parent() {
+        for name in ["tokenizer.json", "tokenizer.model"] {
+            let pb = dir.join(name);
+            if pb.is_file() {
+                return Ok(pb);
+            }
+        }
+    }
+    Err(BitNetError::TokenizerMissing)
+}
+
 /// Shared engine state.
 #[derive(Clone)]
 pub struct Engine {
@@ -51,6 +70,7 @@ struct EngineInner {
     gguf: Option<GgufArchive>,
     toy: Option<ToyLlm>,
     stub: bool,
+    llama: Mutex<Option<LlamaRuntime>>,
 }
 
 impl Engine {
@@ -74,6 +94,7 @@ impl Engine {
                 gguf,
                 toy,
                 stub,
+                llama: Mutex::new(None),
             }),
         })
     }
@@ -87,6 +108,7 @@ impl Engine {
                 gguf: Some(gguf),
                 toy: None,
                 stub: false,
+                llama: Mutex::new(None),
             }),
         })
     }
@@ -135,12 +157,24 @@ impl Engine {
         if let Some(ref t) = self.inner.toy {
             return Ok(t.generate(prompt, max_tokens, temperature));
         }
-        let Some(_g) = self.inner.gguf.as_ref() else {
+        let Some(gguf) = self.inner.gguf.as_ref() else {
             return Err(BitNetError::ModelNotLoaded);
         };
-        Err(BitNetError::NotImplemented(
-            "full BitNet forward pass — GGUF loaded; implement quantized kernels + transformer graph",
-        ))
+        let model_path = self
+            .inner
+            .model_path
+            .as_ref()
+            .ok_or(BitNetError::ModelNotLoaded)?;
+        let mut slot = self.inner.llama.lock().map_err(|e| {
+            BitNetError::Inference(format!("engine lock poisoned: {e}"))
+        })?;
+        if slot.is_none() {
+            let tok_path = resolve_tokenizer_path(model_path)?;
+            *slot = Some(LlamaRuntime::load(gguf, &tok_path)?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate(prompt, max_tokens, temperature)
     }
 }
 
@@ -163,6 +197,7 @@ mod tests {
                 gguf: None,
                 toy: None,
                 stub: true,
+                llama: Mutex::new(None),
             }),
         }
     }
@@ -174,6 +209,7 @@ mod tests {
                 gguf: None,
                 toy: Some(ToyLlm::new(42)),
                 stub: false,
+                llama: Mutex::new(None),
             }),
         }
     }
