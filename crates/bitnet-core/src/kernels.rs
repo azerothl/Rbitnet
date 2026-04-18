@@ -1,7 +1,7 @@
 //! BitNet-style ternary / low-bit linear algebra (reference implementations).
 //!
 //! Production paths will add SIMD (`std::arch`) and packed layouts matching
-//! `microsoft/BitNet` preset kernels.
+//! `microsoft/BitNet` preset kernels. Run `cargo bench -p bitnet-core` for baselines.
 
 /// Reference row-wise matrix-vector multiply: `y = W @ x + y` (accumulate).
 /// `w` stores `n * k` weights in row-major order, each weight in `{-1, 0, 1}`.

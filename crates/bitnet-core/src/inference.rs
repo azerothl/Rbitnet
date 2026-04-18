@@ -1,13 +1,15 @@
-//! High-level inference façade. Full BitNet forward pass is not implemented yet.
+//! High-level inference façade.
 //!
-//! When `RBITNET_STUB=1`, returns deterministic stub text for integration testing
-//! (Akasha `BitNetProvider`).
+//! - `RBITNET_STUB=1` — HTTP integration text (Akasha `BitNetProvider`).
+//! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
+//! - `RBITNET_MODEL` — load GGUF (full BitNet forward still WIP).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::error::{BitNetError, Result};
-use crate::gguf::{mmap_gguf_header, GgufFileInfo};
+use crate::gguf::GgufArchive;
+use crate::model::ToyLlm;
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -17,12 +19,27 @@ pub fn stub_mode_enabled() -> bool {
     )
 }
 
+/// Tiny toy LM (`RBITNET_TOY=1`), no weights file.
+pub fn toy_mode_enabled() -> bool {
+    matches!(
+        std::env::var("RBITNET_TOY").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    )
+}
+
+fn toy_seed() -> u64 {
+    std::env::var("RBITNET_TOY_SEED")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(42)
+}
+
 /// Path to GGUF from `RBITNET_MODEL` if set.
 pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
 }
 
-/// Shared engine state: optional validated GGUF header (real inference later).
+/// Shared engine state.
 #[derive(Clone)]
 pub struct Engine {
     inner: Arc<EngineInner>,
@@ -31,56 +48,98 @@ pub struct Engine {
 struct EngineInner {
     #[allow(dead_code)]
     model_path: Option<PathBuf>,
-    gguf_info: Option<GgufFileInfo>,
+    gguf: Option<GgufArchive>,
+    toy: Option<ToyLlm>,
+    stub: bool,
 }
 
 impl Engine {
-    /// Load model from `RBITNET_MODEL` or return empty engine (stub-only).
+    /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
-        let gguf_info = if let Some(ref p) = model_path {
-            let (_mmap, info) = mmap_gguf_header(p)?;
-            Some(info)
+        let gguf = if let Some(ref p) = model_path {
+            Some(GgufArchive::mmap_path(p)?)
         } else {
             None
         };
+        let toy = if toy_mode_enabled() {
+            Some(ToyLlm::new(toy_seed()))
+        } else {
+            None
+        };
+        let stub = stub_mode_enabled();
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
-                gguf_info,
+                gguf,
+                toy,
+                stub,
             }),
         })
     }
 
-    /// Validate without loading: check GGUF header if path is set.
+    /// Load and parse a GGUF path.
     pub fn load_path(path: &Path) -> Result<Self> {
-        let (_mmap, info) = mmap_gguf_header(path)?;
+        let gguf = GgufArchive::mmap_path(path)?;
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path: Some(path.to_path_buf()),
-                gguf_info: Some(info),
+                gguf: Some(gguf),
+                toy: None,
+                stub: false,
             }),
         })
     }
 
     pub fn has_gguf(&self) -> bool {
-        self.inner.gguf_info.is_some()
+        self.inner.gguf.is_some()
     }
 
-    pub fn tensor_count(&self) -> Option<u64> {
-        self.inner.gguf_info.as_ref().map(|i| i.tensor_count)
+    pub fn tensor_count(&self) -> Option<usize> {
+        self.inner.gguf.as_ref().map(|g| g.tensor_count())
     }
 
-    /// Generate completion text from a single user-facing prompt string.
-    pub fn complete(&self, prompt: &str, max_tokens: u32, _temperature: f32) -> Result<String> {
-        if stub_mode_enabled() {
+    pub fn model_summary(&self) -> Option<String> {
+        self.inner.gguf.as_ref().map(|g| g.summary_line())
+    }
+
+    pub fn tensor_names_preview(&self, max: usize) -> Option<Vec<String>> {
+        self.inner.gguf.as_ref().map(|g| {
+            g.tensors
+                .iter()
+                .take(max)
+                .map(|t| t.name.clone())
+                .collect()
+        })
+    }
+
+    /// Label for `/v1/models`.
+    pub fn openai_model_id(&self) -> Option<String> {
+        if self.inner.stub {
+            return None;
+        }
+        if self.inner.toy.is_some() {
+            return Some("rbitnet-toy".into());
+        }
+        self.inner
+            .gguf
+            .as_ref()
+            .map(|g| g.suggested_openai_model_id())
+    }
+
+    /// Generate completion text from a user-facing prompt string.
+    pub fn complete(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
+        if self.inner.stub {
             return Ok(stub_response(prompt, max_tokens));
         }
-        if self.inner.gguf_info.is_none() {
-            return Err(BitNetError::ModelNotLoaded);
+        if let Some(ref t) = self.inner.toy {
+            return Ok(t.generate(prompt, max_tokens, temperature));
         }
+        let Some(_g) = self.inner.gguf.as_ref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
         Err(BitNetError::NotImplemented(
-            "full BitNet forward pass — use RBITNET_STUB=1 for testing or wire kernels + graph",
+            "full BitNet forward pass — GGUF loaded; implement quantized kernels + transformer graph",
         ))
     }
 }
@@ -95,16 +154,42 @@ fn stub_response(prompt: &str, max_tokens: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::ToyLlm;
+
+    fn stub_engine() -> Engine {
+        Engine {
+            inner: Arc::new(EngineInner {
+                model_path: None,
+                gguf: None,
+                toy: None,
+                stub: true,
+            }),
+        }
+    }
+
+    fn toy_engine() -> Engine {
+        Engine {
+            inner: Arc::new(EngineInner {
+                model_path: None,
+                gguf: None,
+                toy: Some(ToyLlm::new(42)),
+                stub: false,
+            }),
+        }
+    }
 
     #[test]
     fn stub_always_works() {
-        std::env::set_var("RBITNET_STUB", "1");
-        let e = Engine {
-            inner: Arc::new(EngineInner {
-                model_path: None,
-                gguf_info: None,
-            }),
-        };
+        let e = stub_engine();
         assert!(e.complete("hi", 16, 0.7).unwrap().contains("stub"));
+        assert_eq!(e.openai_model_id(), None);
+    }
+
+    #[test]
+    fn toy_mode_complete_and_model_id() {
+        let e = toy_engine();
+        assert_eq!(e.openai_model_id(), Some("rbitnet-toy".into()));
+        let result = e.complete("hello", 8, 0.7).unwrap();
+        assert!(!result.is_empty());
     }
 }
