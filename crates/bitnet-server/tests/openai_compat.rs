@@ -47,20 +47,21 @@ impl Drop for EnvGuard {
 
 #[tokio::test]
 async fn openai_stub_models_and_chat() {
-    // Hold the lock while setting env vars and constructing the engine so no
-    // other test in this binary can race on the same variables.  The guard
-    // ensures vars are restored even if an assertion below panics.
-    let _guard = {
+    // Hold the lock for the entire duration we care about env vars: setting them
+    // AND constructing the engine that reads them.  The EnvGuard (_guard) keeps
+    // the variables set for the rest of the test while _lock is released only
+    // after the engine is built.
+    let (engine, _guard) = {
         let _lock = ENV_MUTEX.lock().unwrap();
-        EnvGuard::set(&[
+        let guard = EnvGuard::set(&[
             ("RBITNET_MODEL", None),
             ("RBITNET_TOY", None),
             ("RBITNET_STUB", Some("1")),
-        ])
+        ]);
+        let engine = Arc::new(Engine::from_env().expect("engine"));
+        (engine, guard)
         // _lock released here; _guard keeps vars alive until end of test
     };
-
-    let engine = Arc::new(Engine::from_env().expect("engine"));
     let app = create_app(Arc::clone(&engine));
 
     let res = app

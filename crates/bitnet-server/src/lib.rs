@@ -205,10 +205,10 @@ fn stream_completion(model: &str, full_text: &str) -> Response {
     let model_for_chunks = model_owned.clone();
     let s = stream::iter(chunks.into_iter().map(move |piece| {
         let delta = json!({
-            "id": id_for_chunks,
+            "id": id_for_chunks.as_str(),
             "object": "chat.completion.chunk",
             "created": created,
-            "model": model_for_chunks,
+            "model": model_for_chunks.as_str(),
             "choices": [{
                 "index": 0,
                 "delta": { "content": piece },

@@ -73,6 +73,20 @@ impl GgufArchive {
         let tensor_count = read_u64_le(buf, 8);
         let kv_count = read_u64_le(buf, 16);
 
+        // Sanity limits to guard against malformed/crafted GGUF files.
+        const MAX_KV_COUNT: u64 = 65_536;
+        const MAX_TENSOR_COUNT: u64 = 1_000_000;
+        if kv_count > MAX_KV_COUNT {
+            return Err(BitNetError::InvalidGguf(format!(
+                "kv_count {kv_count} exceeds sanity limit {MAX_KV_COUNT}"
+            )));
+        }
+        if tensor_count > MAX_TENSOR_COUNT {
+            return Err(BitNetError::InvalidGguf(format!(
+                "tensor_count {tensor_count} exceeds sanity limit {MAX_TENSOR_COUNT}"
+            )));
+        }
+
         let mut off = 24usize;
         let mut metadata = HashMap::new();
         for _ in 0..kv_count {
@@ -88,15 +102,23 @@ impl GgufArchive {
             metadata.insert(key, val);
         }
 
+        // Maximum sane alignment: must be a positive power-of-two no larger than 4096.
+        const MAX_ALIGNMENT: u64 = 4096;
         let alignment = metadata
             .get("general.alignment")
             .and_then(|v| match v {
                 GgufValue::U32(u) => Some(*u as u64),
                 GgufValue::U64(u) => Some(*u),
-                GgufValue::I32(i) => Some(*i as u64),
+                // Accept I32 only when positive and within range.
+                GgufValue::I32(i) if *i > 0 => Some(*i as u64),
                 _ => None,
             })
             .unwrap_or(32);
+        if alignment == 0 || alignment > MAX_ALIGNMENT {
+            return Err(BitNetError::InvalidGguf(format!(
+                "general.alignment {alignment} is out of range (1..={MAX_ALIGNMENT})"
+            )));
+        }
 
         off = align_usize(off, alignment as usize);
 
@@ -304,9 +326,17 @@ fn read_metadata_value(buf: &[u8], mut off: usize, typ: u32) -> Result<(GgufValu
                 return Err(BitNetError::InvalidGguf("array header OOB".into()));
             }
             let elem_type = read_u32_le(buf, off);
-            let len = read_u64_le(buf, off + 4) as usize;
+            let len = read_u64_le(buf, off + 4);
             off += 12;
-            let mut out = Vec::with_capacity(len.min(10_000_000));
+            // Guard against malformed files claiming huge arrays.
+            const MAX_ARRAY_LEN: u64 = 10_000_000;
+            if len > MAX_ARRAY_LEN {
+                return Err(BitNetError::InvalidGguf(format!(
+                    "metadata array length {len} exceeds limit {MAX_ARRAY_LEN}"
+                )));
+            }
+            let len = len as usize;
+            let mut out = Vec::with_capacity(len);
             for _ in 0..len {
                 let (v, o2) = read_metadata_value(buf, off, elem_type)?;
                 off = o2;
