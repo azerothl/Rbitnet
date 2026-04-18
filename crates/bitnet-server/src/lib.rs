@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -15,7 +15,7 @@ use bitnet_core::BitNetError;
 use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 #[derive(Clone)]
@@ -26,18 +26,34 @@ pub struct AppState {
 /// Build the Axum application (for tests and `rbitnet-server` binary).
 pub fn create_app(engine: Arc<Engine>) -> Router {
     let state = AppState { engine };
+    let cors = if std::env::var("RBITNET_CORS_ANY").as_deref() == Ok("1") {
+        // Dev/testing: allow any origin (gated behind env flag)
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    } else {
+        // Default: restrict to localhost origins
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list([
+                HeaderValue::from_static("http://localhost:3000"),
+                HeaderValue::from_static("http://127.0.0.1:3000"),
+                HeaderValue::from_static("http://localhost:8080"),
+                HeaderValue::from_static("http://127.0.0.1:8080"),
+            ]))
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::AUTHORIZATION,
+            ])
+    };
     Router::new()
         .route("/", get(root_health))
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
+        .layer(cors)
 }
 
 async fn root_health() -> impl IntoResponse {
@@ -157,13 +173,14 @@ pub fn unix_now() -> u64 {
 }
 
 fn json_completion(model: &str, text: &str) -> impl IntoResponse {
-    let id = format!("chatcmpl-{}", unix_now());
+    let created = unix_now();
+    let id = format!("chatcmpl-{}", created);
     let pt = 0u64;
     let ct = text.split_whitespace().count() as u64;
     Json(json!({
         "id": id,
         "object": "chat.completion",
-        "created": unix_now(),
+        "created": created,
         "model": model,
         "choices": [{
             "index": 0,
@@ -179,15 +196,19 @@ fn json_completion(model: &str, text: &str) -> impl IntoResponse {
 }
 
 fn stream_completion(model: &str, full_text: &str) -> Response {
+    // Compute id/created once so all chunks share the same values.
+    let created = unix_now();
+    let id = format!("chatcmpl-stream-{}", created);
     let model_owned = model.to_string();
     let chunks: Vec<String> = chunk_text_for_stream(full_text);
-    let model_iter = model_owned.clone();
+    let id_for_chunks = id.clone();
+    let model_for_chunks = model_owned.clone();
     let s = stream::iter(chunks.into_iter().map(move |piece| {
         let delta = json!({
-            "id": format!("chatcmpl-stream-{}", unix_now()),
+            "id": id_for_chunks,
             "object": "chat.completion.chunk",
-            "created": unix_now(),
-            "model": model_iter,
+            "created": created,
+            "model": model_for_chunks,
             "choices": [{
                 "index": 0,
                 "delta": { "content": piece },
@@ -200,9 +221,9 @@ fn stream_completion(model: &str, full_text: &str) -> Response {
 
     let tail = stream::once(async move {
         let finish = json!({
-            "id": format!("chatcmpl-stream-{}", unix_now()),
+            "id": id,
             "object": "chat.completion.chunk",
-            "created": unix_now(),
+            "created": created,
             "model": model_owned,
             "choices": [{
                 "index": 0,

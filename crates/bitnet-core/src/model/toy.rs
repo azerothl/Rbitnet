@@ -49,26 +49,37 @@ impl ToyLlm {
         out
     }
 
+    fn greedy(logits: &[f32]) -> u8 {
+        let mut best = 0usize;
+        let mut best_v = logits[0];
+        for (i, &l) in logits.iter().enumerate().skip(1) {
+            if l > best_v {
+                best_v = l;
+                best = i;
+            }
+        }
+        best as u8
+    }
+
     fn sample_token(logits: &[f32], temperature: f32, step: u64) -> u8 {
         if temperature <= 1e-6 {
-            let mut best = 0usize;
-            let mut best_v = logits[0];
-            for (i, &l) in logits.iter().enumerate().skip(1) {
-                if l > best_v {
-                    best_v = l;
-                    best = i;
-                }
-            }
-            return best as u8;
+            return Self::greedy(logits);
         }
-        // Cheap deterministic "sampling" from logits + step (not softmax-quality)
+        // Numerically stable softmax: subtract max logit before exp to avoid overflow.
+        let max_logit = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         let s = step.wrapping_mul(0x9E3779B97F4A7C15);
         let mut sum = 0.0f32;
         let mut scaled = vec![0.0f32; Self::VOCAB];
         for (i, l) in logits.iter().enumerate() {
-            let v = (*l / temperature).exp();
+            let v = ((*l - max_logit) / temperature).exp();
             scaled[i] = v;
             sum += v;
+        }
+        // After subtracting max_logit, the max-shifted term contributes exp(0)=1.0 to
+        // the sum, so sum >= 1.0 always holds for finite logits.  We only guard against
+        // the (degenerate) case where a non-finite logit slips through.
+        if !sum.is_finite() {
+            return Self::greedy(logits);
         }
         let r = (s % 10000) as f32 / 10000.0 * sum;
         let mut acc = 0.0f32;

@@ -50,6 +50,7 @@ struct EngineInner {
     model_path: Option<PathBuf>,
     gguf: Option<GgufArchive>,
     toy: Option<ToyLlm>,
+    stub: bool,
 }
 
 impl Engine {
@@ -66,11 +67,13 @@ impl Engine {
         } else {
             None
         };
+        let stub = stub_mode_enabled();
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
                 gguf,
                 toy,
+                stub,
             }),
         })
     }
@@ -83,6 +86,7 @@ impl Engine {
                 model_path: Some(path.to_path_buf()),
                 gguf: Some(gguf),
                 toy: None,
+                stub: false,
             }),
         })
     }
@@ -111,10 +115,10 @@ impl Engine {
 
     /// Label for `/v1/models`.
     pub fn openai_model_id(&self) -> Option<String> {
-        if stub_mode_enabled() {
+        if self.inner.stub {
             return None;
         }
-        if toy_mode_enabled() && self.inner.toy.is_some() {
+        if self.inner.toy.is_some() {
             return Some("rbitnet-toy".into());
         }
         self.inner
@@ -125,7 +129,7 @@ impl Engine {
 
     /// Generate completion text from a user-facing prompt string.
     pub fn complete(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
-        if stub_mode_enabled() {
+        if self.inner.stub {
             return Ok(stub_response(prompt, max_tokens));
         }
         if let Some(ref t) = self.inner.toy {
@@ -150,18 +154,42 @@ fn stub_response(prompt: &str, max_tokens: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::ToyLlm;
 
-    #[test]
-    fn stub_always_works() {
-        std::env::set_var("RBITNET_STUB", "1");
-        std::env::remove_var("RBITNET_TOY");
-        let e = Engine {
+    fn stub_engine() -> Engine {
+        Engine {
             inner: Arc::new(EngineInner {
                 model_path: None,
                 gguf: None,
                 toy: None,
+                stub: true,
             }),
-        };
+        }
+    }
+
+    fn toy_engine() -> Engine {
+        Engine {
+            inner: Arc::new(EngineInner {
+                model_path: None,
+                gguf: None,
+                toy: Some(ToyLlm::new(42)),
+                stub: false,
+            }),
+        }
+    }
+
+    #[test]
+    fn stub_always_works() {
+        let e = stub_engine();
         assert!(e.complete("hi", 16, 0.7).unwrap().contains("stub"));
+        assert_eq!(e.openai_model_id(), None);
+    }
+
+    #[test]
+    fn toy_mode_complete_and_model_id() {
+        let e = toy_engine();
+        assert_eq!(e.openai_model_id(), Some("rbitnet-toy".into()));
+        let result = e.complete("hello", 8, 0.7).unwrap();
+        assert!(!result.is_empty());
     }
 }
