@@ -1,7 +1,9 @@
 //! GGUF support: header-only helper (legacy) and full archive parse.
 
+mod bitnet_meta;
 mod parse;
 
+pub use bitnet_meta::LlamaHyperParams;
 pub use parse::{GgufArchive, GgufTensorInfo, GgufValue};
 
 use std::fs::File;
