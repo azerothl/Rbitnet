@@ -101,8 +101,8 @@ fn dequant_q4_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
         let d = fp16_to_f32(u16::from_le_bytes(data[o..o + 2].try_into().unwrap()));
         for j in 0..QK4_0 / 2 {
             let q = data[o + 2 + j];
-            let x0 = (q & 0x0f) as f32;
-            let x1 = (q >> 4) as f32;
+            let x0 = ((q & 0x0f) as f32) - 8.0;
+            let x1 = ((q >> 4) as f32) - 8.0;
             y[i * QK4_0 + j] = x0 * d;
             y[i * QK4_0 + j + QK4_0 / 2] = x1 * d;
         }
@@ -122,8 +122,8 @@ fn dequant_q4_1(data: &[u8], n: usize) -> Result<Vec<f32>> {
         let m = fp16_to_f32(u16::from_le_bytes(data[o + 2..o + 4].try_into().unwrap()));
         for j in 0..QK4_0 / 2 {
             let q = data[o + 4 + j];
-            let x0 = (q & 0x0f) as f32;
-            let x1 = (q >> 4) as f32;
+            let x0 = ((q & 0x0f) as f32) - 8.0;
+            let x1 = ((q >> 4) as f32) - 8.0;
             y[i * QK4_0 + j] = x0 * d + m;
             y[i * QK4_0 + j + QK4_0 / 2] = x1 * d + m;
         }

@@ -83,7 +83,11 @@ fn sample_token(logits: &[f32], temperature: f32, rng: &mut impl Rng) -> u32 {
         return logits
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| {
+                let a = if a.is_nan() { f32::NEG_INFINITY } else { **a };
+                let b = if b.is_nan() { f32::NEG_INFINITY } else { **b };
+                a.total_cmp(&b)
+            })
             .unwrap()
             .0 as u32;
     }

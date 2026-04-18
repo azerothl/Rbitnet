@@ -13,8 +13,8 @@ fn optional_gguf_from_env_smoke() {
     };
     let p = Path::new(&path);
     assert!(
-        p.exists(),
-        "RBITNET_TEST_GGUF path does not exist: {}",
+        p.exists() && p.is_file(),
+        "RBITNET_TEST_GGUF path does not exist or is not a file: {}",
         p.display()
     );
     let g = GgufArchive::mmap_path(p).expect("parse GGUF");

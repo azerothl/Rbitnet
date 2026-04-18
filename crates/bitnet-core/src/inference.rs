@@ -43,16 +43,16 @@ pub fn model_path_from_env() -> Option<PathBuf> {
 fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
     if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
         let pb = PathBuf::from(p);
-        if pb.is_file() {
+        if pb.is_file()
+            && pb.file_name().and_then(|name| name.to_str()) == Some("tokenizer.json")
+        {
             return Ok(pb);
         }
     }
     if let Some(dir) = model_path.parent() {
-        for name in ["tokenizer.json", "tokenizer.model"] {
-            let pb = dir.join(name);
-            if pb.is_file() {
-                return Ok(pb);
-            }
+        let pb = dir.join("tokenizer.json");
+        if pb.is_file() {
+            return Ok(pb);
         }
     }
     Err(BitNetError::TokenizerMissing)

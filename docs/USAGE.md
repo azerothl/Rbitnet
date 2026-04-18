@@ -2,7 +2,7 @@
 
 ## Do you need Python?
 
-**No — not for running Rbitnet.** Inference is implemented in **Rust** (`bitnet-core`): GGUF is memory-mapped, weights are dequantized in-process, and text is generated via the [`Engine`](crates/bitnet-core/src/inference.rs) or the HTTP server.
+**No — not for running Rbitnet.** Inference is implemented in **Rust** (`bitnet-core`): GGUF is memory-mapped, weights are dequantized in-process, and text is generated via the [`Engine`](../crates/bitnet-core/src/inference.rs) or the HTTP server.
 
 You **only need Python (or another stack)** if you are **converting** checkpoints from Hugging Face Safetensors into **GGUF** using upstream tools (for example [microsoft/BitNet](https://github.com/microsoft/BitNet) scripts). That is a one-time **export** step on the machine where you build the file, not a runtime dependency of `rbitnet-server`.
 
@@ -79,7 +79,7 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 ## Programmatic use (Rust)
 
-Depend on `bitnet-core` and build an [`Engine`](crates/bitnet-core/src/inference.rs) from the environment or from a path:
+Depend on `bitnet-core` and build an [`Engine`](../crates/bitnet-core/src/inference.rs) from the environment or from a path:
 
 ```rust
 use bitnet_core::Engine;

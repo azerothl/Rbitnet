@@ -65,6 +65,11 @@ impl LlamaConfig {
                 "embedding_length not divisible by head_count".into(),
             ));
         }
+        if head_dim % 2 != 0 {
+            return Err(BitNetError::Inference(
+                "invalid head_dim: embedding_length / head_count must be even".into(),
+            ));
+        }
 
         let n_ff = m
             .get("llama.feed_forward_length")
