@@ -97,10 +97,25 @@ pub fn create_app_with_config(engine: Arc<Engine>, config: Arc<ServerConfig>) ->
         .merge(public)
         .merge(api)
         .layer(DefaultBodyLimit::max(max_body_bytes))
-        .layer(middleware::from_fn(add_request_id_if_missing))
         .with_state(state)
         .layer(cors)
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|req: &Request<Body>| {
+                let id = req
+                    .headers()
+                    .get("x-request-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("-");
+                tracing::info_span!(
+                    "http_request",
+                    method = %req.method(),
+                    path = %req.uri().path(),
+                    request_id = %id,
+                )
+            }),
+        )
+        // Outermost: assign `x-request-id` before trace/logging (see PLAN_PRODUCTION observability).
+        .layer(middleware::from_fn(add_request_id_if_missing))
 }
 
 async fn add_request_id_if_missing(mut req: Request<Body>, next: Next) -> Response {

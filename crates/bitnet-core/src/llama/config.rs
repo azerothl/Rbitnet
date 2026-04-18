@@ -79,13 +79,16 @@ impl LlamaConfig {
 
         let n_vocab = h.vocab_size.map(|v| v as usize).or_else(|| {
             archive
-                .tensor_by_name("token_embd.weight")
+                .tensor_first_of(&["token_embd.weight", "token_embd"])
                 .and_then(|t| t.dimensions.get(1).copied())
                 .map(|d| d as usize)
         });
 
         let n_vocab = n_vocab.ok_or_else(|| {
-            BitNetError::Inference("missing llama.vocab_size and token_embd.weight".into())
+            BitNetError::Inference(
+                "missing llama.vocab_size and token embedding tensor (token_embd.weight / token_embd)"
+                    .into(),
+            )
         })?;
 
         let rope_theta = m

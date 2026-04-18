@@ -51,12 +51,17 @@ impl KvCache {
     }
 }
 
-fn load_tensor(archive: &GgufArchive, name: &str) -> Result<Vec<f32>> {
-    let t = archive
-        .tensor_by_name(name)
-        .ok_or_else(|| BitNetError::Inference(format!("missing tensor {name}")))?;
+fn load_tensor(archive: &GgufArchive, names: &[&str]) -> Result<Vec<f32>> {
+    let t = archive.tensor_first_of(names).ok_or_else(|| {
+        BitNetError::Inference(format!("missing tensor (tried {:?})", names))
+    })?;
     let payload = archive.tensor_payload(t)?;
     tensor_to_f32(payload, t.ggml_type, &t.dimensions)
+}
+
+fn load_tensor_strings(archive: &GgufArchive, names: &[String]) -> Result<Vec<f32>> {
+    let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+    load_tensor(archive, &refs)
 }
 
 /// `y[out] = sum_i W[i + out * n_embd] * x[i]` — GGUF layout `ne[0]=n_embd`, `ne[1]=out`.
@@ -138,21 +143,21 @@ impl LlamaModel {
         let n_ff = cfg.n_ff;
         let n_embd_kv = cfg.n_kv * cfg.head_dim;
 
-        let token_embd = load_tensor(archive, "token_embd.weight")?;
+        let token_embd = load_tensor(archive, &["token_embd.weight", "token_embd"])?;
         if token_embd.len() != n_embd * n_vocab {
             return Err(BitNetError::Inference(
                 "token_embd.weight element count mismatch".into(),
             ));
         }
 
-        let output_norm = load_tensor(archive, "output_norm.weight")?;
+        let output_norm = load_tensor(archive, &["output_norm.weight"])?;
         if output_norm.len() != n_embd {
             return Err(BitNetError::Inference(
                 "output_norm.weight shape mismatch".into(),
             ));
         }
 
-        let output = load_tensor(archive, "output.weight")?;
+        let output = load_tensor(archive, &["output.weight", "lm_head.weight"])?;
         if output.len() != n_embd * n_vocab {
             return Err(BitNetError::Inference("output.weight shape mismatch".into()));
         }
@@ -160,15 +165,18 @@ impl LlamaModel {
         let mut layers = Vec::with_capacity(cfg.n_layer);
         for i in 0..cfg.n_layer {
             let p = format!("blk.{i}");
-            let attn_norm = load_tensor(archive, &format!("{p}.attn_norm.weight"))?;
-            let wq = load_tensor(archive, &format!("{p}.attn_q.weight"))?;
-            let wk = load_tensor(archive, &format!("{p}.attn_k.weight"))?;
-            let wv = load_tensor(archive, &format!("{p}.attn_v.weight"))?;
-            let wo = load_tensor(archive, &format!("{p}.attn_output.weight"))?;
-            let ffn_norm = load_tensor(archive, &format!("{p}.ffn_norm.weight"))?;
-            let ffn_gate = load_tensor(archive, &format!("{p}.ffn_gate.weight"))?;
-            let ffn_up = load_tensor(archive, &format!("{p}.ffn_up.weight"))?;
-            let ffn_down = load_tensor(archive, &format!("{p}.ffn_down.weight"))?;
+            let attn_norm = load_tensor_strings(archive, &[format!("{p}.attn_norm.weight")])?;
+            let wq = load_tensor_strings(archive, &[format!("{p}.attn_q.weight")])?;
+            let wk = load_tensor_strings(archive, &[format!("{p}.attn_k.weight")])?;
+            let wv = load_tensor_strings(archive, &[format!("{p}.attn_v.weight")])?;
+            let wo = load_tensor_strings(archive, &[
+                format!("{p}.attn_output.weight"),
+                format!("{p}.attn_out.weight"),
+            ])?;
+            let ffn_norm = load_tensor_strings(archive, &[format!("{p}.ffn_norm.weight")])?;
+            let ffn_gate = load_tensor_strings(archive, &[format!("{p}.ffn_gate.weight")])?;
+            let ffn_up = load_tensor_strings(archive, &[format!("{p}.ffn_up.weight")])?;
+            let ffn_down = load_tensor_strings(archive, &[format!("{p}.ffn_down.weight")])?;
 
             if attn_norm.len() != n_embd
                 || wq.len() != n_embd * n_embd

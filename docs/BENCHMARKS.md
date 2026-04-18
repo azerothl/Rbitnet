@@ -2,6 +2,8 @@
 
 Reproducible numbers belong here for **Phase 2** of [`PLAN_PRODUCTION.md`](PLAN_PRODUCTION.md).
 
+For **CPU profiling** workflow (perf, flamegraph, what to inspect in code), see [PROFILING.md](PROFILING.md).
+
 ## Running Criterion benches (kernels)
 
 From the repo root:

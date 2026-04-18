@@ -46,4 +46,14 @@ location /v1/ {
 
 ## Docker
 
-No official image is published yet. A minimal pattern is a two-stage `cargo build --release` and `FROM debian:bookworm-slim` copying `target/release/rbitnet-server` plus your GGUF and tokenizer at runtime via volumes.
+A **reference** multi-stage build lives at the repository root [`Dockerfile`](../Dockerfile). It compiles `rbitnet-server` and runs as `ENTRYPOINT`; mount your `.gguf` and tokenizer at runtime and set `RBITNET_MODEL` (and usually `RBITNET_BIND`, `RBITNET_API_KEY`).
+
+```bash
+docker build -t rbitnet:local .
+docker run --rm -p 8080:8080 \
+  -e RBITNET_MODEL=/model/model.gguf \
+  -v /abs/path/on/host:/model:ro \
+  rbitnet:local
+```
+
+The default `RBITNET_BIND` in the image is `0.0.0.0:8080` — use TLS and auth at the edge.

@@ -22,6 +22,7 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
   - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
+  - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
   - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
   - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist

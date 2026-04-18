@@ -6,6 +6,7 @@ use std::sync::{LazyLock, Mutex};
 use axum::body::Body;
 use bitnet_core::inference::Engine;
 use bitnet_server::{create_app_with_config, ServerConfig};
+use futures::future::join_all;
 use http::Request;
 use http_body_util::BodyExt;
 use tower::ServiceExt;
@@ -211,5 +212,56 @@ async fn chat_accepts_bearer_api_key() {
         .await
         .expect("chat response");
     assert!(res.status().is_success());
+}
+
+/// Phase 1 plan: light parallel load; `max_concurrent=2` should still complete three stub requests.
+#[tokio::test]
+async fn parallel_stub_chats_under_concurrency_cap() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let config = Arc::new(ServerConfig {
+        max_concurrent: 2,
+        ..ServerConfig::test_defaults()
+    });
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "parallel" }],
+        "stream": false
+    });
+    let body_str = chat_body.to_string();
+
+    let futs: Vec<_> = (0..3)
+        .map(|_| {
+            let app = create_app_with_config(Arc::clone(&engine), Arc::clone(&config));
+            let body = body_str.clone();
+            async move {
+                app.oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/v1/chat/completions")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+            }
+        })
+        .collect();
+
+    let results = join_all(futs).await;
+    for res in results {
+        let response = res.expect("response");
+        assert!(
+            response.status().is_success(),
+            "got {}",
+            response.status()
+        );
+    }
 }
 

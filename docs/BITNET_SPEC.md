@@ -23,11 +23,21 @@ Typical keys (prefix `llama.*` when `general.architecture` declares a Llama-comp
 
 BitNet may add layout-specific keys; the loader exposes everything via `GgufArchive::metadata`.
 
-## Tensor naming (indicative)
+## Tensor naming
 
 Exact names follow the llama.cpp / BitNet fork conventions, for example:
 
 - `token_embd.*`, `blk.N.attn_*`, `blk.N.ffn_*`, `output.*`
+
+The loader resolves weights with a **small set of alternates** (first match wins):
+
+| Logical tensor | Primary name | Also accepted |
+|----------------|--------------|----------------|
+| Token embedding | `token_embd.weight` | `token_embd` |
+| Output projection | `output.weight` | `lm_head.weight` |
+| Attention output | `blk.N.attn_output.weight` | `blk.N.attn_out.weight` |
+
+Other layer tensors (`attn_q`, `attn_k`, `ffn_gate`, …) currently use the single canonical `*.weight` name; extend the `tensor_first_of` lists in `crates/bitnet-core/src/llama/model.rs` if your exporter differs.
 
 For golden validation, compare per-layer activations or final logits against **bitnet.cpp** on identical inputs.
 
