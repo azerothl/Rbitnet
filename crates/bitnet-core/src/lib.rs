@@ -11,4 +11,5 @@ pub mod inference;
 pub mod kernels;
 
 pub use error::{BitNetError, Result};
+pub use gguf::{GgufArchive, GgufFileInfo, GgufTensorInfo, GgufValue};
 pub use inference::Engine;

@@ -47,11 +47,8 @@ async fn main() {
         }
     };
 
-    if engine.has_gguf() {
-        info!(
-            tensors = engine.tensor_count(),
-            "GGUF header loaded (inference not yet wired)"
-        );
+    if let Some(summary) = engine.model_summary() {
+        info!(%summary, "GGUF loaded (inference not yet wired)");
     } else if !stub_mode_enabled() {
         info!("no RBITNET_MODEL — set RBITNET_STUB=1 for testing without weights");
     }
@@ -86,11 +83,10 @@ async fn root_health() -> impl IntoResponse {
 }
 
 async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
-    let model_id = if state.engine.has_gguf() {
-        "rbitnet-gguf"
-    } else {
-        "rbitnet-stub"
-    };
+    let model_id = state
+        .engine
+        .openai_model_id()
+        .unwrap_or_else(|| "rbitnet-stub".into());
     Json(json!({
         "object": "list",
         "data": [

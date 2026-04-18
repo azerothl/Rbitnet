@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::error::{BitNetError, Result};
-use crate::gguf::{mmap_gguf_header, GgufFileInfo};
+use crate::gguf::GgufArchive;
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -22,7 +22,7 @@ pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
 }
 
-/// Shared engine state: optional validated GGUF header (real inference later).
+/// Shared engine state: optional fully parsed GGUF archive (metadata + tensor table).
 #[derive(Clone)]
 pub struct Engine {
     inner: Arc<EngineInner>,
@@ -31,44 +31,67 @@ pub struct Engine {
 struct EngineInner {
     #[allow(dead_code)]
     model_path: Option<PathBuf>,
-    gguf_info: Option<GgufFileInfo>,
+    gguf: Option<GgufArchive>,
 }
 
 impl Engine {
     /// Load model from `RBITNET_MODEL` or return empty engine (stub-only).
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
-        let gguf_info = if let Some(ref p) = model_path {
-            let (_mmap, info) = mmap_gguf_header(p)?;
-            Some(info)
+        let gguf = if let Some(ref p) = model_path {
+            Some(GgufArchive::mmap_path(p)?)
         } else {
             None
         };
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
-                gguf_info,
+                gguf,
             }),
         })
     }
 
-    /// Validate without loading: check GGUF header if path is set.
+    /// Load and parse a GGUF path (validates full file structure).
     pub fn load_path(path: &Path) -> Result<Self> {
-        let (_mmap, info) = mmap_gguf_header(path)?;
+        let gguf = GgufArchive::mmap_path(path)?;
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path: Some(path.to_path_buf()),
-                gguf_info: Some(info),
+                gguf: Some(gguf),
             }),
         })
     }
 
     pub fn has_gguf(&self) -> bool {
-        self.inner.gguf_info.is_some()
+        self.inner.gguf.is_some()
     }
 
-    pub fn tensor_count(&self) -> Option<u64> {
-        self.inner.gguf_info.as_ref().map(|i| i.tensor_count)
+    pub fn tensor_count(&self) -> Option<usize> {
+        self.inner.gguf.as_ref().map(|g| g.tensor_count())
+    }
+
+    /// Human-readable one-line description (architecture, tensor count).
+    pub fn model_summary(&self) -> Option<String> {
+        self.inner.gguf.as_ref().map(|g| g.summary_line())
+    }
+
+    /// First N tensor names for debugging.
+    pub fn tensor_names_preview(&self, max: usize) -> Option<Vec<String>> {
+        self.inner.gguf.as_ref().map(|g| {
+            g.tensors
+                .iter()
+                .take(max)
+                .map(|t| t.name.clone())
+                .collect()
+        })
+    }
+
+    /// Label for `/v1/models` when a GGUF is loaded.
+    pub fn openai_model_id(&self) -> Option<String> {
+        self.inner
+            .gguf
+            .as_ref()
+            .map(|g| g.suggested_openai_model_id())
     }
 
     /// Generate completion text from a single user-facing prompt string.
@@ -76,11 +99,11 @@ impl Engine {
         if stub_mode_enabled() {
             return Ok(stub_response(prompt, max_tokens));
         }
-        if self.inner.gguf_info.is_none() {
+        let Some(_g) = self.inner.gguf.as_ref() else {
             return Err(BitNetError::ModelNotLoaded);
-        }
+        };
         Err(BitNetError::NotImplemented(
-            "full BitNet forward pass — use RBITNET_STUB=1 for testing or wire kernels + graph",
+            "full BitNet forward pass — GGUF metadata and tensors are loaded; wire kernels + graph next",
         ))
     }
 }
@@ -102,7 +125,7 @@ mod tests {
         let e = Engine {
             inner: Arc::new(EngineInner {
                 model_path: None,
-                gguf_info: None,
+                gguf: None,
             }),
         };
         assert!(e.complete("hi", 16, 0.7).unwrap().contains("stub"));
