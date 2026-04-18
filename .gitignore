@@ -1,5 +1,7 @@
 /target/
 /target-check/
+/target-ci/
+/target-ci2/
 **/*.rs.bk
 .env
 *.gguf
