@@ -15,6 +15,15 @@ pub enum BitNetError {
 
     #[error("model not loaded; set RBITNET_MODEL to a .gguf path or use stub mode")]
     ModelNotLoaded,
+
+    #[error("inference error: {0}")]
+    Inference(String),
+
+    #[error("tokenizer required: set RBITNET_TOKENIZER or place tokenizer.json next to the GGUF")]
+    TokenizerMissing,
+
+    #[error("unsupported GGML tensor type {0} for dequantization")]
+    UnsupportedGgmlType(u32),
 }
 
 pub type Result<T> = std::result::Result<T, BitNetError>;

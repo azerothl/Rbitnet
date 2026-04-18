@@ -51,6 +51,28 @@ pub struct GgufArchive {
 }
 
 impl GgufArchive {
+    /// Look up a tensor by exact name.
+    pub fn tensor_by_name(&self, name: &str) -> Option<&GgufTensorInfo> {
+        self.tensors.iter().find(|t| t.name == name)
+    }
+
+    /// Raw payload bytes for a tensor (size matches [`crate::ggml::ggml_nbytes`]).
+    pub fn tensor_payload(&self, t: &GgufTensorInfo) -> Result<&[u8]> {
+        let n = crate::ggml::ggml_nbytes(&t.dimensions, t.ggml_type)?;
+        let start = t.offset as usize;
+        let end = start
+            .checked_add(n)
+            .ok_or_else(|| BitNetError::InvalidGguf("tensor offset overflow".into()))?;
+        let blob = self.tensor_data();
+        if end > blob.len() {
+            return Err(BitNetError::InvalidGguf(format!(
+                "tensor payload [{start}, {end}) out of range (blob len {})",
+                blob.len()
+            )));
+        }
+        Ok(&blob[start..end])
+    }
+
     /// Memory-map and parse a `.gguf` file.
     pub fn mmap_path(path: &Path) -> Result<Self> {
         let file = File::open(path)?;

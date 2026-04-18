@@ -20,3 +20,6 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 futures = "0.3"
 memmap2 = "0.9"
 criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+half = "2.4"
+tokenizers = "0.21"
+rand = "0.8"
