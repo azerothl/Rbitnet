@@ -40,6 +40,18 @@ pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
 }
 
+/// Reject paths containing `..` so environment-controlled paths cannot escape the intended directory.
+pub fn validate_no_parent_components(path: &Path) -> Result<()> {
+    for c in path.components() {
+        if matches!(c, std::path::Component::ParentDir) {
+            return Err(BitNetError::InvalidGguf(
+                "path must not contain '..' components".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
     if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
         let pb = PathBuf::from(p);
@@ -77,6 +89,12 @@ impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
+        if let Some(ref p) = model_path {
+            validate_no_parent_components(p)?;
+        }
+        if let Ok(tok) = std::env::var("RBITNET_TOKENIZER") {
+            validate_no_parent_components(Path::new(&tok))?;
+        }
         let gguf = if let Some(ref p) = model_path {
             Some(GgufArchive::mmap_path(p)?)
         } else {
@@ -133,6 +151,18 @@ impl Engine {
                 .map(|t| t.name.clone())
                 .collect()
         })
+    }
+
+    /// Whether chat can run without a missing-tokenizer configuration error.
+    /// Stub and toy modes are always ready; GGUF mode requires a discoverable `tokenizer.json`.
+    pub fn is_ready(&self) -> bool {
+        if self.inner.stub || self.inner.toy.is_some() {
+            return true;
+        }
+        let Some(ref model_path) = self.inner.model_path else {
+            return false;
+        };
+        self.inner.gguf.is_some() && resolve_tokenizer_path(model_path).is_ok()
     }
 
     /// Label for `/v1/models`.
@@ -227,5 +257,11 @@ mod tests {
         assert_eq!(e.openai_model_id(), Some("rbitnet-toy".into()));
         let result = e.complete("hello", 8, 0.7).unwrap();
         assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn stub_engine_is_ready() {
+        let e = stub_engine();
+        assert!(e.is_ready());
     }
 }

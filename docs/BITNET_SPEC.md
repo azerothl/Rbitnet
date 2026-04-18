@@ -31,6 +31,10 @@ Exact names follow the llama.cpp / BitNet fork conventions, for example:
 
 For golden validation, compare per-layer activations or final logits against **bitnet.cpp** on identical inputs.
 
+## GGML tensor types (storage layout)
+
+Rbitnet computes tensor payload sizes and dequantization using the numeric `ggml_type` in each tensor info. Layouts follow llama.cpp conventions; **unknown** type codes surface as `UnsupportedGgmlType` (see `crates/bitnet-core/src/error.rs`) when a weight must be dequantized. The authoritative list of recognized codes is in `crates/bitnet-core/src/ggml/types.rs` (`type_layout`). Deprecated codes (for example `4`, `5`, `31`–`33`, `36`–`38`) are rejected at parse/size time with a clear error.
+
 ## See also
 
 - **[USAGE.md](USAGE.md)** — running Rbitnet with a GGUF and tokenizer (Rust-only at runtime).

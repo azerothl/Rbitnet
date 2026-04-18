@@ -18,5 +18,5 @@ pub mod model;
 
 pub use error::{BitNetError, Result};
 pub use gguf::{GgufArchive, GgufFileInfo, GgufTensorInfo, GgufValue, LlamaHyperParams};
-pub use inference::Engine;
+pub use inference::{validate_no_parent_components, Engine};
 pub use model::ToyLlm;

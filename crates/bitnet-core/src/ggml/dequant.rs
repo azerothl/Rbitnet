@@ -143,7 +143,7 @@ fn dequant_q5_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
         let qh = u32::from_le_bytes(data[o + 2..o + 6].try_into().unwrap());
         for j in 0..16 {
             let xh0 = ((qh >> j) << 4) & 0x10;
-            let xh1 = ((qh >> (j + 12))) & 0x10;
+            let xh1 = (qh >> (j + 12)) & 0x10;
             let q = data[o + 6 + j];
             let x0 = (((q & 0x0F) as u32 | xh0) as i32) - 16;
             let x1 = (((q >> 4) as u32 | xh1) as i32) - 16;
@@ -167,7 +167,7 @@ fn dequant_q5_1(data: &[u8], n: usize) -> Result<Vec<f32>> {
         let qh = u32::from_le_bytes(data[o + 4..o + 8].try_into().unwrap());
         for j in 0..16 {
             let xh0 = ((qh >> j) << 4) & 0x10;
-            let xh1 = ((qh >> (j + 12))) & 0x10;
+            let xh1 = (qh >> (j + 12)) & 0x10;
             let q = data[o + 8 + j];
             let x0 = (((q & 0x0F) as u32 | xh0) as i32) - 16;
             let x1 = (((q >> 4) as u32 | xh1) as i32) - 16;
