@@ -1,39 +1,72 @@
 //! OpenAI-compatible HTTP surface for Rbitnet (Akasha `BitNetProvider`).
+//!
+//! See `docs/PLAN_PRODUCTION.md` for limits, metrics, and health endpoints.
+
+mod config;
+mod metrics;
 
 use std::convert::Infallible;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
+use axum::extract::DefaultBodyLimit;
 use axum::extract::State;
-use axum::http::{HeaderValue, Method, StatusCode};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, Request, StatusCode};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
+use axum::Router;
 use bitnet_core::inference::Engine;
 use bitnet_core::BitNetError;
 use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
+use tokio::sync::Semaphore;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::trace::TraceLayer;
+use uuid::Uuid;
+
+pub use config::ServerConfig;
+use metrics::ServerMetrics;
 
 #[derive(Clone)]
 pub struct AppState {
     pub engine: Arc<Engine>,
+    pub config: Arc<ServerConfig>,
+    pub metrics: Arc<ServerMetrics>,
+    pub semaphore: Arc<Semaphore>,
 }
 
-/// Build the Axum application (for tests and `rbitnet-server` binary).
-pub fn create_app(engine: Arc<Engine>) -> Router {
-    let state = AppState { engine };
+/// Build the Axum app using [`ServerConfig::from_env`].
+///
+/// Returns an error if any `RBITNET_*` environment variable contains an invalid value.
+pub fn create_app(engine: Arc<Engine>) -> Result<Router, String> {
+    let config = Arc::new(ServerConfig::from_env()?);
+    Ok(create_app_with_config(engine, config))
+}
+
+/// Build the Axum app with an explicit config (tests and embedders).
+#[must_use]
+pub fn create_app_with_config(engine: Arc<Engine>, config: Arc<ServerConfig>) -> Router {
+    let metrics = Arc::new(ServerMetrics::default());
+    let max_body_bytes = config.max_body_bytes;
+    let semaphore = Arc::new(Semaphore::new(config.max_concurrent));
+    let state = AppState {
+        engine,
+        config: Arc::clone(&config),
+        metrics: Arc::clone(&metrics),
+        semaphore,
+    };
+
     let cors = if std::env::var("RBITNET_CORS_ANY").as_deref() == Ok("1") {
-        // Dev/testing: allow any origin (gated behind env flag)
         CorsLayer::new()
             .allow_origin(Any)
             .allow_methods(Any)
             .allow_headers(Any)
     } else {
-        // Default: restrict to localhost origins
         CorsLayer::new()
             .allow_origin(AllowOrigin::list([
                 HeaderValue::from_static("http://localhost:3000"),
@@ -45,22 +78,136 @@ pub fn create_app(engine: Arc<Engine>) -> Router {
             .allow_headers([
                 axum::http::header::CONTENT_TYPE,
                 axum::http::header::AUTHORIZATION,
+                HeaderName::from_static("x-api-key"),
+                HeaderName::from_static("x-request-id"),
             ])
     };
-    Router::new()
+
+    let public = Router::new()
+        .route("/health", get(liveness))
+        .route("/ready", get(readiness))
+        .route("/metrics", get(metrics_handler));
+
+    let api = Router::new()
         .route("/", get(root_health))
         .route("/v1/models", get(list_models))
-        .route("/v1/chat/completions", post(chat_completions))
+        .route("/v1/chat/completions", post(chat_completions));
+
+    Router::new()
+        .merge(public)
+        .merge(api)
+        .layer(DefaultBodyLimit::max(max_body_bytes))
         .with_state(state)
-        .layer(TraceLayer::new_for_http())
         .layer(cors)
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|req: &Request<Body>| {
+                let id = req
+                    .headers()
+                    .get("x-request-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("-");
+                tracing::info_span!(
+                    "http_request",
+                    method = %req.method(),
+                    path = %req.uri().path(),
+                    request_id = %id,
+                )
+            }),
+        )
+        // Outermost: assign `x-request-id` before trace/logging (see PLAN_PRODUCTION observability).
+        .layer(middleware::from_fn(add_request_id_if_missing))
 }
 
-async fn root_health() -> impl IntoResponse {
-    (StatusCode::OK, "rbitnet OK")
+async fn add_request_id_if_missing(mut req: Request<Body>, next: Next) -> Response {
+    if req.headers().get("x-request-id").is_none() {
+        if let Ok(v) = HeaderValue::from_str(&Uuid::new_v4().to_string()) {
+            req.headers_mut().insert("x-request-id", v);
+        }
+    }
+    next.run(req).await
 }
 
-async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
+fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
+    let key = match &state.config.api_key {
+        None => return Ok(()),
+        Some(k) => k,
+    };
+    let ok = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| {
+            // RFC 7235: auth-scheme tokens are case-insensitive.
+            let mut parts = s.splitn(2, ' ');
+            let scheme = parts.next()?;
+            let token = parts.next()?.trim();
+            if scheme.eq_ignore_ascii_case("bearer") {
+                Some(token)
+            } else {
+                None
+            }
+        })
+        .map(|t| t == key.as_str())
+        .unwrap_or(false)
+        || headers
+            .get("x-api-key")
+            .and_then(|v| v.to_str().ok())
+            .map(|t| t == key.as_str())
+            .unwrap_or(false);
+    if ok {
+        return Ok(());
+    }
+    state
+        .metrics
+        .unauthorized_total
+        .fetch_add(1, Ordering::Relaxed);
+    Err((
+        StatusCode::UNAUTHORIZED,
+        Json(json!({
+            "error": {
+                "message": "invalid or missing API key",
+                "type": "authentication_error"
+            }
+        })),
+    )
+        .into_response())
+}
+
+async fn liveness() -> impl IntoResponse {
+    (StatusCode::OK, "ok\n")
+}
+
+async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
+    if state.engine.is_ready() {
+        (StatusCode::OK, "ready\n")
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "not ready: tokenizer missing or model not configured\n",
+        )
+    }
+}
+
+async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("text/plain; version=0.0.4"),
+        )],
+        state.metrics.prometheus_text(),
+    )
+}
+
+async fn root_health(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(r) = check_auth(&state, &headers) {
+        return r;
+    }
+    (StatusCode::OK, "rbitnet OK\n").into_response()
+}
+
+async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(r) = check_auth(&state, &headers) {
+        return r;
+    }
     let model_id = state
         .engine
         .openai_model_id()
@@ -76,6 +223,7 @@ async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
             }
         ]
     }))
+    .into_response()
 }
 
 #[derive(Debug, Deserialize)]
@@ -129,17 +277,152 @@ pub fn build_prompt_from_messages(messages: &[ChatMessage]) -> String {
 
 async fn chat_completions(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<ChatCompletionRequest>,
 ) -> Result<Response, Infallible> {
-    let prompt = build_prompt_from_messages(&req.messages);
-    let max_tokens = req.max_tokens.unwrap_or(256);
-    let temperature = req.temperature.unwrap_or(0.7);
+    if let Err(r) = check_auth(&state, &headers) {
+        return Ok(r);
+    }
 
-    let text_result = state.engine.complete(&prompt, max_tokens, temperature);
+    state
+        .metrics
+        .chat_requests_total
+        .fetch_add(1, Ordering::Relaxed);
+
+    let prompt = build_prompt_from_messages(&req.messages);
+    let prompt_chars = prompt.chars().count();
+    if prompt_chars > state.config.max_prompt_chars {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": {
+                    "message": format!(
+                        "prompt too long ({} chars, max {})",
+                        prompt_chars, state.config.max_prompt_chars
+                    ),
+                    "type": "invalid_request_error"
+                }
+            })),
+        )
+            .into_response());
+    }
+
+    let max_tokens = req.max_tokens.unwrap_or(256);
+    if max_tokens > state.config.max_tokens_cap {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": {
+                    "message": format!(
+                        "max_tokens exceeds cap ({}, max {})",
+                        max_tokens, state.config.max_tokens_cap
+                    ),
+                    "type": "invalid_request_error"
+                }
+            })),
+        )
+            .into_response());
+    }
+
+    let permit = match state.semaphore.clone().try_acquire_owned() {
+        Ok(p) => p,
+        Err(_) => {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": {
+                        "message": "too many concurrent inference requests",
+                        "type": "rate_limit_error"
+                    }
+                })),
+            )
+                .into_response());
+        }
+    };
+
+    let temperature = req.temperature.unwrap_or(0.7);
+    let engine = state.engine.clone();
+    let metrics = state.metrics.clone();
+    let timeout_dur = state.config.inference_timeout;
+    let prompt_owned = prompt;
+    let join = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        engine.complete(&prompt_owned, max_tokens, temperature)
+    });
+
+    let start = Instant::now();
+    let text_result: Result<String, BitNetError> = match tokio::time::timeout(timeout_dur, join).await {
+        Ok(Ok(Ok(t))) => {
+            let ms = start.elapsed().as_millis() as u64;
+            metrics
+                .inference_ms_total
+                .fetch_add(ms, Ordering::Relaxed);
+            metrics
+                .inference_calls_total
+                .fetch_add(1, Ordering::Relaxed);
+            Ok(t)
+        }
+        Ok(Ok(Err(e))) => {
+            let ms = start.elapsed().as_millis() as u64;
+            metrics
+                .inference_ms_total
+                .fetch_add(ms, Ordering::Relaxed);
+            metrics
+                .inference_calls_total
+                .fetch_add(1, Ordering::Relaxed);
+            Err(e)
+        }
+        Ok(Err(_join_err)) => {
+            metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": { "message": "inference task failed", "type": "rbitnet_error" }
+                })),
+            )
+                .into_response());
+        }
+        Err(_elapsed) => {
+            metrics
+                .inference_timeouts_total
+                .fetch_add(1, Ordering::Relaxed);
+            metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::GATEWAY_TIMEOUT,
+                Json(json!({
+                    "error": {
+                        "message": "inference timed out",
+                        "type": "timeout_error"
+                    }
+                })),
+            )
+                .into_response());
+        }
+    };
 
     let text = match text_result {
         Ok(t) => t,
         Err(e) => {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
             let (status, msg) = match e {
                 BitNetError::ModelNotLoaded => (
                     StatusCode::SERVICE_UNAVAILABLE,
@@ -196,7 +479,6 @@ fn json_completion(model: &str, text: &str) -> impl IntoResponse {
 }
 
 fn stream_completion(model: &str, full_text: &str) -> Response {
-    // Compute id/created once so all chunks share the same values.
     let created = unix_now();
     let id = format!("chatcmpl-stream-{}", created);
     let model_owned = model.to_string();

@@ -13,14 +13,19 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
 ## Status
 
 - **bitnet-core**: GGUF parse, GGML dequantization, Llama-shaped forward (RMSNorm, RoPE, GQA, KV cache, SiLU FFN), [`Engine`](crates/bitnet-core/src/inference.rs), optional toy LM.
-- **bitnet-server** (`rbitnet-server`): `GET /`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Integration tests for stub mode.
+- **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Limits, optional API key, integration tests.
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
-  - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — plan de feuille de route pour une version « prod ready »
+  - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
+  - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
+  - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
+  - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
+  - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
+  - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist
 
 ## Run the server (real GGUF)
 
@@ -99,6 +104,8 @@ See the Akasha repo: `spec/llm_router.example.yaml`.
 | `RBITNET_TOY` | `1` = tiny in-process F32 toy LM (no GGUF) |
 | `RBITNET_TOY_SEED` | Seed for toy weights (default `42`) |
 | `RBITNET_TEST_GGUF` | Optional path for `optional_gguf_from_env_smoke` test only |
+
+Server tuning (`rbitnet-server`): `RBITNET_MAX_BODY_BYTES`, `RBITNET_MAX_PROMPT_CHARS`, `RBITNET_MAX_TOKENS_CAP`, `RBITNET_MAX_CONCURRENT`, `RBITNET_INFERENCE_TIMEOUT_SECS`, `RBITNET_API_KEY` — see [docs/USAGE.md](docs/USAGE.md).
 
 ## Benchmarks
 

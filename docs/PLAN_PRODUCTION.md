@@ -1,119 +1,135 @@
-# Plan — version « prod ready » de Rbitnet
+# Plan — “prod ready” Rbitnet release
 
-Ce document fixe une **feuille de route** pour qu’une release Rbitnet puisse être annoncée comme **prête production** avec des critères vérifiables. Les phases peuvent se chevaucher ; l’ordre reflète une dépendance logique.
+This document sets a **roadmap** so a Rbitnet release can be announced as **production-ready** with verifiable criteria. Phases may overlap; the order reflects logical dependencies.
 
-## Définition cible (critères de sortie)
+## Target definition (exit criteria)
 
-Une version est considérée **prod ready** lorsque **toutes** les conditions suivantes sont remplies :
+A version counts as **prod ready** when **all** of the following hold:
 
-1. **Critères de performance** documentés et mesurés sur au moins une configuration de référence (latence p50/p95, tokens/s, RAM max).
-2. **Limites et garde-fous** : prompts, `max_tokens`, concurrence, timeouts — refus explicites et codes HTTP cohérents.
-3. **Sécurité minimale** pour une exposition réseau : auth configurable ou guide de déploiement derrière proxy ; pas de surface d’abus évidente sur les entrées.
-4. **Observabilité** : logs structurés, métriques (requêtes, erreurs, durée), endpoint de santé adapté au déploiement.
-5. **Qualité** : CI verte (build, tests), tests d’intégration sur un GGUF de référence ; politique de version (semver) et notes de release.
-6. **Documentation** : installation, configuration, exploitation, dépannage, limites connues — à jour pour cette release.
-
----
-
-## Phase 0 — Cadrage (court)
-
-| Action | Livrable |
-|--------|----------|
-| Définir le **périmètre prod** visé (intranet, edge, SaaS, Akasha uniquement) | Paragraphe dans ce doc ou ADR |
-| Choisir **1–3 modèles GGUF de référence** (taille, quant, arch) pour bench et tests | Liste figée + emplacement des artefacts |
-| Fixer des **SLO indicatifs** (ex. p95 latence première token, erreurs &lt; 0,1 %) | Tableau cible non contractuel |
+1. **Performance criteria** documented and measured on at least one reference setup (p50/p95 latency, tokens/s, peak RAM).
+2. **Limits and guardrails**: prompts, `max_tokens`, concurrency, timeouts — explicit rejections and consistent HTTP codes.
+3. **Minimal security** for network exposure: configurable auth or deployment guide behind a proxy; no obvious abuse surface on inputs.
+4. **Observability**: structured logs, metrics (requests, errors, duration), health endpoint suited to deployment.
+5. **Quality**: green CI (build, tests), integration tests on a reference GGUF; versioning policy (semver) and release notes.
+6. **Documentation**: install, configuration, operations, troubleshooting, known limitations — current for that release.
 
 ---
 
-## Phase 1 — Fiabilité et limites
+## Phase 0 — Scoping (short)
 
-| Action | Livrable |
-|--------|----------|
-| Plafonds sur taille de corps JSON, longueur prompt, `max_tokens`, taille contexte effective | Rejet `413` / `400` avec message clair |
-| Timeouts par requête (inférence + I/O) | Pas de requêtes bloquées indéfiniment |
-| Gestion explicite **OOM** / mmap échoué / fichier manquant | Erreurs typées, logs, pas de panic utilisateur |
-| Politique de **concurrence** (semaphore / file) | Nombre max de générations simultanées configurable |
-| Tests d’intégration charge **légère** (plusieurs requêtes séquentielles / peu parallèles) | Test CI ou script documenté |
+### Prod scope (working definition)
 
----
+Rbitnet targets **local and trusted-network** deployments first: **developer machines**, **intranet** services, and **Akasha** on the same host or LAN. It is **not** positioned as an internet-facing multi-tenant API without additional hardening (reverse proxy, TLS, rate limits, and operational monitoring). Edge / SaaS-style exposure is out of scope until Phase 3–6 items are routinely met.
 
-## Phase 2 — Performance et ressources
+### Reference GGUF models (for benchmarks and CI)
 
-| Action | Livrable |
-|--------|----------|
-| **Benchmarks** reproductibles (prompt fixe, longueur fixe, `--release`) | `docs/BENCHMARKS.md` + chiffres pour modèles de référence |
-| Profiler hot paths (matmul, attention, déquant) | Rapport court + issues priorisées |
-| Pistes d’optimisation **CPU** (SIMD, threads, réduction allocations) | Implémentations incrémentales derrière critères mesurables |
-| (Optionnel) Documenter **plafond RAM** par modèle et recommandations matériel | Section doc |
+| Role | Example | Notes |
+|------|---------|--------|
+| Integration / API | Stub (`RBITNET_STUB=1`) or toy (`RBITNET_TOY=1`) | No GGUF artifact; CI uses these by default. |
+| Parser / smoke | Any small llama-compatible GGUF you already have | Set `RBITNET_TEST_GGUF` for optional `bitnet-core` tests. |
+| Performance baseline | A fixed BitNet or Llama GGUF you choose locally | Record hardware + command in `docs/BENCHMARKS.md` when publishing numbers. |
 
-*Note : le GPU ou l’appel à un backend externe peut être une **phase ultérieure** si le positionnement produit est « Rust CPU seul ».*
+Paths are **local** (not checked in): update the table in `docs/BENCHMARKS.md` when you freeze a baseline.
 
----
+### Indicative SLOs (non-contractual)
 
-## Phase 3 — Sécurité et exposition
-
-| Action | Livrable |
-|--------|----------|
-| Revue **entrées utilisateur** (chat, chemins de fichiers env) | Pas de traversal arbitraire ; validation stricte |
-| **Auth** : clé API via header ou `--api-key`, ou doc explicite « uniquement derrière Nginx + auth » | Choix documenté + implémentation minimale si besoin |
-| **CORS** et binding : défaut `127.0.0.1` ; avertissement si `0.0.0.0` | README + log au démarrage |
-| Scan dépendances / `cargo audit` en CI | Job CI ou checklist release |
+| Metric | Starting target |
+|--------|-------------------|
+| Error rate (5xx from process bugs) | &lt; 0.1% under normal load |
+| p95 time-to-first-token (short prompt, CPU ref.) | Measure and publish per release in `docs/BENCHMARKS.md` |
+| Availability (single instance) | No unbounded memory growth on moderate sustained load |
 
 ---
 
-## Phase 4 — Observabilité et exploitation
+## Phase 1 — Reliability and limits
 
-| Action | Livrable |
-|--------|----------|
-| Métriques (Prometheus ou stats simples) : requêtes, durées, erreurs, tokens | Endpoint `/metrics` ou export documenté |
-| Logs structurés (niveau, durée, `task_id` / `request_id`) | Format stable |
-| **Health** : `GET /health` ou `/ready` (liveness vs readiness si modèle chargé) | Spécification pour orchestrateurs |
-| Variables d’environnement **récapitulées** et validées au démarrage | Message d’erreur clair si config invalide |
-
----
-
-## Phase 5 — Qualité et compatibilité
-
-| Action | Livrable |
-|--------|----------|
-| Étendre / figurer les **types GGML** supportés ou erreurs explicites | Tableau dans la doc |
-| **Alias** de noms de tenseurs ou tests sur 2 exports (llama.cpp / BitNet) | Moins d’échecs « silencieux » sur des GGUF valides |
-| Suite de **tests de non-régression** (golden logits ou texte sur prompts courts) | CI avec artefact optionnel `RBITNET_TEST_GGUF` |
-| Processus **release** : version workspace, tag, changelog | `README` + `docs/RELEASE.md` (court) |
+| Action | Deliverable |
+|--------|-------------|
+| Caps on JSON body size, prompt length, `max_tokens`, effective context size | `413` / `400` with clear messages |
+| Per-request timeouts (inference + I/O) | No requests blocked indefinitely |
+| Explicit handling of **OOM** / failed mmap / missing file | Typed errors, logs, no user-facing panic |
+| **Concurrency** policy (semaphore / queue) | Configurable max simultaneous generations |
+| Light-load **integration** tests (several sequential / few parallel requests) | CI test or documented script |
 
 ---
 
-## Phase 6 — Documentation et communication
+## Phase 2 — Performance and resources
 
-| Action | Livrable |
-|--------|----------|
-| Mettre à jour **USAGE**, **TRAINING_AND_COMPATIBILITY**, README avec critères prod | Cohérence avec ce plan |
-| Page **« Limitations »** (perf, types, archs) | Évite les attentes irréalistes |
-| Guide **déploiement** (systemd, Docker optionnel, reverse proxy) | Au moins un scénario de référence |
+| Action | Deliverable |
+|--------|-------------|
+| Reproducible **benchmarks** (fixed prompt, fixed length, `--release`) | `docs/BENCHMARKS.md` + numbers for reference models |
+| Profile hot paths (matmul, attention, dequant) | Short report + prioritized issues |
+| **CPU** optimization paths (SIMD, threads, fewer allocations) | Incremental implementations behind measurable criteria |
+| (Optional) Document **RAM ceiling** per model and hardware notes | Doc section |
 
----
-
-## Priorisation suggérée (MVP prod interne)
-
-1. Phase **1** (limites + timeouts + concurrence) — bloque les incidents les plus fréquents.  
-2. Phase **4** (logs + health) — indispensable pour opérer.  
-3. Phase **2** (bench + perf CPU raisonnable) — crédibilise l’usage réel.  
-4. Phase **3** (sécurité) — avant toute exposition Internet.  
-5. Phases **5** et **6** — en parallèle dès que la stabilité fonctionnelle est là.
+*Note: GPU support or calling an external backend can be a **later phase** if the product stance is “Rust CPU only.”*
 
 ---
 
-## Métriques de suivi (exemples)
+## Phase 3 — Security and exposure
 
-| Indicateur | Cible indicative (à ajuster) |
-|------------|-------------------------------|
-| Tests CI | 100 % sur la branche release |
-| Couverture des cas d’erreur (entrée, fichier, tokenizer) | Tous les chemins documentés testés ou explicitement « non supporté » |
-| Latence p95 (prompt court, modèle ref., CPU ref.) | Fixée et publiée dans `BENCHMARKS.md` |
-| Uptime attendu (interne) | Pas de fuite mémoire sur charge modérée longue durée |
+| Action | Deliverable |
+|--------|-------------|
+| Review **user inputs** (chat, file paths from env) | No arbitrary traversal; strict validation |
+| **Auth**: API key via header or `--api-key`, or explicit doc “only behind Nginx + auth” | Documented choice + minimal implementation if needed |
+| **CORS** and bind: default `127.0.0.1`; warning if `0.0.0.0` | README + log at startup |
+| Dependency scan / `cargo audit` in CI | CI job or release checklist |
 
 ---
 
-## Révision
+## Phase 4 — Observability and operations
 
-Ce plan doit être **révisé** après chaque release majeure ou si le périmètre produit change (ex. support GPU, multi-modèles).
+| Action | Deliverable |
+|--------|-------------|
+| Metrics (Prometheus or simple stats): requests, durations, errors, tokens | `/metrics` endpoint or documented export |
+| Structured logs (level, duration, `task_id` / `request_id`) | Stable format |
+| **Health**: `GET /health` or `/ready` (liveness vs readiness when model is loaded) | Spec for orchestrators |
+| **Summarized** environment variables validated at startup | Clear error if config is invalid |
+
+---
+
+## Phase 5 — Quality and compatibility
+
+| Action | Deliverable |
+|--------|-------------|
+| Extend / freeze **supported GGML types** or explicit errors | Table in docs |
+| **Tensor name aliases** or tests on two exports (llama.cpp / BitNet) | Fewer “silent” failures on valid GGUFs |
+| **Regression** suite (golden logits or short-prompt text) | CI with optional `RBITNET_TEST_GGUF` artifact |
+| **Release** process: workspace version, tag, changelog | `README` + short `docs/RELEASE.md` |
+
+---
+
+## Phase 6 — Documentation and communication
+
+| Action | Deliverable |
+|--------|-------------|
+| Update **USAGE**, **TRAINING_AND_COMPATIBILITY**, README with prod criteria | Aligned with this plan |
+| **“Limitations”** page (perf, types, archs) | Sets realistic expectations |
+| **Deployment** guide (systemd, optional Docker, reverse proxy) | At least one reference scenario |
+
+---
+
+## Suggested prioritization (internal prod MVP)
+
+1. Phase **1** (limits + timeouts + concurrency) — blocks the most common incidents.
+2. Phase **4** (logs + health) — essential to operate.
+3. Phase **2** (bench + reasonable CPU perf) — makes real use credible.
+4. Phase **3** (security) — before any Internet exposure.
+5. Phases **5** and **6** — in parallel once functional stability is there.
+
+---
+
+## Tracking metrics (examples)
+
+| Indicator | Indicative target (to adjust) |
+|-----------|-------------------------------|
+| CI tests | 100% on the release branch |
+| Error-path coverage (input, file, tokenizer) | All paths tested or explicitly “unsupported” |
+| p95 latency (short prompt, ref model, ref CPU) | Fixed and published in `BENCHMARKS.md` |
+| Expected uptime (internal) | No memory leak under moderate sustained load |
+
+---
+
+## Revision
+
+This plan should be **revised** after each major release or if product scope changes (e.g. GPU support, multi-model).

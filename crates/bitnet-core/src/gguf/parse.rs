@@ -56,6 +56,11 @@ impl GgufArchive {
         self.tensors.iter().find(|t| t.name == name)
     }
 
+    /// First tensor whose name matches one of `names` (order is priority).
+    pub fn tensor_first_of(&self, names: &[&str]) -> Option<&GgufTensorInfo> {
+        names.iter().find_map(|&n| self.tensor_by_name(n))
+    }
+
     /// Raw payload bytes for a tensor (size matches [`crate::ggml::ggml_nbytes`]).
     pub fn tensor_payload(&self, t: &GgufTensorInfo) -> Result<&[u8]> {
         let n = crate::ggml::ggml_nbytes(&t.dimensions, t.ggml_type)?;

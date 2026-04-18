@@ -34,6 +34,14 @@ $env:RBITNET_BIND="127.0.0.1:8080"
 cargo run -p bitnet-server --bin rbitnet-server --release
 ```
 
+**Health and metrics (operations):**
+
+```bash
+curl -s http://127.0.0.1:8080/health
+curl -s http://127.0.0.1:8080/ready
+curl -s http://127.0.0.1:8080/metrics
+```
+
 **Check models list:**
 
 ```bash
@@ -61,15 +69,31 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 
 ## Environment variables
 
+### Engine
+
 | Variable | Meaning |
 |----------|---------|
 | `RBITNET_BIND` | Listen address (default `127.0.0.1:8080`). |
-| `RBITNET_MODEL` | Path to a `.gguf` file. |
-| `RBITNET_TOKENIZER` | Path to `tokenizer.json` or `tokenizer.model` if not next to the GGUF. |
+| `RBITNET_MODEL` | Path to a `.gguf` file (must not contain `..` path components). |
+| `RBITNET_TOKENIZER` | Path to `tokenizer.json` if not next to the GGUF (must not contain `..`). |
 | `RBITNET_STUB` | `1` / `true` / `yes` — stub responses (overrides real inference when set). |
 | `RBITNET_TOY` | `1` — toy LM instead of GGUF. |
 | `RBITNET_TOY_SEED` | Integer seed for the toy LM (default `42`). |
 | `RBITNET_TEST_GGUF` | Used only by the `optional_gguf_from_env_smoke` test in `bitnet-core`. |
+
+### Server limits and security (`rbitnet-server`)
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `RBITNET_MAX_BODY_BYTES` | `1048576` | Max JSON body size for `/v1/chat/completions` (HTTP 413 if exceeded). |
+| `RBITNET_MAX_PROMPT_CHARS` | `256000` | Max UTF-8 characters in the built prompt (HTTP 400). |
+| `RBITNET_MAX_TOKENS_CAP` | `8192` | Hard ceiling on client `max_tokens` (HTTP 400 if higher). |
+| `RBITNET_MAX_CONCURRENT` | `4` | Simultaneous blocking inference tasks (HTTP 503 when saturated). |
+| `RBITNET_INFERENCE_TIMEOUT_SECS` | `600` | Wall-clock limit per completion (HTTP 504). |
+| `RBITNET_API_KEY` | unset | If set, `Authorization: Bearer <key>` or `X-API-Key: <key>` is required on `/`, `/v1/models`, and `/v1/chat/completions` (not on `/health`, `/ready`, `/metrics`). |
+| `RBITNET_CORS_ANY` | unset | Set to `1` only for dev to allow any CORS origin. |
+
+Binding to `0.0.0.0` or `[::]` logs a warning: use a reverse proxy and TLS for untrusted networks ([DEPLOYMENT.md](DEPLOYMENT.md)).
 
 ## Inspect a GGUF (no server)
 
