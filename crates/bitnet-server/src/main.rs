@@ -74,7 +74,7 @@ async fn main() {
         info!("no RBITNET_MODEL — set RBITNET_STUB=1 or RBITNET_TOY=1 for testing without weights");
     }
 
-    if !engine.is_ready() {
+    if engine.has_gguf() && !engine.is_ready() {
         warn!(
             "readiness: tokenizer not found next to GGUF; /ready will return 503 until tokenizer.json is available"
         );

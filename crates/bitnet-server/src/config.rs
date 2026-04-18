@@ -39,7 +39,9 @@ impl ServerConfig {
     pub fn from_env() -> Result<Self, String> {
         let max_body_bytes = parse_usize("RBITNET_MAX_BODY_BYTES", 1024 * 1024)?;
         let max_prompt_chars = parse_usize("RBITNET_MAX_PROMPT_CHARS", 256_000)?;
-        let max_tokens_cap = parse_u64("RBITNET_MAX_TOKENS_CAP", 8192)? as u32;
+        let max_tokens_cap_raw = parse_u64("RBITNET_MAX_TOKENS_CAP", 8192)?;
+        let max_tokens_cap = u32::try_from(max_tokens_cap_raw)
+            .map_err(|_| format!("RBITNET_MAX_TOKENS_CAP: value {max_tokens_cap_raw} exceeds u32::MAX"))?;
         let max_concurrent = parse_usize("RBITNET_MAX_CONCURRENT", 4)?.max(1);
         let inference_timeout_secs = parse_u64("RBITNET_INFERENCE_TIMEOUT_SECS", 600)?;
         let api_key = std::env::var("RBITNET_API_KEY")

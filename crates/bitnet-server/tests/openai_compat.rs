@@ -214,6 +214,129 @@ async fn chat_accepts_bearer_api_key() {
     assert!(res.status().is_success());
 }
 
+/// X-API-Key header should be accepted as an alternative to Authorization: Bearer.
+#[tokio::test]
+async fn chat_accepts_x_api_key_header() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+
+    let config = Arc::new(ServerConfig {
+        api_key: Some("correct".into()),
+        ..ServerConfig::test_defaults()
+    });
+    let app = create_app_with_config(engine, config);
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "stream": false
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .header("x-api-key", "correct")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert!(res.status().is_success());
+}
+
+/// Authorization Bearer scheme matching must be case-insensitive (RFC 7235).
+#[tokio::test]
+async fn chat_accepts_uppercase_bearer_scheme() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+
+    let config = Arc::new(ServerConfig {
+        api_key: Some("correct".into()),
+        ..ServerConfig::test_defaults()
+    });
+    let app = create_app_with_config(engine, config);
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "stream": false
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .header("authorization", "BEARER correct")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert!(res.status().is_success());
+}
+
+/// Auth must be enforced on GET / and GET /v1/models when an API key is configured.
+#[tokio::test]
+async fn get_routes_require_api_key_when_configured() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+
+    let config = Arc::new(ServerConfig {
+        api_key: Some("secret".into()),
+        ..ServerConfig::test_defaults()
+    });
+
+    for path in ["/", "/v1/models"] {
+        // No credentials → 401
+        let app = create_app_with_config(Arc::clone(&engine), Arc::clone(&config));
+        let res = app
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap_or_else(|e| panic!("{path}: {e}"));
+        assert_eq!(
+            res.status(),
+            http::StatusCode::UNAUTHORIZED,
+            "{path}: expected 401 without credentials"
+        );
+
+        // Valid X-API-Key → 2xx
+        let app = create_app_with_config(Arc::clone(&engine), Arc::clone(&config));
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri(path)
+                    .header("x-api-key", "secret")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("{path}: {e}"));
+        assert!(
+            res.status().is_success(),
+            "{path}: expected 2xx with valid X-API-Key, got {}",
+            res.status()
+        );
+    }
+}
+
 /// Phase 1 plan: light parallel load; `max_concurrent=2` should still complete three stub requests.
 #[tokio::test]
 async fn parallel_stub_chats_under_concurrency_cap() {

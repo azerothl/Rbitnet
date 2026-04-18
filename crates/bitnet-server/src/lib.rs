@@ -41,11 +41,11 @@ pub struct AppState {
 }
 
 /// Build the Axum app using [`ServerConfig::from_env`].
-pub fn create_app(engine: Arc<Engine>) -> Router {
-    let config = Arc::new(
-        ServerConfig::from_env().expect("invalid RBITNET_* server configuration (see docs/USAGE.md)"),
-    );
-    create_app_with_config(engine, config)
+///
+/// Returns an error if any `RBITNET_*` environment variable contains an invalid value.
+pub fn create_app(engine: Arc<Engine>) -> Result<Router, String> {
+    let config = Arc::new(ServerConfig::from_env()?);
+    Ok(create_app_with_config(engine, config))
 }
 
 /// Build the Axum app with an explicit config (tests and embedders).
@@ -135,7 +135,17 @@ fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
     let ok = headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer ").or_else(|| s.strip_prefix("bearer ")))
+        .and_then(|s| {
+            // RFC 7235: auth-scheme tokens are case-insensitive.
+            let mut parts = s.splitn(2, ' ');
+            let scheme = parts.next()?;
+            let token = parts.next()?.trim();
+            if scheme.eq_ignore_ascii_case("bearer") {
+                Some(token)
+            } else {
+                None
+            }
+        })
         .map(|t| t == key.as_str())
         .unwrap_or(false)
         || headers
@@ -364,7 +374,16 @@ async fn chat_completions(
                 .fetch_add(1, Ordering::Relaxed);
             Ok(t)
         }
-        Ok(Ok(Err(e))) => Err(e),
+        Ok(Ok(Err(e))) => {
+            let ms = start.elapsed().as_millis() as u64;
+            metrics
+                .inference_ms_total
+                .fetch_add(ms, Ordering::Relaxed);
+            metrics
+                .inference_calls_total
+                .fetch_add(1, Ordering::Relaxed);
+            Err(e)
+        }
         Ok(Err(_join_err)) => {
             metrics
                 .chat_errors_total
