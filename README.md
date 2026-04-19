@@ -8,6 +8,8 @@ Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP se
 
 You only need **Python (or other tools)** if you are **converting** a Hugging Face / Safetensors checkpoint into **GGUF** upstream (for example Microsoft BitNet or `llama.cpp` converters). That is export-time, not a runtime dependency.
 
+Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF weights (`huggingface_hub`), print `RBITNET_*` lines; **calling Microsoft BitNet is optional** — see [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md).
+
 **Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, curl examples).
 
 ## Status
@@ -18,6 +20,7 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
   - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
+  - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion

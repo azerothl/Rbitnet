@@ -1,6 +1,6 @@
 # Benchmarks and performance baselines
 
-Reproducible numbers belong here for **Phase 2** of [`PLAN_PRODUCTION.md`](PLAN_PRODUCTION.md).
+Reproducible numbers belong here for **Phase 2** of [`PLAN_PRODUCTION.md`](PLAN_PRODUCTION.md). The table below is a **template** until a baseline is measured and filled in (see [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md)).
 
 For **CPU profiling** workflow (perf, flamegraph, what to inspect in code), see [PROFILING.md](PROFILING.md).
 

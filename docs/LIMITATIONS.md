@@ -14,7 +14,7 @@ This page sets expectations for performance, formats, and architectures. For com
 
 ## Tokenizer
 
-- The bundled generation path loads **`tokenizer.json`** via the Hugging Face `tokenizers` crate. If your workflow only produced `tokenizer.model`, convert or obtain a compatible `tokenizer.json` for Rbitnet.
+- The bundled generation path loads `**tokenizer.json`** via the Hugging Face `tokenizers` crate. If your workflow only produced `tokenizer.model`, convert or obtain a compatible `tokenizer.json` for Rbitnet (see [USAGE.md](USAGE.md)).
 
 ## HTTP server
 

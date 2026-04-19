@@ -1,0 +1,2 @@
+# Optional: for scripts/setup_env.py (HF download)
+huggingface_hub>=0.23.0

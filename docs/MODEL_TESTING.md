@@ -1,51 +1,99 @@
 # Testing Rbitnet with Hugging Face models (e.g. `bitnet_b1_58-large`)
 
-This guide uses **[1bitLLM/bitnet_b1_58-large](https://huggingface.co/1bitLLM/bitnet_b1_58-large)** as the reference checkpoint. That repo publishes **Safetensors** (FP32 weights). Rbitnet’s loader expects **GGUF**, which you produce with **Microsoft BitNet**’s conversion tooling—not by pointing Rbitnet at the `.safetensors` file directly.
+## No Microsoft BitNet required to *run* Rbitnet
 
-## What works today
+**Rbitnet has zero runtime dependency on the Microsoft BitNet repository.** It is pure Rust: point `RBITNET_MODEL` at a `**.gguf*`* file and provide `**tokenizer.json**` (see [USAGE.md](USAGE.md)). No checkout, no BitNet CMake, no `bitnet.cpp`.
 
-- **Parse** a BitNet- or llama-compatible GGUF: metadata, tensor table, mmap’d weight blob.
-- **Inference** in pure Rust: dequantize + Llama-shaped forward + tokenizer-driven generation (see **[USAGE.md](USAGE.md)**).
-- **HTTP server**: `GET /v1/models` shows `rbitnet-<architecture>` (e.g. `rbitnet-llama` when `general.architecture` is `llama`); `POST /v1/chat/completions` runs real generation when `RBITNET_MODEL` and a tokenizer are set (use `RBITNET_STUB=1` or `RBITNET_TOY=1` only for smoke tests without weights).
+What you need is **a file**: a Llama-shaped, GGUF-packaged model. *Where that GGUF comes from* is separate from Rbitnet.
 
-Use this flow to **convert** HF / Safetensors checkpoints to GGUF (Python upstream), then run Rbitnet **without Python** at runtime.
+---
 
-## Prerequisites
+## Path 1 — You already have a `.gguf` (recommended if you want zero BitNet)
 
-- Python 3.9+, CMake, Clang (see [microsoft/BitNet](https://github.com/microsoft/BitNet) README).
-- Clone BitNet with submodules:
+Use any GGUF produced by **any** toolchain, as long as it is compatible with Rbitnet’s loader (llama metadata + tensor names — see [BITNET_SPEC.md](BITNET_SPEC.md)):
 
-```bash
-git clone --recursive https://github.com/microsoft/BitNet.git
-cd BitNet
-pip install -r requirements.txt
-```
+- A **community upload** on Hugging Face (search for `.gguf` in the model files).
+- A file built on another machine with **llama.cpp** converters (`convert_hf_to_gguf.py`, etc.) for a standard Llama-family checkpoint.
+- A file shared by a colleague or CI artifact.
 
-Follow BitNet’s platform notes (Windows: VS + Clang toolchain as documented upstream).
+Then skip straight to **[Validate with Rbitnet](#validate-with-rbitnet)** below. No Python, no BitNet.
 
-## Option A — `setup_env.py` (recommended)
+---
 
-BitNet’s `setup_env.py` can download a Hugging Face repo and prepare the environment for inference. For the **0.7B** `bitnet_b1_58-large` model, use the repo id **`1bitLLM/bitnet_b1_58-large`** (supported in upstream help where listed).
+## Path 2 — Download weights only (no BitNet clone)
 
-Example (adjust `--model-dir` and `-q` per [BitNet README](https://github.com/microsoft/BitNet)):
+If you only need the Hugging Face **Safetensors** tree locally before converting elsewhere:
 
 ```bash
-python setup_env.py --hf-repo 1bitLLM/bitnet_b1_58-large --model-dir models/bitnet_b1_58-large -q i2_s
+pip install -r scripts/requirements-setup.txt
+python scripts/setup_env.py download --hf-repo 1bitLLM/bitnet_b1_58-large --model-dir models
 ```
 
-Alternatively, download Safetensors first:
+This uses `**huggingface_hub` only** (listed in `scripts/requirements-setup.txt`). It does **not** clone Microsoft BitNet.
+
+You must still convert Safetensors → GGUF with **some** converter (see next section). Rbitnet does not ship that conversion in Rust.
+
+---
+
+## Path 3 — Converting without Microsoft BitNet (conceptual)
+
+- **Standard Llama / Mistral-style** checkpoints are often convertible with **[llama.cpp](https://github.com/ggml-org/llama.cpp)** `convert_hf_to_gguf.py` (or newer equivalents), then you run Rbitnet on the resulting GGUF.
+- **BitNet-specific 1.58-bit** checkpoints (e.g. `1bitLLM/bitnet_b1_58-large`) use custom layouts; practical options are: obtain an **already converted GGUF** from the community, or use Microsoft’s tooling **once** if no alternative exists. Rbitnet itself does not mandate which converter you use.
+
+---
+
+## Path 4 — Microsoft BitNet tooling (optional, only if you choose it)
+
+Use this **only** if you want the upstream `**convert-hf-to-gguf-bitnet.py`** / `llama-quantize` pipeline from [microsoft/BitNet](https://github.com/microsoft/BitNet).
+
+Prerequisites: Python, CMake, Clang (see BitNet README). Clone BitNet with submodules and follow their docs.
+
+Example inside a BitNet clone:
 
 ```bash
-huggingface-cli download 1bitLLM/bitnet_b1_58-large --local-dir ./models/bitnet_b1_58-large-src
+python setup_env.py --hf-repo 1bitLLM/bitnet_b1_58-large --model-dir models -q i2_s
 ```
 
-Then use BitNet’s conversion path documented for local checkpoints (e.g. `convert-helper-bitnet.py` / `setup_env.py -md` on the downloaded folder), producing a `*.gguf` under your `models/` tree.
+From the Rbitnet repo you can **delegate** to that script without retyping repo ids:
 
-Exact output filenames (e.g. `ggml-model-i2_s.gguf`) depend on BitNet version—check the directory after the run.
+```bash
+export BITNET_ROOT=/path/to/BitNet
+python scripts/setup_env.py bitnet-setup --hf-repo 1bitLLM/bitnet_b1_58-large --model-dir models -q i2_s
+```
 
-## Option B — Quick inspection only (no BitNet build)
+This is **optional** convenience; it does not change Rbitnet’s runtime.
 
-If you already have a **BitNet-compatible `.gguf`** from another machine, skip straight to validation below.
+---
+
+## Helper: `scripts/setup_env.py` (no BitNet needed for most commands)
+
+
+| Command           | Needs BitNet clone?                    |
+| ----------------- | -------------------------------------- |
+| `list-models`     | No                                     |
+| `download`        | No (only `huggingface_hub`)            |
+| `env --gguf PATH` | No                                     |
+| `doctor`          | No                                     |
+| `bitnet-setup`    | **Yes** — runs BitNet’s `setup_env.py` |
+
+
+```bash
+python scripts/setup_env.py env --gguf /path/to/model.gguf
+```
+
+---
+
+## Reference: `bitnet_b1_58-large` on Hugging Face
+
+This guide often cites **[1bitLLM/bitnet_b1_58-large](https://huggingface.co/1bitLLM/bitnet_b1_58-large)**. That repo ships **Safetensors** (FP32). Rbitnet does **not** read Safetensors directly — you need a **GGUF** on disk. The conversion step is upstream of Rbitnet; BitNet’s repo is one possible converter, not a dependency of the Rbitnet binary.
+
+## What works today in Rbitnet
+
+- **Parse** a Llama-compatible GGUF: metadata, tensor table, mmap’d weights.
+- **Inference** in pure Rust: dequantize + forward + tokenizer-driven generation (see **[USAGE.md](USAGE.md)**).
+- **HTTP server**: OpenAI-shaped API when `RBITNET_MODEL` and tokenizer are set (or stub/toy for tests).
+
+---
 
 ## Validate with Rbitnet
 
@@ -101,4 +149,4 @@ If `RBITNET_TEST_GGUF` is unset, the test **passes without doing I/O** (skipped 
 - **Format on HF**: Safetensors, ~729M parameters (FP32 in repo)
 - **License**: MIT (see model card)
 
-For BitNet-accurate inference speeds and numerics, compare against **bitnet.cpp** in the Microsoft repo; Rbitnet aims for a pure-Rust path with golden checks (see [GOLDEN_TESTS.md](GOLDEN_TESTS.md)).
+For BitNet-accurate inference speeds and numerics in *their* stack, compare against **bitnet.cpp** in the Microsoft repo; Rbitnet is a separate pure-Rust implementation (see [GOLDEN_TESTS.md](GOLDEN_TESTS.md)).

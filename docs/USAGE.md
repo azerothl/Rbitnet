@@ -117,8 +117,8 @@ The first call that needs generation will load the tokenizer (same rules as abov
 ## Limitations and troubleshooting
 
 - **Quantization types:** Some rare GGML types may not be implemented yet; loading can fail with `UnsupportedGgmlType`. Prefer widely used types (for example Q4_K, Q8_0, or F16 layers) or re-export with a supported layout.
-- **Tensor names:** The loader expects **llama.cpp-style** names (`token_embd.weight`, `blk.N.attn_q.weight`, …). Custom exports may need renaming or a small fork of the loader.
+- **Tensor names:** The loader expects **llama.cpp-style** names, with a few **aliases** (for example `lm_head.weight` vs `output.weight`). See [BITNET_SPEC.md](BITNET_SPEC.md). Odd exports may still need renaming or loader tweaks.
 - **Context length:** Generation is bounded by `llama.context_length` (capped internally for safety). Very long prompts can hit limits or run slowly on CPU.
 - **Performance:** Pure Rust + dequantized matmuls is correct but not as fast as highly optimized C++/GPU stacks; for production throughput, profile on your hardware.
 
-For golden tests and regression expectations, see [GOLDEN_TESTS.md](GOLDEN_TESTS.md). For HF → GGUF conversion workflows, see [MODEL_TESTING.md](MODEL_TESTING.md).
+For golden tests and regression expectations, see [GOLDEN_TESTS.md](GOLDEN_TESTS.md). For HF → GGUF conversion workflows, see [MODEL_TESTING.md](MODEL_TESTING.md). For **what is implemented vs still planned** (production roadmap), see [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md).

@@ -2,6 +2,8 @@
 
 Workspace version lives in the root `Cargo.toml` (`[workspace.package].version`). Keep it aligned with tags and notes.
 
+Overall **feature and gap tracking** for the repo: [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md).
+
 ## Prebuilt binaries (GitHub Actions)
 
 Pushing a tag matching `v*` (for example `v0.2.0`) runs [`.github/workflows/release.yml`](../.github/workflows/release.yml). It builds **`rbitnet-server`** in release mode (`cargo build -p bitnet-server --release --locked`) on **Linux (x86_64)**, **Windows (x86_64)**, and **macOS** (architecture matches the runner, e.g. `arm64` on Apple Silicon), then uploads archives to a **GitHub Release** for that tag:
