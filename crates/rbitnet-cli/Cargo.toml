@@ -1,0 +1,22 @@
+[package]
+name = "rbitnet-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CLI for Rbitnet: curated HF model list, search, download, optional serve"
+
+[[bin]]
+name = "rbitnet"
+path = "src/main.rs"
+
+[dependencies]
+bitnet-server = { path = "../bitnet-server" }
+clap = { version = "4", features = ["derive", "env"] }
+hf-hub = "0.4"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+ureq = { version = "2", features = ["json"] }
+urlencoding = "2"

@@ -6,6 +6,26 @@
 
 You **only need Python (or another stack)** if you are **converting** checkpoints from Hugging Face Safetensors into **GGUF** using upstream tools (for example [microsoft/BitNet](https://github.com/microsoft/BitNet) scripts). That is a one-time **export** step on the machine where you build the file, not a runtime dependency of `rbitnet-server`.
 
+## Hugging Face: curated list, search, and download (no Python)
+
+The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, can **search** the Hugging Face Hub for repos that expose **`.gguf`** files, and **downloads** files into a directory using the same cache layout as the Python hub (`HF_TOKEN` / `--token` for gated models).
+
+| Command | Purpose |
+|--------|---------|
+| `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
+| `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). |
+| `rbitnet models download <repo_id> [--dir DIR] [--file NAME]...` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). |
+| `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). |
+
+**Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results; repos that ship **only Safetensors** are naturally excluded when no `.gguf` exists in the tree.
+
+```bash
+cargo build -p rbitnet-cli --release
+./target/release/rbitnet models list
+./target/release/rbitnet models search llama
+./target/release/rbitnet models download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --dir ./models --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --file tokenizer.json
+```
+
 ## Requirements to run a real model
 
 1. A **`.gguf`** file with **Llama-compatible** layout (see [BITNET_SPEC.md](BITNET_SPEC.md) and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)).

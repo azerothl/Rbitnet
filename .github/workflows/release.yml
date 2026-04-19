@@ -39,8 +39,8 @@ jobs:
         with:
           shared-key: release-${{ matrix.os }}
 
-      - name: Build rbitnet-server (release)
-        run: cargo build -p bitnet-server --bin rbitnet-server --release --locked
+      - name: Build rbitnet-server and rbitnet CLI (release)
+        run: cargo build -p bitnet-server -p rbitnet-cli --release --locked
 
       - name: Package (Unix)
         if: matrix.package == 'unix'
@@ -54,7 +54,7 @@ jobs:
           else
             NAME="rbitnet-server-${{ github.ref_name }}-macos-${ARCH}"
           fi
-          tar czvf "../../${NAME}.tar.gz" rbitnet-server
+          tar czvf "../../${NAME}.tar.gz" rbitnet-server rbitnet
           cd ../..
           ls -la "${NAME}.tar.gz"
 
@@ -65,7 +65,7 @@ jobs:
           $arch = $env:PROCESSOR_ARCHITECTURE.ToLower()
           if ($arch -eq "amd64") { $arch = "x86_64" }
           $name = "rbitnet-server-${{ github.ref_name }}-windows-${arch}"
-          Compress-Archive -Path "target/release/rbitnet-server.exe" -DestinationPath "${name}.zip" -Force
+          Compress-Archive -Path "target/release/rbitnet-server.exe","target/release/rbitnet.exe" -DestinationPath "${name}.zip" -Force
           Get-ChildItem "${name}.zip"
 
       - name: Upload artifact (Unix)

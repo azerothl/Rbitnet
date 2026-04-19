@@ -20,6 +20,20 @@ Then skip straight to **[Validate with Rbitnet](#validate-with-rbitnet)** below.
 
 ---
 
+## Path 1b — List / search / download from Hugging Face (Rust CLI only)
+
+If you have the **`rbitnet`** binary (from a release archive or `cargo build -p rbitnet-cli`), you do **not** need `scripts/setup_env.py` to discover or fetch **`.gguf`** files:
+
+- **`rbitnet models list`** — curated, versioned index (`data/compatible_models.json`); this is the only list the project treats as **recommended**.
+- **`rbitnet models search`** — Hub API search filtered to repos that expose at least one **`.gguf`** file. Results are **not** guaranteed compatible with Rbitnet until tested; stderr prints an explicit warning.
+- **`rbitnet models download`** — uses the Hugging Face cache and copies into `--dir`. Set **`HF_TOKEN`** (or pass a token flag) for gated repositories.
+
+Repos that contain **only Safetensors** will not appear in search results that require a `.gguf` sibling; you still need an external conversion step to produce GGUF if you only have Safetensors.
+
+See [USAGE.md](USAGE.md) for flags and environment variables.
+
+---
+
 ## Path 2 — Download weights only (no BitNet clone)
 
 If you only need the Hugging Face **Safetensors** tree locally before converting elsewhere:
