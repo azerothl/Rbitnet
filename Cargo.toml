@@ -10,7 +10,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/loicpeaudecerf/Rbitnet"
+repository = "https://github.com/azerothl/Rbitnet"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }

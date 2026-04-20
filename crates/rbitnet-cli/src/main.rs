@@ -3,7 +3,10 @@
 mod catalog;
 mod download;
 mod hf_search;
+mod hub_http;
+mod interactive_models;
 
+use std::fs;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -30,16 +33,36 @@ enum ModelsCmd {
         /// Override the default GitHub raw URL for `compatible_models.json`.
         #[arg(long, env = "RBITNET_MODELS_INDEX_URL")]
         index_url: Option<String>,
+        /// Tableau interactif (ratatui) : détail par ligne et téléchargement (touche `d`).
+        #[arg(short, long)]
+        interactive: bool,
+        /// Répertoire cible pour `d` dans le mode interactif (défaut : `models`).
+        #[arg(long, env = "RBITNET_DOWNLOAD_DIR", default_value = "models")]
+        download_dir: PathBuf,
+        /// Jeton Hugging Face (modèles privés / rate limit) pour le téléchargement depuis le TUI.
+        #[arg(long, env = "HF_TOKEN")]
+        token: Option<String>,
     },
     /// Search Hugging Face for model repos that expose at least one `.gguf` file.
     Search {
         query: String,
-        #[arg(long, default_value_t = 25)]
+        #[arg(long, default_value_t = 50)]
         search_limit: usize,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 120)]
         max_inspect: usize,
+        /// Keep only repos that heuristically look like BitNet candidates (`likely`/`possible`).
+        /// Enabled by default.
+        #[arg(long)]
+        strict_bitnet: bool,
+        /// Disable strict BitNet filtering and show all GGUF repos.
+        #[arg(long)]
+        all_gguf: bool,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
+        #[arg(short, long)]
+        interactive: bool,
+        #[arg(long, env = "RBITNET_DOWNLOAD_DIR", default_value = "models")]
+        download_dir: PathBuf,
     },
     /// Download files from a Hugging Face model repo (uses HF cache, then copies into `--dir`).
     Download {
@@ -52,6 +75,27 @@ enum ModelsCmd {
         dir: PathBuf,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
+    },
+    /// Build a `compatible_models.json` skeleton from Hugging Face (one GGUF + tokenizer per repo when found).
+    ///
+    /// Output is meant to be reviewed and committed; it does not replace project testing.
+    GenerateCatalog {
+        /// Hub search string. Default `gguf` surfaces repos that usually ship `.gguf` files;
+        /// `llama` alone tends to return Safetensors-only Meta repos first.
+        #[arg(long, default_value = "gguf")]
+        query: String,
+        #[arg(long, default_value_t = 100)]
+        search_limit: usize,
+        /// Max `/api/models/{repo}` fetches (skips non-GGUF repos without counting toward `--max-entries`).
+        #[arg(long, default_value_t = 250)]
+        max_inspect: usize,
+        #[arg(long, default_value_t = 40)]
+        max_entries: usize,
+        #[arg(long, env = "HF_TOKEN")]
+        token: Option<String>,
+        /// Write JSON to this path instead of stdout.
+        #[arg(long)]
+        output: Option<PathBuf>,
     },
 }
 
@@ -81,37 +125,86 @@ fn print_catalog_list(url: &str) -> Result<(), String> {
 
 fn run_models(cmd: ModelsCmd) -> Result<(), String> {
     match cmd {
-        ModelsCmd::List { index_url } => {
+        ModelsCmd::List {
+            index_url,
+            interactive,
+            download_dir,
+            token,
+        } => {
             let url = index_url
                 .unwrap_or_else(|| catalog::DEFAULT_MODELS_INDEX_URL.to_string());
-            print_catalog_list(&url)
+            if interactive {
+                interactive_models::run_catalog_interactive(&url, token, download_dir)
+            } else {
+                print_catalog_list(&url)
+            }
         }
         ModelsCmd::Search {
             query,
             search_limit,
             max_inspect,
+            strict_bitnet: _strict_bitnet_flag,
+            all_gguf,
             token,
+            interactive,
+            download_dir,
         } => {
+            let strict_bitnet = !all_gguf;
             eprintln!("{}", hf_search::SEARCH_WARNING);
+            if strict_bitnet {
+                eprintln!("strict-bitnet: enabled (keeps likely/possible BitNet candidates only).");
+            }
             eprintln!();
-            let hits = hf_search::search_gguf_models(
-                &query,
-                search_limit,
-                max_inspect,
-                token.as_deref(),
-            )?;
-            if hits.is_empty() {
-                println!("No repos with .gguf files found in the first inspected candidates (try a different query or increase --max-inspect).");
-                return Ok(());
-            }
-            for h in hits {
-                println!("{}", h.id);
-                for f in &h.gguf_files {
-                    println!("  {f}");
+            if interactive {
+                interactive_models::run_search_interactive(
+                    &query,
+                    search_limit,
+                    max_inspect,
+                    strict_bitnet,
+                    token,
+                    download_dir,
+                )
+            } else {
+                let hits = hf_search::search_gguf_models(
+                    &query,
+                    search_limit,
+                    max_inspect,
+                    strict_bitnet,
+                    token.as_deref(),
+                )?;
+                if hits.is_empty() {
+                    println!(
+                        "No repos with .gguf files found (try --query gguf / TheBloke, or raise --max-inspect / --search-limit)."
+                    );
+                    return Ok(());
                 }
-                println!();
+                for h in hits {
+                    println!(
+                        "{} [{}:{}]",
+                        h.id,
+                        h.confidence.label(),
+                        h.confidence_score
+                    );
+                    for f in &h.gguf_files {
+                        println!("  {f}");
+                    }
+                    if let Some(t) = &h.tokenizer_json {
+                        println!("  {t}");
+                    }
+                    if let Some(t) = &h.tokenizer_model {
+                        println!("  {t}");
+                    }
+                    if h.tokenizer_json.is_none() && h.tokenizer_model.is_none() {
+                        if let Some(t) = &h.tokenizer_config_json {
+                            println!("  {t}  (config only — see USAGE tokenizer note)");
+                        } else {
+                            println!("  (no tokenizer.json / tokenizer.model in repo file list)");
+                        }
+                    }
+                    println!();
+                }
+                Ok(())
             }
-            Ok(())
         }
         ModelsCmd::Download {
             repo_id,
@@ -129,6 +222,64 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             let paths = download::download_files(&repo_id, &resolved, &dir, token.as_deref())?;
             for p in paths {
                 println!("{}", p.display());
+            }
+            Ok(())
+        }
+        ModelsCmd::GenerateCatalog {
+            query,
+            search_limit,
+            max_inspect,
+            max_entries,
+            token,
+            output,
+        } => {
+            eprintln!("{}", hf_search::GENERATE_CATALOG_WARNING);
+            eprintln!();
+            let repos = hf_search::discover_gguf_repos(
+                &query,
+                search_limit,
+                max_inspect,
+                max_entries,
+                None,
+                token.as_deref(),
+            )?;
+            let mut models = Vec::new();
+            for r in repos {
+                let Some(primary) = catalog::pick_primary_gguf(&r.gguf_files) else {
+                    continue;
+                };
+                let mut files = vec![primary];
+                if let Some(tj) = r.tokenizer_json {
+                    files.push(tj);
+                } else if let Some(tm) = r.tokenizer_model {
+                    files.push(tm);
+                }
+                models.push(catalog::CatalogModel {
+                    id: catalog::catalog_id_from_repo(&r.id),
+                    repo: r.id.clone(),
+                    description: format!(
+                        "Auto-discovered on Hugging Face (search query: {query}). Primary GGUF chosen heuristically; not Rbitnet-CI-tested."
+                    ),
+                    files,
+                    min_rbitnet_version: None,
+                });
+            }
+            let cat = catalog::Catalog {
+                version: 1,
+                models,
+            };
+            if cat.models.is_empty() {
+                eprintln!(
+                    "hint: aucun dépôt avec fichiers .gguf trouvé pour cette requête. Essayez `--query gguf` ou `--query tinyllama`, ou augmentez `--max-inspect` / `--search-limit`."
+                );
+            }
+            let json = serde_json::to_string_pretty(&cat)
+                .map_err(|e| format!("serialize catalog: {e}"))?;
+            if let Some(path) = output {
+                fs::write(&path, json).map_err(|e| format!("write {}: {e}", path.display()))?;
+                eprintln!("Wrote {} model(s) to {}", cat.models.len(), path.display());
+            } else {
+                println!("{json}");
             }
             Ok(())
         }

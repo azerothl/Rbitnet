@@ -32,6 +32,14 @@ Repos that contain **only Safetensors** will not appear in search results that r
 
 See [USAGE.md](USAGE.md) for flags and environment variables.
 
+### Mettre à jour `data/compatible_models.json` sans saisie manuelle
+
+Pour remplir (ou régénérer) le catalogue à partir du Hub : **`rbitnet models generate-catalog`** — même principe que la recherche HF, mais écrit un JSON au schéma `compatible_models.json` (un GGUF « principal » par dépôt + tokenizer si le fichier est listé côté Hub). **Ce n’est pas un test Rbitnet** : relire les entrées, retirer les dépôts douteux, éventuellement ajuster les noms de fichiers, puis commit.
+
+Exemple : `cargo run -p rbitnet-cli --release -- models generate-catalog --output data/compatible_models.json` (requête par défaut `gguf`). Pour cibler une famille : `--query llama --max-inspect 400`.
+
+Pour une liste **100 % exploratoire** sans toucher au dépôt, continue d’utiliser **`rbitnet models search <requête>`**.
+
 ---
 
 ## Path 2 — Download weights only (no BitNet clone)

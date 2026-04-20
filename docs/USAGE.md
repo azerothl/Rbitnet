@@ -13,18 +13,40 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | Command | Purpose |
 |--------|---------|
 | `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
-| `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). |
+| `rbitnet models list --interactive` (`-i`) | Same catalog in a **terminal UI** (table + detail panel + download with `d`). Target directory: `--download-dir` or `RBITNET_DOWNLOAD_DIR` (default `models`); optional `HF_TOKEN` for gated downloads. |
+| `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood. **Default mode is strict-bitnet** (`likely`/`possible` only). |
+| `rbitnet models search <query> --all-gguf` | Disable strict filtering and show all GGUF repos, including `generic-gguf`. |
+| `rbitnet models search <query> -i` | Same search as an **interactive** table (detail + `d` download like `models download` without `--file`). Press `f` to toggle `strict-bitnet` / `all-gguf`. |
+| `rbitnet models generate-catalog` | Build a `compatible_models.json` **draft** from Hub search (one GGUF + tokenizer per repo when found). Review before commit — see below. |
 | `rbitnet models download <repo_id> [--dir DIR] [--file NAME]...` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). |
 
-**Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results; repos that ship **only Safetensors** are naturally excluded when no `.gguf` exists in the tree.
+**Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
+
+**TLS / réseau (Windows) :** les appels Hub et `raw.githubusercontent.com` passent par **native-tls** (magasin de certificats de l’OS) et respectent **`HTTPS_PROXY` / `HTTP_PROXY`** si définis. En cas d’erreur du type « connexion fermée par l’hôte distant » (10054) ou échec d’init TLS, vérifier proxy / antivirus / inspection HTTPS d’entreprise.
+
+**Regénérer le fichier catalogue sans le remplir à la main:** `models generate-catalog` interroge l’API Hugging Face (comme `search`), choisit **un** fichier `.gguf` par dépôt (heuristique type `Q4_K_M` si présent) et ajoute `tokenizer.json` / `tokenizer.model` s’ils sont listés dans le dépôt. La requête par défaut est **`gguf`** (les recherches du type `llama` renvoient souvent d’abord des dépôts Safetensors sans `.gguf` à inspecter). La sortie est une **ébauche** à relire, puis à committer dans `data/compatible_models.json`.
 
 ```bash
 cargo build -p rbitnet-cli --release
 ./target/release/rbitnet models list
+# Tableau interactif : ↑/↓ ou j/k (ligne), PgUp/PgDn (détail), d (télécharger), q ou Échap (quitter)
+./target/release/rbitnet models list -i --download-dir ./models
 ./target/release/rbitnet models search llama
+./target/release/rbitnet models search llama --all-gguf
+./target/release/rbitnet models search gguf -i
+./target/release/rbitnet models search bitnet --strict-bitnet -i
+# Brouillon JSON vers stdout (ou --output data/compatible_models.json)
+./target/release/rbitnet models generate-catalog --max-entries 40 --output data/compatible_models.json
+# (défaut : `--query gguf` ; pour une famille précise : `--query llama` + `--max-inspect 400`)
 ./target/release/rbitnet models download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --dir ./models --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --file tokenizer.json
 ```
+
+**Mode interactif :** le catalogue ou les résultats de recherche s’affichent dans un **tableau** (ratatui). La ligne sélectionnée remplit le panneau **Détail** ; **`d`** télécharge les fichiers listés (catalogue curaté : liste du JSON ; recherche : `.gguf` + `tokenizer.json` / `tokenizer.model` **si** présents dans les siblings Hub). En recherche interactive, **`f`** bascule le filtre entre `strict-bitnet` et `all-gguf`. Répertoire cible : **`--download-dir`** ou variable d’environnement **`RBITNET_DOWNLOAD_DIR`** (défaut `models`). Jeton Hub optionnel : **`HF_TOKEN`** / **`--token`** (recherche et dépôts privés).
+
+**Heuristique BitNet (`confidence`) :** `likely-bitnet`, `possible-bitnet`, `generic-gguf` sont des **indices textuels** (nom de repo/fichiers) et non une validation formelle. Le mode strict (par défaut) combine le filtre Hub `other=bitnet` et cette heuristique pour réduire le bruit, puis il faut valider manuellement avant usage en production.
+
+**Tokenizers sur le Hub :** beaucoup de dépôts BitNet / Transformers documentent `AutoTokenizer.from_pretrained(...)` sans publier de `tokenizer.json` ou `tokenizer.model` dans le même dépôt que le GGUF (ex. tokenizer chargé depuis un autre repo, ou seulement des poids Safetensors). Rbitnet, lui, a besoin d’un **fichier** `tokenizer.json` ou `tokenizer.model` à côté du GGUF, ou de **`RBITNET_TOKENIZER`** pointant vers l’un de ces fichiers. La recherche `models search` ne peut lister que ce que l’API `siblings` expose ; si la carte du modèle renvoie vers un autre id Hugging Face pour le tokenizer, téléchargez ce fichier depuis ce dépôt ou fixez `RBITNET_TOKENIZER` en conséquence.
 
 ## Requirements to run a real model
 

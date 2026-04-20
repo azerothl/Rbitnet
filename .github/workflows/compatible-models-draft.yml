@@ -1,0 +1,55 @@
+# Produces a draft compatible_models.json from Hugging Face (manual run).
+# Download the artifact, review, then replace data/compatible_models.json in a normal PR.
+
+name: Compatible models draft (HF)
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: "Hugging Face Hub search string (default gguf surfaces GGUF-heavy repos)"
+        required: true
+        default: "gguf"
+      max_entries:
+        description: "Max repos in the JSON"
+        required: true
+        default: "40"
+      max_inspect:
+        description: "Max /api/models/{repo} detail fetches (skip Safetensors-only)"
+        required: true
+        default: "250"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build rbitnet CLI
+        run: cargo build -p rbitnet-cli --release --locked
+
+      - name: Generate catalog JSON
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          OUT="compatible_models.json"
+          ./target/release/rbitnet models generate-catalog \
+            --query "${{ inputs.query }}" \
+            --max-inspect "${{ inputs.max_inspect }}" \
+            --max-entries "${{ inputs.max_entries }}" \
+            --output "$OUT"
+          test -s "$OUT"
+          head -n 40 "$OUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatible_models-${{ inputs.query }}
+          path: compatible_models.json
