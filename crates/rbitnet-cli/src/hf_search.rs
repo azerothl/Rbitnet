@@ -16,6 +16,21 @@ pub(crate) fn hf_model_detail_url(repo_id: &str) -> String {
     format!("{HF_MODELS_API}/{path}")
 }
 
+/// `GET https://huggingface.co/{org}/{repo}/resolve/main/{file}` with per-segment path encoding.
+pub fn hf_resolve_main_url(repo_id: &str, file: &str) -> String {
+    let repo_path = repo_id
+        .split('/')
+        .map(|seg| urlencoding::encode(seg).into_owned())
+        .collect::<Vec<_>>()
+        .join("/");
+    let file_path = file
+        .split('/')
+        .map(|seg| urlencoding::encode(seg).into_owned())
+        .collect::<Vec<_>>()
+        .join("/");
+    format!("https://huggingface.co/{repo_path}/resolve/main/{file_path}")
+}
+
 pub const SEARCH_WARNING: &str = "Hub search returns repositories that contain `.gguf` files only. This does NOT guarantee BitNet 1-bit weights nor Rbitnet compatibility. Only the curated catalog (`rbitnet models list`) is project-tested.";
 
 pub const GENERATE_CATALOG_WARNING: &str = "This JSON is built from Hugging Face metadata only (repos with `.gguf`). GGUF does NOT imply BitNet 1-bit. Output is NOT validated by Rbitnet CI; review and trim before commit.";
@@ -38,6 +53,82 @@ impl BitnetConfidence {
 
     pub fn strict_match(self) -> bool {
         matches!(self, Self::Likely | Self::Possible)
+    }
+}
+
+/// Best-effort Rbitnet runtime readiness from Hub **siblings** only (no full GGUF parse).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RbitnetReadiness {
+    /// GGUF + tokenizer.json or tokenizer.model in the same repo file list.
+    Ready,
+    /// GGUF present but no tokenizer files in siblings.
+    NeedsTokenizer,
+    /// Only tokenizer_config.json or similar — tokenizer often lives elsewhere / AutoTokenizer.
+    NeedsExternalTokenizer,
+    /// Heuristic: repo id suggests a non-Llama family (e.g. Phi) that Rbitnet does not run.
+    UnsupportedArchLikely,
+    /// GGUF filename suggests BitNet-specific quant; dequant support may still fail.
+    ExperimentalGguf,
+}
+
+impl RbitnetReadiness {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::NeedsTokenizer => "needs_tokenizer",
+            Self::NeedsExternalTokenizer => "needs_external_tokenizer",
+            Self::UnsupportedArchLikely => "unsupported_arch_likely",
+            Self::ExperimentalGguf => "experimental_gguf",
+        }
+    }
+}
+
+fn gguf_filename_suggests_experimental_bitnet_quant(gguf_files: &[String]) -> bool {
+    gguf_files.iter().any(|f| {
+        let l = f.to_ascii_lowercase();
+        l.contains("i2_s")
+            || l.contains("tl1")
+            || l.contains("tq1_")
+            || l.contains("tq2_")
+            || l.contains("1.58")
+    })
+}
+
+fn repo_id_suggests_non_llama(repo_id: &str) -> bool {
+    let r = repo_id.to_ascii_lowercase();
+    r.contains("phi-4")
+        || r.contains("phi4-")
+        || r.contains("/phi4")
+        || r.contains("phi-3")
+        || r.contains("phi3")
+        || r.contains("phi3-")
+        || r.contains("phi3_")
+        || r.contains("phi-2")
+        || r.contains("falcon3")
+}
+
+fn rbitnet_readiness(
+    repo_id: &str,
+    gguf_files: &[String],
+    tokenizer_json: &Option<String>,
+    tokenizer_model: &Option<String>,
+    tokenizer_config_json: &Option<String>,
+) -> RbitnetReadiness {
+    if repo_id_suggests_non_llama(repo_id) {
+        return RbitnetReadiness::UnsupportedArchLikely;
+    }
+    let has_tok = tokenizer_json.is_some() || tokenizer_model.is_some();
+    let experimental = gguf_filename_suggests_experimental_bitnet_quant(gguf_files);
+    if has_tok {
+        if experimental {
+            RbitnetReadiness::ExperimentalGguf
+        } else {
+            RbitnetReadiness::Ready
+        }
+    } else if tokenizer_config_json.is_some() {
+        RbitnetReadiness::NeedsExternalTokenizer
+    } else {
+        RbitnetReadiness::NeedsTokenizer
     }
 }
 
@@ -210,6 +301,13 @@ pub fn search_gguf_models(
             .into_iter()
             .map(|r| {
                 let (confidence, score) = classify_bitnet_confidence(&r.id, &r.gguf_files);
+                let readiness = rbitnet_readiness(
+                    &r.id,
+                    &r.gguf_files,
+                    &r.tokenizer_json,
+                    &r.tokenizer_model,
+                    &r.tokenizer_config_json,
+                );
                 GgufSearchHit {
                     id: r.id,
                     gguf_files: r.gguf_files,
@@ -218,6 +316,7 @@ pub fn search_gguf_models(
                     tokenizer_config_json: r.tokenizer_config_json,
                     confidence,
                     confidence_score: score,
+                    readiness,
                 }
             })
             .filter(|h| !strict_bitnet || h.confidence.strict_match())
@@ -233,6 +332,7 @@ pub struct GgufSearchHit {
     pub tokenizer_config_json: Option<String>,
     pub confidence: BitnetConfidence,
     pub confidence_score: u8,
+    pub readiness: RbitnetReadiness,
 }
 
 fn classify_bitnet_confidence(repo_id: &str, gguf_files: &[String]) -> (BitnetConfidence, u8) {
@@ -311,5 +411,61 @@ mod tests {
     fn hf_search_smoke_tinyllama() {
         let hits = search_gguf_models("tinyllama", 10, 5, false, None).expect("search");
         assert!(!hits.is_empty(), "expected at least one .gguf repo");
+    }
+
+    #[test]
+    fn readiness_ready_with_tokenizer_json() {
+        assert_eq!(
+            rbitnet_readiness(
+                "org/model",
+                &["w.gguf".into()],
+                &Some("tokenizer.json".into()),
+                &None,
+                &None
+            ),
+            RbitnetReadiness::Ready
+        );
+    }
+
+    #[test]
+    fn readiness_experimental_when_filename_suggests_bitnet_quant() {
+        assert_eq!(
+            rbitnet_readiness(
+                "org/model",
+                &["x.I2_S.gguf".into()],
+                &Some("tokenizer.json".into()),
+                &None,
+                &None
+            ),
+            RbitnetReadiness::ExperimentalGguf
+        );
+    }
+
+    #[test]
+    fn readiness_phi_repo_id() {
+        assert_eq!(
+            rbitnet_readiness(
+                "u/phi-4-bitnet",
+                &["a.gguf".into()],
+                &Some("tokenizer.json".into()),
+                &None,
+                &None
+            ),
+            RbitnetReadiness::UnsupportedArchLikely
+        );
+    }
+
+    #[test]
+    fn readiness_needs_external_when_only_config() {
+        assert_eq!(
+            rbitnet_readiness(
+                "org/model",
+                &["a.gguf".into()],
+                &None,
+                &None,
+                &Some("tokenizer_config.json".into())
+            ),
+            RbitnetReadiness::NeedsExternalTokenizer
+        );
     }
 }

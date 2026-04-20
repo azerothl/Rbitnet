@@ -1,5 +1,6 @@
 //! `rbitnet` — list curated models, search Hugging Face for `.gguf` repos, download weights, or run the HTTP server.
 
+mod bitnet_install;
 mod catalog;
 mod download;
 mod hf_search;
@@ -52,7 +53,7 @@ enum ModelsCmd {
         max_inspect: usize,
         /// Disable strict BitNet filtering and show all GGUF repos.
         /// By default, only repos heuristically matching BitNet (`likely`/`possible`) are shown.
-        #[arg(long, conflicts_with = "all_gguf")]
+        #[arg(long)]
         all_gguf: bool,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
@@ -60,6 +61,18 @@ enum ModelsCmd {
         interactive: bool,
         #[arg(long, env = "RBITNET_DOWNLOAD_DIR", default_value = "models")]
         download_dir: PathBuf,
+    },
+    /// Install a curated BitNet-related bundle (paired GGUF + tokenizer repos) and write `rbitnet.manifest.json`.
+    Install {
+        /// Print known bundle ids and exit.
+        #[arg(long)]
+        list: bool,
+        /// Bundle id (see `--list`), e.g. `microsoft-bitnet-b1.58-2b-4t`.
+        bundle_id: Option<String>,
+        #[arg(long, default_value = ".", env = "RBITNET_DOWNLOAD_DIR")]
+        dir: PathBuf,
+        #[arg(long, env = "HF_TOKEN")]
+        token: Option<String>,
     },
     /// Download files from a Hugging Face model repo (uses HF cache, then copies into `--dir`).
     Download {
@@ -136,6 +149,24 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 print_catalog_list(&url)
             }
         }
+        ModelsCmd::Install {
+            list,
+            bundle_id,
+            dir,
+            token,
+        } => {
+            if list {
+                print!("{}", bitnet_install::list_bundles_text());
+                return Ok(());
+            }
+            let Some(id) = bundle_id else {
+                return Err(
+                    "models install: specify a bundle id, or use --list to print bundle ids."
+                        .into(),
+                );
+            };
+            bitnet_install::install_bundle(&id, &dir, token.as_deref())
+        }
         ModelsCmd::Search {
             query,
             search_limit,
@@ -176,10 +207,11 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 }
                 for h in hits {
                     println!(
-                        "{} [{}:{}]",
+                        "{} [{}:{} rbitnet={}]",
                         h.id,
                         h.confidence.label(),
-                        h.confidence_score
+                        h.confidence_score,
+                        h.readiness.label()
                     );
                     for f in &h.gguf_files {
                         println!("  {f}");
