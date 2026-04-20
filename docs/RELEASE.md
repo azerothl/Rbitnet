@@ -6,11 +6,11 @@ Overall **feature and gap tracking** for the repo: [STATUS_AND_ROADMAP.md](STATU
 
 ## Prebuilt binaries (GitHub Actions)
 
-Pushing a tag matching `v*` (for example `v0.2.0`) runs [`.github/workflows/release.yml`](../.github/workflows/release.yml). It builds **`rbitnet-server`** in release mode (`cargo build -p bitnet-server --release --locked`) on **Linux (x86_64)**, **Windows (x86_64)**, and **macOS** (architecture matches the runner, e.g. `arm64` on Apple Silicon), then uploads archives to a **GitHub Release** for that tag:
+Pushing a tag matching `v*` (for example `v0.2.0`) runs [`.github/workflows/release.yml`](../.github/workflows/release.yml). It builds **`rbitnet-server`** and the **`rbitnet`** CLI (`cargo build -p bitnet-server -p rbitnet-cli --release --locked`) on **Linux (x86_64)**, **Windows (x86_64)**, and **macOS** (architecture matches the runner, e.g. `arm64` on Apple Silicon), then uploads archives to a **GitHub Release** for that tag. Each archive contains **both** executables:
 
-- `rbitnet-server-vX.Y.Z-linux-<arch>.tar.gz`
-- `rbitnet-server-vX.Y.Z-macos-<arch>.tar.gz`
-- `rbitnet-server-vX.Y.Z-windows-<arch>.zip`
+- `rbitnet-server-vX.Y.Z-linux-<arch>.tar.gz` — includes `rbitnet-server` and `rbitnet`
+- `rbitnet-server-vX.Y.Z-macos-<arch>.tar.gz` — includes `rbitnet-server` and `rbitnet`
+- `rbitnet-server-vX.Y.Z-windows-<arch>.zip` — includes `rbitnet-server.exe` and `rbitnet.exe`
 
 Requirements: `Cargo.lock` must be committed so `--locked` succeeds.
 

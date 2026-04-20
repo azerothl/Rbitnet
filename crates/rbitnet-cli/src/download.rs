@@ -1,0 +1,246 @@
+//! Download model files via `hf-hub` (HF cache) into a user directory.
+
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use hf_hub::api::sync::ApiBuilder;
+use serde_json::Value;
+
+use crate::hf_search;
+
+const HF_MODELS_API: &str = "https://huggingface.co/api/models";
+
+/// Resolve filenames to download: explicit list, or all `.gguf` + `tokenizer.json` / `tokenizer.model` from the repo tree API.
+pub fn resolve_download_files(
+    repo_id: &str,
+    explicit: &[String],
+    token: Option<&str>,
+) -> Result<Vec<String>, String> {
+    if !explicit.is_empty() {
+        return Ok(explicit.to_vec());
+    }
+    list_auto_files(repo_id, token)
+}
+
+fn list_auto_files(repo_id: &str, token: Option<&str>) -> Result<Vec<String>, String> {
+    let enc = urlencoding::encode(repo_id);
+    let url = format!("{HF_MODELS_API}/{enc}");
+    let mut req = ureq::get(&url);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    let v: Value = req
+        .call()
+        .map_err(|e| format!("HF model info {repo_id}: {e}"))?
+        .into_json()
+        .map_err(|e| format!("HF model JSON: {e}"))?;
+
+    let siblings: Vec<hf_search::Sibling> =
+        if let Ok(si) = serde_json::from_value::<hf_search::ModelInfo>(v.clone()) {
+            si.siblings
+        } else if let Some(arr) = v.get("siblings").and_then(|x| x.as_array()) {
+            arr.iter()
+                .filter_map(|item| {
+                    item.get("rfilename").and_then(|x| x.as_str()).map(|s| {
+                        hf_search::Sibling {
+                            rfilename: s.to_string(),
+                        }
+                    })
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+    let names = select_auto_files(&siblings);
+    if names.is_empty() {
+        return Err(
+            "no .gguf (and no tokenizer.json/tokenizer.model) found in repo; specify --file"
+                .into(),
+        );
+    }
+    Ok(names)
+}
+
+/// Select the subset of sibling filenames to auto-download: all `.gguf` files plus tokenizer files.
+/// Extracted into a separate function so file-selection logic can be unit-tested without network calls.
+fn select_auto_files(siblings: &[hf_search::Sibling]) -> Vec<String> {
+    let mut names: Vec<String> = siblings
+        .iter()
+        .filter_map(|s| {
+            let lower = s.rfilename.to_ascii_lowercase();
+            let take = lower.ends_with(".gguf")
+                || lower == "tokenizer.json"
+                || lower.ends_with("/tokenizer.json")
+                || lower == "tokenizer.model"
+                || lower.ends_with("/tokenizer.model");
+            if take { Some(s.rfilename.clone()) } else { None }
+        })
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Compute the local destination path for a remote `file` relative to `dest_dir`,
+/// preserving subdirectory structure. Returns an error if the path is absolute or
+/// contains path-traversal components (`..`).
+fn dest_path_for(dest_dir: &Path, file: &str) -> Result<PathBuf, String> {
+    let rel = Path::new(file);
+    for component in rel.components() {
+        match component {
+            std::path::Component::Normal(_) | std::path::Component::CurDir => {}
+            _ => {
+                return Err(format!(
+                    "unsafe path component in '{file}': only relative paths without '..' are allowed"
+                ))
+            }
+        }
+    }
+    Ok(dest_dir.join(rel))
+}
+
+/// Download each file into `dest_dir` (created if missing). Uses HF cache then copies.
+/// Remote subpaths (e.g. `subdir/tokenizer.json`) are preserved under `dest_dir`, with
+/// parent directories created as needed. Paths containing `..` or absolute components
+/// are rejected to prevent path traversal.
+pub fn download_files(
+    repo_id: &str,
+    files: &[String],
+    dest_dir: &Path,
+    token: Option<&str>,
+) -> Result<Vec<PathBuf>, String> {
+    fs::create_dir_all(dest_dir).map_err(|e| format!("create {}: {e}", dest_dir.display()))?;
+
+    let mut builder = ApiBuilder::new();
+    if let Some(t) = token {
+        builder = builder.with_token(Some(t.into()));
+    }
+    let api = builder.build().map_err(|e| format!("hf-hub Api: {e}"))?;
+    let repo = api.model(repo_id.to_string());
+
+    let mut out = Vec::new();
+    for file in files {
+        let cached = repo
+            .get(file)
+            .map_err(|e| format!("download {repo_id} {file}: {e}"))?;
+        let dest = dest_path_for(dest_dir, file)?;
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("create {}: {e}", parent.display()))?;
+        }
+        fs::copy(&cached, &dest)
+            .map_err(|e| format!("copy {} -> {}: {e}", cached.display(), dest.display()))?;
+        out.push(dest);
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sibling(name: &str) -> hf_search::Sibling {
+        hf_search::Sibling {
+            rfilename: name.to_string(),
+        }
+    }
+
+    // --- select_auto_files ---
+
+    #[test]
+    fn auto_files_selects_gguf_and_tokenizer() {
+        let siblings = vec![
+            sibling("README.md"),
+            sibling("model.Q4_K_M.gguf"),
+            sibling("tokenizer.json"),
+            sibling("config.json"),
+        ];
+        let selected = select_auto_files(&siblings);
+        assert_eq!(selected, vec!["model.Q4_K_M.gguf", "tokenizer.json"]);
+    }
+
+    #[test]
+    fn auto_files_selects_nested_tokenizer_json() {
+        let siblings = vec![
+            sibling("model.gguf"),
+            sibling("tokenizer/tokenizer.json"),
+            sibling("README.md"),
+        ];
+        let selected = select_auto_files(&siblings);
+        assert_eq!(selected, vec!["model.gguf", "tokenizer/tokenizer.json"]);
+    }
+
+    #[test]
+    fn auto_files_selects_tokenizer_model() {
+        let siblings = vec![sibling("model.gguf"), sibling("tokenizer.model")];
+        let selected = select_auto_files(&siblings);
+        assert_eq!(selected, vec!["model.gguf", "tokenizer.model"]);
+    }
+
+    #[test]
+    fn auto_files_empty_when_no_match() {
+        let siblings = vec![sibling("README.md"), sibling("config.json")];
+        let selected = select_auto_files(&siblings);
+        assert!(selected.is_empty());
+    }
+
+    #[test]
+    fn auto_files_deduplicates() {
+        let siblings = vec![sibling("model.Q4_K_M.gguf"), sibling("model.Q4_K_M.gguf")];
+        let selected = select_auto_files(&siblings);
+        assert_eq!(selected.len(), 1);
+    }
+
+    #[test]
+    fn auto_files_case_insensitive_gguf() {
+        let siblings = vec![sibling("MODEL.GGUF"), sibling("tokenizer.json")];
+        let selected = select_auto_files(&siblings);
+        assert_eq!(selected, vec!["MODEL.GGUF", "tokenizer.json"]);
+    }
+
+    // --- dest_path_for ---
+
+    #[test]
+    fn dest_path_flat_file() {
+        let base = Path::new("/tmp/models");
+        let p = dest_path_for(base, "model.gguf").unwrap();
+        assert_eq!(p, PathBuf::from("/tmp/models/model.gguf"));
+    }
+
+    #[test]
+    fn dest_path_preserves_subdir() {
+        let base = Path::new("/tmp/models");
+        let p = dest_path_for(base, "subdir/tokenizer.json").unwrap();
+        assert_eq!(p, PathBuf::from("/tmp/models/subdir/tokenizer.json"));
+    }
+
+    #[test]
+    fn dest_path_rejects_parent_traversal() {
+        let base = Path::new("/tmp/models");
+        let err = dest_path_for(base, "../evil.gguf").unwrap_err();
+        assert!(err.contains("unsafe path component"), "got: {err}");
+    }
+
+    #[test]
+    fn dest_path_rejects_absolute_path() {
+        let base = Path::new("/tmp/models");
+        let err = dest_path_for(base, "/etc/passwd").unwrap_err();
+        assert!(err.contains("unsafe path component"), "got: {err}");
+    }
+
+    #[test]
+    fn dest_path_rejects_traversal_in_subdir() {
+        let base = Path::new("/tmp/models");
+        let err = dest_path_for(base, "subdir/../../evil.gguf").unwrap_err();
+        assert!(err.contains("unsafe path component"), "got: {err}");
+    }
+
+    #[test]
+    fn dest_path_different_subdir_same_basename_no_collision() {
+        let base = Path::new("/tmp/models");
+        let p1 = dest_path_for(base, "a/tokenizer.json").unwrap();
+        let p2 = dest_path_for(base, "b/tokenizer.json").unwrap();
+        assert_ne!(p1, p2);
+    }
+}

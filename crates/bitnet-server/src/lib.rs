@@ -4,6 +4,9 @@
 
 mod config;
 mod metrics;
+mod run;
+
+pub use run::run_server;
 
 use std::convert::Infallible;
 use std::sync::atomic::Ordering;

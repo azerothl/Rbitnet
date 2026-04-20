@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "tinyllama-1.1b-chat-q4-example",
+      "repo": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+      "description": "Example curated entry (Llama-family GGUF). Filenames must match the repo; verify on Hugging Face before downloading.",
+      "files": [
+        "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        "tokenizer.json"
+      ],
+      "min_rbitnet_version": "0.1.0"
+    }
+  ]
+}

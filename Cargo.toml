@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/bitnet-core", "crates/bitnet-server"]
+members = [
+    "crates/bitnet-core",
+    "crates/bitnet-server",
+    "crates/rbitnet-cli",
+]
 
 [workspace.package]
 version = "0.1.0"
