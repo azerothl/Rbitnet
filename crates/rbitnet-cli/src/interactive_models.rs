@@ -288,12 +288,16 @@ impl BrowserApp {
         let main_area = vchunks[1];
         let status_area = vchunks[2];
 
+        let help_hint = if self.search_filter_mode.is_some() {
+            "(↑↓ j/k row · PgUp/PgDn detail · d download · f filter · q quit)"
+        } else {
+            "(↑↓ j/k row · PgUp/PgDn detail · d download · q quit)"
+        };
+
         let title = Paragraph::new(Line::from(vec![
             self.title.as_str().bold(),
             "  ".into(),
-            "(↑↓ j/k ligne · PgUp/PgDn détail · d télécharger · f filtre · q quitter)"
-                .dim()
-                .into(),
+            help_hint.dim().into(),
         ]))
         .style(Style::default().fg(Color::Cyan));
         frame.render_widget(title, title_area);

@@ -203,10 +203,55 @@ fn download_file_via_http(
         .map_err(|e| format!("request error: {url}: {e}"))?;
 
     let mut reader = resp.into_reader();
-    let mut f =
-        fs::File::create(dest).map_err(|e| format!("create {}: {e}", dest.display()))?;
-    io::copy(&mut reader, &mut f)
-        .map_err(|e| format!("write {}: {e}", dest.display()))?;
+
+    let dest_dir = dest.parent().unwrap_or(Path::new("."));
+    let dest_name = dest
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("download");
+
+    let mut temp_path = None;
+    let mut f = None;
+    for attempt in 0..1000 {
+        let candidate =
+            dest_dir.join(format!(".{dest_name}.part.{}.{}", std::process::id(), attempt));
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(file) => {
+                temp_path = Some(candidate);
+                f = Some(file);
+                break;
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => {
+                return Err(format!("create temp file for {}: {e}", dest.display()));
+            }
+        }
+    }
+
+    let temp_path =
+        temp_path.ok_or_else(|| format!("create temp file for {}: exhausted retries", dest.display()))?;
+    let mut f = f.expect("temporary file handle must exist when temp_path is set");
+
+    if let Err(e) = io::copy(&mut reader, &mut f) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!("write {}: {e}", dest.display()));
+    }
+
+    drop(f);
+
+    if let Err(e) = fs::rename(&temp_path, dest) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!(
+            "rename {} -> {}: {e}",
+            temp_path.display(),
+            dest.display()
+        ));
+    }
+
     Ok(())
 }
 

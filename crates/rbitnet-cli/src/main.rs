@@ -50,12 +50,9 @@ enum ModelsCmd {
         search_limit: usize,
         #[arg(long, default_value_t = 120)]
         max_inspect: usize,
-        /// Keep only repos that heuristically look like BitNet candidates (`likely`/`possible`).
-        /// Enabled by default.
-        #[arg(long)]
-        strict_bitnet: bool,
         /// Disable strict BitNet filtering and show all GGUF repos.
-        #[arg(long)]
+        /// By default, only repos heuristically matching BitNet (`likely`/`possible`) are shown.
+        #[arg(long, conflicts_with = "all_gguf")]
         all_gguf: bool,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
@@ -143,7 +140,6 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             query,
             search_limit,
             max_inspect,
-            strict_bitnet: _strict_bitnet_flag,
             all_gguf,
             token,
             interactive,
