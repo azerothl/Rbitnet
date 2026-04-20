@@ -65,9 +65,10 @@ enum ModelsCmd {
     /// Install a curated BitNet-related bundle (paired GGUF + tokenizer repos) and write `rbitnet.manifest.json`.
     Install {
         /// Print known bundle ids and exit.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "bundle_id")]
         list: bool,
         /// Bundle id (see `--list`), e.g. `microsoft-bitnet-b1.58-2b-4t`.
+        #[arg(required_unless_present = "list")]
         bundle_id: Option<String>,
         #[arg(long, default_value = ".", env = "RBITNET_DOWNLOAD_DIR")]
         dir: PathBuf,
@@ -159,12 +160,8 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 print!("{}", bitnet_install::list_bundles_text());
                 return Ok(());
             }
-            let Some(id) = bundle_id else {
-                return Err(
-                    "models install: specify a bundle id, or use --list to print bundle ids."
-                        .into(),
-                );
-            };
+            // clap guarantees bundle_id is Some (required_unless_present = "list")
+            let id = bundle_id.expect("bundle_id guaranteed by clap (required_unless_present = list)");
             bitnet_install::install_bundle(&id, &dir, token.as_deref())
         }
         ModelsCmd::Search {
