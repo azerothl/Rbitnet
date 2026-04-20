@@ -32,6 +32,14 @@ Repos that contain **only Safetensors** will not appear in search results that r
 
 See [USAGE.md](USAGE.md) for flags and environment variables.
 
+### Update `data/compatible_models.json` without manual entry
+
+To populate (or regenerate) the catalog from the Hub, use **`rbitnet models generate-catalog`** — it follows the same principle as HF search, but writes a JSON file matching the `compatible_models.json` schema (one “primary” GGUF per repository, plus tokenizer metadata if the file is listed on the Hub). **This is not an Rbitnet compatibility test**: review the entries, remove questionable repositories, optionally adjust filenames, then commit.
+
+Example: `cargo run -p rbitnet-cli --release -- models generate-catalog --output data/compatible_models.json` (default query: `gguf`). To target a family, use: `--query llama --max-inspect 400`.
+
+For a **100% exploratory** list without modifying the repository, continue using **`rbitnet models search <query>`**.
+
 ---
 
 ## Path 2 — Download weights only (no BitNet clone)

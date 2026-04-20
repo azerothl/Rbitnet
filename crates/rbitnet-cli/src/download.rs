@@ -1,14 +1,15 @@
 //! Download model files via `hf-hub` (HF cache) into a user directory.
 
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 use hf_hub::api::sync::ApiBuilder;
 use serde_json::Value;
 
 use crate::hf_search;
-
-const HF_MODELS_API: &str = "https://huggingface.co/api/models";
 
 /// Resolve filenames to download: explicit list, or all `.gguf` + `tokenizer.json` / `tokenizer.model` from the repo tree API.
 pub fn resolve_download_files(
@@ -23,9 +24,9 @@ pub fn resolve_download_files(
 }
 
 fn list_auto_files(repo_id: &str, token: Option<&str>) -> Result<Vec<String>, String> {
-    let enc = urlencoding::encode(repo_id);
-    let url = format!("{HF_MODELS_API}/{enc}");
-    let mut req = ureq::get(&url);
+    let url = hf_search::hf_model_detail_url(repo_id);
+    let agent = crate::hub_http::agent()?;
+    let mut req = agent.get(&url);
     if let Some(t) = token {
         req = req.set("Authorization", &format!("Bearer {t}"));
     }
@@ -121,19 +122,137 @@ pub fn download_files(
 
     let mut out = Vec::new();
     for file in files {
-        let cached = repo
-            .get(file)
-            .map_err(|e| format!("download {repo_id} {file}: {e}"))?;
         let dest = dest_path_for(dest_dir, file)?;
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("create {}: {e}", parent.display()))?;
         }
-        fs::copy(&cached, &dest)
-            .map_err(|e| format!("copy {} -> {}: {e}", cached.display(), dest.display()))?;
+
+        let mut last_err = String::new();
+        let mut copied = false;
+
+        // First try hf-hub cache path (fast path).
+        for attempt in 1..=3 {
+            match repo.get(file) {
+                Ok(cached) => {
+                    fs::copy(&cached, &dest).map_err(|e| {
+                        format!("copy {} -> {}: {e}", cached.display(), dest.display())
+                    })?;
+                    copied = true;
+                    break;
+                }
+                Err(e) => {
+                    last_err = format!("hf-hub attempt {attempt}/3 failed: {e}");
+                    thread::sleep(Duration::from_millis(250 * attempt as u64));
+                }
+            }
+        }
+
+        // Fallback: direct HTTPS download via native-tls agent.
+        if !copied {
+            for attempt in 1..=2 {
+                match download_file_via_http(repo_id, file, &dest, token) {
+                    Ok(()) => {
+                        copied = true;
+                        break;
+                    }
+                    Err(e) => {
+                        last_err = format!("http fallback attempt {attempt}/2 failed: {e}");
+                        thread::sleep(Duration::from_millis(300 * attempt as u64));
+                    }
+                }
+            }
+        }
+
+        if !copied {
+            return Err(format!("download {repo_id} {file}: {last_err}"));
+        }
         out.push(dest);
     }
     Ok(out)
+}
+
+fn hf_resolve_url(repo_id: &str, file: &str) -> String {
+    let repo_path = repo_id
+        .split('/')
+        .map(|seg| urlencoding::encode(seg).into_owned())
+        .collect::<Vec<_>>()
+        .join("/");
+    let file_path = file
+        .split('/')
+        .map(|seg| urlencoding::encode(seg).into_owned())
+        .collect::<Vec<_>>()
+        .join("/");
+    format!("https://huggingface.co/{repo_path}/resolve/main/{file_path}")
+}
+
+fn download_file_via_http(
+    repo_id: &str,
+    file: &str,
+    dest: &Path,
+    token: Option<&str>,
+) -> Result<(), String> {
+    let url = hf_resolve_url(repo_id, file);
+    let agent = crate::hub_http::agent()?;
+    let mut req = agent.get(&url);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    let resp = req
+        .call()
+        .map_err(|e| format!("request error: {url}: {e}"))?;
+
+    let mut reader = resp.into_reader();
+
+    let dest_dir = dest.parent().unwrap_or(Path::new("."));
+    let dest_name = dest
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("download");
+
+    let mut temp_path = None;
+    let mut f = None;
+    for attempt in 0..1000 {
+        let candidate =
+            dest_dir.join(format!(".{dest_name}.part.{}.{}", std::process::id(), attempt));
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(file) => {
+                temp_path = Some(candidate);
+                f = Some(file);
+                break;
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => {
+                return Err(format!("create temp file for {}: {e}", dest.display()));
+            }
+        }
+    }
+
+    let temp_path =
+        temp_path.ok_or_else(|| format!("create temp file for {}: exhausted retries", dest.display()))?;
+    let mut f = f.expect("temporary file handle must exist when temp_path is set");
+
+    if let Err(e) = io::copy(&mut reader, &mut f) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!("write {}: {e}", dest.display()));
+    }
+
+    drop(f);
+
+    if let Err(e) = fs::rename(&temp_path, dest) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!(
+            "rename {} -> {}: {e}",
+            temp_path.display(),
+            dest.display()
+        ));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
