@@ -76,6 +76,7 @@ cargo run -p bitnet-server --bin rbitnet-server --release
 
 ```powershell
 # Windows PowerShell
+# Set RBITNET_MODEL to one .gguf file (not a folder). Example: C:\models\weights.Q4_K_M.gguf
 $env:RBITNET_MODEL="C:\path\to\model.gguf"
 $env:RBITNET_BIND="127.0.0.1:8080"
 cargo run -p bitnet-server --bin rbitnet-server --release

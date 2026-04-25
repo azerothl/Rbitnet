@@ -98,12 +98,31 @@ struct EngineInner {
     llama: Mutex<Option<LlamaRuntime>>,
 }
 
+fn validate_model_path_for_gguf(p: &Path) -> Result<()> {
+    validate_no_parent_components(p)?;
+    match std::fs::metadata(p) {
+        Ok(m) if m.is_dir() => Err(BitNetError::InvalidGguf(format!(
+            "RBITNET_MODEL must be a single .gguf file, not a directory: {}. \
+             Example: {}\\model.Q4_K_M.gguf",
+            p.display(),
+            p.display()
+        ))),
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(BitNetError::InvalidGguf(format!(
+            "RBITNET_MODEL path not found: {}. \
+             Use the full path to one .gguf file (not a folder). If you downloaded with `rbitnet models install`, open the folder and pick the .gguf name.",
+            p.display()
+        ))),
+        Err(e) => Err(e.into()),
+    }
+}
+
 impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
         if let Some(ref p) = model_path {
-            validate_no_parent_components(p)?;
+            validate_model_path_for_gguf(p)?;
         }
         if let Ok(tok) = std::env::var("RBITNET_TOKENIZER") {
             validate_no_parent_components(Path::new(&tok))?;
