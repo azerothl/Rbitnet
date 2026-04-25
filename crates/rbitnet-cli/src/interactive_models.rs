@@ -21,6 +21,8 @@ pub struct ModelBrowserRow {
     pub repo_id: String,
     pub description: String,
     pub confidence: Option<String>,
+    /// Best-effort Rbitnet readiness (`models search` only).
+    pub readiness: Option<String>,
     /// Texte multi-lignes pour le panneau détail (fichiers, version min, etc.).
     pub detail_body: String,
     /// `Some` = fichiers explicites (catalogue) ; `None` = résolution auto comme `models download` sans `--file`.
@@ -45,6 +47,7 @@ impl ModelBrowserRow {
             repo_id: m.repo.clone(),
             description: m.description.clone(),
             confidence: None,
+            readiness: None,
             detail_body: detail,
             explicit_files: Some(m.files.clone()),
         }
@@ -58,9 +61,13 @@ impl ModelBrowserRow {
             "Recherche HF: dépôts contenant des fichiers .gguf. Attention: GGUF ne veut PAS dire modèle BitNet 1-bit ni compatibilité Rbitnet.\n\n",
         );
         detail.push_str(&format!(
-            "Confiance heuristique BitNet: {} (score {})\n\n",
+            "Confiance heuristique BitNet: {} (score {})\n",
             h.confidence.label(),
             h.confidence_score
+        ));
+        detail.push_str(&format!(
+            "Lisibilité Rbitnet (heuristique siblings): {}\n\n",
+            h.readiness.label()
         ));
         for f in &h.gguf_files {
             detail.push_str(f);
@@ -102,6 +109,7 @@ impl ModelBrowserRow {
             repo_id: h.id.clone(),
             description: format!("{n} fichier(s) (gguf/tokenizer)"),
             confidence: Some(format!("{}:{}", h.confidence.label(), h.confidence_score)),
+            readiness: Some(h.readiness.label().to_string()),
             detail_body: detail,
             explicit_files: Some(explicit_files),
         }
@@ -314,6 +322,7 @@ impl BrowserApp {
             Cell::from("id").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("repo").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("conf").style(Style::default().add_modifier(Modifier::BOLD)),
+            Cell::from("rbitnet").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("#f").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("résumé").style(Style::default().add_modifier(Modifier::BOLD)),
         ])
@@ -335,13 +344,17 @@ impl BrowserApp {
                     });
                 Row::new(vec![
                     Cell::from(truncate(&r.id, 18)),
-                    Cell::from(truncate(&r.repo_id, 28)),
+                    Cell::from(truncate(&r.repo_id, 24)),
                     Cell::from(truncate(
                         r.confidence.as_deref().unwrap_or("-"),
-                        16,
+                        14,
+                    )),
+                    Cell::from(truncate(
+                        r.readiness.as_deref().unwrap_or("-"),
+                        18,
                     )),
                     Cell::from(format!("{n_files}")),
-                    Cell::from(truncate(&r.description, 36)),
+                    Cell::from(truncate(&r.description, 28)),
                 ])
             })
             .collect();
@@ -350,10 +363,11 @@ impl BrowserApp {
             rows,
             [
                 Constraint::Max(20),
-                Constraint::Min(18),
-                Constraint::Length(16),
+                Constraint::Min(14),
+                Constraint::Length(14),
+                Constraint::Length(18),
                 Constraint::Length(4),
-                Constraint::Min(12),
+                Constraint::Min(10),
             ],
         )
         .header(header)

@@ -10,13 +10,17 @@ You **only need Python (or another stack)** if you are **converting** checkpoint
 
 The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, can **search** the Hugging Face Hub for repos that expose **`.gguf`** files, and **downloads** files into a directory using the same cache layout as the Python hub (`HF_TOKEN` / `--token` for gated models).
 
+**Why many HF BitNet repos do not “just work”:** Rbitnet loads **GGUF + Llama-shaped** graphs and a **tokenizer file** on disk; Hugging Face often splits **Safetensors vs GGUF** across repos, or documents **AutoTokenizer** from another (sometimes **gated**) repository. See **[HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)** for the full gap table, readiness labels, and `models install` bundles.
+
 | Command | Purpose |
 |--------|---------|
 | `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
 | `rbitnet models list --interactive` (`-i`) | Same catalog in a **terminal UI** (table + detail panel + download with `d`). Target directory: `--download-dir` or `RBITNET_DOWNLOAD_DIR` (default `models`); optional `HF_TOKEN` for gated downloads. |
-| `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood. **Default mode is strict BitNet filtering** (`likely`/`possible` only). |
+| `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood and an **`rbitnet=`** readiness hint (`ready`, `needs_tokenizer`, `needs_external_tokenizer`, `unsupported_arch_likely`, `experimental_gguf` — see [HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)). **Default mode is strict BitNet filtering** (`likely`/`possible` only). |
 | `rbitnet models search <query> --all-gguf` | Disable strict filtering and show all GGUF repos, including `generic-gguf`. |
-| `rbitnet models search <query> -i` | Same search as an **interactive** table (detail + `d` download like `models download` without `--file`). Press `f` to toggle between the default strict BitNet filter and `all-gguf`. |
+| `rbitnet models search <query> -i` | Same search as an **interactive** table (detail + `d` download like `models download` without `--file`). Press `f` to toggle between the default strict BitNet filter and `all-gguf`. Readiness appears in the **rbitnet** column. |
+| `rbitnet models install --list` | Print curated **bundle** ids (paired GGUF repo + tokenizer source). |
+| `rbitnet models install <bundle-id> --dir DIR` | Download the bundle into `DIR` and write **`rbitnet.manifest.json`** with suggested `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths (relative). Uses `HF_TOKEN` when the Hub requires it. |
 | `rbitnet models generate-catalog` | Build a `compatible_models.json` **draft** from Hub search (one GGUF + tokenizer per repo when found). Review before commit — see below. |
 | `rbitnet models download <repo_id> [--dir DIR] [--file NAME]...` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). |
@@ -36,6 +40,8 @@ cargo build -p rbitnet-cli --release
 ./target/release/rbitnet models search llama --all-gguf
 ./target/release/rbitnet models search gguf -i
 ./target/release/rbitnet models search bitnet -i
+./target/release/rbitnet models install --list
+./target/release/rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models
 # JSON draft to stdout (or --output data/compatible_models.json)
 ./target/release/rbitnet models generate-catalog --max-entries 40 --output data/compatible_models.json
 # (default: `--query gguf`; for a specific family: `--query llama` + `--max-inspect 400`)
@@ -70,6 +76,7 @@ cargo run -p bitnet-server --bin rbitnet-server --release
 
 ```powershell
 # Windows PowerShell
+# Set RBITNET_MODEL to one .gguf file (not a folder). Example: C:\models\weights.Q4_K_M.gguf
 $env:RBITNET_MODEL="C:\path\to\model.gguf"
 $env:RBITNET_BIND="127.0.0.1:8080"
 cargo run -p bitnet-server --bin rbitnet-server --release

@@ -2,7 +2,7 @@
 //!
 //! - `RBITNET_STUB=1` — HTTP integration text (Akasha `BitNetProvider`).
 //! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
-//! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `RBITNET_TOKENIZER`.
+//! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `tokenizer.model` / `RBITNET_TOKENIZER`.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -52,18 +52,31 @@ pub fn validate_no_parent_components(path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn tokenizer_path_candidate(pb: &Path) -> bool {
+    if !pb.is_file() {
+        return false;
+    }
+    let Some(name) = pb.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let lower = name.to_ascii_lowercase();
+    lower == "tokenizer.json" || lower == "tokenizer.model"
+}
+
 fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
     if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
         let pb = PathBuf::from(p);
-        if pb.is_file()
-            && pb.file_name().and_then(|name| name.to_str()) == Some("tokenizer.json")
-        {
+        if tokenizer_path_candidate(&pb) {
             return Ok(pb);
         }
     }
     if let Some(dir) = model_path.parent() {
         let pb = dir.join("tokenizer.json");
-        if pb.is_file() {
+        if tokenizer_path_candidate(&pb) {
+            return Ok(pb);
+        }
+        let pb = dir.join("tokenizer.model");
+        if tokenizer_path_candidate(&pb) {
             return Ok(pb);
         }
     }
@@ -85,12 +98,31 @@ struct EngineInner {
     llama: Mutex<Option<LlamaRuntime>>,
 }
 
+fn validate_model_path_for_gguf(p: &Path) -> Result<()> {
+    validate_no_parent_components(p)?;
+    match std::fs::metadata(p) {
+        Ok(m) if m.is_dir() => Err(BitNetError::InvalidGguf(format!(
+            "RBITNET_MODEL must be a single .gguf file, not a directory: {}. \
+             Example: {}\\model.Q4_K_M.gguf",
+            p.display(),
+            p.display()
+        ))),
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(BitNetError::InvalidGguf(format!(
+            "RBITNET_MODEL path not found: {}. \
+             Use the full path to one .gguf file (not a folder). If you downloaded with `rbitnet models install`, open the folder and pick the .gguf name.",
+            p.display()
+        ))),
+        Err(e) => Err(e.into()),
+    }
+}
+
 impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
         if let Some(ref p) = model_path {
-            validate_no_parent_components(p)?;
+            validate_model_path_for_gguf(p)?;
         }
         if let Ok(tok) = std::env::var("RBITNET_TOKENIZER") {
             validate_no_parent_components(Path::new(&tok))?;
@@ -154,7 +186,7 @@ impl Engine {
     }
 
     /// Whether chat can run without a missing-tokenizer configuration error.
-    /// Stub and toy modes are always ready; GGUF mode requires a discoverable `tokenizer.json`.
+    /// Stub and toy modes are always ready; GGUF mode requires a discoverable `tokenizer.json` or `tokenizer.model`.
     pub fn is_ready(&self) -> bool {
         if self.inner.stub || self.inner.toy.is_some() {
             return true;

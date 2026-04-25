@@ -10,19 +10,35 @@ use crate::gguf::GgufArchive;
 
 use super::model::{KvCache, LlamaModel};
 
-/// Loads [`LlamaModel`] from GGUF and a Hugging Face `tokenizer.json` (or compatible).
+/// Loads [`LlamaModel`] from GGUF and a Hugging Face tokenizer file (`tokenizer.json`, or `tokenizer.model` when loadable).
 pub struct LlamaRuntime {
     model: LlamaModel,
     tokenizer: Tokenizer,
     kv: KvCache,
 }
 
+fn load_tokenizer(tokenizer_path: &Path) -> Result<Tokenizer> {
+    let lower = tokenizer_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default();
+    let tokenizer = Tokenizer::from_file(tokenizer_path).map_err(|e| {
+        if lower.ends_with(".model") {
+            BitNetError::Inference(format!(
+                "tokenizer load (tokenizer.model): {e}. If this is a raw SentencePiece protobuf, export tokenizer.json from Hugging Face (Save Pretrained) or use a repo that ships tokenizer.json."
+            ))
+        } else {
+            BitNetError::Inference(format!("tokenizer load: {e}"))
+        }
+    })?;
+    Ok(tokenizer)
+}
+
 impl LlamaRuntime {
     pub fn load(archive: &GgufArchive, tokenizer_path: &Path) -> Result<Self> {
         let model = LlamaModel::from_gguf(archive)?;
-        let tokenizer = Tokenizer::from_file(tokenizer_path).map_err(|e| {
-            BitNetError::Inference(format!("tokenizer load: {e}"))
-        })?;
+        let tokenizer = load_tokenizer(tokenizer_path)?;
         let kv = KvCache::new(&model.cfg);
         Ok(Self {
             model,

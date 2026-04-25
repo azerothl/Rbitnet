@@ -172,27 +172,13 @@ pub fn download_files(
     Ok(out)
 }
 
-fn hf_resolve_url(repo_id: &str, file: &str) -> String {
-    let repo_path = repo_id
-        .split('/')
-        .map(|seg| urlencoding::encode(seg).into_owned())
-        .collect::<Vec<_>>()
-        .join("/");
-    let file_path = file
-        .split('/')
-        .map(|seg| urlencoding::encode(seg).into_owned())
-        .collect::<Vec<_>>()
-        .join("/");
-    format!("https://huggingface.co/{repo_path}/resolve/main/{file_path}")
-}
-
 fn download_file_via_http(
     repo_id: &str,
     file: &str,
     dest: &Path,
     token: Option<&str>,
 ) -> Result<(), String> {
-    let url = hf_resolve_url(repo_id, file);
+    let url = hf_search::hf_resolve_main_url(repo_id, file);
     let agent = crate::hub_http::agent()?;
     let mut req = agent.get(&url);
     if let Some(t) = token {
