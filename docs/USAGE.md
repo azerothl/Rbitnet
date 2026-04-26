@@ -1,5 +1,22 @@
 # Using Rbitnet — models, tokenizer, and runtime
 
+## Akasha `llm_router.yaml` (BitNet / local)
+
+Point a **BitNet** or OpenAI-compatible route at `http://127.0.0.1:<port>/v1` (see `rbitnet serve` / `rbitnet-server` and `RBITNET_*` env vars in this repo). In [Akasha](https://github.com/azerothl/Akasha), add a provider entry in `llm_router.yaml` with that base URL and a small model id matching `RBITNET_MODEL`. Use **`akasha services doctor`** (akasha-models compose) plus **`GET /api/router/metrics`** after traffic to validate latency and errors.
+
+### Example `llm_router.yaml` snippet (Akasha)
+
+Akasha already documents a **BitNet / Rbitnet** provider block in [`spec/llm_router.example.yaml`](https://github.com/azerothl/Akasha/blob/main/spec/llm_router.example.yaml) (`providers.bitnet.base_url`). Point it at your listener (default `http://127.0.0.1:8080` — no `/v1` suffix in that field; the router adds the API path). Then set a task type’s `primary` to `provider: bitnet` and `model: <id>` where `<id>` matches **`RBITNET_MODEL`** / `GET /v1/models`. Prefer **`rbitnet models install <bundle>`** so `rbitnet.manifest.json` paths stay consistent.
+
+## Prometheus metrics (`GET /metrics`)
+
+`rbitnet-server` (and `rbitnet serve`) expose **`GET /metrics`** as **Prometheus text** alongside **`GET /health`** and **`GET /ready`** (no API key required for these paths — see `crates/bitnet-server/tests/openai_compat.rs`). Use them for:
+
+- **Hermes-style self-hosted ops:** scrape with Prometheus / Grafana or a simple `curl -sS http://127.0.0.1:8080/metrics | head`.
+- **Correlation with Akasha:** when Akasha routes traffic here, watch Rbitnet request counters and errors while observing **`GET /api/router/metrics`** on the Akasha daemon.
+
+**Tested profiles:** treat bundles from **`rbitnet models install --list`** / **`data/compatible_models.json`** as the supported matrix; Hub `search` hits remain best-effort until promoted to the curated list.
+
 ## Do you need Python?
 
 **No — not for running Rbitnet.** Inference is implemented in **Rust** (`bitnet-core`): GGUF is memory-mapped, weights are dequantized in-process, and text is generated via the [`Engine`](../crates/bitnet-core/src/inference.rs) or the HTTP server.
