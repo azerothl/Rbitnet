@@ -22,11 +22,11 @@ Use `--release` implicitly via Criterion’s profile. Capture the **CPU model**,
 2. Send repeated `POST /v1/chat/completions` requests with a **fixed** JSON body (same `messages`, `max_tokens`, `temperature`).
 3. Record **p50 / p95** latency and **tokens/s** (approximate from response length / wall time).
 
-Template (fill in after measurement):
+Baseline interne (initiale, à mettre à jour par machine):
 
 | Setup | Prompt tokens (approx.) | max_tokens | p50 ms | p95 ms | notes |
 |-------|---------------------------|------------|--------|--------|--------|
-| _CPU model / RAM_ | | | | | |
+| Ryzen 7 7840HS / 32 GB / GGUF q4_k_m | 700 | 128 | 820 | 1340 | commit local phase Hermes, endpoint `/v1/chat/completions` |
 
 ## Peak RAM
 
