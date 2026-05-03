@@ -98,7 +98,7 @@ See the Akasha repo: `spec/llm_router.example.yaml`.
 
 ### Hermes / Akasha ecosystem (ops)
 
-Rbitnet is the **local OpenAI-compatible** backend row in the Akasha ↔ Hermes parity story. For self-hosted SLO alignment with the daemon router, scrape **`GET /metrics`** on Rbitnet and compare with Akasha’s **`GET /api/router/metrics`** (see [docs/USAGE.md](docs/USAGE.md) § correlation). Product parity tracking: [Akasha `docs/hermes-akasha-parity-matrix.md`](https://github.com/azerothl/Akasha/blob/main/docs/hermes-akasha-parity-matrix.md) and [Akasha `docs/hermes-integration-remainder.md`](https://github.com/azerothl/Akasha/blob/main/docs/hermes-integration-remainder.md).
+Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference parity story. For self-hosted SLO alignment with the daemon router, scrape **`GET /metrics`** on Rbitnet and compare with Akasha’s **`GET /api/router/metrics`** (see [docs/USAGE.md](docs/USAGE.md) § correlation). Product parity tracking: [Akasha `spec/dev/roadmap/reference-products-parity-matrix.md`](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/reference-products-parity-matrix.md) and [Akasha `spec/dev/roadmap/hermes-integration-remainder.md`](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/hermes-integration-remainder.md).
 
 ## Environment
 
