@@ -1,0 +1,17 @@
+# Dependency metadata (optional). Prefer: pip install -r requirements.txt in a venv.
+# Requires Python >= 3.10 and a recent transformers (>=4.46) for current TRL SFTTrainer.
+
+[project]
+name = "rbitnet-training"
+version = "0.1.0"
+description = "Optional LoRA/SFT recipes; outputs Safetensors for GGUF conversion upstream of Rbitnet."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "accelerate>=0.28.0",
+  "datasets>=2.18.0",
+  "peft>=0.11.0",
+  "torch>=2.1.0",
+  "transformers>=4.46.0",
+  "trl>=0.9.0",
+]

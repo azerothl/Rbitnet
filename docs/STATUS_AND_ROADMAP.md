@@ -13,6 +13,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | CI (build, test, clippy, audit)                                | **Done**                                                      |
 | Release binaries (GitHub Actions on tag `v`*)                  | **Done** — see `[RELEASE.md](RELEASE.md)`                     |
 | Core inference (GGUF, Llama forward, tokenizer, stub/toy)      | **Done** for supported layouts                                |
+| Optional train/export docs + Python recipe + `rbitnet train`     | **Done** — see [`training/README.md`](../training/README.md), [`TRAINING_AND_COMPATIBILITY.md`](TRAINING_AND_COMPATIBILITY.md) |
 | Performance baselines (published numbers)                      | **Missing** — template in `[BENCHMARKS.md](BENCHMARKS.md)`    |
 | Profiling report (hot paths, prioritized follow-ups)           | **Missing** — checklist in `[PROFILING.md](PROFILING.md)`     |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
@@ -102,7 +103,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 
 | Item                                      | Status                                               |
 | ----------------------------------------- | ---------------------------------------------------- |
-| USAGE, TRAINING_AND_COMPATIBILITY, README | **Updated** with server envs and pointers            |
+| USAGE, TRAINING_AND_COMPATIBILITY, README, `training/` | **Updated** — optional fine-tune recipe + CLI helpers |
 | Limitations                               | `[LIMITATIONS.md](LIMITATIONS.md)`                   |
 | Deployment (systemd, nginx, Docker)       | `[DEPLOYMENT.md](DEPLOYMENT.md)` + root `Dockerfile` |
 
@@ -132,3 +133,4 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | `[LIMITATIONS.md](LIMITATIONS.md)`         | Known constraints                       |
 | `[BENCHMARKS.md](BENCHMARKS.md)`           | Where to record performance numbers     |
 | `[PROFILING.md](PROFILING.md)`             | How to profile CPU hot paths            |
+| [`training/README.md`](../training/README.md) | Optional Python LoRA/SFT + `rbitnet train` |

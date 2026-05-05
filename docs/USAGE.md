@@ -23,6 +23,17 @@ Akasha already documents a **BitNet / Rbitnet** provider block in [`spec/llm_rou
 
 You **only need Python (or another stack)** if you are **converting** checkpoints from Hugging Face Safetensors into **GGUF** using upstream tools (for example [microsoft/BitNet](https://github.com/microsoft/BitNet) scripts). That is a one-time **export** step on the machine where you build the file, not a runtime dependency of `rbitnet-server`.
 
+### Fine-tuning helper (optional Python)
+
+Training still happens **outside** `bitnet-core`. This repo includes an optional **[`training/`](../training/README.md)** tree (Transformers + TRL + PEFT) and CLI helpers:
+
+| Command | Purpose |
+|--------|---------|
+| `rbitnet train --repo-root DIR --recipe recipes/sft_lora.py -- …` | Run a Python recipe under `DIR/training/`; arguments after `--` are forwarded to the script (example in [`training/README.md`](../training/README.md)). Env **`RBITNET_REPO_ROOT`** defaults to `.`. Override interpreter with **`RBITNET_PYTHON`**. |
+| `rbitnet export-gguf [--checkpoint DIR]` | Print a short **HF checkpoint → GGUF** checklist (llama.cpp); optional `--checkpoint` fills in an example `convert_hf_to_gguf.py` line. |
+
+After you have a `.gguf` and tokenizer files, inference is unchanged: **`RBITNET_MODEL`**, `rbitnet serve`. See **[TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)** for [ml-intern](https://github.com/huggingface/ml-intern), LoRA/SFT, and compatibility rules.
+
 ## Hugging Face: curated list, search, and download (no Python)
 
 The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, can **search** the Hugging Face Hub for repos that expose **`.gguf`** files, and **downloads** files into a directory using the same cache layout as the Python hub (`HF_TOKEN` / `--token` for gated models).

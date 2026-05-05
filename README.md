@@ -19,6 +19,7 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
+  - **[training/README.md](training/README.md)** — optional Python LoRA/SFT recipe; `rbitnet train` / `rbitnet export-gguf`
   - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations

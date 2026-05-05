@@ -6,11 +6,12 @@ mod download;
 mod hf_search;
 mod hub_http;
 mod interactive_models;
+mod train_cli;
 
 use std::fs;
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 use download::HubPlaceMode;
 
@@ -23,7 +24,7 @@ fn hub_place_mode(symlink: bool) -> HubPlaceMode {
 }
 
 #[derive(Parser)]
-#[command(name = "rbitnet", version, about = "Rbitnet CLI: Hugging Face models, download, and optional HTTP server")]
+#[command(name = "rbitnet", version, about = "Rbitnet CLI: Hugging Face models, download, optional Python train helper, and HTTP server")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -33,8 +34,32 @@ struct Cli {
 enum Commands {
     #[command(subcommand, about = "Curated catalog, HF search, and downloads")]
     Models(ModelsCmd),
+    /// Run an optional LoRA/SFT Python recipe under `training/` (requires a repo checkout + Python).
+    Train(TrainCmd),
+    /// Print steps to convert a Hugging Face checkpoint directory to GGUF for Rbitnet (see llama.cpp).
+    ExportGguf(ExportGgufCmd),
     /// Run the OpenAI-compatible HTTP server (same as `rbitnet-server`).
     Serve,
+}
+
+#[derive(Args)]
+struct TrainCmd {
+    /// Root of the Rbitnet repository (must contain `training/recipes/`).
+    #[arg(long, env = "RBITNET_REPO_ROOT", default_value = ".", value_name = "DIR")]
+    repo_root: PathBuf,
+    /// Path under `training/` to the recipe script.
+    #[arg(long, default_value = "recipes/sft_lora.py", value_name = "REL_PATH")]
+    recipe: PathBuf,
+    /// Forwarded to the Python script (place `--` before flags if clap mis-parses).
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    passthrough: Vec<String>,
+}
+
+#[derive(Args)]
+struct ExportGgufCmd {
+    /// Hugging Face export directory (`config.json` + model weights) to mention in the example command.
+    #[arg(long, value_name = "DIR")]
+    checkpoint: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -358,6 +383,11 @@ async fn main() {
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Models(m) => run_models(m),
+        Commands::Train(cmd) => train_cli::run_train(&cmd.repo_root, &cmd.recipe, &cmd.passthrough),
+        Commands::ExportGguf(cmd) => {
+            train_cli::print_export_gguf_hint(cmd.checkpoint.as_deref());
+            Ok(())
+        }
         Commands::Serve => bitnet_server::run_server().await.map_err(|e| e.to_string()),
     };
 
