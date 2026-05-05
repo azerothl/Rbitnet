@@ -137,6 +137,7 @@ struct BrowserApp {
     status: String,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
     title: String,
     /// Hauteur utile du panneau détail (lignes), mise à jour à chaque frame.
     detail_viewport_lines: usize,
@@ -149,6 +150,7 @@ impl BrowserApp {
         rows: Vec<ModelBrowserRow>,
         token: Option<String>,
         download_dir: PathBuf,
+        place_mode: download::HubPlaceMode,
         title: String,
         search_filter_mode: Option<SearchFilterMode>,
         search_ctx: Option<SearchContext>,
@@ -163,6 +165,7 @@ impl BrowserApp {
             ),
             token,
             download_dir,
+            place_mode,
             title,
             detail_viewport_lines: 8,
             search_filter_mode,
@@ -237,6 +240,7 @@ impl BrowserApp {
             &files,
             &self.download_dir,
             self.token.as_deref(),
+            self.place_mode,
         )?;
         self.status = format!(
             "OK — {} fichier(s) écrit(s) sous {}",
@@ -465,6 +469,7 @@ pub fn run_catalog_interactive(
     url: &str,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
 ) -> Result<(), String> {
     let cat = catalog::fetch_catalog(url)?;
     if cat.models.is_empty() {
@@ -472,7 +477,15 @@ pub fn run_catalog_interactive(
     }
     let rows: Vec<ModelBrowserRow> = cat.models.iter().map(ModelBrowserRow::from_catalog).collect();
     let title = format!("Catalogue ({url})");
-    run_browser(rows, token, download_dir, title, None, None)
+    run_browser(
+        rows,
+        token,
+        download_dir,
+        place_mode,
+        title,
+        None,
+        None,
+    )
 }
 
 /// Ouvre le TUI pour les résultats de recherche HF.
@@ -483,6 +496,7 @@ pub fn run_search_interactive(
     strict_bitnet: bool,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
 ) -> Result<(), String> {
     let hits = hf_search::search_gguf_models(
         query,
@@ -509,19 +523,36 @@ pub fn run_search_interactive(
         search_limit,
         max_inspect,
     });
-    run_browser(rows, token, download_dir, title, initial_mode, search_ctx)
+    run_browser(
+        rows,
+        token,
+        download_dir,
+        place_mode,
+        title,
+        initial_mode,
+        search_ctx,
+    )
 }
 
 fn run_browser(
     rows: Vec<ModelBrowserRow>,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
     title: String,
     search_filter_mode: Option<SearchFilterMode>,
     search_ctx: Option<SearchContext>,
 ) -> Result<(), String> {
     let mut terminal = ratatui::init();
-    let app = BrowserApp::new(rows, token, download_dir, title, search_filter_mode, search_ctx);
+    let app = BrowserApp::new(
+        rows,
+        token,
+        download_dir,
+        place_mode,
+        title,
+        search_filter_mode,
+        search_ctx,
+    );
     let r = app.run(&mut terminal);
     ratatui::restore();
     r

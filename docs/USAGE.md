@@ -27,6 +27,12 @@ You **only need Python (or another stack)** if you are **converting** checkpoint
 
 The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, can **search** the Hugging Face Hub for repos that expose **`.gguf`** files, and **downloads** files into a directory using the same cache layout as the Python hub (`HF_TOKEN` / `--token` for gated models).
 
+**Disk space (cache vs `--dir`):** Downloads go through the Hugging Face Hub cache first (`hf-hub`, same roots as Python `huggingface_hub`). By default, `rbitnet` places files under your `--dir` with a **hard link** to the cached blob when the OS allows it (same volume as the cache), so weights are **not** duplicated. If a hard link cannot be created (different drive, filesystem, or permissions), the CLI **falls back to a full copy**. Use **`--symlink`** on `models download`, `models install`, and interactive `models list` / `models search` to create a **symbolic link** to the cache instead (Unix-friendly; on Windows you may need Developer Mode or an elevated shell). Clearing the Hub cache later can break symlink targets.
+
+**Cache location:** You can point the Hub cache with **`HF_HOME`**, **`XDG_CACHE_HOME`**, or **`HUGGINGFACE_HUB_CACHE`** (see Hugging Face docs). That does not remove the need for a destination `--dir` when you want a project-local layout or `rbitnet.manifest.json` paths—it only changes where `hf-hub` stores blobs.
+
+**Tokenizers:** There is no separate Hub API for “the tokenizer”—you download **`tokenizer.json`**, **`tokenizer.model`**, etc., like any other repo file; Rbitnet resolves those filenames from the Hub model API (`siblings`).
+
 **Why many HF BitNet repos do not “just work”:** Rbitnet loads **GGUF + Llama-shaped** graphs and a **tokenizer file** on disk; Hugging Face often splits **Safetensors vs GGUF** across repos, or documents **AutoTokenizer** from another (sometimes **gated**) repository. See **[HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)** for the full gap table, readiness labels, and `models install` bundles.
 
 | Command | Purpose |
@@ -37,9 +43,9 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models search <query> --all-gguf` | Disable strict filtering and show all GGUF repos, including `generic-gguf`. |
 | `rbitnet models search <query> -i` | Same search as an **interactive** table (detail + `d` download like `models download` without `--file`). Press `f` to toggle between the default strict BitNet filter and `all-gguf`. Readiness appears in the **rbitnet** column. |
 | `rbitnet models install --list` | Print curated **bundle** ids (paired GGUF repo + tokenizer source). |
-| `rbitnet models install <bundle-id> --dir DIR` | Download the bundle into `DIR` and write **`rbitnet.manifest.json`** with suggested `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths (relative). Uses `HF_TOKEN` when the Hub requires it. |
+| `rbitnet models install <bundle-id> --dir DIR [--symlink]` | Download the bundle into `DIR` and write **`rbitnet.manifest.json`** with suggested `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths (relative). Uses `HF_TOKEN` when the Hub requires it. **`--symlink`** optional, same semantics as `models download`. |
 | `rbitnet models generate-catalog` | Build a `compatible_models.json` **draft** from Hub search (one GGUF + tokenizer per repo when found). Review before commit — see below. |
-| `rbitnet models download <repo_id> [--dir DIR] [--file NAME]...` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). |
+| `rbitnet models download <repo_id> [--dir DIR] [--file NAME]... [--symlink]` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). Optional **`--symlink`** : symlink into `--dir` instead of hard link / copy. |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). |
 
 **Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
@@ -65,7 +71,7 @@ cargo build -p rbitnet-cli --release
 ./target/release/rbitnet models download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --dir ./models --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --file tokenizer.json
 ```
 
-**Interactive mode:** The catalog or search results are displayed in a **table** (ratatui). The selected row fills the **Detail** panel; **`d`** downloads the listed files (curated catalog: JSON file list; search: `.gguf` + `tokenizer.json` / `tokenizer.model` **if** present in Hub siblings). In interactive search mode, **`f`** toggles the filter between strict BitNet and `all-gguf`. Target directory: **`--download-dir`** or environment variable **`RBITNET_DOWNLOAD_DIR`** (default `models`). Optional Hub token: **`HF_TOKEN`** / **`--token`** (for search and private repos).
+**Interactive mode:** The catalog or search results are displayed in a **table** (ratatui). The selected row fills the **Detail** panel; **`d`** downloads the listed files (curated catalog: JSON file list; search: `.gguf` + `tokenizer.json` / `tokenizer.model` **if** present in Hub siblings). In interactive search mode, **`f`** toggles the filter between strict BitNet and `all-gguf`. Target directory: **`--download-dir`** or environment variable **`RBITNET_DOWNLOAD_DIR`** (default `models`). Optional Hub token: **`HF_TOKEN`** / **`--token`** (for search and private repos). Optional **`--symlink`** (with `-i`) uses symlinks to the Hub cache instead of hard links / copy.
 
 **BitNet heuristic (`confidence`):** `likely-bitnet`, `possible-bitnet`, and `generic-gguf` are **textual hints** (repo/file name matching) and not a formal validation. Strict mode (the default) combines the Hub `other=bitnet` filter with this heuristic to reduce noise; entries should still be manually validated before production use.
 

@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::catalog;
-use crate::download;
+use crate::download::{self, HubPlaceMode};
 use crate::hf_search;
 
 #[derive(Clone, Copy, Debug)]
@@ -164,7 +164,12 @@ struct RbitnetManifest {
 }
 
 /// Download a curated bundle into `dir` and write `rbitnet.manifest.json` with relative env paths.
-pub fn install_bundle(bundle_id: &str, dir: &Path, token: Option<&str>) -> Result<(), String> {
+pub fn install_bundle(
+    bundle_id: &str,
+    dir: &Path,
+    token: Option<&str>,
+    place_mode: HubPlaceMode,
+) -> Result<(), String> {
     let bundle = BUNDLES
         .iter()
         .find(|b| b.id == bundle_id)
@@ -201,7 +206,8 @@ pub fn install_bundle(bundle_id: &str, dir: &Path, token: Option<&str>) -> Resul
 
     let mut written: Vec<PathBuf> = Vec::new();
     for (repo, file) in &jobs {
-        let paths = download::download_files(repo, &[file.clone()], dir, token)?;
+        let paths =
+            download::download_files(repo, &[file.clone()], dir, token, place_mode)?;
         written.extend(paths);
     }
 

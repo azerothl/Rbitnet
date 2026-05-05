@@ -12,6 +12,16 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+use download::HubPlaceMode;
+
+fn hub_place_mode(symlink: bool) -> HubPlaceMode {
+    if symlink {
+        HubPlaceMode::Symlink
+    } else {
+        HubPlaceMode::HardLinkOrCopy
+    }
+}
+
 #[derive(Parser)]
 #[command(name = "rbitnet", version, about = "Rbitnet CLI: Hugging Face models, download, and optional HTTP server")]
 struct Cli {
@@ -43,6 +53,9 @@ enum ModelsCmd {
         /// Jeton Hugging Face (modèles privés / rate limit) pour le téléchargement depuis le TUI.
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
+        /// Créer un lien symbolique vers le fichier en cache Hub au lieu d’un hard link / copie.
+        #[arg(long)]
+        symlink: bool,
     },
     /// Search Hugging Face for model repos that expose at least one `.gguf` file.
     Search {
@@ -61,6 +74,8 @@ enum ModelsCmd {
         interactive: bool,
         #[arg(long, env = "RBITNET_DOWNLOAD_DIR", default_value = "models")]
         download_dir: PathBuf,
+        #[arg(long)]
+        symlink: bool,
     },
     /// Install a curated BitNet-related bundle (paired GGUF + tokenizer repos) and write `rbitnet.manifest.json`.
     Install {
@@ -74,8 +89,10 @@ enum ModelsCmd {
         dir: PathBuf,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
+        #[arg(long)]
+        symlink: bool,
     },
-    /// Download files from a Hugging Face model repo (uses HF cache, then copies into `--dir`).
+    /// Download files from a Hugging Face model repo (uses HF cache, then hard link or copy into `--dir`).
     Download {
         /// Repository id, e.g. `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF`.
         repo_id: String,
@@ -86,6 +103,8 @@ enum ModelsCmd {
         dir: PathBuf,
         #[arg(long, env = "HF_TOKEN")]
         token: Option<String>,
+        #[arg(long)]
+        symlink: bool,
     },
     /// Build a `compatible_models.json` skeleton from Hugging Face (one GGUF + tokenizer per repo when found).
     ///
@@ -141,11 +160,17 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             interactive,
             download_dir,
             token,
+            symlink,
         } => {
             let url = index_url
                 .unwrap_or_else(|| catalog::DEFAULT_MODELS_INDEX_URL.to_string());
             if interactive {
-                interactive_models::run_catalog_interactive(&url, token, download_dir)
+                interactive_models::run_catalog_interactive(
+                    &url,
+                    token,
+                    download_dir,
+                    hub_place_mode(symlink),
+                )
             } else {
                 print_catalog_list(&url)
             }
@@ -155,6 +180,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             bundle_id,
             dir,
             token,
+            symlink,
         } => {
             if list {
                 print!("{}", bitnet_install::list_bundles_text());
@@ -162,7 +188,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             }
             // clap guarantees bundle_id is Some (required_unless_present = "list")
             let id = bundle_id.expect("bundle_id guaranteed by clap (required_unless_present = list)");
-            bitnet_install::install_bundle(&id, &dir, token.as_deref())
+            bitnet_install::install_bundle(&id, &dir, token.as_deref(), hub_place_mode(symlink))
         }
         ModelsCmd::Search {
             query,
@@ -172,6 +198,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             token,
             interactive,
             download_dir,
+            symlink,
         } => {
             let strict_bitnet = !all_gguf;
             eprintln!("{}", hf_search::SEARCH_WARNING);
@@ -187,6 +214,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     strict_bitnet,
                     token,
                     download_dir,
+                    hub_place_mode(symlink),
                 )
             } else {
                 let hits = hf_search::search_gguf_models(
@@ -236,6 +264,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             files,
             dir,
             token,
+            symlink,
         } => {
             let resolved = download::resolve_download_files(&repo_id, &files, token.as_deref())?;
             eprintln!(
@@ -244,7 +273,13 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 repo_id,
                 dir.display()
             );
-            let paths = download::download_files(&repo_id, &resolved, &dir, token.as_deref())?;
+            let paths = download::download_files(
+                &repo_id,
+                &resolved,
+                &dir,
+                token.as_deref(),
+                hub_place_mode(symlink),
+            )?;
             for p in paths {
                 println!("{}", p.display());
             }
