@@ -167,7 +167,7 @@ def main() -> int:
 
         base = AutoModelForCausalLM.from_pretrained(
             args.model_id,
-            torch_dtype=torch.bfloat16 if args.bf16 else torch.float32,
+            torch_dtype=torch.bfloat16 if args.bf16 else (torch.float16 if torch.cuda.is_available() else torch.float32),
             trust_remote_code=args.trust_remote_code,
         )
         merged = PeftModel.from_pretrained(base, str(adapter_dir))

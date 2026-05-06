@@ -40,7 +40,9 @@ pub fn run_train(repo_root: &Path, recipe: &Path, passthrough: &[String]) -> Res
     // Canonicalize the resolved path and verify it stays inside training/.
     let canonical_script = fs::canonicalize(&script)
         .map_err(|e| format!("cannot resolve recipe path {}: {e}", script.display()))?;
-    if !canonical_script.starts_with(root.join("training")) {
+    let canonical_training = fs::canonicalize(root.join("training"))
+        .map_err(|e| format!("cannot resolve training/ directory: {e}"))?;
+    if !canonical_script.starts_with(&canonical_training) {
         return Err(format!(
             "--recipe resolves outside the training/ directory: {}",
             recipe.display()
