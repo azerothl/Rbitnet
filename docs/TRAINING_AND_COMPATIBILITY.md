@@ -57,7 +57,7 @@ Do **not** assume every checkpoint (including BitNet-specific or exotic quantiza
 4. **Copy** `tokenizer.json` (and `tokenizer.model` if used) beside the GGUF, or set `RBITNET_TOKENIZER`.
 5. **Run** `rbitnet-server` / `rbitnet serve`, or embed `bitnet-core`’s `Engine` as in [USAGE.md](USAGE.md).
 
-Optional: use [`rbitnet train`](USAGE.md#fine-tuning-helper-cli) from a checkout of this repo to launch the bundled **Python** LoRA/SFT recipe; use [`rbitnet export-gguf`](USAGE.md#fine-tuning-helper-cli) for a short checklist toward GGUF conversion.
+Optional: use [`rbitnet train`](USAGE.md#fine-tuning-helper-optional-python) from a checkout of this repo to launch the bundled **Python** LoRA/SFT recipe; use [`rbitnet export-gguf`](USAGE.md#fine-tuning-helper-optional-python) for a short checklist toward GGUF conversion.
 
 ## BitNet-specific models
 

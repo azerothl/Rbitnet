@@ -12,6 +12,23 @@ pub fn run_train(repo_root: &Path, recipe: &Path, passthrough: &[String]) -> Res
             repo_root.display()
         )
     })?;
+    // Reject absolute paths and parent-directory components to prevent path traversal.
+    if recipe.is_absolute() {
+        return Err(format!(
+            "--recipe must be a relative path under training/ (got: {})",
+            recipe.display()
+        ));
+    }
+    if recipe
+        .components()
+        .any(|c| c == std::path::Component::ParentDir)
+    {
+        return Err(format!(
+            "--recipe must not contain '..' path components: {}",
+            recipe.display()
+        ));
+    }
+
     let script = root.join("training").join(recipe);
     if !script.is_file() {
         return Err(format!(
@@ -20,9 +37,19 @@ pub fn run_train(repo_root: &Path, recipe: &Path, passthrough: &[String]) -> Res
         ));
     }
 
+    // Canonicalize the resolved path and verify it stays inside training/.
+    let canonical_script = fs::canonicalize(&script)
+        .map_err(|e| format!("cannot resolve recipe path {}: {e}", script.display()))?;
+    if !canonical_script.starts_with(root.join("training")) {
+        return Err(format!(
+            "--recipe resolves outside the training/ directory: {}",
+            recipe.display()
+        ));
+    }
+
     let py = resolve_python()?;
     let mut cmd = Command::new(&py);
-    cmd.arg(&script);
+    cmd.arg(&canonical_script);
     for a in passthrough {
         cmd.arg(a);
     }
@@ -79,7 +106,7 @@ pub fn print_export_gguf_hint(checkpoint: Option<&Path>) {
         println!();
         println!("Typical flow (verify against your llama.cpp checkout):");
         println!(
-            "  1. python convert_hf_to_gguf.py {} --outfile model-f16.gguf",
+            "  1. python convert_hf_to_gguf.py \"{}\" --outfile model-f16.gguf",
             p.display()
         );
         println!("  2. Optional: run the llama.cpp quantize tool for Q4_K_M or similar.");

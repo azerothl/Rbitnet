@@ -47,7 +47,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--merge-and-save",
         action="store_true",
-        help="Merge LoRA into base weights and save full model (needs GPU RAM).",
+        help="Merge LoRA into base weights and save full model (reloads base on CPU; needs significant CPU RAM).",
     )
     p.add_argument(
         "--bf16",
@@ -59,10 +59,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Load base model in 4-bit (QLoRA-style); requires bitsandbytes installed.",
     )
+    p.add_argument(
+        "--trust-remote-code",
+        action="store_true",
+        help=(
+            "Pass trust_remote_code=True when loading the tokenizer and model. "
+            "Only enable this for repositories whose custom code you trust."
+        ),
+    )
     return p.parse_args()
-
-
-def formatting_func(tokenizer):
     def _fn(example: dict) -> str:
         instr = example.get("instruction", "")
         out = example.get("output", "")
@@ -79,7 +84,7 @@ def main() -> int:
         return 1
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=args.trust_remote_code)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -93,8 +98,8 @@ def main() -> int:
         )
 
     load_kw: dict = {
-        "trust_remote_code": True,
-        "torch_dtype": torch.bfloat16 if args.bf16 else torch.float32,
+        "trust_remote_code": args.trust_remote_code,
+        "torch_dtype": torch.bfloat16 if args.bf16 else (torch.float16 if torch.cuda.is_available() else torch.float32),
     }
     if quant is not None:
         load_kw["quantization_config"] = quant
@@ -163,7 +168,7 @@ def main() -> int:
         base = AutoModelForCausalLM.from_pretrained(
             args.model_id,
             torch_dtype=torch.bfloat16 if args.bf16 else torch.float32,
-            trust_remote_code=True,
+            trust_remote_code=args.trust_remote_code,
         )
         merged = PeftModel.from_pretrained(base, str(adapter_dir))
         merged = merged.merge_and_unload()
