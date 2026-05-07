@@ -108,7 +108,10 @@ const CUDA_MEMCPY_DEVICE_TO_HOST: cudaMemcpyKind = 2;
 const CUBLAS_STATUS_SUCCESS: cublasStatus_t = 0;
 const CUBLAS_OP_T: i32 = 1;
 
-struct CudaRuntime {
+/// CUDA bootstrap state (CUDA runtime + optional cuBLAS) used by [`CudaBackend`] and native Qwen paths.
+///
+/// Loaded dynamically from the system CUDA stack; callers should treat failures as unavailable GPU.
+pub struct CudaRuntime {
     _lib: Library,
     _cublas_lib: Option<Library>,
     cuda_malloc: unsafe extern "C" fn(*mut *mut c_void, usize) -> cudaError_t,
@@ -142,6 +145,25 @@ impl std::fmt::Debug for CudaRuntime {
 }
 
 impl CudaRuntime {
+    /// Try loading CUDA runtime and cuBLAS from the usual system library names for this platform.
+    pub fn try_load() -> Option<std::sync::Arc<Self>> {
+        Self::load().map(std::sync::Arc::new)
+    }
+
+    pub fn roundtrip_host_f32(&self, src: &[f32]) -> Option<Vec<f32>> {
+        self.roundtrip_f32(src)
+    }
+
+    pub fn gemv_host_f32(
+        &self,
+        w: &[f32],
+        x: &[f32],
+        out_rows: usize,
+        in_cols: usize,
+    ) -> Option<Vec<f32>> {
+        self.matvec_cuda(w, x, out_rows, in_cols)
+    }
+
     fn load() -> Option<Self> {
         let candidates = [
             "cudart64_12.dll",
@@ -360,7 +382,7 @@ impl Default for CudaBackend {
     fn default() -> Self {
         Self {
             cpu: CpuBackend,
-            runtime: CudaRuntime::load().map(Arc::new),
+            runtime: CudaRuntime::try_load(),
         }
     }
 }

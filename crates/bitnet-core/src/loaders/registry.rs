@@ -10,24 +10,11 @@ use crate::model::ModelExecutor;
 
 use super::arch_key::resolve_architecture_key;
 use super::llama;
+use super::qwen35;
 
 const BITNET_NOT_IMPL: &str = "BitNet GGUF inference is not yet implemented. \
 Use RBITNET_TOY=1 for a toy model, or provide a Llama-architecture GGUF. \
 Set RBITNET_MODEL_FAMILY=llama to override auto-detected architecture from the file.";
-
-fn unsupported_arch_message(arch: &str) -> String {
-    format!(
-        "GGUF architecture `{arch}` is not implemented in Rbitnet yet. \
-Use a Llama-family checkpoint and tokenizer, or contribute a loader under `crates/bitnet-core/src/loaders/`. \
-Inspect `general.architecture` via `cargo run -p bitnet-core --example inspect_gguf -- your.gguf`. \
-To force attempting the Llama loader anyway, set RBITNET_ARCHITECTURE=llama."
-    )
-}
-
-/// Loaders for architectures that have a dedicated inference path (not the generic Llama GGUF stack).
-fn is_known_non_llama_executor(arch: &str) -> bool {
-    matches!(arch, "qwen35moe")
-}
 
 /// Build a [`ModelExecutor`] for a memory-mapped GGUF.
 pub fn dispatch_gguf_executor(
@@ -41,8 +28,14 @@ pub fn dispatch_gguf_executor(
         return Err(BitNetError::Inference(BITNET_NOT_IMPL.into()));
     }
 
-    if is_known_non_llama_executor(&key) {
-        return Err(BitNetError::Inference(unsupported_arch_message(&key)));
+    if key == "qwen35moe" {
+        if backend_kind != BackendKind::Cuda {
+            return Err(BitNetError::Inference(
+                "GGUF `qwen35moe`: native CUDA path requires `RBITNET_BACKEND=cuda` (Phase 1; CPU Llama-compatible loader is unsupported for this topology)."
+                    .into(),
+            ));
+        }
+        return qwen35::build_qwen35_moe_executor(backend_kind, gguf, model_path);
     }
 
     llama::build_llama_executor(backend_kind, gguf, model_path)
@@ -85,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_rejects_qwen35moe_early() {
+    fn dispatch_requires_cuda_for_qwen35moe_native() {
         let _g = env_test_lock();
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().join("x.gguf");
@@ -94,14 +87,30 @@ mod tests {
         std::env::remove_var("RBITNET_MODEL_FAMILY");
         let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
         let err = match dispatch_gguf_executor(BackendKind::Cpu, Arc::clone(&g), &p) {
-            Ok(_) => panic!("expected error for qwen35moe"),
+            Ok(_) => panic!("expected Cpu dispatch error for qwen35moe"),
             Err(e) => e,
         };
         let msg = format!("{err}");
         assert!(
-            msg.contains("qwen35moe") || msg.contains("`qwen35moe`"),
+            msg.to_ascii_lowercase().contains("cuda"),
             "msg={msg}"
         );
+    }
+
+    #[test]
+    fn dispatch_qwen35moe_cuda_requires_tokenizer() {
+        let _g = env_test_lock();
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("m.gguf");
+        write_minimal_gguf_with_arch(&p, "qwen35moe").unwrap();
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        match dispatch_gguf_executor(BackendKind::Cuda, g, &p) {
+            Err(BitNetError::TokenizerMissing) => {}
+            Err(e) => panic!("expected TokenizerMissing from qwen35moe builder, got {e}"),
+            Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
+        }
     }
 
     #[test]

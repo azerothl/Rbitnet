@@ -127,7 +127,9 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 You should see GGUF version, architecture, tensor count, first tensors, and `llama.*` hyperparameters when present.
 
-If `inspect_gguf` shows an architecture that Rbitnet does not implement yet (for example `qwen35moe`), the server fails at **loader dispatch** with an explicit error instead of obscure `llama.*` missing-key messages. See **[USAGE.md — GGUF general.architecture dispatch](USAGE.md#gguf-generalarchitecture-dispatch)** for `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY` and the contributor hook in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/).
+For `qwen35moe`, **loader dispatch** succeeds when `RBITNET_BACKEND=cuda` and bundles the native Qwen3 MoE executor; on CPU backend you get an immediate error asking for CUDA. Missing tokenizer or incomplete GGUF manifests still fail at load time with a clear message (`TokenizerMissing` / missing tensor), not obscure `llama.*` key errors. See **[USAGE.md — GGUF general.architecture dispatch](USAGE.md#gguf-generalarchitecture-dispatch)** for `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY` and hooks in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/).
+
+**VRAM / CUDA:** Hybrid Qwen3 MoE checkpoints are large even when quantized. Treat the CUDA path as needing a discrete NVIDIA GPU with a recent driver; start with modest `max_tokens` and bump `RBITNET_INFERENCE_TIMEOUT_SECS` if completions time out (`USAGE.md`).
 
 **2. Point the engine at the file and run the HTTP server:**
 

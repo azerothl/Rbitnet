@@ -6,6 +6,7 @@
 
 mod arch_key;
 mod llama;
+mod qwen35;
 pub(crate) mod tokenizer;
 mod registry;
 #[cfg(test)]

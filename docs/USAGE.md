@@ -187,7 +187,7 @@ Rbitnet resolves a **normalized architecture key** from the environment and from
 |----------------------------------|------------------|
 | `llama`, `mistral`, (typical Llama-shaped family) | Llama GGUF stack (`LlamaExecutor`) |
 | `bitnet` | Error: BitNet weights forward not implemented yet (same message as before). |
-| `qwen35moe` | Error: not implemented; message points to `loaders/` and `inspect_gguf`. Override with `RBITNET_ARCHITECTURE=llama` only if you accept that the Llama stack will likely fail later on tensor layout. |
+| `qwen35moe` | **Experimental** native text path when `RBITNET_BACKEND=cuda` (NVIDIA CUDA runtime + cuBLAS must load). CPU dispatch returns an explicit error. Expect high VRAM usage and slow first-token latency: weights are dequantized on the host per matmul; logits can use `cuBLAS` GEMV in chunks. Pair the GGUF with a Hugging Face tokenizer (`tokenizer.json` next to the checkpoint or `RBITNET_TOKENIZER`). Vision and MTP are out of scope for this first path. To force the Llama loader instead, set `RBITNET_ARCHITECTURE=llama` (likely to fail on tensor layout). |
 
 Extend the match table in [`registry.rs`](../crates/bitnet-core/src/loaders/registry.rs) when adding a new family.
 
