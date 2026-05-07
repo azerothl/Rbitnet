@@ -97,17 +97,42 @@ pub struct CudaBackend {
 type cudaError_t = i32;
 #[allow(non_camel_case_types)]
 type cudaMemcpyKind = i32;
+#[allow(non_camel_case_types)]
+type cublasStatus_t = i32;
+#[allow(non_camel_case_types)]
+type cublasHandle_t = *mut c_void;
 
 const CUDA_SUCCESS: cudaError_t = 0;
 const CUDA_MEMCPY_HOST_TO_DEVICE: cudaMemcpyKind = 1;
 const CUDA_MEMCPY_DEVICE_TO_HOST: cudaMemcpyKind = 2;
+const CUBLAS_STATUS_SUCCESS: cublasStatus_t = 0;
+const CUBLAS_OP_T: i32 = 1;
 
 struct CudaRuntime {
     _lib: Library,
+    _cublas_lib: Option<Library>,
     cuda_malloc: unsafe extern "C" fn(*mut *mut c_void, usize) -> cudaError_t,
     cuda_free: unsafe extern "C" fn(*mut c_void) -> cudaError_t,
     cuda_memcpy: unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
     cuda_device_synchronize: unsafe extern "C" fn() -> cudaError_t,
+    cublas_create_v2: Option<unsafe extern "C" fn(*mut cublasHandle_t) -> cublasStatus_t>,
+    cublas_destroy_v2: Option<unsafe extern "C" fn(cublasHandle_t) -> cublasStatus_t>,
+    cublas_sgemv_v2: Option<
+        unsafe extern "C" fn(
+            cublasHandle_t,
+            i32,
+            i32,
+            i32,
+            *const f32,
+            *const f32,
+            i32,
+            *const f32,
+            i32,
+            *const f32,
+            *mut f32,
+            i32,
+        ) -> cublasStatus_t,
+    >,
 }
 
 impl std::fmt::Debug for CudaRuntime {
@@ -151,12 +176,69 @@ impl CudaRuntime {
                     lib.get(b"cudaDeviceSynchronize").ok()?;
                 *sym
             };
+            let mut cublas_lib: Option<Library> = None;
+            let mut cublas_create_v2 = None;
+            let mut cublas_destroy_v2 = None;
+            let mut cublas_sgemv_v2 = None;
+            for cb_path in [
+                "cublas64_12.dll",
+                "cublas64_11.dll",
+                "libcublas.so",
+                "libcublas.so.12",
+                "libcublas.dylib",
+            ] {
+                let Ok(cb_lib) = (unsafe { Library::new(cb_path) }) else {
+                    continue;
+                };
+                unsafe {
+                    let s_create: libloading::Symbol<
+                        unsafe extern "C" fn(*mut cublasHandle_t) -> cublasStatus_t,
+                    > = match cb_lib.get(b"cublasCreate_v2") {
+                        Ok(s) => s,
+                        Err(_) => continue,
+                    };
+                    let s_destroy: libloading::Symbol<
+                        unsafe extern "C" fn(cublasHandle_t) -> cublasStatus_t,
+                    > = match cb_lib.get(b"cublasDestroy_v2") {
+                        Ok(s) => s,
+                        Err(_) => continue,
+                    };
+                    let s_gemv: libloading::Symbol<
+                        unsafe extern "C" fn(
+                            cublasHandle_t,
+                            i32,
+                            i32,
+                            i32,
+                            *const f32,
+                            *const f32,
+                            i32,
+                            *const f32,
+                            i32,
+                            *const f32,
+                            *mut f32,
+                            i32,
+                        ) -> cublasStatus_t,
+                    > = match cb_lib.get(b"cublasSgemv_v2") {
+                        Ok(s) => s,
+                        Err(_) => continue,
+                    };
+                    cublas_create_v2 = Some(*s_create);
+                    cublas_destroy_v2 = Some(*s_destroy);
+                    cublas_sgemv_v2 = Some(*s_gemv);
+                    cublas_lib = Some(cb_lib);
+                    break;
+                }
+            }
             return Some(Self {
                 _lib: lib,
+                _cublas_lib: cublas_lib,
                 cuda_malloc,
                 cuda_free,
                 cuda_memcpy,
                 cuda_device_synchronize,
+                cublas_create_v2,
+                cublas_destroy_v2,
+                cublas_sgemv_v2,
             });
         }
         None
@@ -185,6 +267,88 @@ impl CudaRuntime {
             let _ = (self.cuda_device_synchronize)();
             let _ = (self.cuda_free)(dev_ptr);
             if !ok_h2d || !ok_d2h {
+                return None;
+            }
+        }
+        Some(out)
+    }
+
+    fn matvec_cuda(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Option<Vec<f32>> {
+        let create = self.cublas_create_v2?;
+        let destroy = self.cublas_destroy_v2?;
+        let sgemv = self.cublas_sgemv_v2?;
+        let w_bytes = w.len().checked_mul(std::mem::size_of::<f32>())?;
+        let x_bytes = x.len().checked_mul(std::mem::size_of::<f32>())?;
+        let y_bytes = out_rows.checked_mul(std::mem::size_of::<f32>())?;
+        let mut d_w: *mut c_void = null_mut();
+        let mut d_x: *mut c_void = null_mut();
+        let mut d_y: *mut c_void = null_mut();
+        let mut out = vec![0.0f32; out_rows];
+        let alpha: f32 = 1.0;
+        let beta: f32 = 0.0;
+        unsafe {
+            if (self.cuda_malloc)(&mut d_w, w_bytes) != CUDA_SUCCESS
+                || (self.cuda_malloc)(&mut d_x, x_bytes) != CUDA_SUCCESS
+                || (self.cuda_malloc)(&mut d_y, y_bytes) != CUDA_SUCCESS
+            {
+                let _ = (self.cuda_free)(d_w);
+                let _ = (self.cuda_free)(d_x);
+                let _ = (self.cuda_free)(d_y);
+                return None;
+            }
+            let ok_h2d = (self.cuda_memcpy)(
+                d_w,
+                w.as_ptr().cast::<c_void>(),
+                w_bytes,
+                CUDA_MEMCPY_HOST_TO_DEVICE,
+            ) == CUDA_SUCCESS
+                && (self.cuda_memcpy)(
+                    d_x,
+                    x.as_ptr().cast::<c_void>(),
+                    x_bytes,
+                    CUDA_MEMCPY_HOST_TO_DEVICE,
+                ) == CUDA_SUCCESS;
+            if !ok_h2d {
+                let _ = (self.cuda_free)(d_w);
+                let _ = (self.cuda_free)(d_x);
+                let _ = (self.cuda_free)(d_y);
+                return None;
+            }
+            let mut handle: cublasHandle_t = null_mut();
+            if create(&mut handle as *mut cublasHandle_t) != CUBLAS_STATUS_SUCCESS {
+                let _ = (self.cuda_free)(d_w);
+                let _ = (self.cuda_free)(d_x);
+                let _ = (self.cuda_free)(d_y);
+                return None;
+            }
+            // W is row-major (out_rows x in_cols). Use cublas column-major view of W^T and op=T.
+            let gemv_status = sgemv(
+                handle,
+                CUBLAS_OP_T,
+                in_cols as i32,
+                out_rows as i32,
+                &alpha as *const f32,
+                d_w.cast::<f32>(),
+                in_cols as i32,
+                d_x.cast::<f32>(),
+                1,
+                &beta as *const f32,
+                d_y.cast::<f32>(),
+                1,
+            );
+            let ok_d2h = gemv_status == CUBLAS_STATUS_SUCCESS
+                && (self.cuda_memcpy)(
+                    out.as_mut_ptr().cast::<c_void>(),
+                    d_y,
+                    y_bytes,
+                    CUDA_MEMCPY_DEVICE_TO_HOST,
+                ) == CUDA_SUCCESS;
+            let _ = (self.cuda_device_synchronize)();
+            let _ = destroy(handle);
+            let _ = (self.cuda_free)(d_w);
+            let _ = (self.cuda_free)(d_x);
+            let _ = (self.cuda_free)(d_y);
+            if !ok_d2h {
                 return None;
             }
         }
@@ -232,6 +396,11 @@ impl ComputeBackend for CudaBackend {
     }
 
     fn matvec(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Result<Vec<f32>> {
+        if let Some(rt) = &self.runtime {
+            if let Some(out) = rt.matvec_cuda(w, x, out_rows, in_cols) {
+                return Ok(out);
+            }
+        }
         self.cpu.matvec(w, x, out_rows, in_cols)
     }
 }
