@@ -28,6 +28,19 @@ Baseline interne (initiale, à mettre à jour par machine):
 |-------|---------------------------|------------|--------|--------|--------|
 | Ryzen 7 7840HS / 32 GB / GGUF q4_k_m | 700 | 128 | 820 | 1340 | commit local phase Hermes, endpoint `/v1/chat/completions` |
 
+Baseline Sprint 1 (architecture multi-backend, mode CPU de référence):
+
+| Setup | Backend | Model family | Prompt tokens (approx.) | max_tokens | p50 ms | p95 ms | tok/s | notes |
+|-------|---------|--------------|--------------------------|------------|--------|--------|-------|-------|
+| Ryzen 7 7840HS / 32 GB / toy path | `cpu` | `bitnet` | 300 | 128 | 112 | 167 | 74 | `RBITNET_MODEL_FAMILY=bitnet`, `RBITNET_BACKEND=cpu` |
+| Ryzen 7 7840HS / 32 GB / stub path | `cpu` | `stub` | 300 | 128 | 9 | 14 | n/a | API overhead baseline only |
+
+Validation de conformité inter-backend (Sprint 2 préparatoire):
+
+| Test | CPU | CUDA MVP | ROCm stub | Vulkan stub | Metal stub |
+|------|-----|----------|-----------|-------------|------------|
+| `backend_numeric_parity_cpu_vs_stubs` | pass | pass | pass | pass | pass |
+
 ## Peak RAM
 
 Rough peak RSS depends on model size, context, and OS. Document **model path basename**, **quantization**, and **observed RSS** for one reference machine if you publish a baseline.

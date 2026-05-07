@@ -2,6 +2,7 @@
 
 use std::fmt::Write as _;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 
 /// Request and inference counters for `GET /metrics`.
 #[derive(Debug, Default)]
@@ -12,9 +13,25 @@ pub struct ServerMetrics {
     pub inference_ms_total: AtomicU64,
     pub inference_calls_total: AtomicU64,
     pub unauthorized_total: AtomicU64,
+    pub inference_by_backend_family: Mutex<Vec<((String, String), u64)>>,
 }
 
 impl ServerMetrics {
+    pub fn record_backend_family_call(&self, backend: &str, family: &str) {
+        let mut rows = self
+            .inference_by_backend_family
+            .lock()
+            .expect("metrics mutex poisoned");
+        if let Some((_, count)) = rows
+            .iter_mut()
+            .find(|((b, f), _)| b == backend && f == family)
+        {
+            *count += 1;
+            return;
+        }
+        rows.push(((backend.to_string(), family.to_string()), 1));
+    }
+
     pub fn prometheus_text(&self) -> String {
         let cr = self.chat_requests_total.load(Ordering::Relaxed);
         let ce = self.chat_errors_total.load(Ordering::Relaxed);
@@ -71,6 +88,29 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_unauthorized_total counter").unwrap();
         writeln!(s, "rbitnet_unauthorized_total {ua}").unwrap();
+
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_calls_by_backend_family_total Completed inference calls by backend/model family"
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "# TYPE rbitnet_inference_calls_by_backend_family_total counter"
+        )
+        .unwrap();
+        let rows = self
+            .inference_by_backend_family
+            .lock()
+            .expect("metrics mutex poisoned");
+        for ((backend, family), count) in rows.iter() {
+            writeln!(
+                s,
+                "rbitnet_inference_calls_by_backend_family_total{{backend=\"{}\",family=\"{}\"}} {}",
+                backend, family, count
+            )
+            .unwrap();
+        }
 
         s
     }

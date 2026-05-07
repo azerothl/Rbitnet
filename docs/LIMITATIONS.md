@@ -4,7 +4,7 @@ This page sets expectations for performance, formats, and architectures. For com
 
 ## Performance
 
-- **CPU-first:** Throughput is limited by single-node CPU performance; there is no GPU backend in this repository.
+- **CPU-first in production today:** multi-backend architecture exists (`cpu`, `cuda`, `rocm`, `vulkan`, `metal`) but non-CPU backends are currently MVP/parity stubs unless explicitly documented otherwise.
 - **No distributed inference:** One process loads one GGUF for real generation (stub/toy modes are separate smoke paths).
 
 ## GGUF / GGML

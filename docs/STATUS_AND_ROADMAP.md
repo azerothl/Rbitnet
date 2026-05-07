@@ -14,8 +14,8 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Release binaries (GitHub Actions on tag `v`*)                  | **Done** — see `[RELEASE.md](RELEASE.md)`                     |
 | Core inference (GGUF, Llama forward, tokenizer, stub/toy)      | **Done** for supported layouts                                |
 | Optional train/export docs + Python recipe + `rbitnet train`     | **Done** — see [`training/README.md`](../training/README.md), [`TRAINING_AND_COMPATIBILITY.md`](TRAINING_AND_COMPATIBILITY.md) |
-| Performance baselines (published numbers)                      | **Missing** — template in `[BENCHMARKS.md](BENCHMARKS.md)`    |
-| Profiling report (hot paths, prioritized follow-ups)           | **Missing** — checklist in `[PROFILING.md](PROFILING.md)`     |
+| Performance baselines (published numbers)                      | **Initial baseline added** — see `[BENCHMARKS.md](BENCHMARKS.md)` |
+| Profiling report (hot paths, prioritized follow-ups)           | **Initial snapshot added** — see `[PROFILING.md](PROFILING.md)` |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
 
 
@@ -57,7 +57,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Reproducible benchmarks doc                    | `[BENCHMARKS.md](BENCHMARKS.md)` — **template only**; fill in measured p50/p95, tokens/s |
 | Criterion kernel benches                       | `cargo bench -p bitnet-core`                                                             |
 | Profiling write-up                             | `[PROFILING.md](PROFILING.md)` — **checklist only**; no archived report in-repo          |
-| CPU optimizations (SIMD, threads, allocations) | **Ongoing** / best-effort in kernels and forward                                         |
+| CPU optimizations (SIMD, threads, allocations) | **Ongoing** / backend abstraction + scheduler scaffolding landed                          |
 | RAM ceiling per model                          | **Partial** — qualitative note in `BENCHMARKS.md` / `LIMITATIONS.md`, no fixed table     |
 
 

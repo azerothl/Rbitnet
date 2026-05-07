@@ -23,3 +23,20 @@ Use this as a **working checklist** when investigating CPU time in `bitnet-core`
 - Before/after numbers for the same GGUF (or stub/toy for API-only changes).
 
 Link the results from [BENCHMARKS.md](BENCHMARKS.md) when you publish a baseline.
+
+## Sprint 3 profiling snapshot
+
+Scope:
+- scheduler path with speculative decode enabled (`RBITNET_SPECULATIVE=1`)
+- BitNet CPU MVP executor and backend abstraction layer
+- kernel registry dispatch path (`llama/*`, `bitnet/*`)
+
+Top hot paths observed (target order for Sprint 4):
+1. `llama::model::forward` (attention loops and KV access)
+2. `ggml::dequant::tensor_to_f32` + quantized dequant helpers
+3. `kernels::matvec_ternary_i8` / `kernels::bitnet_cuda_matvec_mvp` compatibility path
+
+Follow-ups:
+- Replace fallback backend matvec in CUDA/ROCm/Vulkan paths with native kernels.
+- Optimize speculative verify to avoid prompt re-tokenization duplication.
+- Add per-op timing around dequant and attention decode for regression guards.

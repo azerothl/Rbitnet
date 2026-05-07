@@ -357,6 +357,8 @@ async fn chat_completions(
 
     let temperature = req.temperature.unwrap_or(0.7);
     let engine = state.engine.clone();
+    let backend_kind = engine.backend_kind().to_string();
+    let model_family = engine.model_family().to_string();
     let metrics = state.metrics.clone();
     let timeout_dur = state.config.inference_timeout;
     let prompt_owned = prompt;
@@ -375,6 +377,7 @@ async fn chat_completions(
             metrics
                 .inference_calls_total
                 .fetch_add(1, Ordering::Relaxed);
+            metrics.record_backend_family_call(&backend_kind, &model_family);
             Ok(t)
         }
         Ok(Ok(Err(e))) => {
@@ -385,6 +388,7 @@ async fn chat_completions(
             metrics
                 .inference_calls_total
                 .fetch_add(1, Ordering::Relaxed);
+            metrics.record_backend_family_call(&backend_kind, &model_family);
             Err(e)
         }
         Ok(Err(_join_err)) => {
