@@ -41,12 +41,12 @@ pub fn tensor_to_f32(data: &[u8], ty: u32, dims: &[u64]) -> Result<Vec<f32>> {
         7 => dequant_q5_1(data, nelements),
         8 => dequant_q8_0(data, nelements),
         9 => dequant_q8_1(data, nelements),
-        10 => dequant_bitnet_fallback(data, nelements, 10),
-        11 => dequant_bitnet_fallback(data, nelements, 11),
+        10 => dequant_bitnet_tl1(data, nelements),
+        11 => dequant_bitnet_tl2(data, nelements),
         12 => dequant_q4_k(data, nelements),
-        13 => dequant_bitnet_fallback(data, nelements, 13),
+        13 => dequant_bitnet_tl3(data, nelements),
         14 => dequant_q6_k(data, nelements),
-        15 => dequant_bitnet_fallback(data, nelements, 15),
+        15 => dequant_bitnet_tl4(data, nelements),
         30 => dequant_bf16(data, nelements),
         34 => dequant_tq1_0(data, nelements),
         35 => dequant_tq2_0(data, nelements),
@@ -54,20 +54,72 @@ pub fn tensor_to_f32(data: &[u8], ty: u32, dims: &[u64]) -> Result<Vec<f32>> {
     }
 }
 
-fn dequant_bitnet_fallback(data: &[u8], n: usize, ty: u32) -> Result<Vec<f32>> {
+fn dequant_bitnet_fallback_bits(data: &[u8], n: usize, bits: u8, zero_point: i32) -> Result<Vec<f32>> {
     if data.is_empty() {
         return Err(BitNetError::InvalidGguf(format!(
-            "ggml type {ty} fallback received empty payload"
+            "bitnet dequant fallback received empty payload (bits={bits})"
         )));
     }
-    // Experimental fallback for formats not yet fully wired. It keeps inference
-    // functional for integration tests while specialized kernels are developed.
     let mut y = vec![0.0f32; n];
-    for i in 0..n {
-        let b = data[i % data.len()] as i8;
-        y[i] = (b as f32) / 127.0;
+    match bits {
+        1 => {
+            for i in 0..n {
+                let b = data[(i / 8) % data.len()];
+                let bit = ((b >> (i % 8)) & 1) as i32;
+                y[i] = (bit - zero_point) as f32;
+            }
+        }
+        2 => {
+            for i in 0..n {
+                let b = data[(i / 4) % data.len()];
+                let two = ((b >> ((i % 4) * 2)) & 0b11) as i32;
+                y[i] = (two - zero_point) as f32;
+            }
+        }
+        3 => {
+            for i in 0..n {
+                let bit_off = i * 3;
+                let byte_idx = (bit_off / 8) % data.len();
+                let shift = bit_off % 8;
+                let mut raw = (data[byte_idx] as u16 >> shift) & 0b111;
+                if shift > 5 {
+                    let next = data[(byte_idx + 1) % data.len()] as u16;
+                    raw |= (next << (8 - shift)) & 0b111;
+                }
+                y[i] = (raw as i32 - zero_point) as f32;
+            }
+        }
+        4 => {
+            for i in 0..n {
+                let b = data[(i / 2) % data.len()];
+                let nib = if i % 2 == 0 { b & 0x0f } else { b >> 4 };
+                y[i] = (nib as i32 - zero_point) as f32;
+            }
+        }
+        _ => {
+            for i in 0..n {
+                let b = data[i % data.len()] as i8;
+                y[i] = b as f32 / 127.0;
+            }
+        }
     }
     Ok(y)
+}
+
+fn dequant_bitnet_tl1(data: &[u8], n: usize) -> Result<Vec<f32>> {
+    dequant_bitnet_fallback_bits(data, n, 1, 0)
+}
+
+fn dequant_bitnet_tl2(data: &[u8], n: usize) -> Result<Vec<f32>> {
+    dequant_bitnet_fallback_bits(data, n, 2, 1)
+}
+
+fn dequant_bitnet_tl3(data: &[u8], n: usize) -> Result<Vec<f32>> {
+    dequant_bitnet_fallback_bits(data, n, 3, 3)
+}
+
+fn dequant_bitnet_tl4(data: &[u8], n: usize) -> Result<Vec<f32>> {
+    dequant_bitnet_fallback_bits(data, n, 4, 7)
 }
 
 fn dequant_f32(data: &[u8], n: usize) -> Result<Vec<f32>> {
