@@ -46,6 +46,12 @@ python scripts/bench_backend_compare.py --model rbitnet-llama --runs 15
 
 Copy `p50_ms`, `p95_ms`, and `mean_tok_s` for both runs into the table below and compute the ratio (`cpu_tok_s / cuda_tok_s`) as Gate A evidence.
 
+Automated runner (starts CPU then CUDA server, benchmarks both, prints markdown row):
+
+```bash
+python scripts/bench_gate_a_runner.py --model rbitnet-llama --runs 12
+```
+
 Baseline interne (initiale, à mettre à jour par machine):
 
 | Setup | Prompt tokens (approx.) | max_tokens | p50 ms | p95 ms | notes |
