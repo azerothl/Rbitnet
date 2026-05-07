@@ -41,6 +41,16 @@ Validation de conformité inter-backend (Sprint 2 préparatoire):
 |------|-----|----------|-----------|-------------|------------|
 | `backend_numeric_parity_cpu_vs_stubs` | pass | pass | pass | pass | pass |
 
+Backend matrix (phase Atlas-like):
+
+| Backend | Runtime detection | Numeric parity test | Notes |
+|---------|-------------------|---------------------|-------|
+| `cpu` | n/a | pass | baseline reference |
+| `cuda` | dynamic CUDA runtime load (`cudart`) | pass | uses native runtime copy path when available |
+| `rocm` | dynamic HIP runtime load | pass | bootstrap path, optimization backlog |
+| `vulkan` | dynamic Vulkan loader detection | pass | bootstrap path, optimization backlog |
+| `metal` | dynamic Metal loader detection | pass | second-stage backend |
+
 ## Peak RAM
 
 Rough peak RSS depends on model size, context, and OS. Document **model path basename**, **quantization**, and **observed RSS** for one reference machine if you publish a baseline.
