@@ -147,7 +147,9 @@ impl GgufArchive {
             )));
         }
 
-        off = align_usize(off, alignment as usize);
+        // Tensor info entries follow metadata immediately (same as llama.cpp `gguf.cpp`: no
+        // padding before the first tensor name). Padding to `general.alignment` applies only
+        // after all tensor infos, before the tensor data blob.
 
         let mut tensors = Vec::new();
         for _ in 0..tensor_count {
