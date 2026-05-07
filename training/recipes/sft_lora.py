@@ -68,6 +68,9 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     return p.parse_args()
+
+
+def formatting_func(tokenizer):
     def _fn(example: dict) -> str:
         instr = example.get("instruction", "")
         out = example.get("output", "")

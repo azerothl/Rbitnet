@@ -44,7 +44,7 @@ RBITNET_BACKEND=cuda cargo run -p bitnet-server --bin rbitnet-server --release
 python scripts/bench_backend_compare.py --model rbitnet-llama --runs 15
 ```
 
-Copy `p50_ms`, `p95_ms`, and `mean_tok_s` for both runs into the table below and compute the ratio (`cpu_tok_s / cuda_tok_s`) as Gate A evidence.
+Copy `p50_ms`, `p95_ms`, and `mean_tok_s` for both runs into the table below and compute the ratio (`cuda_tok_s / cpu_tok_s`) as Gate A evidence.
 
 Automated runner (starts CPU then CUDA server, benchmarks both, prints markdown row):
 

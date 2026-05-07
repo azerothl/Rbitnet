@@ -38,11 +38,11 @@ fn load_tokenizer(tokenizer_path: &Path) -> Result<Tokenizer> {
 }
 
 impl LlamaRuntime {
-    pub fn load(archive: &GgufArchive, tokenizer_path: &Path) -> Result<Self> {
+    pub fn load(archive: &GgufArchive, tokenizer_path: &Path, backend_kind: BackendKind) -> Result<Self> {
         let model = LlamaModel::from_gguf(archive)?;
         let tokenizer = load_tokenizer(tokenizer_path)?;
         let kv = KvCache::new(&model.cfg);
-        let backend = make_backend(BackendKind::from_env());
+        let backend = make_backend(backend_kind);
         Ok(Self {
             model,
             tokenizer,

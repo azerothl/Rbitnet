@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::backend::{make_backend, BackendKind};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
-use crate::model::{BitNetExecutor, LlamaExecutor, ModelExecutor, ToyLlm};
+use crate::model::{LlamaExecutor, ModelExecutor, ToyLlm};
 use crate::paged_kv::PagedKvCache;
 use crate::registry::KernelRegistry;
 use crate::scheduler::{ContinuousBatchScheduler, InferenceOutput, InferenceRequest, InferenceStats};
@@ -273,7 +273,7 @@ impl Engine {
             .executor
             .as_ref()
             .map(|e| e.backend_accelerated())
-            .unwrap_or(self.inner.backend_kind == BackendKind::Cpu)
+            .unwrap_or(false)
     }
 
     /// Generate completion text from a user-facing prompt string.
@@ -375,11 +375,12 @@ fn build_executor(
     }
     let backend = make_backend(backend_kind);
     if model_family == "bitnet" {
-        return Ok(Some(Box::new(BitNetExecutor::new(
-            backend_kind,
-            backend,
-            toy_seed(),
-        ))));
+        return Err(BitNetError::Inference(
+            "BitNet GGUF inference is not yet implemented. \
+             Use RBITNET_TOY=1 for a toy model, or provide a Llama-architecture GGUF. \
+             Set RBITNET_MODEL_FAMILY=llama to override the auto-detected architecture."
+                .into(),
+        ));
     }
     let gguf = gguf.ok_or(BitNetError::ModelNotLoaded)?;
     let model_path = model_path.ok_or(BitNetError::ModelNotLoaded)?;

@@ -50,9 +50,8 @@ def run_backend(
         server_cmd,
         cwd=str(repo_root),
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     try:
         if not wait_ready(base_url, timeout_s=45.0):

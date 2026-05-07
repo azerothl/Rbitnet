@@ -275,17 +275,32 @@ impl LlamaModel {
             for qh in 0..cfg.n_head {
                 let kv_h = qh / n_rep;
                 let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                let mut k_mat = vec![0.0f32; (pos + 1) * cfg.head_dim];
-                for p in 0..=pos {
-                    let k_off = p * stride + kv_h * cfg.head_dim;
-                    let k_slice = &kv.k[il][k_off..k_off + cfg.head_dim];
-                    let row_off = p * cfg.head_dim;
-                    k_mat[row_off..row_off + cfg.head_dim].copy_from_slice(k_slice);
-                }
-                let mut scores = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
-                for s in &mut scores {
-                    *s *= scale;
-                }
+                // For CPU backends compute dot products directly to avoid per-head allocations.
+                // For accelerated backends build k_mat and delegate to backend.matvec.
+                let scores: Vec<f32> = if backend.kind() == crate::backend::BackendKind::Cpu {
+                    (0..=pos)
+                        .map(|p| {
+                            let k_off = p * stride + kv_h * cfg.head_dim;
+                            let k_slice = &kv.k[il][k_off..k_off + cfg.head_dim];
+                            let dot: f32 = q_slice.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
+                            dot * scale
+                        })
+                        .collect()
+                } else {
+                    let mut k_mat = vec![0.0f32; (pos + 1) * cfg.head_dim];
+                    for p in 0..=pos {
+                        let k_off = p * stride + kv_h * cfg.head_dim;
+                        let k_slice = &kv.k[il][k_off..k_off + cfg.head_dim];
+                        let row_off = p * cfg.head_dim;
+                        k_mat[row_off..row_off + cfg.head_dim].copy_from_slice(k_slice);
+                    }
+                    let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
+                    for v in &mut s {
+                        *v *= scale;
+                    }
+                    s
+                };
+                let mut scores = scores;
                 softmax_inplace(&mut scores);
                 let mut comb = vec![0.0f32; cfg.head_dim];
                 for p in 0..=pos {

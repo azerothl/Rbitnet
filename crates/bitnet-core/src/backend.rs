@@ -44,7 +44,7 @@ impl BackendKind {
 pub trait ComputeBackend: Send + Sync {
     fn kind(&self) -> BackendKind;
     fn is_native_accelerated(&self) -> bool {
-        self.kind() == BackendKind::Cpu
+        false
     }
     fn alloc(&self, len: usize) -> Result<Vec<f32>>;
     fn copy_from_host(&self, src: &[f32]) -> Result<Vec<f32>>;

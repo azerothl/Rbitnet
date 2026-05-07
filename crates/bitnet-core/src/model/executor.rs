@@ -66,7 +66,7 @@ impl ModelExecutor for LlamaExecutor {
             BitNetError::Inference(format!("executor lock poisoned: {e}"))
         })?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(&self.gguf, &self.tokenizer_path)?);
+            *slot = Some(LlamaRuntime::load(&self.gguf, &self.tokenizer_path, self.backend_kind)?);
         }
         slot.as_mut()
             .unwrap()

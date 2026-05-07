@@ -4,6 +4,14 @@ use std::fmt::Write as _;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
+/// Escape a Prometheus label value per the text exposition format spec:
+/// backslash → `\\`, double-quote → `\"`, newline → `\n`.
+fn escape_label_value(v: &str) -> String {
+    v.replace('\\', r"\\")
+        .replace('"', "\\\"")
+        .replace('\n', r"\n")
+}
+
 /// Request and inference counters for `GET /metrics`.
 #[derive(Debug, Default)]
 pub struct ServerMetrics {
@@ -23,10 +31,10 @@ pub struct ServerMetrics {
 
 impl ServerMetrics {
     pub fn record_backend_family_call(&self, backend: &str, family: &str) {
-        let mut rows = self
-            .inference_by_backend_family
-            .lock()
-            .expect("metrics mutex poisoned");
+        let mut rows = match self.inference_by_backend_family.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         if let Some((_, count)) = rows
             .iter_mut()
             .find(|((b, f), _)| b == backend && f == family)
@@ -144,15 +152,17 @@ impl ServerMetrics {
             "# TYPE rbitnet_inference_calls_by_backend_family_total counter"
         )
         .unwrap();
-        let rows = self
-            .inference_by_backend_family
-            .lock()
-            .expect("metrics mutex poisoned");
+        let rows = match self.inference_by_backend_family.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         for ((backend, family), count) in rows.iter() {
             writeln!(
                 s,
                 "rbitnet_inference_calls_by_backend_family_total{{backend=\"{}\",family=\"{}\"}} {}",
-                backend, family, count
+                escape_label_value(backend),
+                escape_label_value(family),
+                count
             )
             .unwrap();
         }
