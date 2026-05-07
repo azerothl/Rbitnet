@@ -13,7 +13,7 @@ use crate::gguf::GgufArchive;
 use crate::model::{BitNetExecutor, LlamaExecutor, ModelExecutor, ToyLlm};
 use crate::paged_kv::PagedKvCache;
 use crate::registry::KernelRegistry;
-use crate::scheduler::{ContinuousBatchScheduler, InferenceRequest};
+use crate::scheduler::{ContinuousBatchScheduler, InferenceOutput, InferenceRequest, InferenceStats};
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -268,6 +268,14 @@ impl Engine {
         &self.inner.model_family
     }
 
+    pub fn backend_accelerated(&self) -> bool {
+        self.inner
+            .executor
+            .as_ref()
+            .map(|e| e.backend_accelerated())
+            .unwrap_or(self.inner.backend_kind == BackendKind::Cpu)
+    }
+
     /// Generate completion text from a user-facing prompt string.
     pub fn complete(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
         if self.inner.stub {
@@ -275,6 +283,52 @@ impl Engine {
         }
         if let Some(ref t) = self.inner.toy {
             return Ok(t.generate(prompt, max_tokens, temperature));
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let req = InferenceRequest {
+            prompt: prompt.to_string(),
+            max_tokens,
+            temperature,
+        };
+        self.inner
+            .scheduler
+            .run(executor, &req)
+            .map(|output| output.text)
+    }
+
+    pub fn complete_detailed(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<InferenceOutput> {
+        if self.inner.stub {
+            let text = stub_response(prompt, max_tokens);
+            let completion_tokens = text.split_whitespace().count() as u32;
+            return Ok(InferenceOutput {
+                text,
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    tpot_us: 1000,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            });
+        }
+        if let Some(ref t) = self.inner.toy {
+            let text = t.generate(prompt, max_tokens, temperature);
+            let completion_tokens = text.split_whitespace().count() as u32;
+            return Ok(InferenceOutput {
+                text,
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    tpot_us: 1000,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            });
         }
         let Some(executor) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);

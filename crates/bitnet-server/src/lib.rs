@@ -359,17 +359,18 @@ async fn chat_completions(
     let engine = state.engine.clone();
     let backend_kind = engine.backend_kind().to_string();
     let model_family = engine.model_family().to_string();
+    let backend_accelerated = engine.backend_accelerated();
     let metrics = state.metrics.clone();
     let timeout_dur = state.config.inference_timeout;
     let prompt_owned = prompt;
     let join = tokio::task::spawn_blocking(move || {
         let _permit = permit;
-        engine.complete(&prompt_owned, max_tokens, temperature)
+        engine.complete_detailed(&prompt_owned, max_tokens, temperature)
     });
 
     let start = Instant::now();
-    let text_result: Result<String, BitNetError> = match tokio::time::timeout(timeout_dur, join).await {
-        Ok(Ok(Ok(t))) => {
+    let output_result = match tokio::time::timeout(timeout_dur, join).await {
+        Ok(Ok(Ok(output))) => {
             let ms = start.elapsed().as_millis() as u64;
             metrics
                 .inference_ms_total
@@ -378,7 +379,26 @@ async fn chat_completions(
                 .inference_calls_total
                 .fetch_add(1, Ordering::Relaxed);
             metrics.record_backend_family_call(&backend_kind, &model_family);
-            Ok(t)
+            metrics
+                .inference_ttft_ms_total
+                .fetch_add(output.stats.ttft_ms, Ordering::Relaxed);
+            metrics
+                .inference_tpot_us_total
+                .fetch_add(output.stats.tpot_us, Ordering::Relaxed);
+            metrics
+                .completion_tokens_total
+                .fetch_add(output.stats.completion_tokens as u64, Ordering::Relaxed);
+            if output.stats.speculative_attempted {
+                metrics
+                    .speculative_requests_total
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            if backend_accelerated {
+                metrics
+                    .native_accelerated_calls_total
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            Ok(output)
         }
         Ok(Ok(Err(e))) => {
             let ms = start.elapsed().as_millis() as u64;
@@ -423,7 +443,7 @@ async fn chat_completions(
         }
     };
 
-    let text = match text_result {
+    let output = match output_result {
         Ok(t) => t,
         Err(e) => {
             state
@@ -449,9 +469,9 @@ async fn chat_completions(
     };
 
     if req.stream == Some(true) {
-        Ok(stream_completion(&req.model, &text).into_response())
+        Ok(stream_completion(&req.model, &output.text).into_response())
     } else {
-        Ok(json_completion(&req.model, &text).into_response())
+        Ok(json_completion(&req.model, &output.text).into_response())
     }
 }
 

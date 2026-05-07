@@ -14,6 +14,11 @@ pub struct ServerMetrics {
     pub inference_calls_total: AtomicU64,
     pub unauthorized_total: AtomicU64,
     pub inference_by_backend_family: Mutex<Vec<((String, String), u64)>>,
+    pub inference_ttft_ms_total: AtomicU64,
+    pub inference_tpot_us_total: AtomicU64,
+    pub speculative_requests_total: AtomicU64,
+    pub completion_tokens_total: AtomicU64,
+    pub native_accelerated_calls_total: AtomicU64,
 }
 
 impl ServerMetrics {
@@ -39,6 +44,11 @@ impl ServerMetrics {
         let it = self.inference_ms_total.load(Ordering::Relaxed);
         let ic = self.inference_calls_total.load(Ordering::Relaxed);
         let ua = self.unauthorized_total.load(Ordering::Relaxed);
+        let ttft_sum = self.inference_ttft_ms_total.load(Ordering::Relaxed);
+        let tpot_sum = self.inference_tpot_us_total.load(Ordering::Relaxed);
+        let spec_total = self.speculative_requests_total.load(Ordering::Relaxed);
+        let completion_tokens = self.completion_tokens_total.load(Ordering::Relaxed);
+        let native_calls = self.native_accelerated_calls_total.load(Ordering::Relaxed);
 
         let mut s = String::new();
         writeln!(
@@ -88,6 +98,41 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_unauthorized_total counter").unwrap();
         writeln!(s, "rbitnet_unauthorized_total {ua}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_ttft_ms_sum Sum of estimated time-to-first-token in milliseconds"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_ttft_ms_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_ttft_ms_sum {ttft_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_tpot_us_sum Sum of estimated time-per-output-token in microseconds"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_tpot_us_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_tpot_us_sum {tpot_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_speculative_requests_total Requests handled with speculative path"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_speculative_requests_total counter").unwrap();
+        writeln!(s, "rbitnet_speculative_requests_total {spec_total}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_completion_tokens_total Total completion tokens produced (estimated)"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_completion_tokens_total counter").unwrap();
+        writeln!(s, "rbitnet_completion_tokens_total {completion_tokens}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_native_accelerated_calls_total Inference calls executed on native accelerated backend paths"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_native_accelerated_calls_total counter").unwrap();
+        writeln!(s, "rbitnet_native_accelerated_calls_total {native_calls}").unwrap();
 
         writeln!(
             s,

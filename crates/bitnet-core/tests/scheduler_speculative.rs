@@ -14,6 +14,9 @@ impl ModelExecutor for EchoExecutor {
     fn backend(&self) -> BackendKind {
         BackendKind::Cpu
     }
+    fn backend_accelerated(&self) -> bool {
+        false
+    }
 
     fn is_ready(&self) -> bool {
         true
@@ -42,7 +45,8 @@ fn scheduler_regular_mode_passthrough() {
         temperature: 0.0,
     };
     let out = scheduler.run(&EchoExecutor, &req).expect("run");
-    assert_eq!(out, "hello[8]");
+    assert_eq!(out.text, "hello[8]");
+    assert!(!out.stats.speculative_attempted);
 }
 
 #[test]
@@ -59,6 +63,7 @@ fn scheduler_speculative_combines_draft_and_verify() {
         temperature: 0.7,
     };
     let out = scheduler.run(&EchoExecutor, &req).expect("run");
-    assert!(out.contains("hi[5]"));
-    assert!(out.contains("hi"));
+    assert!(out.text.contains("hi[5]"));
+    assert!(out.text.contains("hi"));
+    assert!(out.stats.speculative_attempted);
 }
