@@ -22,6 +22,30 @@ Use `--release` implicitly via Criterion’s profile. Capture the **CPU model**,
 2. Send repeated `POST /v1/chat/completions` requests with a **fixed** JSON body (same `messages`, `max_tokens`, `temperature`).
 3. Record **p50 / p95** latency and **tokens/s** (approximate from response length / wall time).
 
+## Gate A benchmark harness (CPU vs CUDA)
+
+Use the helper script to produce comparable JSON output per backend:
+
+```bash
+# Terminal 1 (CPU)
+RBITNET_BACKEND=cpu cargo run -p bitnet-server --bin rbitnet-server --release
+
+# Terminal 2
+python scripts/bench_backend_compare.py --model rbitnet-llama --runs 15
+```
+
+Then repeat with CUDA:
+
+```bash
+# Terminal 1 (CUDA)
+RBITNET_BACKEND=cuda cargo run -p bitnet-server --bin rbitnet-server --release
+
+# Terminal 2
+python scripts/bench_backend_compare.py --model rbitnet-llama --runs 15
+```
+
+Copy `p50_ms`, `p95_ms`, and `mean_tok_s` for both runs into the table below and compute the ratio (`cpu_tok_s / cuda_tok_s`) as Gate A evidence.
+
 Baseline interne (initiale, à mettre à jour par machine):
 
 | Setup | Prompt tokens (approx.) | max_tokens | p50 ms | p95 ms | notes |
