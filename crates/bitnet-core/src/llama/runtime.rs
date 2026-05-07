@@ -5,6 +5,7 @@ use std::path::Path;
 use rand::Rng;
 use tokenizers::Tokenizer;
 
+use crate::backend::{make_backend, BackendKind, ComputeBackend};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 
@@ -15,6 +16,7 @@ pub struct LlamaRuntime {
     model: LlamaModel,
     tokenizer: Tokenizer,
     kv: KvCache,
+    backend: Box<dyn ComputeBackend>,
 }
 
 fn load_tokenizer(tokenizer_path: &Path) -> Result<Tokenizer> {
@@ -40,10 +42,12 @@ impl LlamaRuntime {
         let model = LlamaModel::from_gguf(archive)?;
         let tokenizer = load_tokenizer(tokenizer_path)?;
         let kv = KvCache::new(&model.cfg);
+        let backend = make_backend(BackendKind::from_env());
         Ok(Self {
             model,
             tokenizer,
             kv,
+            backend,
         })
     }
 
@@ -65,7 +69,9 @@ impl LlamaRuntime {
 
         let mut logits = Vec::new();
         for (pos, &tid) in prompt_ids.iter().enumerate() {
-            logits = self.model.forward(&mut self.kv, tid, pos)?;
+            logits = self
+                .model
+                .forward_with_backend(&mut self.kv, tid, pos, self.backend.as_ref())?;
         }
 
         let eos_id = self
@@ -84,7 +90,9 @@ impl LlamaRuntime {
                 break;
             }
             gen.push(next_id);
-            logits = self.model.forward(&mut self.kv, next_id, pos)?;
+            logits = self
+                .model
+                .forward_with_backend(&mut self.kv, next_id, pos, self.backend.as_ref())?;
             pos += 1;
         }
 

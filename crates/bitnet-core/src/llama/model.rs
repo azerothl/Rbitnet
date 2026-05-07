@@ -3,6 +3,7 @@
 use crate::error::{BitNetError, Result};
 use crate::ggml::tensor_to_f32;
 use crate::gguf::GgufArchive;
+use crate::backend::{ComputeBackend, CpuBackend};
 
 use super::config::LlamaConfig;
 
@@ -216,7 +217,19 @@ impl LlamaModel {
     }
 
     /// Run one forward step: token embedding + all layers + output matmul. Returns logits `[n_vocab]`.
+    #[allow(dead_code)]
     pub fn forward(&self, kv: &mut KvCache, token: u32, pos: usize) -> Result<Vec<f32>> {
+        let cpu = CpuBackend;
+        self.forward_with_backend(kv, token, pos, &cpu)
+    }
+
+    pub fn forward_with_backend(
+        &self,
+        kv: &mut KvCache,
+        token: u32,
+        pos: usize,
+        backend: &dyn ComputeBackend,
+    ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         if pos >= cfg.max_seq {
             return Err(BitNetError::Inference("sequence position >= max_seq".into()));
@@ -262,17 +275,16 @@ impl LlamaModel {
             for qh in 0..cfg.n_head {
                 let kv_h = qh / n_rep;
                 let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                let mut scores = vec![0.0f32; pos + 1];
+                let mut k_mat = vec![0.0f32; (pos + 1) * cfg.head_dim];
                 for p in 0..=pos {
                     let k_off = p * stride + kv_h * cfg.head_dim;
                     let k_slice = &kv.k[il][k_off..k_off + cfg.head_dim];
-                    let s: f32 = q_slice
-                        .iter()
-                        .zip(k_slice.iter())
-                        .map(|(&a, &b)| a * b)
-                        .sum::<f32>()
-                        * scale;
-                    scores[p] = s;
+                    let row_off = p * cfg.head_dim;
+                    k_mat[row_off..row_off + cfg.head_dim].copy_from_slice(k_slice);
+                }
+                let mut scores = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
+                for s in &mut scores {
+                    *s *= scale;
                 }
                 softmax_inplace(&mut scores);
                 let mut comb = vec![0.0f32; cfg.head_dim];
