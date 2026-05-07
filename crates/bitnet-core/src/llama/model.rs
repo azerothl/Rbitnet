@@ -277,7 +277,7 @@ impl LlamaModel {
                 let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
                 // For CPU backends compute dot products directly to avoid per-head allocations.
                 // For accelerated backends build k_mat and delegate to backend.matvec.
-                let scores: Vec<f32> = if backend.kind() == crate::backend::BackendKind::Cpu {
+                let mut scores: Vec<f32> = if backend.kind() == crate::backend::BackendKind::Cpu {
                     (0..=pos)
                         .map(|p| {
                             let k_off = p * stride + kv_h * cfg.head_dim;
@@ -300,7 +300,6 @@ impl LlamaModel {
                     }
                     s
                 };
-                let mut scores = scores;
                 softmax_inplace(&mut scores);
                 let mut comb = vec![0.0f32; cfg.head_dim];
                 for p in 0..=pos {
