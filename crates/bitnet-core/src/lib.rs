@@ -8,6 +8,7 @@
 //! - [`llama`] — Llama-compatible GGUF inference (dequant + transformer)
 //! - [`ggml`] — GGML type sizes and dequantization helpers
 
+pub mod backend;
 pub mod error;
 pub mod ggml;
 pub mod gguf;
@@ -15,6 +16,9 @@ pub mod inference;
 pub mod llama;
 pub mod kernels;
 pub mod model;
+pub mod paged_kv;
+pub mod registry;
+pub mod scheduler;
 
 pub use error::{BitNetError, Result};
 pub use gguf::{GgufArchive, GgufFileInfo, GgufTensorInfo, GgufValue, LlamaHyperParams};
