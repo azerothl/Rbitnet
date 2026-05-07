@@ -10,6 +10,7 @@ use crate::model::ToyLlm;
 pub trait ModelExecutor: Send + Sync {
     fn family(&self) -> &'static str;
     fn backend(&self) -> BackendKind;
+    fn backend_accelerated(&self) -> bool;
     fn is_ready(&self) -> bool;
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String>;
     fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String>;
@@ -17,7 +18,7 @@ pub trait ModelExecutor: Send + Sync {
 
 pub struct LlamaExecutor {
     pub backend_kind: BackendKind,
-    pub _backend: Box<dyn ComputeBackend>,
+    pub backend_impl: Box<dyn ComputeBackend>,
     pub gguf: Arc<GgufArchive>,
     pub tokenizer_path: PathBuf,
     runtime: Mutex<Option<LlamaRuntime>>,
@@ -32,7 +33,7 @@ impl LlamaExecutor {
     ) -> Self {
         Self {
             backend_kind,
-            _backend: backend,
+            backend_impl: backend,
             gguf,
             tokenizer_path,
             runtime: Mutex::new(None),
@@ -47,6 +48,9 @@ impl ModelExecutor for LlamaExecutor {
 
     fn backend(&self) -> BackendKind {
         self.backend_kind
+    }
+    fn backend_accelerated(&self) -> bool {
+        self.backend_impl.is_native_accelerated()
     }
 
     fn is_ready(&self) -> bool {
@@ -72,7 +76,7 @@ impl ModelExecutor for LlamaExecutor {
 
 pub struct BitNetExecutor {
     pub backend_kind: BackendKind,
-    pub _backend: Box<dyn ComputeBackend>,
+    pub backend_impl: Box<dyn ComputeBackend>,
     toy: ToyLlm,
 }
 
@@ -80,7 +84,7 @@ impl BitNetExecutor {
     pub fn new(backend_kind: BackendKind, backend: Box<dyn ComputeBackend>, seed: u64) -> Self {
         Self {
             backend_kind,
-            _backend: backend,
+            backend_impl: backend,
             toy: ToyLlm::new(seed),
         }
     }
@@ -93,6 +97,9 @@ impl ModelExecutor for BitNetExecutor {
 
     fn backend(&self) -> BackendKind {
         self.backend_kind
+    }
+    fn backend_accelerated(&self) -> bool {
+        self.backend_impl.is_native_accelerated()
     }
 
     fn is_ready(&self) -> bool {
