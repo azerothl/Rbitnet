@@ -3,14 +3,20 @@
 //! - `RBITNET_STUB=1` — HTTP integration text (Akasha `BitNetProvider`).
 //! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
 //! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `tokenizer.model` / `RBITNET_TOKENIZER`.
+//! - `RBITNET_ARCHITECTURE` — optional override for `general.architecture` dispatch (see `loaders/`).
+//! - `RBITNET_MODEL_FAMILY` — `llama` / `bitnet` / `auto` narrows how the architecture key is resolved alongside the GGUF metadata.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::backend::{make_backend, BackendKind};
+use crate::backend::BackendKind;
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
-use crate::model::{LlamaExecutor, ModelExecutor, ToyLlm};
+use crate::loaders::{
+    dispatch_gguf_executor, normalize_architecture_slug, resolve_architecture_key,
+};
+use crate::model::{ModelExecutor, ToyLlm};
+use crate::paths::validate_no_parent_components;
 use crate::paged_kv::PagedKvCache;
 use crate::registry::KernelRegistry;
 use crate::scheduler::{ContinuousBatchScheduler, InferenceOutput, InferenceRequest, InferenceStats};
@@ -41,49 +47,6 @@ fn toy_seed() -> u64 {
 /// Path to GGUF from `RBITNET_MODEL` if set.
 pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
-}
-
-/// Reject paths containing `..` so environment-controlled paths cannot escape the intended directory.
-pub fn validate_no_parent_components(path: &Path) -> Result<()> {
-    for c in path.components() {
-        if matches!(c, std::path::Component::ParentDir) {
-            return Err(BitNetError::InvalidGguf(
-                "path must not contain '..' components".into(),
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn tokenizer_path_candidate(pb: &Path) -> bool {
-    if !pb.is_file() {
-        return false;
-    }
-    let Some(name) = pb.file_name().and_then(|n| n.to_str()) else {
-        return false;
-    };
-    let lower = name.to_ascii_lowercase();
-    lower == "tokenizer.json" || lower == "tokenizer.model"
-}
-
-fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
-    if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
-        let pb = PathBuf::from(p);
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-    }
-    if let Some(dir) = model_path.parent() {
-        let pb = dir.join("tokenizer.json");
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-        let pb = dir.join("tokenizer.model");
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-    }
-    Err(BitNetError::TokenizerMissing)
 }
 
 /// Shared engine state.
@@ -147,13 +110,15 @@ impl Engine {
         };
         let stub = stub_mode_enabled();
         let backend_kind = BackendKind::from_env();
-        let model_family = model_family_from_env(gguf.as_deref()).to_string();
+        let model_family = gguf
+            .as_deref()
+            .map(resolve_architecture_key)
+            .unwrap_or_else(model_family_when_no_gguf);
         let scheduler = ContinuousBatchScheduler::from_env();
         let kernel_registry = KernelRegistry::bootstrap_default();
         let paged_kv = PagedKvCache::from_env();
         let executor = build_executor(
             backend_kind,
-            &model_family,
             gguf.as_ref().map(Arc::clone),
             model_path.as_ref(),
             stub,
@@ -179,11 +144,10 @@ impl Engine {
     pub fn load_path(path: &Path) -> Result<Self> {
         let gguf = Arc::new(GgufArchive::mmap_path(path)?);
         let backend_kind = BackendKind::from_env();
-        let model_family = model_family_from_env(Some(&gguf)).to_string();
+        let model_family = resolve_architecture_key(&gguf);
         let model_path = Some(path.to_path_buf());
         let executor = build_executor(
             backend_kind,
-            &model_family,
             Some(Arc::clone(&gguf)),
             model_path.as_ref(),
             false,
@@ -342,29 +306,28 @@ impl Engine {
     }
 }
 
-fn model_family_from_env(gguf: Option<&GgufArchive>) -> &'static str {
-    match std::env::var("RBITNET_MODEL_FAMILY")
-        .unwrap_or_else(|_| "auto".into())
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "llama" => "llama",
-        "bitnet" => "bitnet",
-        _ => {
-            if gguf.and_then(|g| g.architecture()).is_some_and(|a| a.eq_ignore_ascii_case("bitnet"))
-            {
-                "bitnet"
-            } else {
-                "llama"
-            }
+/// Label for [`EngineInner::model_family`] when no GGUF is loaded (stub / toy / no `RBITNET_MODEL`).
+fn model_family_when_no_gguf() -> String {
+    if let Ok(v) = std::env::var("RBITNET_ARCHITECTURE") {
+        let t = normalize_architecture_slug(&v);
+        if !t.is_empty() {
+            return t;
         }
+    }
+    match std::env::var("RBITNET_MODEL_FAMILY") {
+        Ok(f) => {
+            let fam = normalize_architecture_slug(&f);
+            if fam == "bitnet" {
+                return "bitnet".into();
+            }
+            "llama".into()
+        }
+        Err(_) => "llama".into(),
     }
 }
 
 fn build_executor(
     backend_kind: BackendKind,
-    model_family: &str,
     gguf: Option<Arc<GgufArchive>>,
     model_path: Option<&PathBuf>,
     stub: bool,
@@ -373,24 +336,9 @@ fn build_executor(
     if stub || toy {
         return Ok(None);
     }
-    let backend = make_backend(backend_kind);
-    if model_family == "bitnet" {
-        return Err(BitNetError::Inference(
-            "BitNet GGUF inference is not yet implemented. \
-             Use RBITNET_TOY=1 for a toy model, or provide a Llama-architecture GGUF. \
-             Set RBITNET_MODEL_FAMILY=llama to override the auto-detected architecture."
-                .into(),
-        ));
-    }
     let gguf = gguf.ok_or(BitNetError::ModelNotLoaded)?;
     let model_path = model_path.ok_or(BitNetError::ModelNotLoaded)?;
-    let tok_path = resolve_tokenizer_path(model_path)?;
-    Ok(Some(Box::new(LlamaExecutor::new(
-        backend_kind,
-        backend,
-        gguf,
-        tok_path,
-    ))))
+    dispatch_gguf_executor(backend_kind, gguf, model_path.as_path()).map(Some)
 }
 
 fn stub_response(prompt: &str, max_tokens: u32) -> String {

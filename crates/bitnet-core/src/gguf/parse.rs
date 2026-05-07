@@ -228,6 +228,16 @@ impl GgufArchive {
         })
     }
 
+    /// Lowercased trimmed `general.architecture`, if present.
+    ///
+    /// When metadata is absent (legacy GGUF), callers typically fall back to treating the file
+    /// as Llama-shaped for inference dispatch (see [`crate::loaders::resolve_architecture_key`]).
+    pub fn normalized_architecture(&self) -> Option<String> {
+        self.architecture()
+            .map(|s| s.trim().to_ascii_lowercase())
+            .filter(|s| !s.is_empty())
+    }
+
     /// Stable id for OpenAI-style `model` fields (e.g. `rbitnet-llama`).
     pub fn suggested_openai_model_id(&self) -> String {
         self.architecture()

@@ -158,6 +158,8 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_BIND` | Listen address (default `127.0.0.1:8080`). |
 | `RBITNET_MODEL` | Path to a `.gguf` file (must not contain `..` path components). |
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` if not next to the GGUF (must not contain `..`). |
+| `RBITNET_ARCHITECTURE` | Force the architecture dispatch key (ASCII, case-insensitive); wins over `general.architecture` and `RBITNET_MODEL_FAMILY`. Use to experiment or to force `llama` when a file advertises an unsupported arch (e.g. MoE). |
+| `RBITNET_MODEL_FAMILY` | `llama`, `bitnet`, or `auto` (default): with `auto`, the key is `bitnet` when the GGUF says so, otherwise `general.architecture` (lowercased), else `llama` if that metadata is missing (legacy files). |
 | `RBITNET_STUB` | `1` / `true` / `yes` — stub responses (overrides real inference when set). |
 | `RBITNET_TOY` | `1` — toy LM instead of GGUF. |
 | `RBITNET_TOY_SEED` | Integer seed for the toy LM (default `42`). |
@@ -176,6 +178,18 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_CORS_ANY` | unset | Set to `1` only for dev to allow any CORS origin. |
 
 Binding to `0.0.0.0` or `[::]` logs a warning: use a reverse proxy and TLS for untrusted networks ([DEPLOYMENT.md](DEPLOYMENT.md)).
+
+## GGUF general.architecture dispatch
+
+Rbitnet resolves a **normalized architecture key** from the environment and from `general.architecture` in the GGUF, then selects an executor builder (Atlas-style factory in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/)).
+
+| Example `general.architecture` | Loader / outcome |
+|----------------------------------|------------------|
+| `llama`, `mistral`, (typical Llama-shaped family) | Llama GGUF stack (`LlamaExecutor`) |
+| `bitnet` | Error: BitNet weights forward not implemented yet (same message as before). |
+| `qwen35moe` | Error: not implemented; message points to `loaders/` and `inspect_gguf`. Override with `RBITNET_ARCHITECTURE=llama` only if you accept that the Llama stack will likely fail later on tensor layout. |
+
+Extend the match table in [`registry.rs`](../crates/bitnet-core/src/loaders/registry.rs) when adding a new family.
 
 ## Inspect a GGUF (no server)
 

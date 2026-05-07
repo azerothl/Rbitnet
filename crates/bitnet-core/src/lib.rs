@@ -15,12 +15,15 @@ pub mod gguf;
 pub mod inference;
 pub mod llama;
 pub mod kernels;
+pub mod loaders;
 pub mod model;
 pub mod paged_kv;
+pub mod paths;
 pub mod registry;
 pub mod scheduler;
 
 pub use error::{BitNetError, Result};
 pub use gguf::{GgufArchive, GgufFileInfo, GgufTensorInfo, GgufValue, LlamaHyperParams};
-pub use inference::{validate_no_parent_components, Engine};
+pub use inference::Engine;
 pub use model::ToyLlm;
+pub use paths::validate_no_parent_components;

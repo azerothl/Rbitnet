@@ -127,6 +127,8 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 You should see GGUF version, architecture, tensor count, first tensors, and `llama.*` hyperparameters when present.
 
+If `inspect_gguf` shows an architecture that Rbitnet does not implement yet (for example `qwen35moe`), the server fails at **loader dispatch** with an explicit error instead of obscure `llama.*` missing-key messages. See **[USAGE.md — GGUF general.architecture dispatch](USAGE.md#gguf-generalarchitecture-dispatch)** for `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY` and the contributor hook in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/).
+
 **2. Point the engine at the file and run the HTTP server:**
 
 ```bash
