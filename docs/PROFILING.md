@@ -2,19 +2,31 @@
 
 Use this as a **working checklist** when investigating CPU time in `bitnet-core` (matmul, attention, dequantization). Publish a one-page summary in your PR when you change numerical kernels or the Llama forward.
 
+**Archived snapshots:** store dated findings under [docs/profiling/](profiling/README.md) and link them from [BENCHMARKS.md](BENCHMARKS.md) for the same release.
+
 ## What to measure first
 
 1. **`cargo bench -p bitnet-core`** — Criterion reports for ternary / matvec kernels (`benches/kernels.rs`).
 2. **Wall time per token** — run `rbitnet-server` with `RUST_LOG=info`, a fixed prompt, and compare timestamps (or wrap with `time` / your APM).
 3. **Sampling profiler** — on Linux, [perf](https://perf.wiki.kernel.org/) (`perf record -g -- ./target/release/rbitnet-server`) or [flamegraph](https://github.com/flamegraph-rs/flamegraph) on the binary.
 
+## Host-side pipeline (CPU / HTTP first-token latency)
+
+Industry write-ups often split **prefill** (compute-heavy) from **decode** (memory-bandwidth-heavy). Time-to-first-byte can still be dominated by **everything before the model**:
+
+1. **HTTP / JSON** parsing and validation (`bitnet-server`).
+2. **Tokenizer** `encode` (Rust `tokenizers` — compare wall time to **prefill_ms** from `Engine::complete_detailed` or Prometheus sums).
+3. **Prompt assembly** in your client (templates, tools metadata).
+
+If **encode_ms** rivals **prefill_ms** on long prompts, optimize templates or tokenizer loading before tuning kernels. Use **`GET /metrics`** phase counters (`rbitnet_inference_encode_ms_sum`, `…_prefill_ms_sum`, `…_decode_ms_sum`) after steady traffic, or log `InferenceStats` from **`complete_detailed`** for single-shot debugging.
+
 ## Likely hot spots (prioritized issues)
 
 | Area | File / module | Notes |
 |------|----------------|--------|
-| Quantized matmul / matvec | `crates/bitnet-core/src/kernels.rs`, `ggml/dequant.rs` | Dominates large models. |
-| Attention + RoPE | `crates/bitnet-core/src/llama/model.rs` | Per-layer loops; KV cache access pattern matters. |
-| GGUF dequant | `ggml/dequant.rs`, `ggml/tensor_to_f32` | Per-layer weight loads are amortized after first forward if cached in `f32` (current design keeps dequant in `LlamaModel`). |
+| Quantized matmul / matvec | `kernels.rs`, `ggml/dequant.rs`, **`ggml/quant_dot.rs`** | **`quant_dot`** implements mmap row GEMV for Llama (`RBITNET_LLAMA_WEIGHT_MODE`); SIMD there is the next win. |
+| Attention + RoPE | `llama/model.rs` | Per-layer loops; KV cache access pattern matters. |
+| GGUF dequant | `ggml/dequant.rs`, `tensor_to_f32` | Used for **`dense`** Llama weights and norms; mmap mode avoids full-weight `tensor_to_f32` for large matrices. |
 
 ## What to record
 
@@ -25,6 +37,8 @@ Use this as a **working checklist** when investigating CPU time in `bitnet-core`
 Link the results from [BENCHMARKS.md](BENCHMARKS.md) when you publish a baseline.
 
 ## Sprint 3 profiling snapshot
+
+Archived as [profiling/snapshot-2026-05.md](profiling/snapshot-2026-05.md) (update the date/SHA when you replace this content for a new release).
 
 Scope:
 - scheduler path with speculative decode enabled (`RBITNET_SPECULATIVE=1`)

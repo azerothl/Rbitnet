@@ -21,7 +21,9 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
   - **[training/README.md](training/README.md)** — optional Python LoRA/SFT recipe; `rbitnet train` / `rbitnet export-gguf`
   - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
+  - **[CHANGELOG.md](CHANGELOG.md)** — release-facing changes (Keep a Changelog style)
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
+  - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_*` variables
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
@@ -30,6 +32,7 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
   - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
   - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist
+  - [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md) — long-term inference backlog (PagedAttention-class epic)
 
 ## Run the server (real GGUF)
 

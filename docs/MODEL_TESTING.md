@@ -18,6 +18,8 @@ Use any GGUF produced by **any** toolchain, as long as it is compatible with Rbi
 
 Then skip straight to **[Validate with Rbitnet](#validate-with-rbitnet)** below. No Python, no BitNet.
 
+**Roadmap GGUF (`glm4moe`, `gptoss`, `deepseek2`):** only GGUF files whose tensors match [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) load; others fail at startup ([ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)).
+
 ---
 
 ## Path 1b — List / search / download from Hugging Face (Rust CLI only)
@@ -168,6 +170,15 @@ cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture
 ```
 
 If `RBITNET_TEST_GGUF` is unset, the test **passes without doing I/O** (skipped logic).
+
+## Roadmap architectures — GLM (Z.ai), gpt-oss, DeepSeek MoE
+
+GGUF families **`glm4moe`**, **`gptoss`**, and **`deepseek2`** use a **CUDA-only** executor shell: tokenizer resolution works; **`generate` returns an explicit “not implemented yet”** until the transformer graph is ported from llama.cpp.
+
+- Matrix and slug notes: [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)
+- DeepSeek dense vs MoE: [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md)
+
+**Smoke checklist:** `RBITNET_BACKEND=cuda`, valid `tokenizer.json` beside the GGUF, then call chat — expect **503/500 with roadmap message**, not a tokenizer crash. Prefer **Flash / Lite** GGUF for iteration when the architecture matches the full model.
 
 ## Model card summary (`bitnet_b1_58-large`)
 

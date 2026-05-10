@@ -16,7 +16,7 @@ Requirements: `Cargo.lock` must be committed so `--locked` succeeds.
 
 ## Steps
 
-1. Update `CHANGELOG` or GitHub release notes: user-visible fixes, new env vars, breaking HTTP changes.
+1. Update [CHANGELOG.md](../CHANGELOG.md) and GitHub release notes: user-visible fixes, new env vars, breaking HTTP changes.
 2. Bump `version` in `Cargo.toml` (semver).
 3. Commit and tag: `git tag v0.x.y && git push origin v0.x.y` (or create the tag from the GitHub UI). This triggers the release workflow and attaches the binaries.
 4. CI (see `.github/workflows/ci.yml`) should be green on the release branch before tagging.

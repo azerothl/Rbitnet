@@ -1,5 +1,7 @@
 # Using Rbitnet — models, tokenizer, and runtime
 
+Consolidated variable index: **[ENV_REFERENCE.md](ENV_REFERENCE.md)**.
+
 ## Akasha `llm_router.yaml` (BitNet / local)
 
 Point a **BitNet** or OpenAI-compatible route at `http://127.0.0.1:<port>/v1` (see `rbitnet serve` / `rbitnet-server` and `RBITNET_*` env vars in this repo). In [Akasha](https://github.com/azerothl/Akasha), add a provider entry in `llm_router.yaml` with that base URL and a small model id matching `RBITNET_MODEL`. Use **`akasha services doctor`** (akasha-models compose) plus **`GET /api/router/metrics`** after traffic to validate latency and errors.
@@ -10,7 +12,7 @@ Akasha already documents a **BitNet / Rbitnet** provider block in [`spec/llm_rou
 
 ## Prometheus metrics (`GET /metrics`)
 
-`rbitnet-server` (and `rbitnet serve`) expose **`GET /metrics`** as **Prometheus text** alongside **`GET /health`** and **`GET /ready`** (no API key required for these paths — see `crates/bitnet-server/tests/openai_compat.rs`). Use them for:
+`rbitnet-server` (and `rbitnet serve`) expose **`GET /metrics`** as **Prometheus text** alongside **`GET /health`** and **`GET /ready`** (no API key required for these paths — see `crates/bitnet-server/tests/openai_compat.rs`). Counters include end-to-end wall time plus **phase-oriented** sums when using a real executor: `rbitnet_inference_encode_ms_sum` (tokenizer), `rbitnet_inference_prefill_ms_sum`, `rbitnet_inference_decode_ms_sum`, `rbitnet_inference_ttft_ms_sum` (encode+prefill), `rbitnet_inference_itl_us_sum` and `rbitnet_inference_tpot_us_sum` (per-request average inter-token / TPOT in decode, summed per completed call), and `rbitnet_completion_tokens_total` (generated token count from the runtime when available). Use them for:
 
 - **Hermes-style self-hosted ops:** scrape with Prometheus / Grafana or a simple `curl -sS http://127.0.0.1:8080/metrics | head`.
 - **Correlation with Akasha:** when Akasha routes traffic here, watch Rbitnet request counters and errors while observing **`GET /api/router/metrics`** on the Akasha daemon.
@@ -57,7 +59,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models install <bundle-id> --dir DIR [--symlink]` | Download the bundle into `DIR` and write **`rbitnet.manifest.json`** with suggested `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths (relative). Uses `HF_TOKEN` when the Hub requires it. **`--symlink`** optional, same semantics as `models download`. |
 | `rbitnet models generate-catalog` | Build a `compatible_models.json` **draft** from Hub search (one GGUF + tokenizer per repo when found). Review before commit — see below. |
 | `rbitnet models download <repo_id> [--dir DIR] [--file NAME]... [--symlink]` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). Optional **`--symlink`** : symlink into `--dir` instead of hard link / copy. |
-| `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). |
+| `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). |
 
 **Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
 
@@ -89,13 +91,15 @@ cargo build -p rbitnet-cli --release
 **Tokenizers on the Hub:** Many BitNet / Transformers repos document `AutoTokenizer.from_pretrained(...)` without publishing a `tokenizer.json` or `tokenizer.model` in the same repo as the GGUF (e.g., tokenizer loaded from a different repo, or only Safetensors weights). Rbitnet requires a **file** `tokenizer.json` or `tokenizer.model` alongside the GGUF, or **`RBITNET_TOKENIZER`** pointing to one of those files. The `models search` command can only list what the `siblings` API exposes; if the model card points to a different Hugging Face id for the tokenizer, download that file from that repo or set `RBITNET_TOKENIZER` accordingly.
 ## Requirements to run a real model
 
-1. A **`.gguf`** file with **Llama-compatible** layout (see [BITNET_SPEC.md](BITNET_SPEC.md) and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)).
+1. A **`.gguf`** file with **Llama-compatible** layout (see [BITNET_SPEC.md](BITNET_SPEC.md) and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)), **or** a roadmap-tagged GGUF (`glm4moe`, `gptoss`, `deepseek2`) with **`RBITNET_BACKEND=cuda`** whose tensors still match the Llama loader. If not, the server fails at **load** with an explicit error — see [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md).
 2. A **tokenizer** file that the Hugging Face `tokenizers` crate can load:
    - Prefer **`tokenizer.json`** next to the GGUF, **or**
    - **`tokenizer.model`** (SentencePiece) in the same directory, **or**
    - Set **`RBITNET_TOKENIZER`** to the absolute path of either file.
 
 Without a tokenizer, the engine returns `TokenizerMissing` when you try to generate text.
+
+**Chat templates:** Rbitnet builds a simple **plain-text** prompt from `messages` (`role: content` lines). Models that expect a **specific** chat template (Hermes, Llama 3 instruct, Qwen, etc.) should use prompts consistent with how the GGUF was exported — see the upstream model card and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md). Bundles from **`rbitnet models install`** record tokenizer-relative paths in `rbitnet.manifest.json`; align temperature and stop tokens with the upstream recommendation.
 
 ## Quick start — HTTP server with a GGUF
 
@@ -115,6 +119,8 @@ $env:RBITNET_MODEL="C:\path\to\model.gguf"
 $env:RBITNET_BIND="127.0.0.1:8080"
 cargo run -p bitnet-server --bin rbitnet-server --release
 ```
+
+**CLI overrides (same as `rbitnet serve`):** `rbitnet-server --bind 127.0.0.1:8080 --api-key your-secret` only fills env when those variables are **not** already set.
 
 **Health and metrics (operations):**
 
@@ -164,6 +170,16 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_TOY` | `1` — toy LM instead of GGUF. |
 | `RBITNET_TOY_SEED` | Integer seed for the toy LM (default `42`). |
 | `RBITNET_TEST_GGUF` | Used only by the `optional_gguf_from_env_smoke` test in `bitnet-core`. |
+| `RBITNET_CACHE_OUTPUT_F32` | **Default on** for the experimental **`qwen35moe`** CUDA path: load `output.weight` / `lm_head` as F32 once and reuse for logits (much lower per-token dequant overhead). Costs extra **host RAM** on the order of `vocab × hidden × 4` bytes. Set to `0`, `false`, or `no` to keep weights quantized in memory during logits (slower logits, less RAM). |
+| `RBITNET_PREFILL_CHUNK_TOKENS` | Positive integer (default `128`). Llama and Qwen35 runtimes process the prompt prefill in slices of this many tokens (cancellation granularity and scheduling hooks). Each slice still runs **one forward step per token**; this is **not** batched-matrix multi-token prefill as in large serving stacks. |
+| `RBITNET_PREFIX_CACHE` | `1` / `true` / `yes` enables an **exact-match cache of prior completions**: same prompt string, `max_tokens`, and `temperature`. This is **not** Hugging Face / OpenAI–style **prompt caching** that reuses **KV blocks** for a shared prefix across requests. See [LIMITATIONS.md](LIMITATIONS.md). |
+| `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | LRU-ish cap for prefix-cache entries (default `64`). |
+| `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | **`dense`** (full `f32` weight materialization, high RAM), **`mmap_quant`** (quantized weights in mmap + row GEMV; fails if a matrix uses an unsupported GGML type), **`auto`** (mmap when all Llama weight tensors are supported, else `dense`). |
+| `RBITNET_LLAMA_PAGED_KV` | `0` | **`1` / `true` / `yes`** — use **paged KV slabs** for Llama-lineage GGUF (Inference stack v2 phase A). Uses `RBITNET_PAGED_KV_PAGE_TOKENS` and `RBITNET_PAGED_KV_MAX_PAGES` (see [`paged_kv.rs`](../crates/bitnet-core/src/paged_kv.rs)). Default remains dense buffers. |
+| `RBITNET_PAGED_KV_PAGE_TOKENS`, `RBITNET_PAGED_KV_MAX_PAGES` | `16`, `4096` | Page size and per-layer physical page cap when **`RBITNET_LLAMA_PAGED_KV`** is enabled; also tune experimental Qwen35 attention metadata (see code). |
+| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_NUM`, `RBITNET_SPEC_DRAFT_RATIO_DEN` | Scheduler flags (see `crates/bitnet-core/src/scheduler.rs`). Batching is still **sequential** per request; speculative mode runs a **draft** then **verify** generate (MVP), not a separate draft model. |
+
+**Programmatic phase stats:** `Engine::complete_detailed` returns `InferenceOutput.stats` with `encode_ms`, `prefill_ms`, `decode_ms`, `ttft_ms`, `itl_us`, `tpot_us`, and tokenizer token counts when a real `ModelExecutor` is loaded.
 
 ### Server limits and security (`rbitnet-server`)
 
@@ -171,6 +187,7 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 |----------|---------|---------|
 | `RBITNET_MAX_BODY_BYTES` | `1048576` | Max JSON body size for `/v1/chat/completions` (HTTP 413 if exceeded). |
 | `RBITNET_MAX_PROMPT_CHARS` | `256000` | Max UTF-8 characters in the built prompt (HTTP 400). |
+| `RBITNET_MAX_PROMPT_TOKENS` | unset | Optional cap on tokenizer-encoded prompt length (HTTP 400 when exceeded). Checked after character limit; stub/toy modes use a rough `len/4` estimate. |
 | `RBITNET_MAX_TOKENS_CAP` | `8192` | Hard ceiling on client `max_tokens` (HTTP 400 if higher). |
 | `RBITNET_MAX_CONCURRENT` | `4` | Simultaneous blocking inference tasks (HTTP 503 when saturated). |
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | `600` | Wall-clock limit per completion (HTTP 504). |
@@ -187,7 +204,7 @@ Rbitnet resolves a **normalized architecture key** from the environment and from
 |----------------------------------|------------------|
 | `llama`, `mistral`, (typical Llama-shaped family) | Llama GGUF stack (`LlamaExecutor`) |
 | `bitnet` | Error: BitNet weights forward not implemented yet (same message as before). |
-| `qwen35moe` | **Experimental** native text path when `RBITNET_BACKEND=cuda` (NVIDIA CUDA runtime + cuBLAS must load). CPU dispatch returns an explicit error. Expect high VRAM usage and slow first-token latency: weights are dequantized on the host per matmul; logits can use `cuBLAS` GEMV in chunks. Pair the GGUF with a Hugging Face tokenizer (`tokenizer.json` next to the checkpoint or `RBITNET_TOKENIZER`). Vision and MTP are out of scope for this first path. To force the Llama loader instead, set `RBITNET_ARCHITECTURE=llama` (likely to fail on tensor layout). |
+| `qwen35moe` | **Experimental** native text path when `RBITNET_BACKEND=cuda` (NVIDIA CUDA runtime + cuBLAS must load). CPU dispatch returns an explicit error. Expect high VRAM usage and slow first-token latency: weights are dequantized on the host per matmul; logits use `cuBLAS` GEMV in chunks by default after a one-shot F32 **`output.weight`** cache (`RBITNET_CACHE_OUTPUT_F32`, on unless disabled). Pair the GGUF with a Hugging Face tokenizer (`tokenizer.json` next to the checkpoint or `RBITNET_TOKENIZER`). Vision and MTP are out of scope for this first path. To force the Llama loader instead, set `RBITNET_ARCHITECTURE=llama` (likely to fail on tensor layout). |
 
 Extend the match table in [`registry.rs`](../crates/bitnet-core/src/loaders/registry.rs) when adding a new family.
 

@@ -44,6 +44,8 @@ A model is compatible if, after export, it satisfies all of the following:
 4. **Tokenizer:** `tokenizer.json` (or compatible `tokenizer.model`) matching the vocabulary and special tokens of the trained model. Rbitnet does not ship tokenizers inside the GGUF; it loads them from disk (see [USAGE.md](USAGE.md)).
 5. **Quantization:** Weights must use GGML types that Rbitnet can **dequantize** to `f32` for the current implementation. Exotic IQ layouts may fail until implemented; re-quantize to a supported type if needed.
 
+**Roadmap GGUF (`glm4moe`, `gptoss`, `deepseek2`):** only loads when tensors match the **Llama** loader; pure MoE/MLA exports error at load time. CUDA + tokenizer must succeed; see [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md) and [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md).
+
 Do **not** assume every checkpoint (including BitNet-specific or exotic quantizations) converts cleanly to a Llama-shaped GGUF without checking the upstream converter and running `inspect_gguf`.
 
 ## Typical workflow (train elsewhere → export → run Rbitnet)
