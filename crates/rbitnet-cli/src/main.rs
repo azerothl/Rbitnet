@@ -39,7 +39,30 @@ enum Commands {
     /// Print steps to convert a Hugging Face checkpoint directory to GGUF for Rbitnet (see llama.cpp).
     ExportGguf(ExportGgufCmd),
     /// Run the OpenAI-compatible HTTP server (same as `rbitnet-server`).
-    Serve,
+    Serve(ServeCmd),
+}
+
+#[derive(Args)]
+struct ServeCmd {
+    /// API key for protected routes (only if `RBITNET_API_KEY` is not already set).
+    #[arg(long, env = "RBITNET_API_KEY")]
+    api_key: Option<String>,
+    /// Listen address host:port (only if `RBITNET_BIND` is not already set).
+    #[arg(long, env = "RBITNET_BIND")]
+    bind: Option<String>,
+}
+
+fn apply_serve_cli_env(cmd: &ServeCmd) {
+    if let Some(k) = &cmd.api_key {
+        if std::env::var_os("RBITNET_API_KEY").is_none() {
+            std::env::set_var("RBITNET_API_KEY", k);
+        }
+    }
+    if let Some(b) = &cmd.bind {
+        if std::env::var_os("RBITNET_BIND").is_none() {
+            std::env::set_var("RBITNET_BIND", b);
+        }
+    }
 }
 
 #[derive(Args)]
@@ -130,6 +153,16 @@ enum ModelsCmd {
         token: Option<String>,
         #[arg(long)]
         symlink: bool,
+    },
+    /// Resolve GGUF/tokenizer files for one Hugging Face repo and print suggested `RBITNET_*`.
+    Resolve {
+        /// Repository id, e.g. `microsoft/bitnet-b1.58-2B-4T-gguf`.
+        repo_id: String,
+        #[arg(long, env = "HF_TOKEN")]
+        token: Option<String>,
+        /// Print pretty JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// Build a `compatible_models.json` skeleton from Hugging Face (one GGUF + tokenizer per repo when found).
     ///
@@ -310,6 +343,41 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             }
             Ok(())
         }
+        ModelsCmd::Resolve { repo_id, token, json } => {
+            let resolved = bitnet_install::resolve_model(&repo_id, token.as_deref())?;
+            if json {
+                let body = serde_json::to_string_pretty(&resolved)
+                    .map_err(|e| format!("serialize resolve output: {e}"))?;
+                println!("{body}");
+                return Ok(());
+            }
+            println!("repo: {}", resolved.repo_id);
+            println!("readiness: {}", resolved.readiness);
+            if resolved.gguf.is_empty() {
+                println!("gguf: (none)");
+            } else {
+                println!("gguf:");
+                for g in &resolved.gguf {
+                    println!("  {g}");
+                }
+            }
+            if let Some(v) = &resolved.tokenizer_json {
+                println!("tokenizer.json: {v}");
+            }
+            if let Some(v) = &resolved.tokenizer_model {
+                println!("tokenizer.model: {v}");
+            }
+            if let Some(v) = &resolved.tokenizer_config_json {
+                println!("tokenizer_config.json: {v}");
+            }
+            if !resolved.suggested_env.is_empty() {
+                println!("suggested env:");
+                for (k, v) in &resolved.suggested_env {
+                    println!("  {k}={v}");
+                }
+            }
+            Ok(())
+        }
         ModelsCmd::GenerateCatalog {
             query,
             search_limit,
@@ -388,7 +456,10 @@ async fn main() {
             train_cli::print_export_gguf_hint(cmd.checkpoint.as_deref());
             Ok(())
         }
-        Commands::Serve => bitnet_server::run_server().await.map_err(|e| e.to_string()),
+        Commands::Serve(cmd) => {
+            apply_serve_cli_env(&cmd);
+            bitnet_server::run_server().await.map_err(|e| e.to_string())
+        }
     };
 
     if let Err(e) = result {
