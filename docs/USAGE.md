@@ -64,6 +64,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models inspect <PATH>` | Inspect a local model file or directory and print model, tokenizer, and template-source paths. |
 | `rbitnet models rm <PATH> --yes` | Remove a local model file or directory. The command refuses deletion without `--yes`. Alias: `models remove`. |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). |
+| `rbitnet-proxy` | Parent OpenAI-compatible proxy. Requires `RBITNET_MODEL_REGISTRY`; spawns one native `rbitnet-runner` child per requested model id. No external inference engine is required. |
 
 **Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
 
@@ -130,6 +131,40 @@ cargo run -p bitnet-server --bin rbitnet-server --release
 **CLI overrides (same as `rbitnet serve`):** `rbitnet-server --bind 127.0.0.1:8080 --api-key your-secret` only fills env when those variables are **not** already set.
 
 **Local config:** `rbitnet serve` / `rbitnet-server` read flat `rbitnet.toml` defaults from the current directory, `RBITNET_CONFIG`, then the user config directory (`%APPDATA%\Rbitnet\rbitnet.toml` on Windows, `$XDG_CONFIG_HOME/rbitnet/rbitnet.toml` or `~/.config/rbitnet/rbitnet.toml` on Unix). Supported keys: `model`, `tokenizer`, `bind`, `chat_format`, `model_registry`, `active_model_id`. Environment variables keep priority.
+
+## Multi-process proxy
+
+Use `rbitnet-proxy` when you want one parent OpenAI-compatible base URL with isolated child processes per model. Each child is a real `rbitnet-runner` server with its own `RBITNET_MODEL`, bind port, mmap, tokenizer, and crash boundary.
+
+Example registry:
+
+```json
+{
+  "default": "tiny",
+  "models": {
+    "tiny": {
+      "gguf": "C:/models/tiny.gguf",
+      "tokenizer": "C:/models/tokenizer.json",
+      "architecture": "llama"
+    },
+    "other": {
+      "gguf": "C:/models/other.gguf"
+    }
+  }
+}
+```
+
+PowerShell:
+
+```powershell
+$env:RBITNET_MODEL_REGISTRY="C:\path\to\rbitnet-registry.json"
+$env:RBITNET_PROXY_BIND="127.0.0.1:8080"
+cargo run -p rbitnet-proxy --release
+```
+
+The proxy routes `/v1/chat/completions` and `/v1/completions` by the JSON `model` field. `GET /v1/models` lists the registry and marks a model loaded once its child is running. `RBITNET_API_KEY` is enforced at the proxy and forwarded to children.
+
+Native-first policy: the proxy's normal mode supervises only workspace binaries (`rbitnet-runner` / `rbitnet-server` internals) and routes to `bitnet-core`. Experimental delegation to external HTTP inference servers is not built by default; see [NATIVE_FIRST.md](NATIVE_FIRST.md).
 
 **Health and metrics (operations):**
 

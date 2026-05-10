@@ -24,13 +24,13 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 ## Phase D — Kernel fusion (GPU)
 
 1. Fused attention / GEMV paths for supported GGUF layouts where residency allows.
-2. Optional **delegation** to an external high-performance backend remains a valid strategy.
+2. Compare against external high-performance backends as benchmarks only; in-tree delegation remains dev-only behind `experimental-external-backends`.
 
 ## Related specs
 
 - [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md) — multi-process isolation (Ollama-style).
 - [PROFILING.md](PROFILING.md) — measure before large scheduler changes.
-- [DELEGATION.md](DELEGATION.md) — routing inference to an external high-performance backend.
+- [DELEGATION.md](DELEGATION.md) — dev-only notes for external backend experiments.
 
 ## Implementation notes (in-repo)
 
@@ -42,4 +42,4 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | B.2 | `PrefillDecodeQueue` placeholder struct (same module). |
 | C.1 | [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs) — `PrefixKvBlockCache` + `hash_prefix_tokens` scaffold. |
 | C.2 | [DEPLOYMENT.md](DEPLOYMENT.md) — replica / hash routing sketch. |
-| D | [DELEGATION.md](DELEGATION.md) — external backend patterns. |
+| D | [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) — native GPU work; [DELEGATION.md](DELEGATION.md) is dev-only. |

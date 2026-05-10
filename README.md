@@ -6,7 +6,7 @@ Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP se
 
 ## Do I need Python?
 
-**Not to run Rbitnet.** The server and `bitnet-core` are **self-sufficient in Rust**: mmap the GGUF, dequantize weights, run the transformer, sample tokens.
+**Not to run Rbitnet.** The server and `bitnet-core` are **self-sufficient in Rust**: mmap the GGUF, dequantize weights, run the transformer, sample tokens. No external inference engine is required.
 
 You only need **Python (or other tools)** if you are **converting** a Hugging Face / Safetensors checkpoint into **GGUF** upstream (for example Microsoft BitNet or `llama.cpp` converters). That is export-time, not a runtime dependency.
 
@@ -89,6 +89,8 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - **[CHANGELOG.md](CHANGELOG.md)** — release-facing changes (Keep a Changelog style)
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
   - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_*` variables
+  - **[docs/NATIVE_FIRST.md](docs/NATIVE_FIRST.md)** — politique native-first: aucun moteur d'inference externe requis
+  - **[docs/GPU_NATIVE_ROADMAP.md](docs/GPU_NATIVE_ROADMAP.md)** — feuille de route GPU native dans `bitnet-core`
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
@@ -103,15 +105,24 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist
   - [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md) — long-term inference backlog (PagedAttention-class epic)
 
-## Works today
+## Works Today
 
-Rbitnet currently runs **Llama-architecture GGUF** models. Native BitNet GGUF forward is still not implemented; files whose `general.architecture` is `bitnet` fail with the explicit loader error in `crates/bitnet-core/src/loaders/registry.rs`. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+Rbitnet runs **Llama-architecture GGUF** models and now has a native BitNet GGUF path for Llama-shaped BitNet b1.58 / ternary exports tagged with `general.architecture=bitnet`. The first curated target is the Microsoft `microsoft-bitnet-b1.58-2b-4t` bundle; see [docs/BITNET_NATIVE.md](docs/BITNET_NATIVE.md) and [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 Concrete public GGUF repos verified through the Hugging Face model API as `gguf.architecture=llama`:
 
 - `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` with `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` (small CPU smoke model).
 - `unsloth/Llama-3.2-1B-Instruct-GGUF` with `Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
 - `NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF` with `Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf` (`RBITNET_CHAT_FORMAT=chatml` recommended).
+
+Native BitNet curated install:
+
+```bash
+rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models
+export RBITNET_MODEL=/absolute/path/to/ggml-model-i2_s.gguf
+export RBITNET_TOKENIZER=/absolute/path/to/tokenizer.json
+cargo run -p bitnet-server --bin rbitnet-server --release
+```
 
 Install the CLI, download a GGUF, set a tokenizer file, then serve:
 
@@ -178,9 +189,9 @@ Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMA
 cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 ```
 
-## Test with `1bitLLM/bitnet_b1_58-large`
+## Test BitNet / Ternary GGUF
 
-The HF repo ships Safetensors; convert to GGUF with **Microsoft BitNet** tooling, then add the tokenizer and point `RBITNET_MODEL` at the `.gguf`. Walkthrough: **[docs/MODEL_TESTING.md](docs/MODEL_TESTING.md)**.
+Use the curated `microsoft-bitnet-b1.58-2b-4t` bundle for native GGUF inference, or convert Safetensors with **Microsoft BitNet** tooling, then add the tokenizer and point `RBITNET_MODEL` at the `.gguf`. Walkthrough: **[docs/BITNET_NATIVE.md](docs/BITNET_NATIVE.md)** and **[docs/MODEL_TESTING.md](docs/MODEL_TESTING.md)**.
 
 Optional automated parse check (local only):
 

@@ -21,6 +21,18 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_ADMIN_TOKEN` | string | (none) | Enables `POST /v1/admin/unload` with matching header. |
 | `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, swap engine for stub to free mmap. |
 
+## Runner proxy (`rbitnet-proxy`)
+
+| Variable | Type | Default | Notes |
+|----------|------|---------|--------|
+| `RBITNET_PROXY_BIND` | `host:port` | `RBITNET_BIND` or `127.0.0.1:8080` | Parent proxy listen address. |
+| `RBITNET_MODEL_REGISTRY` | path | required | JSON registry; each model id becomes one supervised worker in local mode. |
+| `RBITNET_RUNNER_BIN` | path/name | sibling `rbitnet-runner`, then `PATH` | Worker executable spawned per model id. |
+| `RBITNET_RUNNER_READY_TIMEOUT_SECS` | u64 | `60` | Time for child `GET /ready` to become 2xx. |
+| `RBITNET_PROXY_REQUEST_TIMEOUT_SECS` | u64 | `600` | Upstream native child request timeout. |
+| `RBITNET_INFERENCE_BACKEND` | string | `local` | Normal builds accept local native workers only. External delegation values require the dev-only Cargo feature `experimental-external-backends`. |
+| `RBITNET_VLLM_BASE_URL` | URL | (none) | Ignored by default builds; only used when an experimental external backend is compiled in. |
+
 ## Core / model loading (`bitnet-core`)
 
 | Variable | Default | Notes |

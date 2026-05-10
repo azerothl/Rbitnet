@@ -6,6 +6,7 @@ This page sets expectations for performance, formats, and architectures. For com
 
 - **CPU-first in production today:** multi-backend architecture exists (`cpu`, `cuda`, `rocm`, `vulkan`, `metal`) but non-CPU backends are currently MVP/parity stubs unless explicitly documented otherwise.
 - **Llama weights:** **`RBITNET_LLAMA_WEIGHT_MODE`** defaults to **`auto`**. When all Llama matrices use supported GGML types, weights stay **quantized in the GGUF mmap** (row-wise GEMV), giving RAM closer to Ollama/llama.cpp on the same file. **`dense`** forces full `f32` materialization at load (legacy, very high RAM).
+- **BitNet weights:** `general.architecture=bitnet` now routes to the native BitNet GGUF path for Llama-shaped Microsoft b1.58 exports. Projection weights may stay mmap-quantized when they use supported GGML types including ternary **TQ1_0** and **TQ2_0**. See [BITNET_NATIVE.md](BITNET_NATIVE.md).
 - **No distributed inference:** One process loads one GGUF for real generation (stub/toy modes are separate smoke paths).
 - **Not a vLLM / TRT-LLM–class server (yet):** fused GPU kernels (FlashAttention-style), **continuous batching** that fills GPU across heterogeneous requests, **API-style prompt caching** (reuse KV for common prefixes), **prefill/decode disaggregation**, and **CUDA graphs** are **not** the default baseline. **Llama-lineage** inference can use **opt-in paged KV slabs** (`RBITNET_LLAMA_PAGED_KV`, see [USAGE.md](USAGE.md)) as a step toward block-structured memory; **cross-request** pooling and full PagedAttention semantics remain roadmap ([INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md)). Smaller steps ship first: prefill **chunk** sizing via `RBITNET_PREFILL_CHUNK_TOKENS`, detailed **phase timings**, speculative **MVP** in the scheduler. See [STATUS_AND_ROADMAP.md — Advanced inference stack gaps](STATUS_AND_ROADMAP.md#advanced-inference-stack-gaps-vs-industry-serving).
 
@@ -21,6 +22,7 @@ This page sets expectations for performance, formats, and architectures. For com
 
 - **Unknown `ggml_type` values** fail with a clear error (`UnsupportedGgmlType`) once a tensor is dequantized; see `crates/bitnet-core/src/ggml/types.rs` for layout coverage.
 - **Tensor names** must follow llama.cpp-style conventions; odd exports may need renaming or loader extensions.
+- **BitNet native scope:** the supported native path assumes Microsoft/llama.cpp-style BitNet GGUF naming (`token_embd.weight`, `blk.N.attn_q.weight`, `blk.N.ffn_*`, `output.weight`) and Llama-like metadata (`llama.*` or BitNet aliases for shape fields). Non-Llama BitNet research layouts are not covered yet.
 
 ### Roadmap families (`glm4moe`, `gptoss`, `deepseek2`)
 

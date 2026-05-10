@@ -12,7 +12,7 @@ Current asset names are:
 - `rbitnet-server-vX.Y.Z-macos-x86_64.tar.gz`
 - `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz`
 
-Each archive contains `rbitnet`, `rbitnet-server`, and the stub `rbitnet-runner` binary for the future runner-proxy contract.
+Each archive contains `rbitnet`, `rbitnet-server`, `rbitnet-runner`, and `rbitnet-proxy`.
 
 ## Checklist
 
