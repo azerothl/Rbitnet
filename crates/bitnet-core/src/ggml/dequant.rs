@@ -677,19 +677,6 @@ fn dequant_tq1_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
     Ok(y)
 }
 
-#[cfg(test)]
-mod mxfp4_tests {
-    use super::*;
-
-    #[test]
-    fn mxfp4_one_block_shape() {
-        let mut block = [0u8; 17];
-        block[0] = 127;
-        let v = dequant_mxfp4(&block, 32).unwrap();
-        assert_eq!(v.len(), 32);
-    }
-}
-
 fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
     if n % QK_K != 0 {
         return Err(BitNetError::InvalidGguf(
@@ -716,4 +703,17 @@ fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
         }
     }
     Ok(y)
+}
+
+#[cfg(test)]
+mod mxfp4_tests {
+    use super::*;
+
+    #[test]
+    fn mxfp4_one_block_shape() {
+        let mut block = [0u8; 17];
+        block[0] = 127;
+        let v = dequant_mxfp4(&block, 32).unwrap();
+        assert_eq!(v.len(), 32);
+    }
 }

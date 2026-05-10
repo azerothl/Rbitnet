@@ -86,7 +86,11 @@ impl ComputeBackend for CpuBackend {
     }
 }
 
-/// CUDA MVP backend: API-compatible with CPU path, currently forwarding to CPU kernels.
+/// CUDA MVP backend: API-compatible with CPU path, using native cuBLAS GEMV when available.
+///
+/// Host copy operations intentionally remain host-side until the backend exposes real reusable
+/// device buffers; copying host -> device -> host here only adds latency without preserving GPU
+/// state across calls.
 #[derive(Debug)]
 pub struct CudaBackend {
     cpu: CpuBackend,
@@ -163,6 +167,12 @@ impl CudaRuntime {
         in_cols: usize,
     ) -> Option<Vec<f32>> {
         self.matvec_cuda(w, x, out_rows, in_cols)
+    }
+
+    pub fn has_cublas_gemv(&self) -> bool {
+        self.cublas_create_v2.is_some()
+            && self.cublas_destroy_v2.is_some()
+            && self.cublas_sgemv_v2.is_some()
     }
 
     fn load() -> Option<Self> {
@@ -413,20 +423,10 @@ impl ComputeBackend for CudaBackend {
     }
 
     fn copy_from_host(&self, src: &[f32]) -> Result<Vec<f32>> {
-        if let Some(rt) = &self.runtime {
-            if let Some(out) = rt.roundtrip_f32(src) {
-                return Ok(out);
-            }
-        }
         self.cpu.copy_from_host(src)
     }
 
     fn copy_to_host(&self, src: &[f32]) -> Result<Vec<f32>> {
-        if let Some(rt) = &self.runtime {
-            if let Some(out) = rt.roundtrip_f32(src) {
-                return Ok(out);
-            }
-        }
         self.cpu.copy_to_host(src)
     }
 

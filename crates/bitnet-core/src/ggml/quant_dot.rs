@@ -24,7 +24,7 @@ fn bf16_to_f32(bits: u16) -> f32 {
 
 /// Types that have mmap row GEMV / row decode in this module (match [`dot_row`]).
 pub fn ggml_type_supported_mmap_matvec(ty: u32) -> bool {
-    matches!(ty, 0 | 1 | 2 | 8 | 12 | 14 | 30)
+    matches!(ty, 0 | 1 | 2 | 8 | 12 | 14 | 30 | 34 | 35)
 }
 
 /// Dot product of one logical row (along `ne[0]`) with `x`.
@@ -43,6 +43,8 @@ pub fn dot_row(ty: u32, row_payload: &[u8], x: &[f32]) -> Result<f32> {
         8 => dot_row_q8_0(row_payload, x),
         12 => dot_row_q4_k(row_payload, x),
         14 => dot_row_q6_k(row_payload, x),
+        34 => dot_row_tq1_0(row_payload, x),
+        35 => dot_row_tq2_0(row_payload, x),
         _ => Err(BitNetError::UnsupportedGgmlType(ty)),
     }
 }
@@ -163,6 +165,104 @@ fn dot_row_q4_k(row: &[u8], x: &[f32]) -> Result<f32> {
     Ok(acc)
 }
 
+fn dot_row_tq1_0(row: &[u8], x: &[f32]) -> Result<f32> {
+    if x.len() % QK_K != 0 {
+        return Err(BitNetError::InvalidGguf("tq1_0 ne0 % 256".into()));
+    }
+    let mut buf = vec![0.0f32; x.len()];
+    decode_tq1_0_to_f32(row, &mut buf)?;
+    Ok(buf.iter().zip(x.iter()).map(|(w, xi)| w * xi).sum())
+}
+
+fn dot_row_tq2_0(row: &[u8], x: &[f32]) -> Result<f32> {
+    if x.len() % QK_K != 0 {
+        return Err(BitNetError::InvalidGguf("tq2_0 ne0 % 256".into()));
+    }
+    let mut buf = vec![0.0f32; x.len()];
+    decode_tq2_0_to_f32(row, &mut buf)?;
+    Ok(buf.iter().zip(x.iter()).map(|(w, xi)| w * xi).sum())
+}
+
+fn decode_tq1_0_to_f32(row: &[u8], out: &mut [f32]) -> Result<()> {
+    if out.len() % QK_K != 0 {
+        return Err(BitNetError::InvalidGguf("tq1_0 decode ne0".into()));
+    }
+    const QS_LEN: usize = 48;
+    const QH_LEN: usize = 4;
+    const BLOCK: usize = 2 + QS_LEN + QH_LEN;
+    const POW3: [u8; 6] = [1, 3, 9, 27, 81, 243];
+    let nb = out.len() / QK_K;
+    if row.len() != nb * BLOCK {
+        return Err(BitNetError::InvalidGguf("tq1_0 row bytes".into()));
+    }
+    for b in 0..nb {
+        let o = b * BLOCK;
+        let d = fp16_to_f32(u16::from_le_bytes(row[o..o + 2].try_into().unwrap()));
+        let qs = &row[o + 2..o + 2 + QS_LEN];
+        let qh = &row[o + 2 + QS_LEN..o + 2 + QS_LEN + QH_LEN];
+        let mut yp = b * QK_K;
+        for j in (0..(QS_LEN - QS_LEN % 32)).step_by(32) {
+            for p in POW3.iter().take(5) {
+                for m in 0..32 {
+                    let q = qs[j + m].wrapping_mul(*p);
+                    let xi = (((q as u16) * 3) >> 8) as i16;
+                    out[yp] = (xi - 1) as f32 * d;
+                    yp += 1;
+                }
+            }
+        }
+        for j in (QS_LEN - QS_LEN % 32..QS_LEN).step_by(16) {
+            for p in POW3.iter().take(5) {
+                for m in 0..16 {
+                    let q = qs[j + m].wrapping_mul(*p);
+                    let xi = (((q as u16) * 3) >> 8) as i16;
+                    out[yp] = (xi - 1) as f32 * d;
+                    yp += 1;
+                }
+            }
+        }
+        for p in POW3.iter().take(4) {
+            for qh_byte in qh {
+                let q = qh_byte.wrapping_mul(*p);
+                let xi = (((q as u16) * 3) >> 8) as i16;
+                out[yp] = (xi - 1) as f32 * d;
+                yp += 1;
+            }
+        }
+        debug_assert_eq!(yp, (b + 1) * QK_K);
+    }
+    Ok(())
+}
+
+fn decode_tq2_0_to_f32(row: &[u8], out: &mut [f32]) -> Result<()> {
+    if out.len() % QK_K != 0 {
+        return Err(BitNetError::InvalidGguf("tq2_0 decode ne0".into()));
+    }
+    const QS_LEN: usize = 64;
+    const BLOCK: usize = 2 + QS_LEN;
+    let nb = out.len() / QK_K;
+    if row.len() != nb * BLOCK {
+        return Err(BitNetError::InvalidGguf("tq2_0 row bytes".into()));
+    }
+    for b in 0..nb {
+        let o = b * BLOCK;
+        let d = fp16_to_f32(u16::from_le_bytes(row[o..o + 2].try_into().unwrap()));
+        let qs = &row[o + 2..o + 2 + QS_LEN];
+        let mut yp = b * QK_K;
+        for j in (0..QS_LEN).step_by(32) {
+            for l in 0..4 {
+                for m in 0..32 {
+                    let q = (qs[j + m] >> (l * 2)) & 3;
+                    out[yp] = (q as i8 - 1) as f32 * d;
+                    yp += 1;
+                }
+            }
+        }
+        debug_assert_eq!(yp, (b + 1) * QK_K);
+    }
+    Ok(())
+}
+
 /// Decode one matrix row (second index `row`) to `out` (`len == ne0`).
 #[inline]
 pub fn decode_row_to_f32(ty: u32, row_payload: &[u8], out: &mut [f32]) -> Result<()> {
@@ -235,6 +335,8 @@ pub fn decode_row_to_f32(ty: u32, row_payload: &[u8], out: &mut [f32]) -> Result
                 out[b * QK_K..(b + 1) * QK_K].copy_from_slice(&buf);
             }
         }
+        34 => decode_tq1_0_to_f32(row_payload, out)?,
+        35 => decode_tq2_0_to_f32(row_payload, out)?,
         _ => return Err(BitNetError::UnsupportedGgmlType(ty)),
     }
     Ok(())
@@ -367,5 +469,35 @@ mod tests {
         let ref_dot: f32 = dense.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
         let q = dot_row(2, &payload, &x).unwrap();
         assert!((q - ref_dot).abs() < 1e-3);
+    }
+
+    #[test]
+    fn tq1_0_row_dot_matches_full_dequant() {
+        let mut payload = vec![0u8; 54];
+        payload[0..2].copy_from_slice(&f16::from_f32(0.25).to_bits().to_le_bytes());
+        for i in 2..payload.len() {
+            payload[i] = (i as u8).wrapping_mul(17).wrapping_add(5);
+        }
+        let dims = vec![256u64, 1u64];
+        let dense = tensor_to_f32(&payload, 34, &dims).unwrap();
+        let x: Vec<f32> = (0..256).map(|i| i as f32 * 0.015 - 1.7).collect();
+        let ref_dot: f32 = dense.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
+        let q = dot_row(34, &payload, &x).unwrap();
+        assert!((q - ref_dot).abs() < 1e-5, "q={q} ref={ref_dot}");
+    }
+
+    #[test]
+    fn tq2_0_row_dot_matches_full_dequant() {
+        let mut payload = vec![0u8; 66];
+        payload[0..2].copy_from_slice(&f16::from_f32(0.125).to_bits().to_le_bytes());
+        for i in 2..payload.len() {
+            payload[i] = (i as u8).wrapping_mul(19).wrapping_add(7);
+        }
+        let dims = vec![256u64, 1u64];
+        let dense = tensor_to_f32(&payload, 35, &dims).unwrap();
+        let x: Vec<f32> = (0..256).map(|i| i as f32 * -0.02 + 2.0).collect();
+        let ref_dot: f32 = dense.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
+        let q = dot_row(35, &payload, &x).unwrap();
+        assert!((q - ref_dot).abs() < 1e-5, "q={q} ref={ref_dot}");
     }
 }

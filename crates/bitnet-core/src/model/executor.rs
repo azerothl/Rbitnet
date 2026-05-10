@@ -133,6 +133,81 @@ impl ModelExecutor for LlamaExecutor {
     }
 }
 
+pub struct BitNetNativeExecutor {
+    pub backend_kind: BackendKind,
+    pub backend_impl: Box<dyn ComputeBackend>,
+    pub gguf: Arc<GgufArchive>,
+    pub tokenizer_path: PathBuf,
+    runtime: Mutex<Option<LlamaRuntime>>,
+}
+
+impl BitNetNativeExecutor {
+    pub fn new(
+        backend_kind: BackendKind,
+        backend: Box<dyn ComputeBackend>,
+        gguf: Arc<GgufArchive>,
+        tokenizer_path: PathBuf,
+    ) -> Self {
+        Self {
+            backend_kind,
+            backend_impl: backend,
+            gguf,
+            tokenizer_path,
+            runtime: Mutex::new(None),
+        }
+    }
+}
+
+impl ModelExecutor for BitNetNativeExecutor {
+    fn family(&self) -> &'static str {
+        "bitnet"
+    }
+
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        Ok(tok.encode_ids(prompt, true)?.len() as u32)
+    }
+
+    fn backend(&self) -> BackendKind {
+        self.backend_kind
+    }
+
+    fn backend_accelerated(&self) -> bool {
+        self.backend_impl.is_native_accelerated()
+    }
+
+    fn is_ready(&self) -> bool {
+        self.tokenizer_path.is_file()
+    }
+
+    fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
+        gguf.map(|g| g.suggested_openai_model_id())
+            .or_else(|| Some("rbitnet-bitnet".into()))
+    }
+
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(LlamaRuntime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+            )?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate_with_timings(prompt, max_tokens, sampling)
+    }
+}
+
 pub struct BitNetExecutor {
     pub backend_kind: BackendKind,
     pub backend_impl: Box<dyn ComputeBackend>,

@@ -31,7 +31,7 @@ fn backend_factory_resolves_all_targets() {
 
 #[test]
 fn backend_numeric_parity_cpu_vs_stubs() {
-    let cpu = CpuBackend::default();
+    let cpu = CpuBackend;
     let cuda = CudaBackend::default();
     let rocm = RocmBackend::default();
     let vulkan = VulkanBackend::default();

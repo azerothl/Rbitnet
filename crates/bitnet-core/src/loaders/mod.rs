@@ -5,6 +5,7 @@
 //! checkpoint remains Llama-shaped.
 
 mod arch_key;
+mod bitnet;
 mod llama;
 pub(crate) mod prompt_tokenizer;
 mod qwen35;

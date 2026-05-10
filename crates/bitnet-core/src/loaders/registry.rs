@@ -9,16 +9,13 @@ use crate::gguf::GgufArchive;
 use crate::model::ModelExecutor;
 
 use super::arch_key::{resolve_architecture_key, resolve_architecture_key_for_load};
+use super::bitnet;
 use super::llama;
 use super::qwen35;
 
 use crate::deepseek2;
 use crate::glm4_moe;
 use crate::gpt_oss;
-
-const BITNET_NOT_IMPL: &str = "BitNet GGUF inference is not yet implemented. \
-Use RBITNET_TOY=1 for a toy model, or provide a Llama-architecture GGUF. \
-Set RBITNET_MODEL_FAMILY=llama to override auto-detected architecture from the file.";
 
 fn unsupported_non_llama_gguf_architecture(key: &str) -> Option<&'static str> {
     match key {
@@ -75,7 +72,13 @@ fn dispatch_gguf_executor_inner(
     };
 
     if key == "bitnet" {
-        return Err(BitNetError::Inference(BITNET_NOT_IMPL.into()));
+        return bitnet::build_bitnet_executor(
+            backend_kind,
+            gguf,
+            model_path,
+            isolated_from_env,
+            tokenizer_override,
+        );
     }
 
     if key == "qwen35moe" {
@@ -220,6 +223,23 @@ mod tests {
         match dispatch_gguf_executor(BackendKind::Cuda, g, &p) {
             Err(BitNetError::TokenizerMissing) => {}
             Err(e) => panic!("expected TokenizerMissing from qwen35moe builder, got {e}"),
+            Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
+        }
+    }
+
+    #[test]
+    fn dispatch_bitnet_native_requires_tokenizer_not_not_impl() {
+        let _g = env_test_lock();
+        std::env::remove_var("RBITNET_TOKENIZER");
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("bitnet.gguf");
+        write_minimal_gguf_with_arch(&p, "bitnet").unwrap();
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        match dispatch_gguf_executor(BackendKind::Cpu, g, &p) {
+            Err(BitNetError::TokenizerMissing) => {}
+            Err(e) => panic!("expected native BitNet loader to resolve tokenizer first, got {e}"),
             Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
         }
     }
