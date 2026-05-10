@@ -2,6 +2,7 @@
 
 use crate::error::Result;
 use crate::model::ModelExecutor;
+use crate::sampling::SamplingOptions;
 use crate::timings::PhaseTimings;
 
 /// Placeholder queue for phase B.2 (prefill vs decode interleaving across sequences).
@@ -15,7 +16,7 @@ pub struct PrefillDecodeQueue {
 pub struct InferenceRequest {
     pub prompt: String,
     pub max_tokens: u32,
-    pub temperature: f32,
+    pub sampling: SamplingOptions,
 }
 
 #[derive(Debug, Clone)]
@@ -132,7 +133,7 @@ impl ContinuousBatchScheduler {
             self.run_speculative(executor, req)
         } else {
             let (text, phases) =
-                executor.generate_with_timings(&req.prompt, req.max_tokens, req.temperature)?;
+                executor.generate_with_timings(&req.prompt, req.max_tokens, req.sampling)?;
             Ok(InferenceOutput {
                 text,
                 stats: InferenceStats::from_phases(phases, false),
@@ -180,14 +181,14 @@ impl ContinuousBatchScheduler {
         }
         let verify_tokens = req.max_tokens.saturating_sub(draft_tokens);
         let (draft, draft_phases) =
-            executor.generate_with_timings(&req.prompt, draft_tokens, req.temperature)?;
+            executor.generate_with_timings(&req.prompt, draft_tokens, req.sampling)?;
         if verify_tokens == 0 {
             let stats = InferenceStats::from_phases(draft_phases, true);
             return Ok(InferenceOutput { text: draft, stats });
         }
         let verify_prompt = format!("{}\n{}", req.prompt, draft);
         let (verify, verify_phases) =
-            executor.generate_with_timings(&verify_prompt, verify_tokens, req.temperature)?;
+            executor.generate_with_timings(&verify_prompt, verify_tokens, req.sampling)?;
         let text = format!("{draft}{verify}");
         let merged = merge_speculative_phases(draft_phases, verify_phases);
         Ok(InferenceOutput {

@@ -4,12 +4,14 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
-use rand::Rng;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 use crate::backend::{make_backend, BackendKind, ComputeBackend};
 use crate::error::Result;
 use crate::gguf::GgufArchive;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::sampling::{sample_token, SamplingOptions};
 use crate::timings::PhaseTimings;
 
 use crate::paged_kv::PagedKvCache;
@@ -52,15 +54,19 @@ impl LlamaRuntime {
     }
 
     pub fn generate(&mut self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
-        self.generate_with_timings(prompt, max_tokens, temperature)
-            .map(|(s, _)| s)
+        self.generate_with_timings(
+            prompt,
+            max_tokens,
+            SamplingOptions::from_temperature(temperature),
+        )
+        .map(|(s, _)| s)
     }
 
     pub fn generate_with_timings(
         &mut self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         self.kv.clear();
         let t_enc = Instant::now();
@@ -97,11 +103,11 @@ impl LlamaRuntime {
 
         let t_dec = Instant::now();
         let mut gen = Vec::new();
-        let mut rng = rand::thread_rng();
+        let mut rng = seeded_rng(sampling.seed);
         let mut pos = prompt_ids.len();
 
         for _ in 0..max_tokens {
-            let next_id = sample_token(&logits, temperature, &mut rng);
+            let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
             if Some(next_id) == eos_id {
                 break;
             }
@@ -128,6 +134,13 @@ impl LlamaRuntime {
     }
 }
 
+fn seeded_rng(seed: Option<u64>) -> StdRng {
+    match seed {
+        Some(seed) => StdRng::seed_from_u64(seed),
+        None => StdRng::from_entropy(),
+    }
+}
+
 fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
     let use_paged = matches!(
         std::env::var("RBITNET_LLAMA_PAGED_KV").as_deref(),
@@ -139,32 +152,4 @@ fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
     } else {
         Ok(KvStorage::new_dense(cfg))
     }
-}
-
-fn sample_token(logits: &[f32], temperature: f32, rng: &mut impl Rng) -> u32 {
-    if temperature <= 0.0 {
-        return logits
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| {
-                let a = if a.is_nan() { f32::NEG_INFINITY } else { **a };
-                let b = if b.is_nan() { f32::NEG_INFINITY } else { **b };
-                a.total_cmp(&b)
-            })
-            .unwrap()
-            .0 as u32;
-    }
-    let scaled: Vec<f32> = logits.iter().map(|z| z / temperature).collect();
-    let m = scaled.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let exps: Vec<f32> = scaled.iter().map(|z| (z - m).exp()).collect();
-    let s: f32 = exps.iter().sum();
-    let r = rng.gen::<f32>() * s;
-    let mut c = 0.0f32;
-    for (i, &e) in exps.iter().enumerate() {
-        c += e;
-        if c >= r {
-            return i as u32;
-        }
-    }
-    (exps.len().saturating_sub(1)) as u32
 }

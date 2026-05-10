@@ -101,7 +101,7 @@ cargo build -p rbitnet-cli --release
 
 Without a tokenizer, the engine returns `TokenizerMissing` when you try to generate text.
 
-**Chat templates:** By default, Rbitnet builds a simple **plain-text** prompt from `messages` (`role: content` lines). Set **`RBITNET_CHAT_FORMAT=llama3`**, **`chatml`**, or **`raw`** to select a built-in template. For small custom prompts, set **`RBITNET_CHAT_TEMPLATE`**; it supports placeholder replacement for `{messages}` / `{{messages}}`, `{prompt}`, `{system}`, `{user}`, and `{assistant}`. This is intentionally a small subset, not a full Jinja engine. Bundles from **`rbitnet models install`** record tokenizer-relative paths in `rbitnet.manifest.json`; align temperature and stop tokens with the upstream recommendation.
+**Chat templates:** By default, Rbitnet builds a simple **plain-text** prompt from `messages` (`role: content` lines). Set **`RBITNET_CHAT_FORMAT=llama3`**, **`chatml`**, or **`raw`** to select a built-in template. If neither `RBITNET_CHAT_TEMPLATE` nor `RBITNET_CHAT_FORMAT` is set, the server looks for `chat_template` in `tokenizer_config.json` next to the resolved tokenizer/model and maps common Llama 3 / ChatML Jinja templates onto the built-ins. For small custom prompts, set **`RBITNET_CHAT_TEMPLATE`**; it supports placeholder replacement for `{messages}` / `{{messages}}`, `{prompt}`, `{system}`, `{user}`, and `{assistant}`. This is intentionally a small subset, not a full Jinja engine. Bundles from **`rbitnet models install`** record tokenizer-relative paths in `rbitnet.manifest.json`; align temperature and stop tokens with the upstream recommendation.
 
 ## Quick start — HTTP server with a GGUF
 
@@ -148,7 +148,7 @@ curl -s http://127.0.0.1:8080/v1/chat/completions \
   -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"Hello"}],"max_tokens":64,"temperature":0.8,"stop":["</s>"]}'
 ```
 
-OpenAI compatibility note: `stop` is applied to returned text after generation. `top_p`, `frequency_penalty`, `presence_penalty`, and `seed` are accepted in request JSON and logged for compatibility, but the current core sampler only honors `temperature`; those fields are no-ops until sampler options are promoted through `bitnet-core`.
+OpenAI compatibility note: `stop` is applied to returned text after generation. `temperature`, `top_p`, `seed`, `frequency_penalty`, and `presence_penalty` are promoted into the core sampler for real Llama/Qwen generation. Stub/toy modes keep their lightweight deterministic behavior and only use `temperature` where applicable.
 
 ## Modes without a full GGUF
 

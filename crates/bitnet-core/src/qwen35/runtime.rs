@@ -4,7 +4,8 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
-use rand::Rng;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 use crate::backend::BackendKind;
 use crate::cancel::inference_cancelled;
@@ -12,6 +13,7 @@ use crate::error::{BitNetError, Result};
 use crate::ggml::{ggml_nbytes, tensor_to_f32};
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::sampling::{sample_token, SamplingOptions};
 use crate::timings::PhaseTimings;
 
 use super::attention::{block_full_attention, AttnKvCache};
@@ -169,19 +171,17 @@ fn logits_project(
 
         let y = cuda.logits_gemv_maybe(&wchunk, x_norm, hi, n_embd_w, || {
             let mut out = vec![0f32; hi];
-            for j in 0..hi {
+            for (j, out_j) in out.iter_mut().enumerate().take(hi) {
                 let mut sum = 0f32;
                 let base = j * cfg.n_embd;
                 for i in 0..cfg.n_embd {
                     sum += wchunk[base + i] * x_norm[i];
                 }
-                out[j] = sum;
+                *out_j = sum;
             }
             out
         });
-        for i in 0..y.len() {
-            logits[vocab_off + i] = y[i];
-        }
+        logits[vocab_off..vocab_off + y.len()].copy_from_slice(&y);
         vocab_off += hi;
     }
     Ok(logits)
@@ -271,7 +271,7 @@ impl Qwen35Runtime {
         &mut self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
@@ -322,14 +322,14 @@ impl Qwen35Runtime {
 
         let t_dec = Instant::now();
         let mut gen = Vec::new();
-        let mut rng = rand::thread_rng();
+        let mut rng = seeded_rng(sampling.seed);
         let mut pos = prompt_ids.len();
 
         for _ in 0..max_tokens {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
-            let next_id = sample_token(&logits, temperature, &mut rng);
+            let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
             if Some(next_id) == eos_id {
                 break;
             }
@@ -610,33 +610,9 @@ impl Qwen35Runtime {
     }
 }
 
-fn sample_token(logits: &[f32], temperature: f32, rng: &mut impl Rng) -> u32 {
-    if temperature <= 0.0 {
-        let (i, _) =
-            logits
-                .iter()
-                .enumerate()
-                .fold((0usize, f32::NEG_INFINITY), |(pi, pb), (i, v)| {
-                    let v = if v.is_nan() { f32::NEG_INFINITY } else { *v };
-                    if v > pb {
-                        (i, v)
-                    } else {
-                        (pi, pb)
-                    }
-                });
-        return i as u32;
+fn seeded_rng(seed: Option<u64>) -> StdRng {
+    match seed {
+        Some(seed) => StdRng::seed_from_u64(seed),
+        None => StdRng::from_entropy(),
     }
-    let scaled: Vec<f32> = logits.iter().map(|z| z / temperature).collect();
-    let m = scaled.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let exps: Vec<f32> = scaled.iter().map(|z| (z - m).exp()).collect();
-    let s: f32 = exps.iter().sum();
-    let r = rng.gen::<f32>() * s;
-    let mut c = 0.0f32;
-    for (i, &e) in exps.iter().enumerate() {
-        c += e;
-        if c >= r {
-            return i as u32;
-        }
-    }
-    (exps.len().saturating_sub(1)) as u32
 }

@@ -8,6 +8,7 @@ use crate::gguf::GgufArchive;
 use crate::llama::LlamaRuntime;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::model::ToyLlm;
+use crate::sampling::SamplingOptions;
 use crate::timings::PhaseTimings;
 
 pub trait ModelExecutor: Send + Sync {
@@ -24,12 +25,16 @@ pub trait ModelExecutor: Send + Sync {
         &self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)>;
 
     fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
-        self.generate_with_timings(prompt, max_tokens, temperature)
-            .map(|(s, _)| s)
+        self.generate_with_timings(
+            prompt,
+            max_tokens,
+            SamplingOptions::from_temperature(temperature),
+        )
+        .map(|(s, _)| s)
     }
 }
 
@@ -109,7 +114,7 @@ impl ModelExecutor for LlamaExecutor {
         &self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         let mut slot = self
             .runtime
@@ -124,7 +129,7 @@ impl ModelExecutor for LlamaExecutor {
         }
         slot.as_mut()
             .unwrap()
-            .generate_with_timings(prompt, max_tokens, temperature)
+            .generate_with_timings(prompt, max_tokens, sampling)
     }
 }
 
@@ -175,10 +180,10 @@ impl ModelExecutor for BitNetExecutor {
         &self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         let t0 = Instant::now();
-        let text = self.toy.generate(prompt, max_tokens, temperature);
+        let text = self.toy.generate(prompt, max_tokens, sampling.temperature);
         let total_ms = t0.elapsed().as_millis() as u64;
         let completion_tokens = text.split_whitespace().count() as u32;
         Ok((

@@ -6,7 +6,10 @@ use std::sync::{LazyLock, Mutex};
 
 use axum::body::Body;
 use bitnet_core::inference::Engine;
-use bitnet_server::{create_app_with_config, ServerConfig};
+use bitnet_server::{
+    build_prompt_from_messages_with_tokenizer_template, create_app_with_config, ChatMessage,
+    ServerConfig,
+};
 use futures::future::join_all;
 use http::Request;
 use http_body_util::BodyExt;
@@ -45,6 +48,42 @@ impl Drop for EnvGuard {
             }
         }
     }
+}
+
+#[test]
+fn tokenizer_config_chatml_template_is_detected() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_CHAT_FORMAT", None),
+        ("RBITNET_CHAT_TEMPLATE", None),
+    ]);
+    let messages = [ChatMessage {
+        role: "user".into(),
+        content: serde_json::json!("hello"),
+    }];
+    let prompt = build_prompt_from_messages_with_tokenizer_template(
+        &messages,
+        Some("{% for message in messages %}<|im_start|>{{ message['role'] }}\n{{ message['content'] }}<|im_end|>{% endfor %}"),
+    );
+    assert!(prompt.contains("<|im_start|>user\nhello<|im_end|>"));
+}
+
+#[test]
+fn explicit_chat_format_overrides_tokenizer_config_template() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_CHAT_FORMAT", Some("raw")),
+        ("RBITNET_CHAT_TEMPLATE", None),
+    ]);
+    let messages = [ChatMessage {
+        role: "user".into(),
+        content: serde_json::json!("hello"),
+    }];
+    let prompt = build_prompt_from_messages_with_tokenizer_template(
+        &messages,
+        Some("<|im_start|>{{ message['role'] }}<|im_end|>"),
+    );
+    assert_eq!(prompt, "user: hello");
 }
 
 #[tokio::test]

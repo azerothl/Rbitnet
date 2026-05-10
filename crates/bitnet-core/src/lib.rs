@@ -27,6 +27,7 @@ pub mod paths;
 pub mod prefix_kv;
 pub mod qwen35;
 pub mod registry;
+pub mod sampling;
 pub mod scheduler;
 pub mod timings;
 

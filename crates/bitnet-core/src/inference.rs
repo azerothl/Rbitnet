@@ -21,6 +21,7 @@ use crate::model::{ModelExecutor, ToyLlm};
 use crate::paged_kv::PagedKvCache;
 use crate::paths::validate_no_parent_components;
 use crate::registry::KernelRegistry;
+use crate::sampling::SamplingOptions;
 use crate::scheduler::{
     ContinuousBatchScheduler, InferenceBatch, InferenceOutput, InferenceRequest, InferenceStats,
     ScheduledRequest,
@@ -77,6 +78,7 @@ pub struct Engine {
 struct EngineInner {
     #[allow(dead_code)]
     model_path: Option<PathBuf>,
+    tokenizer_dir: Option<PathBuf>,
     gguf: Option<Arc<GgufArchive>>,
     toy: Option<ToyLlm>,
     stub: bool,
@@ -114,6 +116,8 @@ impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
+        let tokenizer_dir =
+            tokenizer_dir_for_load(model_path.as_deref(), tokenizer_path_from_env().as_deref());
         if let Some(ref p) = model_path {
             validate_model_path_for_gguf(p)?;
         }
@@ -160,6 +164,7 @@ impl Engine {
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
+                tokenizer_dir,
                 gguf,
                 toy,
                 stub,
@@ -183,6 +188,7 @@ impl Engine {
         let backend_kind = BackendKind::from_env();
         let model_family = resolve_architecture_key(&gguf);
         let model_path = Some(path.to_path_buf());
+        let tokenizer_dir = tokenizer_dir_for_load(Some(path), None);
         let executor = build_executor(
             backend_kind,
             Some(Arc::clone(&gguf)),
@@ -193,6 +199,7 @@ impl Engine {
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
+                tokenizer_dir,
                 gguf: Some(gguf),
                 toy: None,
                 stub: false,
@@ -228,6 +235,7 @@ impl Engine {
         let backend_kind = BackendKind::from_env();
         let model_family = resolve_architecture_key_for_load(&gguf, architecture_override);
         let model_path = Some(path.to_path_buf());
+        let tokenizer_dir = tokenizer_dir_for_load(Some(path), tokenizer_override);
         let executor = build_executor_for_load(
             backend_kind,
             Arc::clone(&gguf),
@@ -238,6 +246,7 @@ impl Engine {
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
+                tokenizer_dir,
                 gguf: Some(gguf),
                 toy: None,
                 stub: false,
@@ -285,6 +294,23 @@ impl Engine {
             ready: self.is_ready(),
             tensor_count: gguf.map(|g| g.tensor_count()),
         }
+    }
+
+    /// Best-effort Hugging Face chat template from `tokenizer_config.json` next to the tokenizer.
+    pub fn tokenizer_chat_template(&self) -> Option<String> {
+        let path = self
+            .inner
+            .tokenizer_dir
+            .as_ref()?
+            .join("tokenizer_config.json");
+        let text = std::fs::read_to_string(path).ok()?;
+        let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+        value
+            .get("chat_template")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string)
     }
 
     pub fn tensor_names_preview(&self, max: usize) -> Option<Vec<String>> {
@@ -375,7 +401,7 @@ impl Engine {
         let req = InferenceRequest {
             prompt: prompt.to_string(),
             max_tokens,
-            temperature,
+            sampling: SamplingOptions::from_temperature(temperature),
         };
         self.inner
             .scheduler
@@ -388,6 +414,19 @@ impl Engine {
         prompt: &str,
         max_tokens: u32,
         temperature: f32,
+    ) -> Result<InferenceOutput> {
+        self.complete_detailed_with_options(
+            prompt,
+            max_tokens,
+            SamplingOptions::from_temperature(temperature),
+        )
+    }
+
+    pub fn complete_detailed_with_options(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
     ) -> Result<InferenceOutput> {
         if self.inner.stub {
             let text = stub_response(prompt, max_tokens);
@@ -408,7 +447,7 @@ impl Engine {
             });
         }
         if let Some(ref t) = self.inner.toy {
-            let text = t.generate(prompt, max_tokens, temperature);
+            let text = t.generate(prompt, max_tokens, sampling.temperature);
             let completion_tokens = text.split_whitespace().count() as u32;
             return Ok(InferenceOutput {
                 text,
@@ -431,10 +470,10 @@ impl Engine {
         let req = InferenceRequest {
             prompt: prompt.to_string(),
             max_tokens,
-            temperature,
+            sampling,
         };
         if self.inner.prefix_cache_enabled {
-            let key = format!("{}|{}|{:.3}", prompt, max_tokens, temperature);
+            let key = format!("{}|{}|{:?}", prompt, max_tokens, sampling);
             if let Ok(cache) = self.inner.prefix_cache.lock() {
                 if let Some((_, hit)) = cache.iter().find(|(k, _)| k == &key) {
                     return Ok(hit.clone());
@@ -460,7 +499,11 @@ impl Engine {
         if self.inner.stub || self.inner.toy.is_some() {
             let mut out = Vec::with_capacity(requests.len());
             for req in requests {
-                out.push(self.complete_detailed(&req.prompt, req.max_tokens, req.temperature)?);
+                out.push(self.complete_detailed_with_options(
+                    &req.prompt,
+                    req.max_tokens,
+                    req.sampling,
+                )?);
             }
             return Ok(out);
         }
@@ -489,6 +532,7 @@ pub fn stub_engine() -> Engine {
     Engine {
         inner: Arc::new(EngineInner {
             model_path: None,
+            tokenizer_dir: None,
             gguf: None,
             toy: None,
             stub: true,
@@ -535,6 +579,20 @@ fn redact_path_for_display(path: &str) -> String {
         return "<redacted>".into();
     }
     path.to_string()
+}
+
+fn tokenizer_path_from_env() -> Option<PathBuf> {
+    std::env::var_os("RBITNET_TOKENIZER").map(PathBuf::from)
+}
+
+fn tokenizer_dir_for_load(
+    model_path: Option<&Path>,
+    tokenizer_path: Option<&Path>,
+) -> Option<PathBuf> {
+    tokenizer_path
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .or_else(|| model_path.and_then(Path::parent).map(Path::to_path_buf))
 }
 
 fn build_executor(
@@ -588,6 +646,7 @@ mod tests {
         Engine {
             inner: Arc::new(EngineInner {
                 model_path: None,
+                tokenizer_dir: None,
                 gguf: None,
                 toy: Some(ToyLlm::new(42)),
                 stub: false,

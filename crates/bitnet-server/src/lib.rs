@@ -24,6 +24,7 @@ use axum::routing::{get, post};
 use axum::Json;
 use axum::Router;
 use bitnet_core::inference::{stub_engine, Engine};
+use bitnet_core::sampling::SamplingOptions;
 use bitnet_core::scheduler::{InferenceRequest, InferenceStats};
 use bitnet_core::BitNetError;
 use bitnet_core::{clear_inference_cancel, request_inference_cancel};
@@ -499,14 +500,30 @@ fn message_content_to_string(content: &serde_json::Value) -> String {
 }
 
 pub fn build_prompt_from_messages(messages: &[ChatMessage]) -> String {
+    build_prompt_from_messages_with_tokenizer_template(messages, None)
+}
+
+pub fn build_prompt_from_messages_with_tokenizer_template(
+    messages: &[ChatMessage],
+    tokenizer_template: Option<&str>,
+) -> String {
     if let Ok(template) = std::env::var("RBITNET_CHAT_TEMPLATE") {
         let template = template.trim();
         if !template.is_empty() {
-            return apply_simple_chat_template(template, messages);
+            return apply_chat_template(template, messages);
         }
     }
-    match std::env::var("RBITNET_CHAT_FORMAT")
-        .unwrap_or_else(|_| "raw".into())
+    let chat_format = std::env::var("RBITNET_CHAT_FORMAT")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    if chat_format.is_none() {
+        if let Some(template) = tokenizer_template.map(str::trim).filter(|s| !s.is_empty()) {
+            return apply_chat_template(template, messages);
+        }
+    }
+    match chat_format
+        .unwrap_or_else(|| "raw".into())
         .trim()
         .to_ascii_lowercase()
         .as_str()
@@ -586,6 +603,16 @@ fn apply_simple_chat_template(template: &str, messages: &[ChatMessage]) -> Strin
         .replace("{user}", &user)
         .replace("{{assistant}}", &assistant)
         .replace("{assistant}", &assistant)
+}
+
+fn apply_chat_template(template: &str, messages: &[ChatMessage]) -> String {
+    if template.contains("<|start_header_id|>") && template.contains("<|eot_id|>") {
+        return build_llama3_prompt(messages);
+    }
+    if template.contains("<|im_start|>") && template.contains("<|im_end|>") {
+        return build_chatml_prompt(messages);
+    }
+    apply_simple_chat_template(template, messages)
 }
 
 fn last_role_content(messages: &[ChatMessage], role: &str) -> String {
@@ -737,7 +764,11 @@ async fn chat_completions(
         .last_inference_activity_ms
         .store(unix_now_ms(), Ordering::Relaxed);
 
-    let prompt = build_prompt_from_messages(&req.messages);
+    let tokenizer_chat_template = state.engine.read().await.tokenizer_chat_template();
+    let prompt = build_prompt_from_messages_with_tokenizer_template(
+        &req.messages,
+        tokenizer_chat_template.as_deref(),
+    );
     let prompt_chars = prompt.chars().count();
     if prompt_chars > state.config.max_prompt_chars {
         state
@@ -846,6 +877,13 @@ async fn chat_completions(
     };
 
     let temperature = req.temperature.unwrap_or(0.7);
+    let sampling = SamplingOptions {
+        temperature,
+        top_p: req.top_p,
+        seed: req.seed,
+        frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
+        presence_penalty: req.presence_penalty.unwrap_or(0.0),
+    };
     clear_inference_cancel();
     let engine = state.engine.read().await.clone();
     let backend_kind = engine.backend_kind().to_string();
@@ -884,13 +922,13 @@ async fn chat_completions(
             let req = InferenceRequest {
                 prompt: prompt_owned.clone(),
                 max_tokens,
-                temperature,
+                sampling,
             };
             let mut rows = engine.complete_batch_detailed(&[req])?;
             rows.pop()
                 .ok_or_else(|| BitNetError::Inference("empty batch result".into()))
         } else {
-            engine.complete_detailed(&prompt_owned, max_tokens, temperature)
+            engine.complete_detailed_with_options(&prompt_owned, max_tokens, sampling)
         }
     });
 

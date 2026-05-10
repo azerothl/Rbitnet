@@ -7,6 +7,7 @@ use crate::backend::{BackendKind, ComputeBackend};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::sampling::SamplingOptions;
 use crate::timings::PhaseTimings;
 
 use super::cuda_ctx::QwenCudaContext;
@@ -70,7 +71,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         &self,
         prompt: &str,
         max_tokens: u32,
-        temperature: f32,
+        sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         if self.backend_kind != BackendKind::Cuda {
             return Err(BitNetError::Inference(
@@ -100,6 +101,6 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         slot_rt
             .as_mut()
             .unwrap()
-            .generate_with_timings(prompt, max_tokens, temperature)
+            .generate_with_timings(prompt, max_tokens, sampling)
     }
 }

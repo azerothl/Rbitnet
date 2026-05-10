@@ -27,8 +27,8 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 |----------|---------|--------|
 | `RBITNET_MODEL` | (none) | Path to one `.gguf` file. |
 | `RBITNET_TOKENIZER` | (auto beside GGUF) | `tokenizer.json` or `tokenizer.model`. |
-| `RBITNET_CHAT_FORMAT` | `raw` | Server prompt rendering for chat messages: `raw`, `llama3`, or `chatml`. |
-| `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT`. |
+| `RBITNET_CHAT_FORMAT` | `raw` | Server prompt rendering for chat messages: `raw`, `llama3`, or `chatml`; if unset and no custom template exists, `tokenizer_config.json` `chat_template` is used for common Llama 3 / ChatML templates. |
+| `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT` / tokenizer config discovery. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
 | `RBITNET_BACKEND` | `cpu` | e.g. `cpu`, `cuda` — see [USAGE.md](USAGE.md). |

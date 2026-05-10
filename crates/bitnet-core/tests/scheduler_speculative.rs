@@ -1,6 +1,7 @@
 use bitnet_core::backend::BackendKind;
 use bitnet_core::gguf::GgufArchive;
 use bitnet_core::model::ModelExecutor;
+use bitnet_core::sampling::SamplingOptions;
 use bitnet_core::scheduler::{
     ContinuousBatchScheduler, InferenceBatch, InferenceRequest, ScheduledRequest,
 };
@@ -37,7 +38,7 @@ impl ModelExecutor for EchoExecutor {
         &self,
         prompt: &str,
         max_tokens: u32,
-        _temperature: f32,
+        _sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         Ok((
             format!("{prompt}[{max_tokens}]"),
@@ -64,7 +65,7 @@ fn scheduler_regular_mode_passthrough() {
     let req = InferenceRequest {
         prompt: "hello".into(),
         max_tokens: 8,
-        temperature: 0.0,
+        sampling: SamplingOptions::from_temperature(0.0),
     };
     let out = scheduler.run(&EchoExecutor, &req).expect("run");
     assert_eq!(out.text, "hello[8]");
@@ -83,7 +84,7 @@ fn scheduler_speculative_combines_draft_and_verify() {
     let req = InferenceRequest {
         prompt: "hi".into(),
         max_tokens: 10,
-        temperature: 0.7,
+        sampling: SamplingOptions::from_temperature(0.7),
     };
     let out = scheduler.run(&EchoExecutor, &req).expect("run");
     assert!(out.text.contains("hi[5]"));
@@ -107,7 +108,7 @@ fn scheduler_batch_two_preserves_order() {
                 request: InferenceRequest {
                     prompt: "a".into(),
                     max_tokens: 2,
-                    temperature: 0.0,
+                    sampling: SamplingOptions::from_temperature(0.0),
                 },
             },
             ScheduledRequest {
@@ -115,7 +116,7 @@ fn scheduler_batch_two_preserves_order() {
                 request: InferenceRequest {
                     prompt: "b".into(),
                     max_tokens: 3,
-                    temperature: 0.0,
+                    sampling: SamplingOptions::from_temperature(0.0),
                 },
             },
         ],
