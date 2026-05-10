@@ -148,7 +148,19 @@ impl Qwen35Config {
             "moe routed experts",
         )?;
 
-        let n_ff_dense = meta_req_i64(md, &format!("{}{}", kv_prefix, "feed_forward_length"), "ff dense")?;
+        let n_embd_us = i64_to_usize(n_embd_i)?
+            .ok_or_else(|| BitNetError::Inference("invalid embedding_length".into()))?;
+
+        let n_ff_dense = match metadata_i64(md, &format!("{}{}", kv_prefix, "feed_forward_length")) {
+            Some(v) => v,
+            None => infer_ff_dense_from_tensors(archive, n_embd_us)?.ok_or_else(|| {
+                BitNetError::Inference(
+                    "missing `*.feed_forward_length` in GGUF metadata; expected keys like `qwen35moe.feed_forward_length`, \
+                     or inferable shapes from `blk.*.ffn_up_shexp.weight` / `ffn_gate_shexp.weight`"
+                        .into(),
+                )
+            })?,
+        };
 
         let n_ff_exp = metadata_i64(md, &format!("{}{}", kv_prefix, "expert_feed_forward_length"))
             .unwrap_or(0);
@@ -193,8 +205,19 @@ impl Qwen35Config {
             })
             .ok_or_else(|| BitNetError::Inference("unable to derive attention head dimensions".into()))?;
 
-        let ssm_conv = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.conv_kernel"), "ssm conv")?;
-        let ssm_inner = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.inner_size"), "ssm inner")?;
+        let mut ssm_conv = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.conv_kernel"), "ssm conv")?;
+        let mut ssm_inner = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.inner_size"), "ssm inner")?;
+        // Some GGUF exports carry wrong or stale SSM KV vs tensors; conv1d weight is authoritative (layout `[d_conv, conv_channels]`).
+        if let Some(t) = archive.tensor_first_of(&["blk.0.ssm_conv1d.weight", "blk.0.ssm_conv1d"]) {
+            if t.dimensions.len() >= 2 {
+                if let Ok(d0) = i64::try_from(t.dimensions[0]) {
+                    ssm_conv = d0;
+                }
+                if let Ok(d1) = i64::try_from(t.dimensions[1]) {
+                    ssm_inner = d1;
+                }
+            }
+        }
         let ssm_state = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.state_size"), "ssm state")?;
         let ssm_dt_rank = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.time_step_rank"), "ssm dt")?;
         let ssm_group = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.group_count"), "ssm groups")?;
@@ -274,6 +297,31 @@ fn i64_to_usize(v: i64) -> Result<Option<usize>> {
 fn infer_vocab_from_emb(archive: &GgufArchive, _n_embd: usize) -> Option<usize> {
     let t = archive.tensor_first_of(&["token_embd.weight", "token_embd"])?;
     usize::try_from(*t.dimensions.get(1)?).ok()
+}
+
+/// Shared-expert FFN width `[n_embd, n_ff]` (llama.cpp tensor layout).
+fn infer_ff_dense_from_tensors(archive: &GgufArchive, n_embd: usize) -> Result<Option<i64>> {
+    for il in [0usize, 1] {
+        for name in [
+            format!("blk.{il}.ffn_up_shexp.weight"),
+            format!("blk.{il}.ffn_gate_shexp.weight"),
+        ] {
+            let Some(t) = archive.tensor_by_name(&name) else {
+                continue;
+            };
+            if t.dimensions.len() >= 2 {
+                let d0 = usize::try_from(t.dimensions[0]).unwrap_or(0);
+                let d1 = usize::try_from(t.dimensions[1]).unwrap_or(0);
+                if d0 == n_embd && d1 > 0 {
+                    return Ok(Some(d1 as i64));
+                }
+                if d1 == n_embd && d0 > 0 {
+                    return Ok(Some(d0 as i64));
+                }
+            }
+        }
+    }
+    Ok(None)
 }
 
 fn infer_ff_exp_fallback(

@@ -24,13 +24,11 @@ pub fn ssm_conv_f32(window: &[f32], kernel: &[f32], d_conv: usize, d_inner: usiz
 /// Concatenate recurrent tail `hist` `[d_conv - 1][d_inner]` and current strip `strip` `[1][d_inner]`
 /// into `window` `[d_conv][d_inner]` ordered oldest → newest tap along `i0`.
 pub fn stitch_conv_window_mut(hist: &[f32], strip: &[f32], dst: &mut [f32], d_conv: usize, d_inner: usize) {
-    let expect = (d_conv - 1).saturating_mul(d_inner).saturating_add(d_inner.min(d_inner));
-    debug_assert_eq!(hist.len().saturating_add(strip.len()), d_conv.saturating_mul(d_inner));
+    debug_assert!(hist.len().saturating_add(strip.len()) == d_conv.saturating_mul(d_inner));
     debug_assert!(dst.len() >= d_conv * d_inner || d_conv == 0);
     if d_conv == 0 {
         return;
     }
-    let _ = expect;
     let k1 = d_conv.saturating_sub(1);
     dst[..k1 * d_inner].copy_from_slice(&hist[..k1 * d_inner.max(1)]);
     let base = k1 * d_inner;

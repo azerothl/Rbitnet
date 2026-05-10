@@ -43,6 +43,7 @@ pub fn moe_forward(
     up_exps: &GgufTensorInfo,
     gate_exps: &GgufTensorInfo,
     down_exps: &GgufTensorInfo,
+    topk_override: Option<usize>,
     _gate_up_fused: Option<&GgufTensorInfo>,
 ) -> Result<Vec<f32>> {
     if gate_inp.dimensions.len() != 2 {
@@ -53,7 +54,8 @@ pub fn moe_forward(
     let gi_py = archive.tensor_payload(gate_inp)?;
     let mut router = quant_matmul_vec(gi_py, gate_inp.ggml_type, n_emb_g, n_exp_g, x)?;
     softmax_vec(&mut router);
-    let top = top_k_indices(&router, cfg.n_expert_used);
+    let topk = topk_override.unwrap_or(cfg.n_expert_used).max(1);
+    let top = top_k_indices(&router, topk);
 
     for t in &[up_exps, gate_exps, down_exps] {
         if t.dimensions.len() != 3 {
@@ -76,6 +78,11 @@ pub fn moe_forward(
     let up_payload = archive.tensor_payload(up_exps)?;
     let gate_payload = archive.tensor_payload(gate_exps)?;
     let down_payload = archive.tensor_payload(down_exps)?;
+    let fused_payload = if let Some(t) = _gate_up_fused {
+        Some((archive.tensor_payload(t)?, t.ggml_type, t.dimensions.clone()))
+    } else {
+        None
+    };
 
     for &e in &top {
         let w_router = router.get(e).copied().unwrap_or(0f32);
@@ -87,7 +94,46 @@ pub fn moe_forward(
         let gate_off = e * stride_gate;
         let down_off = e * stride_down;
 
-        let gu = quant_matmul_vec_offset(
+        let (gu, gg) = if let Some((fused_py, fused_ty, fused_dims)) = fused_payload.as_ref() {
+            let n_embd_f = usize::try_from(*fused_dims.first().unwrap_or(&0)).unwrap_or(0);
+            let n_2ff_f = usize::try_from(*fused_dims.get(1).unwrap_or(&0)).unwrap_or(0);
+            if n_embd_f == n_embd_up && n_2ff_f >= n_ff_up * 2 {
+                let stride_fused = ggml_nbytes(&[fused_dims[0], fused_dims[1]], *fused_ty)?;
+                let fused_off = e * stride_fused;
+                let gate_up = quant_matmul_vec_offset(
+                    fused_py,
+                    *fused_ty,
+                    n_embd_f,
+                    n_2ff_f,
+                    fused_off,
+                    x,
+                )?;
+                let mut gate = vec![0f32; n_ff_up];
+                let mut up = vec![0f32; n_ff_up];
+                gate.copy_from_slice(&gate_up[..n_ff_up]);
+                up.copy_from_slice(&gate_up[n_ff_up..(n_ff_up * 2)]);
+                (up, gate)
+            } else {
+                let up = quant_matmul_vec_offset(
+                    up_payload,
+                    up_exps.ggml_type,
+                    n_embd_up,
+                    n_ff_up,
+                    up_off,
+                    x,
+                )?;
+                let gate = quant_matmul_vec_offset(
+                    gate_payload,
+                    gate_exps.ggml_type,
+                    n_embd_up,
+                    n_ff_up,
+                    gate_off,
+                    x,
+                )?;
+                (up, gate)
+            }
+        } else {
+            let up = quant_matmul_vec_offset(
                 up_payload,
                 up_exps.ggml_type,
                 n_embd_up,
@@ -95,7 +141,7 @@ pub fn moe_forward(
                 up_off,
                 x,
             )?;
-        let gg = quant_matmul_vec_offset(
+            let gate = quant_matmul_vec_offset(
                 gate_payload,
                 gate_exps.ggml_type,
                 n_embd_up,
@@ -103,6 +149,8 @@ pub fn moe_forward(
                 gate_off,
                 x,
             )?;
+            (up, gate)
+        };
         let silu_g = silu(&gg);
         let hidden: Vec<f32> = gu.iter().zip(silu_g.iter()).map(|(u, g)| u * g).collect();
 

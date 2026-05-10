@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex};
 use crate::backend::{BackendKind, ComputeBackend};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::timings::PhaseTimings;
 
 use super::cuda_ctx::QwenCudaContext;
 use super::runtime::Qwen35Runtime;
@@ -43,6 +45,11 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         "qwen35moe"
     }
 
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        Ok(tok.encode_ids(prompt, true)?.len() as u32)
+    }
+
     fn backend(&self) -> BackendKind {
         self.backend_kind
     }
@@ -59,7 +66,12 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         gguf.map(|g| g.suggested_openai_model_id())
     }
 
-    fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<(String, PhaseTimings)> {
         if self.backend_kind != BackendKind::Cuda {
             return Err(BitNetError::Inference(
                 "native qwen35moe requires CUDA for this phase (`RBITNET_BACKEND=cuda`).".into(),
@@ -88,6 +100,6 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         slot_rt
             .as_mut()
             .unwrap()
-            .generate(prompt, max_tokens, temperature)
+            .generate_with_timings(prompt, max_tokens, temperature)
     }
 }

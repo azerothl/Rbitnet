@@ -12,6 +12,43 @@ pub struct RecurrentState {
     pub ssm_state: Vec<f32>,
 }
 
+/// Output width of `blk.L.attn_gate` for the first recurrent block (GDN value subspace).
+pub fn first_recurrent_gate_out_dim(archive: &GgufArchive, cfg: &Qwen35Config) -> Result<usize> {
+    for il in 0..cfg.n_layer {
+        if cfg.is_recurrent_layer(il) {
+            let name = format!("blk.{il}.attn_gate.weight");
+            let t = archive
+                .tensor_by_name(&name)
+                .ok_or_else(|| BitNetError::Inference(format!("missing `{name}` for recurrent value width")))?;
+            if t.dimensions.len() < 2 {
+                return Err(BitNetError::Inference(format!("`{name}` expected rank-2")));
+            }
+            let ne1 = usize::try_from(t.dimensions[1]).map_err(|_| BitNetError::Inference("attn_gate ne1".into()))?;
+            return Ok(ne1);
+        }
+    }
+    Err(BitNetError::Inference(
+        "no recurrent layer in config — cannot infer attn_gate output width".into(),
+    ))
+}
+
+fn factor_qk_heads(il: usize, key_dim: usize, cfg: &Qwen35Config) -> Result<(usize, usize)> {
+    let hk_cfg = cfg.ssm_d_state;
+    let nk_cfg = cfg.ssm_n_group;
+    if hk_cfg.saturating_mul(nk_cfg) == key_dim {
+        return Ok((hk_cfg, nk_cfg));
+    }
+    if nk_cfg > 0 && key_dim % nk_cfg == 0 {
+        return Ok((key_dim / nk_cfg, nk_cfg));
+    }
+    if hk_cfg > 0 && key_dim % hk_cfg == 0 {
+        return Ok((hk_cfg, key_dim / hk_cfg));
+    }
+    Err(BitNetError::Inference(format!(
+        "recurrent layer {il}: key_dim {key_dim} incompatible with ssm state_size={hk_cfg} and group_count={nk_cfg}"
+    )))
+}
+
 impl RecurrentState {
     pub fn new(d_conv: usize, d_inner: usize, state_dim: usize, num_v_heads: usize) -> Self {
         let hist_len = d_conv.saturating_sub(1).saturating_mul(d_inner);
@@ -61,24 +98,32 @@ pub fn recurrent_forward(
 ) -> Result<Vec<f32>> {
     let d_conv = ssm_conv_d0;
     let d_inner = ssm_conv_d1;
-    let head_k = cfg.ssm_d_state;
-    let num_k = cfg.ssm_n_group;
+    // `ssm.inner_size` in KV is the mixed QKV width (conv / qkv out), not the value subspace alone.
+    // Value width is the output dim of `attn_gate` (GGUF ne1), same as `z` length.
+    let value_dim = wgate.3;
     let num_v = cfg.ssm_dt_rank;
     if num_v == 0 {
         return Err(BitNetError::Inference("ssm time_step_rank is zero".into()));
     }
-    let head_v = cfg.ssm_d_inner / num_v;
-    if head_v * num_v != cfg.ssm_d_inner {
-        return Err(BitNetError::Inference("ssm.inner_size not divisible by time_step_rank".into()));
-    }
-    let key_dim = head_k * num_k;
-    let value_dim = head_v * num_v;
-    if key_dim * 2 + value_dim != d_inner {
-        let expect = key_dim * 2 + value_dim;
+    if value_dim % num_v != 0 {
         return Err(BitNetError::Inference(format!(
-            "recurrent layer {il}: conv inner {d_inner} != 2*key_dim+value_dim ({expect})"
+            "recurrent layer {il}: attn_gate width {value_dim} not divisible by time_step_rank ({num_v})"
         )));
     }
+    let head_v = value_dim / num_v;
+    let rest = d_inner.saturating_sub(value_dim);
+    if rest % 2 != 0 {
+        return Err(BitNetError::Inference(format!(
+            "recurrent layer {il}: d_inner {d_inner} minus value_dim {value_dim} must be even (Q+K split)"
+        )));
+    }
+    let key_dim = rest / 2;
+    if key_dim.saturating_mul(2).saturating_add(value_dim) != d_inner {
+        return Err(BitNetError::Inference(format!(
+            "recurrent layer {il}: inner layout d_inner={d_inner}, key_dim={key_dim}, value_dim={value_dim}"
+        )));
+    }
+    let (head_k, num_k) = factor_qk_heads(il, key_dim, cfg)?;
 
     let qkv_strip = quant_matmul_vec(wqkv.0, wqkv.1, wqkv.2, wqkv.3, x)?;
     if qkv_strip.len() != d_inner {
@@ -116,6 +161,15 @@ pub fn recurrent_forward(
 
     let mut window = vec![0f32; d_conv * d_inner];
     if d_conv > 1 {
+        let need_hist = (d_conv - 1).saturating_mul(d_inner);
+        if st.conv_hist.len() != need_hist {
+            return Err(BitNetError::Inference(format!(
+                "layer {il}: conv_hist has {} floats; expected {} for d_conv={d_conv}, d_inner={d_inner} \
+                 (GGUF `ssm.inner_size` / `ssm.conv_kernel` must match `blk.{il}.ssm_conv1d.weight` shape)",
+                st.conv_hist.len(),
+                need_hist
+            )));
+        }
         stitch_conv_window_mut(&st.conv_hist, &qkv_strip, &mut window, d_conv, d_inner);
     } else {
         window[..d_inner].copy_from_slice(&qkv_strip);
@@ -153,14 +207,34 @@ pub fn recurrent_forward(
     for h in 0..num_v {
         let a = &attn_flat[h * sv..(h + 1) * sv];
         let zsl = &z[h * sv..(h + 1) * sv];
-        let r = rmsnorm_small(a, ssm_norm, cfg.norm_eps);
+        let norm_slice: &[f32] = if ssm_norm.len() == sv {
+            ssm_norm
+        } else if ssm_norm.len() == value_dim {
+            &ssm_norm[h * sv..(h + 1) * sv]
+        } else {
+            return Err(BitNetError::Inference(format!(
+                "layer {il}: ssm_norm length {} (expected per-head {sv} or full {value_dim})",
+                ssm_norm.len()
+            )));
+        };
+        let r = rmsnorm_small(a, norm_slice, cfg.norm_eps);
         for i in 0..sv {
             let g = zsl[i] / (1.0 + (-zsl[i]).exp());
             normed[h * sv + i] = r[i] * g;
         }
     }
 
-    let y = quant_matmul_vec(ssm_out.0, ssm_out.1, ssm_out.2, ssm_out.3, &normed)?;
+    let ssm_out_in = ssm_out.2;
+    let normed_proj = if normed.len() == ssm_out_in {
+        normed
+    } else if normed.len() < ssm_out_in {
+        let mut v = vec![0f32; ssm_out_in];
+        v[..normed.len()].copy_from_slice(&normed);
+        v
+    } else {
+        normed[..ssm_out_in].to_vec()
+    };
+    let y = quant_matmul_vec(ssm_out.0, ssm_out.1, ssm_out.2, ssm_out.3, &normed_proj)?;
     if y.len() != cfg.n_embd {
         return Err(BitNetError::Inference("ssm_out projection width mismatch".into()));
     }
