@@ -1,7 +1,5 @@
 # Rbitnet
 
-Canonical local checkout: `C:\www\Rbitnet`. The older prototype at `C:\Users\loicpeaudecerf\rbitnet` is not the active workspace.
-
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
 ## Do I need Python?
