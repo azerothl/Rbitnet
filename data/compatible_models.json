@@ -2,6 +2,27 @@
   "version": 1,
   "models": [
     {
+      "id": "microsoft-bitnet-b1.58-2b-4t",
+      "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+      "file": "ggml-model-i2_s.gguf",
+      "description": "Official Microsoft BitNet b1.58 2B-4T GGUF bundle; native Rbitnet BitNet path for general.architecture=bitnet and ternary TQ weights.",
+      "files": [
+        "ggml-model-i2_s.gguf"
+      ],
+      "notes": "Install with `rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models`. Tokenizer files come from microsoft/bitnet-b1.58-2B-4T; set RBITNET_TOKENIZER or use the generated rbitnet.manifest.json paths.",
+      "tier": "bitnet_native",
+      "use_case": [
+        "chat",
+        "bitnet"
+      ],
+      "min_ram_gb": 4,
+      "verified": false,
+      "min_ram": "4 GB plus runtime headroom for the official i2_s / ternary GGUF",
+      "tested": false,
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models && $env:RBITNET_MODEL=(Resolve-Path ./models/microsoft-bitnet-b1.58-2b-4t/**/*.gguf | Select-Object -First 1); cargo run -p bitnet-core --example engine_smoke"
+    },
+    {
       "id": "tinyllama-1.1b-chat-q4-k-m",
       "repo": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
       "file": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
