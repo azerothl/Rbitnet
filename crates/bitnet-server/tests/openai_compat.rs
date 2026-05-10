@@ -388,3 +388,37 @@ async fn parallel_stub_chats_under_concurrency_cap() {
     }
 }
 
+#[tokio::test]
+async fn chat_rejects_prompt_over_token_cap() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let config = Arc::new(ServerConfig {
+        max_prompt_tokens: Some(5),
+        ..ServerConfig::test_defaults()
+    });
+    let app = create_app_with_config(engine, config);
+    let long = "a".repeat(100);
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": long }],
+        "stream": false
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert_eq!(res.status(), http::StatusCode::BAD_REQUEST);
+}
+

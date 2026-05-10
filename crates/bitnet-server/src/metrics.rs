@@ -23,10 +23,15 @@ pub struct ServerMetrics {
     pub unauthorized_total: AtomicU64,
     pub inference_by_backend_family: Mutex<Vec<((String, String), u64)>>,
     pub inference_ttft_ms_total: AtomicU64,
+    pub inference_encode_ms_total: AtomicU64,
+    pub inference_prefill_ms_total: AtomicU64,
+    pub inference_decode_ms_total: AtomicU64,
+    pub inference_itl_us_total: AtomicU64,
     pub inference_tpot_us_total: AtomicU64,
     pub speculative_requests_total: AtomicU64,
     pub completion_tokens_total: AtomicU64,
     pub native_accelerated_calls_total: AtomicU64,
+    pub model_unloads_total: AtomicU64,
 }
 
 impl ServerMetrics {
@@ -53,10 +58,15 @@ impl ServerMetrics {
         let ic = self.inference_calls_total.load(Ordering::Relaxed);
         let ua = self.unauthorized_total.load(Ordering::Relaxed);
         let ttft_sum = self.inference_ttft_ms_total.load(Ordering::Relaxed);
+        let encode_sum = self.inference_encode_ms_total.load(Ordering::Relaxed);
+        let prefill_sum = self.inference_prefill_ms_total.load(Ordering::Relaxed);
+        let decode_sum = self.inference_decode_ms_total.load(Ordering::Relaxed);
+        let itl_sum = self.inference_itl_us_total.load(Ordering::Relaxed);
         let tpot_sum = self.inference_tpot_us_total.load(Ordering::Relaxed);
         let spec_total = self.speculative_requests_total.load(Ordering::Relaxed);
         let completion_tokens = self.completion_tokens_total.load(Ordering::Relaxed);
         let native_calls = self.native_accelerated_calls_total.load(Ordering::Relaxed);
+        let unloads = self.model_unloads_total.load(Ordering::Relaxed);
 
         let mut s = String::new();
         writeln!(
@@ -106,6 +116,15 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_unauthorized_total counter").unwrap();
         writeln!(s, "rbitnet_unauthorized_total {ua}").unwrap();
+
+        writeln!(
+            s,
+            "# HELP rbitnet_model_unloads_total Admin or idle-triggered model unload events"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_model_unloads_total counter").unwrap();
+        writeln!(s, "rbitnet_model_unloads_total {unloads}").unwrap();
+
         writeln!(
             s,
             "# HELP rbitnet_inference_ttft_ms_sum Sum of estimated time-to-first-token in milliseconds"
@@ -113,6 +132,34 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_inference_ttft_ms_sum counter").unwrap();
         writeln!(s, "rbitnet_inference_ttft_ms_sum {ttft_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_encode_ms_sum Sum of tokenizer encode wall times in milliseconds"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_encode_ms_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_encode_ms_sum {encode_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_prefill_ms_sum Sum of model prefill phase wall times in milliseconds"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_prefill_ms_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_prefill_ms_sum {prefill_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_decode_ms_sum Sum of model decode phase wall times in milliseconds"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_decode_ms_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_decode_ms_sum {decode_sum}").unwrap();
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_itl_us_sum Sum of average inter-token latency (microseconds per generated token) per completed inference"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_itl_us_sum counter").unwrap();
+        writeln!(s, "rbitnet_inference_itl_us_sum {itl_sum}").unwrap();
         writeln!(
             s,
             "# HELP rbitnet_inference_tpot_us_sum Sum of estimated time-per-output-token in microseconds"
@@ -129,7 +176,7 @@ impl ServerMetrics {
         writeln!(s, "rbitnet_speculative_requests_total {spec_total}").unwrap();
         writeln!(
             s,
-            "# HELP rbitnet_completion_tokens_total Total completion tokens produced (estimated)"
+            "# HELP rbitnet_completion_tokens_total Total completion tokens (generated; from tokenizer counts when the runtime reports them)"
         )
         .unwrap();
         writeln!(s, "# TYPE rbitnet_completion_tokens_total counter").unwrap();
