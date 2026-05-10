@@ -160,7 +160,9 @@ fn router_with_state(state: AppState, max_body_bytes: usize) -> Router {
     let public = Router::new()
         .route("/health", get(liveness))
         .route("/ready", get(readiness))
-        .route("/metrics", get(metrics_handler));
+        .route("/metrics", get(metrics_handler))
+        .route("/ui", get(ui_app))
+        .route("/app", get(ui_app));
 
     let api = Router::new()
         .route("/", get(root_health))
@@ -251,6 +253,16 @@ fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Box<Response>
 
 async fn liveness() -> impl IntoResponse {
     (StatusCode::OK, "ok\n")
+}
+
+async fn ui_app() -> impl IntoResponse {
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        )],
+        include_str!("../static/app.html"),
+    )
 }
 
 async fn readiness(State(state): State<AppState>) -> impl IntoResponse {

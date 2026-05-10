@@ -37,6 +37,18 @@ impl ModelBrowserRow {
         if let Some(v) = &m.min_rbitnet_version {
             detail.push_str(&format!("min_rbitnet_version: {v}\n"));
         }
+        if let Some(tier) = &m.tier {
+            detail.push_str(&format!("tier: {tier}\n"));
+        }
+        if !m.use_case.is_empty() {
+            detail.push_str(&format!("use_case: {}\n", m.use_case.join(", ")));
+        }
+        if let Some(ram_gb) = m.min_ram_gb {
+            detail.push_str(&format!("min_ram_gb: {ram_gb}\n"));
+        }
+        if let Some(verified) = m.verified {
+            detail.push_str(&format!("verified: {verified}\n"));
+        }
         detail.push_str(&format!("\nFichiers ({}):\n", m.files.len()));
         for f in &m.files {
             detail.push_str(f);

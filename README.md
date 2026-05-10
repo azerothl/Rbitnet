@@ -14,12 +14,75 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
 
 **Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, curl examples).
 
+## Installation
+
+### Windows
+
+Build from a checkout:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+Tagged releases publish Windows zip assets named like `rbitnet-server-vX.Y.Z-windows-x86_64.zip` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). The zip contains both `rbitnet.exe` and `rbitnet-server.exe`.
+
+WinGet is prepared as a submission template at [`packaging/winget/Rbitnet.Rbitnet.yaml`](packaging/winget/Rbitnet.Rbitnet.yaml). After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
+
+```powershell
+winget install --manifest .\packaging\winget\Rbitnet.Rbitnet.yaml
+```
+
+### macOS / Linux
+
+Build from a checkout:
+
+```bash
+./scripts/install.sh
+```
+
+Or install the CLI from the default branch with a curl script (requires Rust/Cargo and git):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
+```
+
+Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz`. A documented Homebrew tap formula template lives at [`packaging/homebrew/rbitnet.rb`](packaging/homebrew/rbitnet.rb); it is not a homebrew-core formula. After replacing the release URLs and `sha256` values:
+
+```bash
+brew install --formula ./packaging/homebrew/rbitnet.rb
+```
+
+For a future tap, copy the formula into a tap repo and use:
+
+```bash
+brew tap <owner>/rbitnet
+brew install rbitnet
+```
+
+Direct install from the working tree remains:
+
+```bash
+cargo install --path crates/rbitnet-cli --locked
+```
+
+### Docker
+
+The included [`Dockerfile`](Dockerfile) builds `rbitnet-server` and is usable for server-only deployments:
+
+```bash
+docker build -t rbitnet:local .
+docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/tokenizer.json \
+  -v /path/on/host:/model:ro -p 8080:8080 rbitnet:local
+```
+
 ## Status
 
 - **bitnet-core**: GGUF parse, GGML dequantization, Llama-shaped forward (RMSNorm, RoPE, GQA, KV cache, SiLU FFN), [`Engine`](crates/bitnet-core/src/inference.rs), optional toy LM.
-- **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Limits, optional API key, integration tests.
+- **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /ui`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Limits, optional API key, integration tests.
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
+  - **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** — curl, Python OpenAI, Node OpenAI, LiteLLM, Akasha
+  - **[docs/CURATED_MODELS.md](docs/CURATED_MODELS.md)** — catalog schema and verification policy
   - **[docs/TRAINING_AND_COMPATIBILITY.md](docs/TRAINING_AND_COMPATIBILITY.md)** — training elsewhere, export to GGUF, compatibility rules
   - **[training/README.md](training/README.md)** — optional Python LoRA/SFT recipe; `rbitnet train` / `rbitnet export-gguf`
   - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
@@ -30,6 +93,7 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
   - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
+  - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only local benchmark output
   - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
   - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
@@ -88,6 +152,13 @@ Toy LM (no GGUF):
 ```bash
 export RBITNET_TOY=1
 cargo run -p bitnet-server --bin rbitnet-server
+```
+
+Open the local static UI from the same server:
+
+```bash
+RBITNET_STUB=1 rbitnet serve --open-ui
+# or visit http://127.0.0.1:8080/ui
 ```
 
 ## Inspect a GGUF

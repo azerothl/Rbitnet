@@ -28,3 +28,19 @@ This document specifies an optional future architecture: **one OS process per lo
 ## Relation to current code
 
 Today’s **in-process** features (`RBITNET_MODEL_REGISTRY`, memory budget envs, idle unload to stub) are the lightweight subset. The runner proxy is the next step when you need **concurrent different large models** or **harder isolation** than `Arc<RwLock<Engine>>` provides.
+
+## Phase 1 status
+
+Done in-tree today:
+
+- Single-process OpenAI-compatible serving with `/v1/models` and `/v1/chat/completions`.
+- Multi-model registry selection through `RBITNET_MODEL_REGISTRY`.
+- Idle unload back to a stub engine through `RBITNET_IDLE_UNLOAD_SECS`.
+- A local static UI at `/ui` for smoke testing the current process.
+
+Feature-flag placeholder for the proxy phase:
+
+- Reserve `RBITNET_RUNNER_PROXY=1` for the future parent proxy mode.
+- Reserve `rbitnet serve --proxy` for the future CLI entrypoint.
+
+These flags are not implemented yet. The next small increment should add a proxy-only config parser and a no-op command path that refuses to start unless a registry is configured; actual child process supervision should land separately with tests for spawn, health probe, forward, and idle termination.

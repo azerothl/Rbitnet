@@ -24,6 +24,14 @@ pub struct CatalogModel {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_case: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_ram_gb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_ram: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tested: Option<bool>,
@@ -83,6 +91,9 @@ mod tests {
         assert_eq!(c.models[0].id, "a");
         assert_eq!(c.models[0].repo, "x/y");
         assert_eq!(c.models[0].files, vec!["m.gguf"]);
+        assert!(c.models[0].use_case.is_empty());
+        assert!(c.models[0].min_ram_gb.is_none());
+        assert!(c.models[0].verified.is_none());
         assert!(c.models[0].min_rbitnet_version.is_none());
     }
 

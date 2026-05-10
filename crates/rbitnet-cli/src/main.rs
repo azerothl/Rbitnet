@@ -10,6 +10,9 @@ mod train_cli;
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use clap::{Args, Parser, Subcommand};
 
@@ -46,10 +49,25 @@ enum Commands {
     ExportGguf(ExportGgufCmd),
     /// Run the OpenAI-compatible HTTP server (same as `rbitnet-server`).
     Serve(ServeCmd),
+    /// Run the server and open the bundled local web UI.
+    Ui(UiCmd),
 }
 
 #[derive(Args)]
 struct ServeCmd {
+    /// API key for protected routes (only if `RBITNET_API_KEY` is not already set).
+    #[arg(long, env = "RBITNET_API_KEY")]
+    api_key: Option<String>,
+    /// Listen address host:port (only if `RBITNET_BIND` is not already set).
+    #[arg(long, env = "RBITNET_BIND")]
+    bind: Option<String>,
+    /// Open the bundled local web UI (`/ui`) in the default browser before serving.
+    #[arg(long)]
+    open_ui: bool,
+}
+
+#[derive(Args)]
+struct UiCmd {
     /// API key for protected routes (only if `RBITNET_API_KEY` is not already set).
     #[arg(long, env = "RBITNET_API_KEY")]
     api_key: Option<String>,
@@ -96,16 +114,54 @@ fn apply_serve_cli_env(cmd: &ServeCmd) {
     }
 }
 
+fn apply_ui_cli_env(cmd: &UiCmd) {
+    if let Some(k) = &cmd.api_key {
+        if std::env::var_os("RBITNET_API_KEY").is_none() {
+            std::env::set_var("RBITNET_API_KEY", k);
+        }
+    }
+    if let Some(b) = &cmd.bind {
+        if std::env::var_os("RBITNET_BIND").is_none() {
+            std::env::set_var("RBITNET_BIND", b);
+        }
+    }
+}
+
+fn ui_url_from_env() -> String {
+    let bind = std::env::var("RBITNET_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
+    format!("http://{bind}/ui")
+}
+
+fn open_url_in_browser(url: &str) {
+    #[cfg(target_os = "windows")]
+    let result = Command::new("cmd").args(["/C", "start", "", url]).spawn();
+
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").arg(url).spawn();
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = Command::new("xdg-open").arg(url).spawn();
+
+    if let Err(e) = result {
+        eprintln!("could not open browser automatically: {e}");
+    }
+}
+
+fn open_url_in_browser_soon(url: String) {
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(900));
+        open_url_in_browser(&url);
+    });
+}
+
 fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
     let rel = Path::new(file);
     for component in rel.components() {
         match component {
             std::path::Component::Normal(_) | std::path::Component::CurDir => {}
-            _ => {
-                return Err(format!(
+            _ => return Err(format!(
                 "unsafe path component in '{file}': only relative paths without '..' are allowed"
-            ))
-            }
+            )),
         }
     }
     Ok(dir.join(rel))
@@ -358,6 +414,18 @@ fn print_catalog_list(url: &str) -> Result<(), String> {
         if let Some(ram) = &m.min_ram {
             println!("  min_ram: {ram}");
         }
+        if let Some(tier) = &m.tier {
+            println!("  tier: {tier}");
+        }
+        if !m.use_case.is_empty() {
+            println!("  use_case: {}", m.use_case.join(", "));
+        }
+        if let Some(ram_gb) = m.min_ram_gb {
+            println!("  min_ram_gb: {ram_gb}");
+        }
+        if let Some(verified) = m.verified {
+            println!("  verified: {verified}");
+        }
         if let Some(notes) = &m.notes {
             println!("  notes: {notes}");
         }
@@ -581,6 +649,10 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     file: None,
                     files,
                     notes: None,
+                    tier: Some("power".into()),
+                    use_case: vec!["chat".into()],
+                    min_ram_gb: None,
+                    verified: Some(false),
                     min_ram: None,
                     tested: None,
                     min_rbitnet_version: None,
@@ -625,6 +697,19 @@ async fn main() {
         }
         Commands::Serve(cmd) => {
             apply_serve_cli_env(&cmd);
+            if cmd.open_ui {
+                let url = ui_url_from_env();
+                eprintln!("Opening Rbitnet UI: {url}");
+                open_url_in_browser_soon(url);
+            }
+            eprintln!("Rbitnet UI: {}", ui_url_from_env());
+            bitnet_server::run_server().await.map_err(|e| e.to_string())
+        }
+        Commands::Ui(cmd) => {
+            apply_ui_cli_env(&cmd);
+            let url = ui_url_from_env();
+            eprintln!("Opening Rbitnet UI: {url}");
+            open_url_in_browser_soon(url);
             bitnet_server::run_server().await.map_err(|e| e.to_string())
         }
     };

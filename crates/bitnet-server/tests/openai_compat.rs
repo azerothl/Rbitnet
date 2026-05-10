@@ -254,6 +254,36 @@ async fn health_ready_metrics_do_not_require_api_key() {
 }
 
 #[tokio::test]
+async fn static_ui_is_served_without_api_key() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let config = Arc::new(ServerConfig {
+        api_key: Some("secret-key".into()),
+        ..ServerConfig::test_defaults()
+    });
+    let app = create_app_with_config(engine, config);
+    let res = app
+        .oneshot(Request::builder().uri("/ui").body(Body::empty()).unwrap())
+        .await
+        .expect("ui response");
+    assert!(res.status().is_success());
+    let content_type = res
+        .headers()
+        .get(http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    assert!(content_type.starts_with("text/html"));
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let text = std::str::from_utf8(&body).unwrap();
+    assert!(text.contains("Rbitnet Local UI"));
+}
+
+#[tokio::test]
 async fn chat_rejects_wrong_api_key() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[

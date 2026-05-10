@@ -19,6 +19,20 @@ When you record an official row for a release candidate:
 
 Add or refresh one row in **Baseline reference (frozen)** below.
 
+## Small reproducible matrix
+
+For a cheap smoke benchmark that starts `RBITNET_STUB=1`, runs a few HTTP requests, and appends markdown to [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md):
+
+```bash
+scripts/bench_matrix.sh
+```
+
+```powershell
+.\scripts\bench_matrix.ps1
+```
+
+For real model throughput, start `rbitnet-server` yourself with `RBITNET_MODEL` and `RBITNET_TOKENIZER`, then run the matrix script with `NO_START_SERVER=1` / `-NoStartServer` and set `MODEL` / `-Model` to the id returned by `/v1/models`.
+
 ## Running Criterion benches (kernels)
 
 From the repo root:
