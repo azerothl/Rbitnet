@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use crate::backend::{BackendKind, ComputeBackend};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::llama::LlamaRuntime;
 use crate::model::ToyLlm;
+use crate::timings::PhaseTimings;
 
 pub trait ModelExecutor: Send + Sync {
     fn family(&self) -> &'static str;
@@ -13,7 +16,21 @@ pub trait ModelExecutor: Send + Sync {
     fn backend_accelerated(&self) -> bool;
     fn is_ready(&self) -> bool;
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String>;
-    fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String>;
+
+    /// Tokenizer-encoded prompt length (used for HTTP limits).
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32>;
+
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<(String, PhaseTimings)>;
+
+    fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
+        self.generate_with_timings(prompt, max_tokens, temperature)
+            .map(|(s, _)| s)
+    }
 }
 
 pub struct LlamaExecutor {
@@ -21,6 +38,8 @@ pub struct LlamaExecutor {
     pub backend_impl: Box<dyn ComputeBackend>,
     pub gguf: Arc<GgufArchive>,
     pub tokenizer_path: PathBuf,
+    /// Reported [`ModelExecutor::family`] (defaults to `llama` for standard checkpoints).
+    pub family_reported: &'static str,
     runtime: Mutex<Option<LlamaRuntime>>,
 }
 
@@ -36,6 +55,26 @@ impl LlamaExecutor {
             backend_impl: backend,
             gguf,
             tokenizer_path,
+            family_reported: "llama",
+            runtime: Mutex::new(None),
+        }
+    }
+
+    /// Same weights/tokenizer as [`Self::new`], but [`ModelExecutor::family`] reports `architecture_slug`
+    /// (for Llama-compatible tensors under a roadmap `general.architecture` tag).
+    pub fn new_with_architecture_slug(
+        backend_kind: BackendKind,
+        backend: Box<dyn ComputeBackend>,
+        gguf: Arc<GgufArchive>,
+        tokenizer_path: PathBuf,
+        architecture_slug: &'static str,
+    ) -> Self {
+        Self {
+            backend_kind,
+            backend_impl: backend,
+            gguf,
+            tokenizer_path,
+            family_reported: architecture_slug,
             runtime: Mutex::new(None),
         }
     }
@@ -43,7 +82,12 @@ impl LlamaExecutor {
 
 impl ModelExecutor for LlamaExecutor {
     fn family(&self) -> &'static str {
-        "llama"
+        self.family_reported
+    }
+
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        Ok(tok.encode_ids(prompt, true)?.len() as u32)
     }
 
     fn backend(&self) -> BackendKind {
@@ -61,16 +105,25 @@ impl ModelExecutor for LlamaExecutor {
         gguf.map(|g| g.suggested_openai_model_id())
     }
 
-    fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<(String, PhaseTimings)> {
         let mut slot = self.runtime.lock().map_err(|e| {
             BitNetError::Inference(format!("executor lock poisoned: {e}"))
         })?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(&self.gguf, &self.tokenizer_path, self.backend_kind)?);
+            *slot = Some(LlamaRuntime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+            )?);
         }
         slot.as_mut()
             .unwrap()
-            .generate(prompt, max_tokens, temperature)
+            .generate_with_timings(prompt, max_tokens, temperature)
     }
 }
 
@@ -95,6 +148,10 @@ impl ModelExecutor for BitNetExecutor {
         "bitnet"
     }
 
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        Ok((prompt.len() as u32).saturating_div(4).max(1))
+    }
+
     fn backend(&self) -> BackendKind {
         self.backend_kind
     }
@@ -113,7 +170,19 @@ impl ModelExecutor for BitNetExecutor {
         Some("rbitnet-bitnet".into())
     }
 
-    fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
-        Ok(self.toy.generate(prompt, max_tokens, temperature))
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<(String, PhaseTimings)> {
+        let t0 = Instant::now();
+        let text = self.toy.generate(prompt, max_tokens, temperature);
+        let total_ms = t0.elapsed().as_millis() as u64;
+        let completion_tokens = text.split_whitespace().count() as u32;
+        Ok((
+            text,
+            PhaseTimings::from_total_wall_ms(total_ms, completion_tokens),
+        ))
     }
 }

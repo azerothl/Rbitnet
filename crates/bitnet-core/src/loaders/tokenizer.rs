@@ -37,3 +37,28 @@ pub fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
     }
     Err(BitNetError::TokenizerMissing)
 }
+
+/// Resolve tokenizer for a GGUF loaded without reading `RBITNET_TOKENIZER` (per-checkpoint / registry loads).
+///
+/// If `explicit` is `Some`, that file must exist and be named `tokenizer.json` or `tokenizer.model`.
+/// If `None`, only sibling files next to the GGUF are considered (same as [`resolve_tokenizer_path`] without env).
+pub fn resolve_tokenizer_path_for_load(model_path: &Path, explicit: Option<&Path>) -> Result<PathBuf> {
+    if let Some(p) = explicit {
+        validate_no_parent_components(p)?;
+        if tokenizer_path_candidate(p) {
+            return Ok(p.to_path_buf());
+        }
+        return Err(BitNetError::TokenizerMissing);
+    }
+    if let Some(dir) = model_path.parent() {
+        let pb = dir.join("tokenizer.json");
+        if tokenizer_path_candidate(&pb) {
+            return Ok(pb);
+        }
+        let pb = dir.join("tokenizer.model");
+        if tokenizer_path_candidate(&pb) {
+            return Ok(pb);
+        }
+    }
+    Err(BitNetError::TokenizerMissing)
+}

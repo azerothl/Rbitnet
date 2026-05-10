@@ -4,22 +4,27 @@
 //! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
 //! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `tokenizer.model` / `RBITNET_TOKENIZER`.
 //! - `RBITNET_ARCHITECTURE` — optional override for `general.architecture` dispatch (see `loaders/`).
-//! - `RBITNET_MODEL_FAMILY` — `llama` / `bitnet` / `auto` narrows how the architecture key is resolved alongside the GGUF metadata.
+//! - `RBITNET_MODEL_FAMILY` — `auto`, `bitnet`, or Llama-lineage overrides (`llama`, `mistral`, `deepseek`, …; see [`crate::loaders::family_override_token`]).
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::backend::BackendKind;
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 use crate::loaders::{
-    dispatch_gguf_executor, normalize_architecture_slug, resolve_architecture_key,
+    dispatch_gguf_executor, dispatch_gguf_executor_for_load, family_override_token,
+    normalize_architecture_slug, resolve_architecture_key, resolve_architecture_key_for_load,
 };
 use crate::model::{ModelExecutor, ToyLlm};
 use crate::paths::validate_no_parent_components;
+use crate::memory_budget::check_load_memory_budget;
 use crate::paged_kv::PagedKvCache;
 use crate::registry::KernelRegistry;
-use crate::scheduler::{ContinuousBatchScheduler, InferenceOutput, InferenceRequest, InferenceStats};
+use crate::scheduler::{
+    ContinuousBatchScheduler, InferenceBatch, InferenceOutput, InferenceRequest, InferenceStats,
+    ScheduledRequest,
+};
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -64,6 +69,9 @@ struct EngineInner {
     backend_kind: BackendKind,
     model_family: String,
     scheduler: ContinuousBatchScheduler,
+    prefix_cache_enabled: bool,
+    prefix_cache_max_entries: usize,
+    prefix_cache: Mutex<Vec<(String, InferenceOutput)>>,
     _kernel_registry: KernelRegistry,
     _paged_kv: PagedKvCache,
     executor: Option<Box<dyn ModelExecutor>>,
@@ -99,7 +107,9 @@ impl Engine {
             validate_no_parent_components(Path::new(&tok))?;
         }
         let gguf = if let Some(ref p) = model_path {
-            Some(Arc::new(GgufArchive::mmap_path(p)?))
+            let g = Arc::new(GgufArchive::mmap_path(p)?);
+            check_load_memory_budget(g.as_ref())?;
+            Some(g)
         } else {
             None
         };
@@ -115,6 +125,15 @@ impl Engine {
             .map(resolve_architecture_key)
             .unwrap_or_else(model_family_when_no_gguf);
         let scheduler = ContinuousBatchScheduler::from_env();
+        let prefix_cache_enabled = matches!(
+            std::env::var("RBITNET_PREFIX_CACHE").as_deref(),
+            Ok("1") | Ok("true") | Ok("yes")
+        );
+        let prefix_cache_max_entries = std::env::var("RBITNET_PREFIX_CACHE_MAX_ENTRIES")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(64);
         let kernel_registry = KernelRegistry::bootstrap_default();
         let paged_kv = PagedKvCache::from_env();
         let executor = build_executor(
@@ -133,6 +152,9 @@ impl Engine {
                 backend_kind,
                 model_family,
                 scheduler,
+                prefix_cache_enabled,
+                prefix_cache_max_entries,
+                prefix_cache: Mutex::new(Vec::new()),
                 _kernel_registry: kernel_registry,
                 _paged_kv: paged_kv,
                 executor,
@@ -143,6 +165,7 @@ impl Engine {
     /// Load and parse a GGUF path.
     pub fn load_path(path: &Path) -> Result<Self> {
         let gguf = Arc::new(GgufArchive::mmap_path(path)?);
+        check_load_memory_budget(gguf.as_ref())?;
         let backend_kind = BackendKind::from_env();
         let model_family = resolve_architecture_key(&gguf);
         let model_path = Some(path.to_path_buf());
@@ -162,9 +185,57 @@ impl Engine {
                 backend_kind,
                 model_family,
                 scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
                 _kernel_registry: KernelRegistry::bootstrap_default(),
                 _paged_kv: PagedKvCache::from_env(),
                 executor,
+            }),
+        })
+    }
+
+    /// Load a single GGUF file with optional tokenizer path and architecture slug overrides.
+    ///
+    /// Unlike [`Engine::load_path`], this does not read `RBITNET_TOKENIZER` or `RBITNET_ARCHITECTURE`
+    /// from the environment, so multiple checkpoints can be loaded safely in one process
+    /// (e.g. HTTP `model` selection from a registry).
+    pub fn load_path_with_overrides(
+        path: &Path,
+        tokenizer_override: Option<&Path>,
+        architecture_override: Option<&str>,
+    ) -> Result<Self> {
+        validate_model_path_for_gguf(path)?;
+        if let Some(t) = tokenizer_override {
+            crate::paths::validate_no_parent_components(t)?;
+        }
+        let gguf = Arc::new(GgufArchive::mmap_path(path)?);
+        check_load_memory_budget(gguf.as_ref())?;
+        let backend_kind = BackendKind::from_env();
+        let model_family = resolve_architecture_key_for_load(&gguf, architecture_override);
+        let model_path = Some(path.to_path_buf());
+        let executor = build_executor_for_load(
+            backend_kind,
+            Arc::clone(&gguf),
+            path,
+            tokenizer_override,
+            architecture_override,
+        )?;
+        Ok(Self {
+            inner: Arc::new(EngineInner {
+                model_path,
+                gguf: Some(gguf),
+                toy: None,
+                stub: false,
+                backend_kind,
+                model_family,
+                scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
+                _kernel_registry: KernelRegistry::bootstrap_default(),
+                _paged_kv: PagedKvCache::from_env(),
+                executor: Some(executor),
             }),
         })
     }
@@ -240,6 +311,26 @@ impl Engine {
             .unwrap_or(false)
     }
 
+    pub fn continuous_batching_enabled(&self) -> bool {
+        self.inner.scheduler.enabled
+    }
+
+    /// tokenizer-encoded prompt length (for HTTP guards). Stub/toy use a rough character heuristic.
+    pub fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        if self.inner.stub || self.inner.toy.is_some() {
+            return Ok(
+                u32::try_from(prompt.len())
+                    .unwrap_or(u32::MAX)
+                    .saturating_div(4)
+                    .max(1),
+            );
+        }
+        let Some(ex) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        ex.count_prompt_tokens(prompt)
+    }
+
     /// Generate completion text from a user-facing prompt string.
     pub fn complete(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
         if self.inner.stub {
@@ -275,7 +366,12 @@ impl Engine {
                 text,
                 stats: InferenceStats {
                     ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    itl_us: 1000,
                     tpot_us: 1000,
+                    prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
                 },
@@ -288,7 +384,12 @@ impl Engine {
                 text,
                 stats: InferenceStats {
                     ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    itl_us: 1000,
                     tpot_us: 1000,
+                    prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
                 },
@@ -302,7 +403,75 @@ impl Engine {
             max_tokens,
             temperature,
         };
+        if self.inner.prefix_cache_enabled {
+            let key = format!("{}|{}|{:.3}", prompt, max_tokens, temperature);
+            if let Ok(cache) = self.inner.prefix_cache.lock() {
+                if let Some((_, hit)) = cache.iter().find(|(k, _)| k == &key) {
+                    return Ok(hit.clone());
+                }
+            }
+            let output = self.inner.scheduler.run(executor, &req)?;
+            if let Ok(mut cache) = self.inner.prefix_cache.lock() {
+                cache.push((key, output.clone()));
+                if cache.len() > self.inner.prefix_cache_max_entries {
+                    let overflow = cache.len() - self.inner.prefix_cache_max_entries;
+                    cache.drain(0..overflow);
+                }
+            }
+            return Ok(output);
+        }
         self.inner.scheduler.run(executor, &req)
+    }
+
+    pub fn complete_batch_detailed(
+        &self,
+        requests: &[InferenceRequest],
+    ) -> Result<Vec<InferenceOutput>> {
+        if self.inner.stub || self.inner.toy.is_some() {
+            let mut out = Vec::with_capacity(requests.len());
+            for req in requests {
+                out.push(self.complete_detailed(&req.prompt, req.max_tokens, req.temperature)?);
+            }
+            return Ok(out);
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let batch = InferenceBatch {
+            requests: requests
+                .iter()
+                .enumerate()
+                .map(|(i, req)| ScheduledRequest {
+                    id: i as u64,
+                    request: req.clone(),
+                })
+                .collect(),
+        };
+        let mut rows = self.inner.scheduler.run_batch(executor, &batch)?;
+        rows.sort_by_key(|(id, _)| *id);
+        Ok(rows.into_iter().map(|(_, output)| output).collect())
+    }
+}
+
+/// Stub engine: no GGUF, returns synthetic completions (same as `RBITNET_STUB=1`).
+#[must_use]
+pub fn stub_engine() -> Engine {
+    Engine {
+        inner: Arc::new(EngineInner {
+            model_path: None,
+            gguf: None,
+            toy: None,
+            stub: true,
+            backend_kind: BackendKind::Cpu,
+            model_family: "stub".into(),
+            scheduler: ContinuousBatchScheduler::from_env(),
+            prefix_cache_enabled: false,
+            prefix_cache_max_entries: 0,
+            prefix_cache: Mutex::new(Vec::new()),
+            _kernel_registry: KernelRegistry::bootstrap_default(),
+            _paged_kv: PagedKvCache::from_env(),
+            executor: None,
+        }),
     }
 }
 
@@ -320,7 +489,7 @@ fn model_family_when_no_gguf() -> String {
             if fam == "bitnet" {
                 return "bitnet".into();
             }
-            "llama".into()
+            family_override_token(&fam).unwrap_or("llama").to_string()
         }
         Err(_) => "llama".into(),
     }
@@ -341,6 +510,22 @@ fn build_executor(
     dispatch_gguf_executor(backend_kind, gguf, model_path.as_path()).map(Some)
 }
 
+fn build_executor_for_load(
+    backend_kind: BackendKind,
+    gguf: Arc<GgufArchive>,
+    model_path: &Path,
+    tokenizer_override: Option<&Path>,
+    architecture_override: Option<&str>,
+) -> Result<Box<dyn ModelExecutor>> {
+    dispatch_gguf_executor_for_load(
+        backend_kind,
+        gguf,
+        model_path,
+        tokenizer_override,
+        architecture_override,
+    )
+}
+
 fn stub_response(prompt: &str, max_tokens: u32) -> String {
     let preview: String = prompt.chars().take(400).collect();
     format!(
@@ -354,20 +539,7 @@ mod tests {
     use crate::model::ToyLlm;
 
     fn stub_engine() -> Engine {
-        Engine {
-            inner: Arc::new(EngineInner {
-                model_path: None,
-                gguf: None,
-                toy: None,
-                stub: true,
-                backend_kind: BackendKind::Cpu,
-                model_family: "stub".into(),
-                scheduler: ContinuousBatchScheduler::from_env(),
-                _kernel_registry: KernelRegistry::bootstrap_default(),
-                _paged_kv: PagedKvCache::from_env(),
-                executor: None,
-            }),
-        }
+        super::stub_engine()
     }
 
     fn toy_engine() -> Engine {
@@ -380,6 +552,9 @@ mod tests {
                 backend_kind: BackendKind::Cpu,
                 model_family: "toy".into(),
                 scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
                 _kernel_registry: KernelRegistry::bootstrap_default(),
                 _paged_kv: PagedKvCache::from_env(),
                 executor: None,

@@ -7,9 +7,44 @@ pub fn normalize_architecture_slug(raw: &str) -> String {
     raw.trim().to_ascii_lowercase()
 }
 
+/// Normalized slug for [`resolve_architecture_key`] when `RBITNET_MODEL_FAMILY` selects a
+/// **Llama-GGUF–compatible** runtime path (same tensor layout as `llama.cpp` “Llama” loader).
+///
+/// Covers Mistral/Mixtral/DeepSeek-coded Llama exports, chat templates (*Yi*, *Zephyr*, …),
+/// and vendor labels sometimes used without matching `general.architecture` (*openai*, *z.ai*, …).
+pub fn family_override_token(family_normalized: &str) -> Option<&'static str> {
+    match family_normalized {
+        "llama"
+        | "mistral"
+        | "mixtral"
+        | "codellama"
+        | "deepseek"
+        | "deepseek2"
+        | "deepseekcoder"
+        | "yi"
+        | "vicuna"
+        | "wizardlm"
+        | "orca"
+        | "starling"
+        | "zephyr"
+        | "openchat"
+        | "neural-chat"
+        | "solar"
+        | "stablelm"
+        | "phi"
+        | "phi2"
+        | "openai"
+        | "gpt-oss"
+        | "zai"
+        | "glm"
+        | "chatglm" => Some("llama"),
+        _ => None,
+    }
+}
+
 /// SSOT priority:
 /// 1. `RBITNET_ARCHITECTURE` (explicit override).
-/// 2. `RBITNET_MODEL_FAMILY` when set to **`llama`** or **`bitnet`** (narrow override).
+/// 2. `RBITNET_MODEL_FAMILY` — see [`family_override_token`] (Llama-lineage aliases vs `bitnet`).
 /// 3. **`auto`** (default family): detect `general.architecture == bitnet`; else GGUF slug; else **`llama`**
 ///    when `general.architecture` is missing (legacy GGUF compat).
 ///
@@ -26,12 +61,38 @@ pub fn resolve_architecture_key(gguf: &GgufArchive) -> String {
         let fam = normalize_architecture_slug(&f);
         if fam.is_empty() || fam == "auto" {
             // fall through
-        } else if fam == "llama" {
-            return "llama".to_string();
         } else if fam == "bitnet" {
             return "bitnet".to_string();
+        } else if let Some(slug) = family_override_token(&fam) {
+            return slug.to_string();
         }
         // unrecognized family string: treat like auto — use GGUF + fallbacks below
+    }
+
+    if gguf
+        .architecture()
+        .is_some_and(|a| a.eq_ignore_ascii_case("bitnet"))
+    {
+        return "bitnet".to_string();
+    }
+
+    gguf.normalized_architecture()
+        .unwrap_or_else(|| "llama".to_string())
+}
+
+/// Resolve architecture for a GGUF loaded in isolation from `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY`
+/// so concurrent multi-model loads do not race on environment variables.
+///
+/// Priority:
+/// 1. Non-empty `explicit_override` (registry `architecture` field).
+/// 2. Same detection as [`resolve_architecture_key`] when env vars are unset: BitNet flag from GGUF,
+///    then `general.architecture` slug, else `llama`.
+pub fn resolve_architecture_key_for_load(gguf: &GgufArchive, explicit_override: Option<&str>) -> String {
+    if let Some(raw) = explicit_override {
+        let t = normalize_architecture_slug(raw);
+        if !t.is_empty() {
+            return t;
+        }
     }
 
     if gguf

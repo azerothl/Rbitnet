@@ -1,4 +1,4 @@
-//! GGUF loaders that delegate to [`crate::model::LlamaExecutor`].
+//! Dispatch GLM MoE slugs → Llama-compatible runtime only (no stub).
 
 use std::path::Path;
 use std::sync::Arc;
@@ -6,11 +6,13 @@ use std::sync::Arc;
 use crate::backend::{make_backend, BackendKind};
 use crate::error::Result;
 use crate::gguf::GgufArchive;
+use crate::llama::LlamaModel;
+use crate::loaders::roadmap_unsupported;
+use crate::loaders::tokenizer::{resolve_tokenizer_path, resolve_tokenizer_path_for_load};
 use crate::model::{LlamaExecutor, ModelExecutor};
 
-use super::tokenizer::{resolve_tokenizer_path, resolve_tokenizer_path_for_load};
-
-pub fn build_llama_executor(
+pub fn build_glm4_moe_executor(
+    architecture_key: &str,
     backend_kind: BackendKind,
     gguf: Arc<GgufArchive>,
     model_path: &Path,
@@ -24,10 +26,14 @@ pub fn build_llama_executor(
         resolve_tokenizer_path(model_path)?
     };
     let backend = make_backend(backend_kind);
-    Ok(Box::new(LlamaExecutor::new(
-        backend_kind,
-        backend,
-        gguf,
-        tokenizer_path,
-    )))
+    if LlamaModel::from_gguf_arc(Arc::clone(&gguf)).is_ok() {
+        return Ok(Box::new(LlamaExecutor::new_with_architecture_slug(
+            backend_kind,
+            backend,
+            gguf,
+            tokenizer_path,
+            "glm4moe",
+        )));
+    }
+    Err(roadmap_unsupported::roadmap_architecture_not_supported(architecture_key))
 }
