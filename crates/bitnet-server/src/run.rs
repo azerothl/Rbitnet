@@ -7,6 +7,7 @@ use std::time::Duration;
 use bitnet_core::inference::{stub_engine, stub_mode_enabled, Engine};
 use tracing::{error, info, warn};
 
+use crate::config::apply_runtime_config_env;
 use crate::model_registry::ModelRegistry;
 use crate::{
     create_app_with_expected_model, create_app_with_registry, unix_now_ms, AppState, ServerConfig,
@@ -31,6 +32,11 @@ fn warn_if_insecure_bind(bind: &str) {
 
 /// Run the HTTP server until shutdown or fatal error. Same behavior as the `rbitnet-server` binary.
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if let Err(e) = apply_runtime_config_env() {
+        error!(%e, "invalid runtime config");
+        return Err(format!("invalid runtime config: {e}").into());
+    }
+
     let server_config = match ServerConfig::from_env() {
         Ok(c) => Arc::new(c),
         Err(e) => {

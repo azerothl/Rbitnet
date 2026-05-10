@@ -168,6 +168,7 @@ fn router_with_state(state: AppState, max_body_bytes: usize) -> Router {
         .route("/", get(root_health))
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
+        .route("/v1/completions", post(completions))
         .route("/v1/admin/unload", post(admin_unload));
 
     Router::new()
@@ -450,8 +451,32 @@ async fn admin_unload(
 
 #[derive(Debug, Deserialize)]
 pub struct ChatCompletionRequest {
-    pub model: String,
+    #[serde(default)]
+    pub model: Option<String>,
     pub messages: Vec<ChatMessage>,
+    #[serde(default)]
+    pub max_tokens: Option<u32>,
+    #[serde(default)]
+    pub temperature: Option<f32>,
+    #[serde(default)]
+    pub stream: Option<bool>,
+    #[serde(default)]
+    pub stop: Option<StopSequence>,
+    #[serde(default)]
+    pub top_p: Option<f32>,
+    #[serde(default)]
+    pub frequency_penalty: Option<f32>,
+    #[serde(default)]
+    pub presence_penalty: Option<f32>,
+    #[serde(default)]
+    pub seed: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CompletionRequest {
+    #[serde(default)]
+    pub model: Option<String>,
+    pub prompt: serde_json::Value,
     #[serde(default)]
     pub max_tokens: Option<u32>,
     #[serde(default)]
@@ -707,6 +732,109 @@ async fn ensure_registry_model_loaded(state: &AppState, requested: &str) -> Resu
     Ok(())
 }
 
+async fn default_request_model(state: &AppState, requested: Option<&str>) -> String {
+    if let Some(model) = requested.map(str::trim).filter(|s| !s.is_empty()) {
+        return model.to_string();
+    }
+    if let Some(reg) = state.registry.as_ref() {
+        if let Some(default) = reg.default_model.as_ref() {
+            return default.clone();
+        }
+        if let Some(loaded) = state.loaded_registry_model_id.read().await.clone() {
+            return loaded;
+        }
+        if let Some(first) = reg.models.keys().min() {
+            return first.clone();
+        }
+    }
+    if let Some(expected) = state.expected_request_model_id.read().await.clone() {
+        return expected;
+    }
+    state
+        .engine
+        .read()
+        .await
+        .openai_model_id()
+        .unwrap_or_else(|| "rbitnet-stub".into())
+}
+
+fn completion_prompt_to_string(prompt: &serde_json::Value) -> String {
+    match prompt {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(items) => items
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .map(ToString::to_string)
+                    .unwrap_or_else(|| v.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => prompt.to_string(),
+    }
+}
+
+async fn completions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<CompletionRequest>,
+) -> Result<Response, Infallible> {
+    let model = default_request_model(&state, req.model.as_deref()).await;
+    let chat = ChatCompletionRequest {
+        model: Some(model.clone()),
+        messages: vec![ChatMessage {
+            role: "user".into(),
+            content: serde_json::Value::String(completion_prompt_to_string(&req.prompt)),
+        }],
+        max_tokens: req.max_tokens,
+        temperature: req.temperature,
+        stream: req.stream,
+        stop: req.stop,
+        top_p: req.top_p,
+        frequency_penalty: req.frequency_penalty,
+        presence_penalty: req.presence_penalty,
+        seed: req.seed,
+    };
+    let response = chat_completions(State(state), headers, Json(chat)).await?;
+    if req.stream == Some(true) {
+        return Ok(response);
+    }
+    let (parts, body) = response.into_parts();
+    if !parts.status.is_success() {
+        return Ok(Response::from_parts(parts, body));
+    }
+    let bytes = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            return Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": { "message": format!("completion response conversion failed: {e}"), "type": "rbitnet_error" }
+                })),
+            )
+                .into_response());
+        }
+    };
+    let chat_body: serde_json::Value = serde_json::from_slice(&bytes).unwrap_or_else(|_| json!({}));
+    let text = chat_body["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or_default();
+    Ok(Json(json!({
+        "id": chat_body["id"].clone(),
+        "object": "text_completion",
+        "created": chat_body["created"].clone(),
+        "model": model,
+        "choices": [{
+            "text": text,
+            "index": 0,
+            "logprobs": serde_json::Value::Null,
+            "finish_reason": "stop"
+        }],
+        "usage": chat_body["usage"].clone()
+    }))
+    .into_response())
+}
+
 async fn chat_completions(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -721,8 +849,10 @@ async fn chat_completions(
         .chat_requests_total
         .fetch_add(1, Ordering::Relaxed);
 
+    let request_model = default_request_model(&state, req.model.as_deref()).await;
+
     if let Some(reg) = state.registry.as_ref() {
-        if !reg.models.contains_key(&req.model) {
+        if !reg.models.contains_key(&request_model) {
             state
                 .metrics
                 .chat_errors_total
@@ -733,7 +863,7 @@ async fn chat_completions(
                     "error": {
                         "message": format!(
                             "unknown model '{}'; allowed ids are defined in RBITNET_MODEL_REGISTRY",
-                            req.model
+                            request_model
                         ),
                         "type": "invalid_request_error"
                     }
@@ -741,7 +871,7 @@ async fn chat_completions(
             )
                 .into_response());
         }
-        if let Err(r) = ensure_registry_model_loaded(&state, &req.model).await {
+        if let Err(r) = ensure_registry_model_loaded(&state, &request_model).await {
             state
                 .metrics
                 .chat_errors_total
@@ -751,7 +881,7 @@ async fn chat_completions(
     } else {
         let expected = state.expected_request_model_id.read().await;
         if let Some(ref id) = *expected {
-            if req.model != *id {
+            if request_model != *id {
                 state
                     .metrics
                     .chat_errors_total
@@ -913,7 +1043,7 @@ async fn chat_completions(
     let continuous_batching = engine.continuous_batching_enabled();
     tracing::info!(
         request_id = %request_id,
-        model = %req.model,
+        model = %request_model,
         backend = %backend_kind,
         family = %model_family,
         max_tokens = max_tokens,
@@ -1020,7 +1150,7 @@ async fn chat_completions(
             join.abort();
             tracing::warn!(
                 request_id = %request_id,
-                model = %req.model,
+                model = %request_model,
                 backend = %backend_kind,
                 family = %model_family,
                 timeout_secs = timeout_dur.as_secs(),
@@ -1073,9 +1203,9 @@ async fn chat_completions(
 
     let text = apply_stop_sequences(output.text, req.stop.as_ref());
     if req.stream == Some(true) {
-        Ok(stream_completion(&req.model, &text).into_response())
+        Ok(stream_completion(&request_model, &text).into_response())
     } else {
-        Ok(json_completion(&req.model, &text, &output.stats).into_response())
+        Ok(json_completion(&request_model, &text, &output.stats).into_response())
     }
 }
 

@@ -1,6 +1,10 @@
 # WinGet submission template for Rbitnet.
-# Replace PackageVersion, InstallerUrl, and InstallerSha256 for each tagged GitHub release
-# before submitting with wingetcreate or opening a microsoft/winget-pkgs PR.
+# TODO(release): replace PackageVersion with the tag without leading "v".
+# TODO(release): InstallerUrl must match release.yml asset:
+#   rbitnet-server-vX.Y.Z-windows-x86_64.zip
+# TODO(release): InstallerSha256 must be the SHA-256 of that uploaded zip.
+# See docs/RELEASE_PACKAGING.md before submitting with wingetcreate or opening a
+# microsoft/winget-pkgs PR.
 PackageIdentifier: Rbitnet.Rbitnet
 PackageVersion: 0.1.0
 PackageLocale: en-US
@@ -25,6 +29,8 @@ NestedInstallerFiles:
     PortableCommandAlias: rbitnet
   - RelativeFilePath: rbitnet-server.exe
     PortableCommandAlias: rbitnet-server
+  - RelativeFilePath: rbitnet-runner.exe
+    PortableCommandAlias: rbitnet-runner
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/azerothl/Rbitnet/releases/download/v0.1.0/rbitnet-server-v0.1.0-windows-x86_64.zip

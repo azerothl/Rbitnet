@@ -18,7 +18,8 @@
       "verified": false,
       "min_ram": "4 GB for Q4_K_M plus runtime headroom",
       "tested": false,
-      "min_rbitnet_version": "0.1.0"
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
     },
     {
       "id": "llama-3.2-1b-instruct-q4-k-m",
@@ -38,7 +39,8 @@
       "verified": false,
       "min_ram": "4 GB for Q4_K_M plus runtime headroom",
       "tested": false,
-      "min_rbitnet_version": "0.1.0"
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
     },
     {
       "id": "llama-3.2-3b-instruct-q4-k-m",
@@ -58,7 +60,8 @@
       "verified": false,
       "min_ram": "8 GB for Q4_K_M plus runtime headroom",
       "tested": false,
-      "min_rbitnet_version": "0.1.0"
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
     },
     {
       "id": "hermes-2-pro-llama-3-8b-q4-k-m",
@@ -78,7 +81,8 @@
       "verified": false,
       "min_ram": "16 GB for Q4_K_M plus runtime headroom",
       "tested": false,
-      "min_rbitnet_version": "0.1.0"
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
     }
   ]
 }

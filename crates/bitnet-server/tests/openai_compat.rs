@@ -7,8 +7,8 @@ use std::sync::{LazyLock, Mutex};
 use axum::body::Body;
 use bitnet_core::inference::Engine;
 use bitnet_server::{
-    build_prompt_from_messages_with_tokenizer_template, create_app_with_config, ChatMessage,
-    ServerConfig,
+    build_prompt_from_messages_with_tokenizer_template, create_app_with_config,
+    create_app_with_expected_model, ChatMessage, ServerConfig,
 };
 use futures::future::join_all;
 use http::Request;
@@ -147,6 +147,71 @@ async fn openai_stub_models_and_chat() {
         .as_str()
         .expect("content");
     assert!(text.contains("stub"));
+}
+
+#[tokio::test]
+async fn chat_defaults_model_when_omitted() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let (app, _state) = create_app_with_expected_model(
+        engine,
+        Arc::new(ServerConfig::test_defaults()),
+        Some("rbitnet-stub".into()),
+    );
+    let chat_body = serde_json::json!({
+        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 16
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert!(res.status().is_success());
+}
+
+#[tokio::test]
+async fn completions_endpoint_maps_to_chat_response() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    let body = serde_json::json!({
+        "model": "rbitnet-stub",
+        "prompt": "hello",
+        "max_tokens": 16
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("completion response");
+    assert!(res.status().is_success());
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(v["object"], "text_completion");
+    assert!(v["choices"][0]["text"].as_str().unwrap().contains("stub"));
 }
 
 #[tokio::test]

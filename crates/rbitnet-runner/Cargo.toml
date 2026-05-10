@@ -1,0 +1,12 @@
+[package]
+name = "rbitnet-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Stub runner subprocess contract for future Rbitnet proxy mode"
+
+[[bin]]
+name = "rbitnet-runner"
+path = "src/main.rs"
+
+[dependencies]

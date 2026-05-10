@@ -34,13 +34,31 @@ Today’s **in-process** features (`RBITNET_MODEL_REGISTRY`, memory budget envs,
 Done in-tree today:
 
 - Single-process OpenAI-compatible serving with `/v1/models` and `/v1/chat/completions`.
+- Compatibility bridge for `/v1/completions` through the chat path.
 - Multi-model registry selection through `RBITNET_MODEL_REGISTRY`.
 - Idle unload back to a stub engine through `RBITNET_IDLE_UNLOAD_SECS`.
 - A local static UI at `/ui` for smoke testing the current process.
+- A stub `rbitnet-runner` binary that exits with code `64` after printing the planned child-process contract.
 
-Feature-flag placeholder for the proxy phase:
+Reserved proxy phase:
 
 - Reserve `RBITNET_RUNNER_PROXY=1` for the future parent proxy mode.
 - Reserve `rbitnet serve --proxy` for the future CLI entrypoint.
 
-These flags are not implemented yet. The next small increment should add a proxy-only config parser and a no-op command path that refuses to start unless a registry is configured; actual child process supervision should land separately with tests for spawn, health probe, forward, and idle termination.
+These proxy flags are not implemented yet. The runner stub is intentionally not a server; it documents the subprocess env contract and keeps release archives ready for the next step.
+
+## Implemented vs Planned
+
+Implemented:
+
+- `crates/rbitnet-runner`: contract-only binary.
+- Release archives include `rbitnet-runner` beside `rbitnet` and `rbitnet-server`.
+- Parent process remains the existing single-process Axum server.
+
+Planned:
+
+- Parent proxy mode requiring `RBITNET_MODEL_REGISTRY`.
+- Spawn one runner per model id with `RBITNET_MODEL`, `RBITNET_BIND=127.0.0.1:0`, tokenizer env/config and optional architecture override.
+- Probe child `GET /ready`, then forward `/v1/chat/completions` and `/v1/completions`.
+- Idle TTL, crash backoff, log capture, metrics merge and graceful drain.
+- Tests for spawn, health probe, request forwarding, auth propagation and idle termination.

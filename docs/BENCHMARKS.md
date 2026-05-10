@@ -33,6 +33,8 @@ scripts/bench_matrix.sh
 
 For real model throughput, start `rbitnet-server` yourself with `RBITNET_MODEL` and `RBITNET_TOKENIZER`, then run the matrix script with `NO_START_SERVER=1` / `-NoStartServer` and set `MODEL` / `-Model` to the id returned by `/v1/models`.
 
+The matrix wrappers call `scripts/bench_backend_compare.py` and append a reproducible markdown row. Use `docs/MODEL_MATRIX.md` to decide which model/tokenizer/template combination to test; do not publish placeholder rows as performance claims.
+
 ## Running Criterion benches (kernels)
 
 From the repo root:

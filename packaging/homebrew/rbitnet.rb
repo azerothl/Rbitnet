@@ -7,7 +7,14 @@
 #   brew tap <owner>/rbitnet
 #   brew install rbitnet
 #
-# Update version, URLs, and sha256 values for each tagged GitHub release.
+# TODO(release): update version from the GitHub tag without leading "v".
+# TODO(release): URLs must match release.yml asset names:
+#   rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz
+#   rbitnet-server-vX.Y.Z-linux-aarch64.tar.gz
+#   rbitnet-server-vX.Y.Z-macos-x86_64.tar.gz
+#   rbitnet-server-vX.Y.Z-macos-arm64.tar.gz
+# TODO(release): replace each sha256 with the uploaded asset SHA-256.
+# See docs/RELEASE_PACKAGING.md before publishing this formula to a tap.
 class Rbitnet < Formula
   desc "Pure Rust GGUF inference and OpenAI-compatible local HTTP server"
   homepage "https://github.com/azerothl/Rbitnet"
@@ -37,6 +44,7 @@ class Rbitnet < Formula
   def install
     bin.install "rbitnet"
     bin.install "rbitnet-server"
+    bin.install "rbitnet-runner"
   end
 
   test do

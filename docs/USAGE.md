@@ -50,7 +50,8 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 
 | Command | Purpose |
 |--------|---------|
-| `rbitnet quickstart <repo_id> [--file NAME] [--dir DIR]` | Resolve/download a Hugging Face GGUF repo, infer local `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths when available, and print exact PowerShell + bash commands plus `/v1/models` and chat `curl` examples. Use `--no-download` to print commands only. |
+| `rbitnet quickstart <repo_id> [--file NAME] [--dir DIR] [--write-config]` | Resolve/download a Hugging Face GGUF repo, infer local `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths when available, and print exact PowerShell + bash commands plus `/v1/models` and chat `curl` examples. Use `--no-download` to print commands only. `--write-config` writes `rbitnet.toml` (or `--user-config`) so `serve` works without model env vars. |
+| `rbitnet up <repo_id> [--file NAME] [--dir DIR]` | Same resolver/downloader as `quickstart`, but writes `rbitnet.toml` by default. |
 | `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
 | `rbitnet models list --interactive` (`-i`) | Same catalog in a **terminal UI** (table + detail panel + download with `d`). Target directory: `--download-dir` or `RBITNET_DOWNLOAD_DIR` (default `models`); optional `HF_TOKEN` for gated downloads. |
 | `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood and an **`rbitnet=`** readiness hint (`ready`, `needs_tokenizer`, `needs_external_tokenizer`, `unsupported_arch_likely`, `experimental_gguf` — see [HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)). **Default mode is strict BitNet filtering** (`likely`/`possible` only). |
@@ -60,6 +61,8 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models install <bundle-id> --dir DIR [--symlink]` | Download the bundle into `DIR` and write **`rbitnet.manifest.json`** with suggested `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths (relative). Uses `HF_TOKEN` when the Hub requires it. **`--symlink`** optional, same semantics as `models download`. |
 | `rbitnet models generate-catalog` | Build a `compatible_models.json` **draft** from Hub search (one GGUF + tokenizer per repo when found). Review before commit — see below. |
 | `rbitnet models download <repo_id> [--dir DIR] [--file NAME]... [--symlink]` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). Optional **`--symlink`** : symlink into `--dir` instead of hard link / copy. |
+| `rbitnet models inspect <PATH>` | Inspect a local model file or directory and print model, tokenizer, and template-source paths. |
+| `rbitnet models rm <PATH> --yes` | Remove a local model file or directory. The command refuses deletion without `--yes`. Alias: `models remove`. |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). |
 
 **Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
@@ -80,6 +83,8 @@ cargo build -p rbitnet-cli --release
 ./target/release/rbitnet models install --list
 ./target/release/rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models
 ./target/release/rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+./target/release/rbitnet up TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+./target/release/rbitnet models inspect ./models
 # JSON draft to stdout (or --output data/compatible_models.json)
 ./target/release/rbitnet models generate-catalog --max-entries 40 --output data/compatible_models.json
 # (default: `--query gguf`; for a specific family: `--query llama` + `--max-inspect 400`)
@@ -123,6 +128,8 @@ cargo run -p bitnet-server --bin rbitnet-server --release
 ```
 
 **CLI overrides (same as `rbitnet serve`):** `rbitnet-server --bind 127.0.0.1:8080 --api-key your-secret` only fills env when those variables are **not** already set.
+
+**Local config:** `rbitnet serve` / `rbitnet-server` read flat `rbitnet.toml` defaults from the current directory, `RBITNET_CONFIG`, then the user config directory (`%APPDATA%\Rbitnet\rbitnet.toml` on Windows, `$XDG_CONFIG_HOME/rbitnet/rbitnet.toml` or `~/.config/rbitnet/rbitnet.toml` on Unix). Supported keys: `model`, `tokenizer`, `bind`, `chat_format`, `model_registry`, `active_model_id`. Environment variables keep priority.
 
 **Health and metrics (operations):**
 

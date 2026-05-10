@@ -37,6 +37,8 @@ pub struct CatalogModel {
     pub tested: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_rbitnet_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smoke_test: Option<String>,
 }
 
 /// Pick one GGUF filename when a repo ships many quantizations (prefers common Q4_K_M-style names).
@@ -95,6 +97,7 @@ mod tests {
         assert!(c.models[0].min_ram_gb.is_none());
         assert!(c.models[0].verified.is_none());
         assert!(c.models[0].min_rbitnet_version.is_none());
+        assert!(c.models[0].smoke_test.is_none());
     }
 
     #[test]

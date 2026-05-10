@@ -1,5 +1,7 @@
 # Rbitnet
 
+Canonical local checkout: `C:\www\Rbitnet`. The older prototype at `C:\Users\loicpeaudecerf\rbitnet` is not the active workspace.
+
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
 ## Do I need Python?
@@ -90,8 +92,11 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
+  - [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) — curated-model RAM / tok/s placeholders and reproduction commands
   - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
   - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only local benchmark output
+  - [docs/RELEASE_PACKAGING.md](docs/RELEASE_PACKAGING.md) — WinGet/Homebrew release checklist
+  - [docs/FUTURE_DIFFERENTIATION.md](docs/FUTURE_DIFFERENTIATION.md) — French future differentiation backlog
   - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
   - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
@@ -114,6 +119,9 @@ Install the CLI, download a GGUF, set a tokenizer file, then serve:
 cargo install --path crates/rbitnet-cli
 rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
   --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+# Or write rbitnet.toml so serve needs no model env vars:
+rbitnet up TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
+  --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 # If the GGUF repo did not include tokenizer.json/tokenizer.model:
 rbitnet models download TinyLlama/TinyLlama-1.1B-Chat-v1.0 --dir models/tinyllama-tokenizer --file tokenizer.json
 export RBITNET_TOKENIZER="$PWD/models/tinyllama-tokenizer/tokenizer.json"
@@ -130,6 +138,7 @@ rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-
 ## Run the server (real GGUF)
 
 Place **`tokenizer.json`** (or `tokenizer.model`) beside the `.gguf`, or set `RBITNET_TOKENIZER`.
+`rbitnet serve` and `rbitnet-server` also read `rbitnet.toml` from the current directory, `RBITNET_CONFIG`, or the user config directory; explicit env vars still win.
 
 ```bash
 export RBITNET_MODEL=/absolute/path/to/model.gguf
@@ -158,6 +167,10 @@ Open the local static UI from the same server:
 RBITNET_STUB=1 rbitnet serve --open-ui
 # or visit http://127.0.0.1:8080/ui
 ```
+
+## Benchmarks
+
+Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for appended rows. The helper scripts start a stub server by default for API-overhead smoke checks; for real numbers, start a model yourself and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`.
 
 ## Inspect a GGUF
 
