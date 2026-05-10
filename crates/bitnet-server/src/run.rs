@@ -12,6 +12,8 @@ use crate::{
     create_app_with_expected_model, create_app_with_registry, unix_now_ms, AppState, ServerConfig,
 };
 
+type AppFactory = Box<dyn FnOnce() -> (axum::Router, AppState)>;
+
 fn warn_if_insecure_bind(bind: &str) {
     if bind.starts_with("0.0.0.0:") || bind == "0.0.0.0" {
         warn!(
@@ -51,10 +53,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
     let bind = std::env::var("RBITNET_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
     warn_if_insecure_bind(&bind);
 
-    let (engine, app_factory): (
-        Arc<Engine>,
-        Box<dyn FnOnce() -> (axum::Router, AppState)>,
-    ) = match ModelRegistry::load_from_env() {
+    let (engine, app_factory): (Arc<Engine>, AppFactory) = match ModelRegistry::load_from_env() {
         Ok(Some((reg, active_id))) => {
             let entry = reg
                 .models
@@ -80,11 +79,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
             )
         }
         Ok(None) => {
-            let engine = Arc::new(
-                Engine::from_env().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+            let engine = Arc::new(Engine::from_env().map_err(
+                |e| -> Box<dyn std::error::Error + Send + Sync> {
                     format!("failed to init engine from env: {e:?}").into()
-                })?,
-            );
+                },
+            )?);
             let expected_request_model_id = if server_config.require_model_match {
                 engine.openai_model_id()
             } else {
@@ -94,7 +93,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
             let cfg = Arc::clone(&server_config);
             (
                 Arc::clone(&engine),
-                Box::new(move || create_app_with_expected_model(eng, cfg, expected_request_model_id)),
+                Box::new(move || {
+                    create_app_with_expected_model(eng, cfg, expected_request_model_id)
+                }),
             )
         }
         Err(e) => {

@@ -62,14 +62,16 @@ impl LoadedPromptTokenizer {
 
     /// Best-effort EOS id for Llama/Mistral/Qwen-style chat checkpoints.
     pub(crate) fn eos_token_id(&self) -> Option<u32> {
-        const CANDS: &[&str] =
-            &["</s>", "<|endoftext|>", "<|im_end|>", "<|end|>"];
+        const CANDS: &[&str] = &["</s>", "<|endoftext|>", "<|im_end|>", "<|end|>"];
         match self {
             Self::Hf(t) => CANDS.iter().find_map(|s| t.token_to_id(s)),
-            Self::Sp(sp) => CANDS.iter().find_map(|s| match sp.piece_to_id(s) {
-                Ok(Some(id)) => Some(id),
-                Ok(None) | Err(_) => None,
-            }).or_else(|| sp.eos_id()),
+            Self::Sp(sp) => CANDS
+                .iter()
+                .find_map(|s| match sp.piece_to_id(s) {
+                    Ok(Some(id)) => Some(id),
+                    Ok(None) | Err(_) => None,
+                })
+                .or_else(|| sp.eos_id()),
         }
     }
 }

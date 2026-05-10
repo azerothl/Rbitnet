@@ -14,30 +14,10 @@ pub fn normalize_architecture_slug(raw: &str) -> String {
 /// and vendor labels sometimes used without matching `general.architecture` (*openai*, *z.ai*, …).
 pub fn family_override_token(family_normalized: &str) -> Option<&'static str> {
     match family_normalized {
-        "llama"
-        | "mistral"
-        | "mixtral"
-        | "codellama"
-        | "deepseek"
-        | "deepseek2"
-        | "deepseekcoder"
-        | "yi"
-        | "vicuna"
-        | "wizardlm"
-        | "orca"
-        | "starling"
-        | "zephyr"
-        | "openchat"
-        | "neural-chat"
-        | "solar"
-        | "stablelm"
-        | "phi"
-        | "phi2"
-        | "openai"
-        | "gpt-oss"
-        | "zai"
-        | "glm"
-        | "chatglm" => Some("llama"),
+        "llama" | "mistral" | "mixtral" | "codellama" | "deepseek" | "deepseek2"
+        | "deepseekcoder" | "yi" | "vicuna" | "wizardlm" | "orca" | "starling" | "zephyr"
+        | "openchat" | "neural-chat" | "solar" | "stablelm" | "phi" | "phi2" | "openai"
+        | "gpt-oss" | "zai" | "glm" | "chatglm" => Some("llama"),
         _ => None,
     }
 }
@@ -87,7 +67,10 @@ pub fn resolve_architecture_key(gguf: &GgufArchive) -> String {
 /// 1. Non-empty `explicit_override` (registry `architecture` field).
 /// 2. Same detection as [`resolve_architecture_key`] when env vars are unset: BitNet flag from GGUF,
 ///    then `general.architecture` slug, else `llama`.
-pub fn resolve_architecture_key_for_load(gguf: &GgufArchive, explicit_override: Option<&str>) -> String {
+pub fn resolve_architecture_key_for_load(
+    gguf: &GgufArchive,
+    explicit_override: Option<&str>,
+) -> String {
     if let Some(raw) = explicit_override {
         let t = normalize_architecture_slug(raw);
         if !t.is_empty() {

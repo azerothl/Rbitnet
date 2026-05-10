@@ -42,7 +42,10 @@ pub fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
 ///
 /// If `explicit` is `Some`, that file must exist and be named `tokenizer.json` or `tokenizer.model`.
 /// If `None`, only sibling files next to the GGUF are considered (same as [`resolve_tokenizer_path`] without env).
-pub fn resolve_tokenizer_path_for_load(model_path: &Path, explicit: Option<&Path>) -> Result<PathBuf> {
+pub fn resolve_tokenizer_path_for_load(
+    model_path: &Path,
+    explicit: Option<&Path>,
+) -> Result<PathBuf> {
     if let Some(p) = explicit {
         validate_no_parent_components(p)?;
         if tokenizer_path_candidate(p) {

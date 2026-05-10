@@ -34,5 +34,7 @@ pub fn build_deepseek2_executor(
             "deepseek2",
         )));
     }
-    Err(roadmap_unsupported::roadmap_architecture_not_supported("deepseek2"))
+    Err(roadmap_unsupported::roadmap_architecture_not_supported(
+        "deepseek2",
+    ))
 }

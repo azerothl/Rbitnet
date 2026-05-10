@@ -28,7 +28,11 @@ pub struct LlamaRuntime {
 }
 
 impl LlamaRuntime {
-    pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path, backend_kind: BackendKind) -> Result<Self> {
+    pub fn load(
+        archive: Arc<GgufArchive>,
+        tokenizer_path: &Path,
+        backend_kind: BackendKind,
+    ) -> Result<Self> {
         let model = LlamaModel::from_gguf_arc(archive)?;
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
         let kv = llama_kv_from_env(&model.cfg)?;
@@ -47,12 +51,7 @@ impl LlamaRuntime {
         })
     }
 
-    pub fn generate(
-        &mut self,
-        prompt: &str,
-        max_tokens: u32,
-        temperature: f32,
-    ) -> Result<String> {
+    pub fn generate(&mut self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
         self.generate_with_timings(prompt, max_tokens, temperature)
             .map(|(s, _)| s)
     }
@@ -84,9 +83,12 @@ impl LlamaRuntime {
             let chunk_base = chunk_idx * chunk_sz;
             for (idx, &tid) in chunk.iter().enumerate() {
                 let pos = chunk_base + idx;
-                logits = self
-                    .model
-                    .forward_with_backend(&mut self.kv, tid, pos, self.backend.as_ref())?;
+                logits = self.model.forward_with_backend(
+                    &mut self.kv,
+                    tid,
+                    pos,
+                    self.backend.as_ref(),
+                )?;
             }
         }
         let prefill_ms = t_pf.elapsed().as_millis() as u64;
@@ -104,9 +106,12 @@ impl LlamaRuntime {
                 break;
             }
             gen.push(next_id);
-            logits = self
-                .model
-                .forward_with_backend(&mut self.kv, next_id, pos, self.backend.as_ref())?;
+            logits = self.model.forward_with_backend(
+                &mut self.kv,
+                next_id,
+                pos,
+                self.backend.as_ref(),
+            )?;
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;

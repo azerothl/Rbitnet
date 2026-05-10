@@ -34,5 +34,7 @@ pub fn build_gptoss_executor(
             "gptoss",
         )));
     }
-    Err(roadmap_unsupported::roadmap_architecture_not_supported("gptoss"))
+    Err(roadmap_unsupported::roadmap_architecture_not_supported(
+        "gptoss",
+    ))
 }

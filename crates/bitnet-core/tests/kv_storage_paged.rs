@@ -63,7 +63,9 @@ fn paged_pool_reuses_phys_after_clear() {
     assert!(before_clear.new_phys_pages >= 1);
     paged.clear();
     for pos in 0..12usize {
-        paged.write_kv_layer(0, pos, &k, &v).expect("write after clear");
+        paged
+            .write_kv_layer(0, pos, &k, &v)
+            .expect("write after clear");
     }
     let after = paged.pool_stats();
     assert!(

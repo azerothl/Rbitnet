@@ -25,8 +25,8 @@ use axum::Json;
 use axum::Router;
 use bitnet_core::inference::{stub_engine, Engine};
 use bitnet_core::scheduler::{InferenceRequest, InferenceStats};
-use bitnet_core::{clear_inference_cancel, request_inference_cancel};
 use bitnet_core::BitNetError;
+use bitnet_core::{clear_inference_cancel, request_inference_cancel};
 use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
@@ -36,8 +36,8 @@ use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 pub use config::ServerConfig;
-pub use model_registry::ModelRegistry;
 use metrics::ServerMetrics;
+pub use model_registry::ModelRegistry;
 
 /// Shared HTTP state (engine may be swapped after admin unload or idle eviction).
 #[derive(Clone)]
@@ -96,14 +96,12 @@ pub fn create_app(engine: Arc<Engine>) -> Result<Router, String> {
 }
 
 /// Build the Axum app with an explicit config (tests and embedders).
-#[must_use]
 pub fn create_app_with_config(engine: Arc<Engine>, config: Arc<ServerConfig>) -> Router {
     let state = build_app_state(engine, Arc::clone(&config), None);
     router_with_state(state, config.max_body_bytes)
 }
 
 /// Same as [`create_app_with_config`] but fixes the expected OpenAI `model` field and exposes state for background tasks.
-#[must_use]
 pub fn create_app_with_expected_model(
     engine: Arc<Engine>,
     config: Arc<ServerConfig>,
@@ -116,7 +114,6 @@ pub fn create_app_with_expected_model(
 }
 
 /// Full server state including optional [`ModelRegistry`] for per-request model loads.
-#[must_use]
 pub fn create_app_with_registry(
     engine: Arc<Engine>,
     config: Arc<ServerConfig>,
@@ -204,7 +201,7 @@ async fn add_request_id_if_missing(mut req: Request<Body>, next: Next) -> Respon
     next.run(req).await
 }
 
-fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
+fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Box<Response>> {
     let key = match &state.config.api_key {
         None => return Ok(()),
         Some(k) => k,
@@ -237,16 +234,18 @@ fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
         .metrics
         .unauthorized_total
         .fetch_add(1, Ordering::Relaxed);
-    Err((
-        StatusCode::UNAUTHORIZED,
-        Json(json!({
-            "error": {
-                "message": "invalid or missing API key",
-                "type": "authentication_error"
-            }
-        })),
-    )
-        .into_response())
+    Err(Box::new(
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": {
+                    "message": "invalid or missing API key",
+                    "type": "authentication_error"
+                }
+            })),
+        )
+            .into_response(),
+    ))
 }
 
 async fn liveness() -> impl IntoResponse {
@@ -277,26 +276,52 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
 
 async fn root_health(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Err(r) = check_auth(&state, &headers) {
-        return r;
+        return *r;
     }
     (StatusCode::OK, "rbitnet OK\n").into_response()
 }
 
 async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Err(r) = check_auth(&state, &headers) {
-        return r;
+        return *r;
     }
     if let Some(reg) = &state.registry {
         let mut ids: Vec<&String> = reg.models.keys().collect();
         ids.sort();
+        let loaded_id = state.loaded_registry_model_id.read().await.clone();
+        let active_metadata = state.engine.read().await.model_metadata();
         let data: Vec<serde_json::Value> = ids
             .into_iter()
             .map(|id| {
+                let entry = reg
+                    .models
+                    .get(id)
+                    .expect("ids are collected from registry map");
+                let loaded = loaded_id.as_deref() == Some(id.as_str());
+                let metadata = if loaded {
+                    serde_json::to_value(&active_metadata).unwrap_or_else(|_| json!({}))
+                } else {
+                    json!({
+                        "summary": null,
+                        "model_path": redact_display_path(&entry.gguf.display().to_string()),
+                        "architecture": entry.architecture.as_deref().unwrap_or("auto"),
+                        "context_length": null,
+                        "quantization": null,
+                        "backend": active_metadata.backend,
+                        "backend_accelerated": active_metadata.backend_accelerated,
+                        "ready": false,
+                        "loaded": false,
+                        "tokenizer_path": entry.tokenizer.as_ref().map(|p| redact_display_path(&p.display().to_string()))
+                    })
+                };
                 json!({
                     "id": id,
                     "object": "model",
                     "created": unix_now(),
-                    "owned_by": "rbitnet"
+                    "owned_by": "rbitnet",
+                    "ready": loaded && active_metadata.ready,
+                    "loaded": loaded,
+                    "metadata": metadata
                 })
             })
             .collect();
@@ -310,6 +335,7 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
     let model_id = eng
         .openai_model_id()
         .unwrap_or_else(|| "rbitnet-stub".into());
+    let metadata = eng.model_metadata();
     Json(json!({
         "object": "list",
         "data": [
@@ -317,11 +343,26 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
                 "id": model_id,
                 "object": "model",
                 "created": unix_now(),
-                "owned_by": "rbitnet"
+                "owned_by": "rbitnet",
+                "ready": metadata.ready,
+                "loaded": metadata.model_path.is_some(),
+                "metadata": metadata
             }
         ]
     }))
     .into_response()
+}
+
+fn redact_display_path(path: &str) -> String {
+    let lower = path.to_ascii_lowercase();
+    if lower.contains("hf_")
+        || lower.contains("token=")
+        || lower.contains("apikey")
+        || lower.contains("api_key")
+    {
+        return "<redacted>".into();
+    }
+    path.to_string()
 }
 
 fn admin_token_ok(config: &ServerConfig, headers: &HeaderMap) -> bool {
@@ -343,7 +384,10 @@ fn admin_token_ok(config: &ServerConfig, headers: &HeaderMap) -> bool {
     from_header == Some(expected.as_str()) || from_bearer == Some(expected.as_str())
 }
 
-async fn admin_unload(State(state): State<AppState>, headers: HeaderMap) -> Result<Response, Infallible> {
+async fn admin_unload(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, Infallible> {
     if state.config.admin_token.is_none() {
         return Ok((
             StatusCode::NOT_IMPLEMENTED,
@@ -357,7 +401,10 @@ async fn admin_unload(State(state): State<AppState>, headers: HeaderMap) -> Resu
             .into_response());
     }
     if !admin_token_ok(&state.config, &headers) {
-        state.metrics.unauthorized_total.fetch_add(1, Ordering::Relaxed);
+        state
+            .metrics
+            .unauthorized_total
+            .fetch_add(1, Ordering::Relaxed);
         return Ok((
             StatusCode::UNAUTHORIZED,
             Json(json!({
@@ -398,12 +445,38 @@ pub struct ChatCompletionRequest {
     pub temperature: Option<f32>,
     #[serde(default)]
     pub stream: Option<bool>,
+    #[serde(default)]
+    pub stop: Option<StopSequence>,
+    #[serde(default)]
+    pub top_p: Option<f32>,
+    #[serde(default)]
+    pub frequency_penalty: Option<f32>,
+    #[serde(default)]
+    pub presence_penalty: Option<f32>,
+    #[serde(default)]
+    pub seed: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
     pub content: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum StopSequence {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl StopSequence {
+    fn as_strings(&self) -> Vec<&str> {
+        match self {
+            Self::One(s) => vec![s.as_str()],
+            Self::Many(items) => items.iter().map(String::as_str).collect(),
+        }
+    }
 }
 
 fn message_content_to_string(content: &serde_json::Value) -> String {
@@ -426,6 +499,25 @@ fn message_content_to_string(content: &serde_json::Value) -> String {
 }
 
 pub fn build_prompt_from_messages(messages: &[ChatMessage]) -> String {
+    if let Ok(template) = std::env::var("RBITNET_CHAT_TEMPLATE") {
+        let template = template.trim();
+        if !template.is_empty() {
+            return apply_simple_chat_template(template, messages);
+        }
+    }
+    match std::env::var("RBITNET_CHAT_FORMAT")
+        .unwrap_or_else(|_| "raw".into())
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "llama3" => build_llama3_prompt(messages),
+        "chatml" => build_chatml_prompt(messages),
+        _ => build_raw_prompt(messages),
+    }
+}
+
+fn build_raw_prompt(messages: &[ChatMessage]) -> String {
     let mut parts = Vec::new();
     for m in messages {
         let text = message_content_to_string(&m.content);
@@ -435,6 +527,93 @@ pub fn build_prompt_from_messages(messages: &[ChatMessage]) -> String {
         parts.push(format!("{}: {}", m.role, text));
     }
     parts.join("\n\n")
+}
+
+fn build_llama3_prompt(messages: &[ChatMessage]) -> String {
+    let mut out = String::from("<|begin_of_text|>");
+    for m in messages {
+        let text = message_content_to_string(&m.content);
+        if text.is_empty() {
+            continue;
+        }
+        out.push_str("<|start_header_id|>");
+        out.push_str(m.role.trim());
+        out.push_str("<|end_header_id|>\n\n");
+        out.push_str(text.trim());
+        out.push_str("<|eot_id|>");
+    }
+    out.push_str("<|start_header_id|>assistant<|end_header_id|>\n\n");
+    out
+}
+
+fn build_chatml_prompt(messages: &[ChatMessage]) -> String {
+    let mut out = String::new();
+    for m in messages {
+        let text = message_content_to_string(&m.content);
+        if text.is_empty() {
+            continue;
+        }
+        out.push_str("<|im_start|>");
+        out.push_str(m.role.trim());
+        out.push('\n');
+        out.push_str(text.trim());
+        out.push_str("<|im_end|>\n");
+    }
+    out.push_str("<|im_start|>assistant\n");
+    out
+}
+
+fn apply_simple_chat_template(template: &str, messages: &[ChatMessage]) -> String {
+    let raw = build_raw_prompt(messages);
+    let prompt = messages
+        .iter()
+        .filter(|m| m.role == "user")
+        .map(|m| message_content_to_string(&m.content))
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let system = last_role_content(messages, "system");
+    let user = last_role_content(messages, "user");
+    let assistant = last_role_content(messages, "assistant");
+    template
+        .replace("{{messages}}", &raw)
+        .replace("{messages}", &raw)
+        .replace("{{prompt}}", &prompt)
+        .replace("{prompt}", &prompt)
+        .replace("{{system}}", &system)
+        .replace("{system}", &system)
+        .replace("{{user}}", &user)
+        .replace("{user}", &user)
+        .replace("{{assistant}}", &assistant)
+        .replace("{assistant}", &assistant)
+}
+
+fn last_role_content(messages: &[ChatMessage], role: &str) -> String {
+    messages
+        .iter()
+        .rev()
+        .find(|m| m.role == role)
+        .map(|m| message_content_to_string(&m.content))
+        .unwrap_or_default()
+}
+
+fn apply_stop_sequences(mut text: String, stop: Option<&StopSequence>) -> String {
+    let Some(stop) = stop else {
+        return text;
+    };
+    let mut cut = None;
+    for s in stop.as_strings() {
+        if s.is_empty() {
+            continue;
+        }
+        if let Some(pos) = text.find(s) {
+            cut = Some(cut.map_or(pos, |prev: usize| prev.min(pos)));
+        }
+    }
+    if let Some(pos) = cut {
+        text.truncate(pos);
+    }
+    text
 }
 
 /// Load GGUF for `requested` when it differs from the in-memory registry selection (engine-first lock order).
@@ -495,7 +674,7 @@ async fn chat_completions(
     Json(req): Json<ChatCompletionRequest>,
 ) -> Result<Response, Infallible> {
     if let Err(r) = check_auth(&state, &headers) {
-        return Ok(r);
+        return Ok(*r);
     }
 
     state
@@ -689,6 +868,11 @@ async fn chat_completions(
         family = %model_family,
         max_tokens = max_tokens,
         temperature = temperature,
+        top_p = ?req.top_p,
+        frequency_penalty = ?req.frequency_penalty,
+        presence_penalty = ?req.presence_penalty,
+        seed = ?req.seed,
+        stop = req.stop.is_some(),
         prompt_chars = prompt_chars,
         continuous_batching = continuous_batching,
         timeout_secs = timeout_dur.as_secs(),
@@ -825,10 +1009,7 @@ async fn chat_completions(
                 ),
                 BitNetError::NotImplemented(m) => (StatusCode::NOT_IMPLEMENTED, m.to_string()),
                 BitNetError::Inference(s) => (StatusCode::INTERNAL_SERVER_ERROR, s.clone()),
-                other => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    other.to_string(),
-                ),
+                other => (StatusCode::INTERNAL_SERVER_ERROR, other.to_string()),
             };
             return Ok((
                 status,
@@ -840,10 +1021,11 @@ async fn chat_completions(
         }
     };
 
+    let text = apply_stop_sequences(output.text, req.stop.as_ref());
     if req.stream == Some(true) {
-        Ok(stream_completion(&req.model, &output.text).into_response())
+        Ok(stream_completion(&req.model, &text).into_response())
     } else {
-        Ok(json_completion(&req.model, &output.text, &output.stats).into_response())
+        Ok(json_completion(&req.model, &text, &output.stats).into_response())
     }
 }
 
@@ -926,9 +1108,8 @@ fn stream_completion(model: &str, full_text: &str) -> Response {
         Ok::<_, std::convert::Infallible>(format!("data: {}\n\n", finish))
     });
 
-    let done = stream::once(async {
-        Ok::<_, std::convert::Infallible>("data: [DONE]\n\n".to_string())
-    });
+    let done =
+        stream::once(async { Ok::<_, std::convert::Infallible>("data: [DONE]\n\n".to_string()) });
 
     let combined = s.chain(tail).chain(done);
     let body = Body::from_stream(combined);

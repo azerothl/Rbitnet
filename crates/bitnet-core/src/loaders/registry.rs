@@ -38,14 +38,7 @@ pub fn dispatch_gguf_executor(
     gguf: Arc<GgufArchive>,
     model_path: &Path,
 ) -> Result<Box<dyn ModelExecutor>> {
-    dispatch_gguf_executor_inner(
-        backend_kind,
-        gguf,
-        model_path,
-        false,
-        None,
-        None,
-    )
+    dispatch_gguf_executor_inner(backend_kind, gguf, model_path, false, None, None)
 }
 
 /// Same as [`dispatch_gguf_executor`] but does not use tokenizer/architecture from environment:
@@ -211,10 +204,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(
-            msg.to_ascii_lowercase().contains("cuda"),
-            "msg={msg}"
-        );
+        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
     }
 
     #[test]
@@ -249,10 +239,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(
-            msg.to_ascii_lowercase().contains("cuda"),
-            "msg={msg}"
-        );
+        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
     }
 
     #[test]
@@ -270,10 +257,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(
-            msg.to_ascii_lowercase().contains("cuda"),
-            "msg={msg}"
-        );
+        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
     }
 
     #[test]
@@ -291,10 +275,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(
-            msg.to_ascii_lowercase().contains("cuda"),
-            "msg={msg}"
-        );
+        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
     }
 
     #[test]

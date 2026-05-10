@@ -120,9 +120,7 @@ fn scheduler_batch_two_preserves_order() {
             },
         ],
     };
-    let rows = scheduler
-        .run_batch(&EchoExecutor, &batch)
-        .expect("batch");
+    let rows = scheduler.run_batch(&EchoExecutor, &batch).expect("batch");
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0].0, 1);
     assert_eq!(rows[1].0, 2);

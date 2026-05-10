@@ -115,7 +115,9 @@ impl PagedSeqKv {
     /// Write full K/V rows for `pos` (stride-wide slices).
     pub fn write_kv_layer(&mut self, layer: usize, pos: usize, k: &[f32], v: &[f32]) -> Result<()> {
         if k.len() != self.stride || v.len() != self.stride {
-            return Err(BitNetError::Inference("paged KV write: bad slice len".into()));
+            return Err(BitNetError::Inference(
+                "paged KV write: bad slice len".into(),
+            ));
         }
         let lb = pos / self.page_tokens;
         let pid = self.ensure_logical_block(layer, lb)?;
@@ -160,12 +162,8 @@ impl PagedSeqKv {
                     self.free_ids[layer].push(pid);
                 }
             }
-            self.phys_k[layer]
-                .iter_mut()
-                .for_each(|s| s.fill(0.0));
-            self.phys_v[layer]
-                .iter_mut()
-                .for_each(|s| s.fill(0.0));
+            self.phys_k[layer].iter_mut().for_each(|s| s.fill(0.0));
+            self.phys_v[layer].iter_mut().for_each(|s| s.fill(0.0));
             self.block_phys[layer].clear();
         }
     }
@@ -179,9 +177,7 @@ impl PagedSeqKv {
     }
 
     pub fn physical_counts(&self) -> Vec<usize> {
-        (0..self.n_layer)
-            .map(|l| self.phys_k[l].len())
-            .collect()
+        (0..self.n_layer).map(|l| self.phys_k[l].len()).collect()
     }
 
     pub fn pool_stats(&self) -> KvPoolStats {

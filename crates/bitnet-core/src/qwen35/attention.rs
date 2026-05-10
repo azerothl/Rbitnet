@@ -1,8 +1,8 @@
 //! Full multi-head attention (non-recurrent layers), GQA + RoPE (MRoPE approximated as standard RoPE on `rope_dim_pairs`).
 
-use crate::error::{BitNetError, Result};
 use super::config::Qwen35Config;
 use super::qmatvec::quant_matmul_vec;
+use crate::error::{BitNetError, Result};
 
 #[derive(Clone, Default)]
 pub struct AttnKvCache {
@@ -104,7 +104,13 @@ impl AttnKvCache {
         }
     }
 
-    fn write_token(&mut self, il: usize, pos: usize, k_heads: &[f32], v_heads: &[f32]) -> Result<()> {
+    fn write_token(
+        &mut self,
+        il: usize,
+        pos: usize,
+        k_heads: &[f32],
+        v_heads: &[f32],
+    ) -> Result<()> {
         match &mut self.mode {
             KvMode::Dense => Err(BitNetError::Inference("kv cache is uninitialized".into())),
             KvMode::DenseBuffers { k, v } => {
@@ -113,7 +119,9 @@ impl AttnKvCache {
                     .ok_or_else(|| BitNetError::Inference("kv dense offset overflow".into()))?;
                 let end = off + self.stride;
                 if end > k[il].len() || end > v[il].len() {
-                    return Err(BitNetError::Inference("kv dense write out-of-bounds".into()));
+                    return Err(BitNetError::Inference(
+                        "kv dense write out-of-bounds".into(),
+                    ));
                 }
                 k[il][off..end].copy_from_slice(k_heads);
                 v[il][off..end].copy_from_slice(v_heads);
@@ -124,17 +132,21 @@ impl AttnKvCache {
                 max_pages,
                 layers,
             } => {
-                let layer = layers
-                    .get_mut(il)
-                    .ok_or_else(|| BitNetError::Inference("kv paged layer index out-of-range".into()))?;
+                let layer = layers.get_mut(il).ok_or_else(|| {
+                    BitNetError::Inference("kv paged layer index out-of-range".into())
+                })?;
                 let page_idx = pos / *page_size_tokens;
                 let page_off_tokens = pos % *page_size_tokens;
                 if page_idx >= *max_pages {
                     return Err(BitNetError::Inference("kv paged exceeded max pages".into()));
                 }
                 while layer.k_pages.len() <= page_idx {
-                    layer.k_pages.push(vec![0f32; self.stride * *page_size_tokens]);
-                    layer.v_pages.push(vec![0f32; self.stride * *page_size_tokens]);
+                    layer
+                        .k_pages
+                        .push(vec![0f32; self.stride * *page_size_tokens]);
+                    layer
+                        .v_pages
+                        .push(vec![0f32; self.stride * *page_size_tokens]);
                 }
                 let vec_off = page_off_tokens * self.stride;
                 layer.k_pages[page_idx][vec_off..vec_off + self.stride].copy_from_slice(k_heads);
@@ -148,7 +160,13 @@ impl AttnKvCache {
         }
     }
 
-    fn read_k_slice<'a>(&'a self, il: usize, token_pos: usize, kv_h: usize, kv_head_dim: usize) -> Result<&'a [f32]> {
+    fn read_k_slice<'a>(
+        &'a self,
+        il: usize,
+        token_pos: usize,
+        kv_h: usize,
+        kv_head_dim: usize,
+    ) -> Result<&'a [f32]> {
         let base = kv_h
             .checked_mul(self.kv_head_span)
             .ok_or_else(|| BitNetError::Inference("kv head base overflow".into()))?;
@@ -170,9 +188,9 @@ impl AttnKvCache {
                 layers,
                 ..
             } => {
-                let layer = layers
-                    .get(il)
-                    .ok_or_else(|| BitNetError::Inference("kv paged layer index out-of-range".into()))?;
+                let layer = layers.get(il).ok_or_else(|| {
+                    BitNetError::Inference("kv paged layer index out-of-range".into())
+                })?;
                 if token_pos >= layer.token_to_page.len() {
                     return Err(BitNetError::Inference("kv paged token out-of-range".into()));
                 }
@@ -188,7 +206,13 @@ impl AttnKvCache {
         }
     }
 
-    fn read_v_slice<'a>(&'a self, il: usize, token_pos: usize, kv_h: usize, kv_head_dim: usize) -> Result<&'a [f32]> {
+    fn read_v_slice<'a>(
+        &'a self,
+        il: usize,
+        token_pos: usize,
+        kv_h: usize,
+        kv_head_dim: usize,
+    ) -> Result<&'a [f32]> {
         let base = kv_h
             .checked_mul(self.kv_head_span)
             .ok_or_else(|| BitNetError::Inference("kv head base overflow".into()))?;
@@ -210,9 +234,9 @@ impl AttnKvCache {
                 layers,
                 ..
             } => {
-                let layer = layers
-                    .get(il)
-                    .ok_or_else(|| BitNetError::Inference("kv paged layer index out-of-range".into()))?;
+                let layer = layers.get(il).ok_or_else(|| {
+                    BitNetError::Inference("kv paged layer index out-of-range".into())
+                })?;
                 if token_pos >= layer.token_to_page.len() {
                     return Err(BitNetError::Inference("kv paged token out-of-range".into()));
                 }
@@ -232,7 +256,10 @@ impl AttnKvCache {
 fn rmsnorm(x: &[f32], w: &[f32], eps: f32) -> Vec<f32> {
     let s = x.iter().map(|v| v * v).sum::<f32>() / (x.len() as f32);
     let scale = 1.0 / (s + eps).sqrt();
-    x.iter().zip(w.iter()).map(|(&xi, &wi)| xi * wi * scale).collect()
+    x.iter()
+        .zip(w.iter())
+        .map(|(&xi, &wi)| xi * wi * scale)
+        .collect()
 }
 
 fn softmax_inplace(s: &mut [f32]) {
@@ -302,7 +329,9 @@ pub fn block_full_attention(
     let k_lin = quant_matmul_vec(wk_py, wk_ty, wk_ne0, wk_ne1, x)?;
     let v_lin = quant_matmul_vec(wv_py, wv_ty, wv_ne0, wv_ne1, x)?;
     if cfg.n_head_kv == 0 {
-        return Err(BitNetError::Inference("attention: n_head_kv is zero".into()));
+        return Err(BitNetError::Inference(
+            "attention: n_head_kv is zero".into(),
+        ));
     }
     if k_lin.len() % cfg.n_head_kv != 0 || v_lin.len() % cfg.n_head_kv != 0 {
         return Err(BitNetError::Inference(format!(
@@ -316,7 +345,9 @@ pub fn block_full_attention(
     let v_stride = v_lin.len() / cfg.n_head_kv;
     let kv_head_dim = cfg.head_dim.min(k_stride).min(v_stride);
     if kv_head_dim == 0 {
-        return Err(BitNetError::Inference("attention: computed kv head_dim is zero".into()));
+        return Err(BitNetError::Inference(
+            "attention: computed kv head_dim is zero".into(),
+        ));
     }
 
     let q_full = quant_matmul_vec(wq_py, wq_ty, wq_ne0, wq_ne1, x)?;
@@ -349,7 +380,11 @@ pub fn block_full_attention(
         let k_src = h * k_stride;
         let v_src = h * v_stride;
         let s = h * cfg.head_dim;
-        let kn = rmsnorm(&k_lin[k_src..k_src + kv_head_dim], attn_k_norm_w, cfg.norm_eps);
+        let kn = rmsnorm(
+            &k_lin[k_src..k_src + kv_head_dim],
+            attn_k_norm_w,
+            cfg.norm_eps,
+        );
         k_heads[s..s + kv_head_dim].copy_from_slice(&kn);
         v_heads[s..s + kv_head_dim].copy_from_slice(&v_lin[v_src..v_src + kv_head_dim]);
     }
@@ -358,11 +393,21 @@ pub fn block_full_attention(
 
     for h in 0..cfg.n_head {
         let s = h * cfg.head_dim;
-        rope_inplace_partial(&mut q_heads_actual[s..s + kv_head_dim], pos, cfg.rope_freq_base, rot);
+        rope_inplace_partial(
+            &mut q_heads_actual[s..s + kv_head_dim],
+            pos,
+            cfg.rope_freq_base,
+            rot,
+        );
     }
     for h in 0..cfg.n_head_kv {
         let s = h * cfg.head_dim;
-        rope_inplace_partial(&mut k_heads[s..s + kv_head_dim], pos, cfg.rope_freq_base, rot);
+        rope_inplace_partial(
+            &mut k_heads[s..s + kv_head_dim],
+            pos,
+            cfg.rope_freq_base,
+            rot,
+        );
     }
 
     kv.write_token(il, pos, &k_heads, &v_heads)?;
@@ -410,7 +455,9 @@ pub fn block_full_attention(
 
     let y = quant_matmul_vec(wo_py, wo_ty, wo_ne0, wo_ne1, &attn_out)?;
     if y.len() != cfg.n_embd {
-        return Err(BitNetError::Inference("attention: wo output width mismatch".into()));
+        return Err(BitNetError::Inference(
+            "attention: wo output width mismatch".into(),
+        ));
     }
     Ok(y)
 }

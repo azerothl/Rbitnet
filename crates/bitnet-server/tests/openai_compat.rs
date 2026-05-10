@@ -1,4 +1,5 @@
 //! Integration tests: OpenAI-shaped routes expected by Akasha `BitNetProvider`.
+#![allow(clippy::await_holding_lock)]
 
 use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
@@ -63,10 +64,7 @@ async fn openai_stub_models_and_chat() {
         (engine, guard)
         // _lock released here; _guard keeps vars alive until end of test
     };
-    let app = create_app_with_config(
-        Arc::clone(&engine),
-        Arc::new(ServerConfig::test_defaults()),
-    );
+    let app = create_app_with_config(Arc::clone(&engine), Arc::new(ServerConfig::test_defaults()));
 
     let res = app
         .oneshot(
@@ -81,6 +79,8 @@ async fn openai_stub_models_and_chat() {
     let body = res.into_body().collect().await.unwrap().to_bytes();
     let v: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(v["data"][0]["id"], "rbitnet-stub");
+    assert_eq!(v["data"][0]["ready"], true);
+    assert_eq!(v["data"][0]["metadata"]["backend"], "cpu");
 
     let chat_body = serde_json::json!({
         "model": "any",
@@ -111,6 +111,82 @@ async fn openai_stub_models_and_chat() {
 }
 
 #[tokio::test]
+async fn chat_applies_stop_sequence_after_generation() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 32,
+        "stop": ["Prompt"],
+        "stream": false
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert!(res.status().is_success());
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let text = v["choices"][0]["message"]["content"].as_str().unwrap();
+    assert!(
+        !text.contains("Prompt"),
+        "stop sequence should cut output: {text}"
+    );
+}
+
+#[tokio::test]
+async fn chat_format_chatml_changes_prompt_rendering() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+        ("RBITNET_CHAT_FORMAT", Some("chatml")),
+        ("RBITNET_CHAT_TEMPLATE", None),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 32,
+        "stream": false
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat response");
+    assert!(res.status().is_success());
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let text = v["choices"][0]["message"]["content"].as_str().unwrap();
+    assert!(text.contains("<|im_start|>user"), "text={text}");
+}
+
+#[tokio::test]
 async fn health_ready_metrics_do_not_require_api_key() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[
@@ -127,12 +203,7 @@ async fn health_ready_metrics_do_not_require_api_key() {
     for path in ["/health", "/ready", "/metrics"] {
         let app = create_app_with_config(Arc::clone(&engine), Arc::clone(&config));
         let res = app
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap_or_else(|e| panic!("{path}: {e}"));
         assert!(
@@ -380,11 +451,7 @@ async fn parallel_stub_chats_under_concurrency_cap() {
     let results = join_all(futs).await;
     for res in results {
         let response = res.expect("response");
-        assert!(
-            response.status().is_success(),
-            "got {}",
-            response.status()
-        );
+        assert!(response.status().is_success(), "got {}", response.status());
     }
 }
 
@@ -421,4 +488,3 @@ async fn chat_rejects_prompt_over_token_cap() {
         .expect("chat response");
     assert_eq!(res.status(), http::StatusCode::BAD_REQUEST);
 }
-

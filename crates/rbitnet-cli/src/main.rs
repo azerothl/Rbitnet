@@ -9,7 +9,7 @@ mod interactive_models;
 mod train_cli;
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Args, Parser, Subcommand};
 
@@ -24,7 +24,11 @@ fn hub_place_mode(symlink: bool) -> HubPlaceMode {
 }
 
 #[derive(Parser)]
-#[command(name = "rbitnet", version, about = "Rbitnet CLI: Hugging Face models, download, optional Python train helper, and HTTP server")]
+#[command(
+    name = "rbitnet",
+    version,
+    about = "Rbitnet CLI: Hugging Face models, download, optional Python train helper, and HTTP server"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -32,6 +36,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Download/resolve a GGUF repo and print the exact environment + server/curl commands.
+    Quickstart(QuickstartCmd),
     #[command(subcommand, about = "Curated catalog, HF search, and downloads")]
     Models(ModelsCmd),
     /// Run an optional LoRA/SFT Python recipe under `training/` (requires a repo checkout + Python).
@@ -52,6 +58,31 @@ struct ServeCmd {
     bind: Option<String>,
 }
 
+#[derive(Args)]
+struct QuickstartCmd {
+    /// Hugging Face model repo id, e.g. TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF.
+    model_id: String,
+    /// Files to fetch (repeatable). If omitted, downloads all `.gguf` plus tokenizer files when present.
+    #[arg(long = "file", short = 'f', action = clap::ArgAction::Append)]
+    files: Vec<String>,
+    /// Destination directory for downloaded files.
+    #[arg(long, default_value = "models")]
+    dir: PathBuf,
+    /// Print commands without downloading files.
+    #[arg(long)]
+    no_download: bool,
+    /// Listen address to use in printed commands.
+    #[arg(long, env = "RBITNET_BIND", default_value = "127.0.0.1:8080")]
+    bind: String,
+    /// Optional chat prompt format: raw, llama3, or chatml.
+    #[arg(long)]
+    chat_format: Option<String>,
+    #[arg(long, env = "HF_TOKEN")]
+    token: Option<String>,
+    #[arg(long)]
+    symlink: bool,
+}
+
 fn apply_serve_cli_env(cmd: &ServeCmd) {
     if let Some(k) = &cmd.api_key {
         if std::env::var_os("RBITNET_API_KEY").is_none() {
@@ -65,10 +96,128 @@ fn apply_serve_cli_env(cmd: &ServeCmd) {
     }
 }
 
+fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
+    let rel = Path::new(file);
+    for component in rel.components() {
+        match component {
+            std::path::Component::Normal(_) | std::path::Component::CurDir => {}
+            _ => {
+                return Err(format!(
+                "unsafe path component in '{file}': only relative paths without '..' are allowed"
+            ))
+            }
+        }
+    }
+    Ok(dir.join(rel))
+}
+
+fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
+    let resolved =
+        download::resolve_download_files(&cmd.model_id, &cmd.files, cmd.token.as_deref())?;
+    if resolved.is_empty() {
+        return Err(format!(
+            "no downloadable files resolved for {}",
+            cmd.model_id
+        ));
+    }
+
+    let paths = if cmd.no_download {
+        resolved
+            .iter()
+            .map(|f| path_for_downloaded_file(&cmd.dir, f))
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        eprintln!(
+            "Downloading {} file(s) from {} -> {}",
+            resolved.len(),
+            cmd.model_id,
+            cmd.dir.display()
+        );
+        download::download_files(
+            &cmd.model_id,
+            &resolved,
+            &cmd.dir,
+            cmd.token.as_deref(),
+            hub_place_mode(cmd.symlink),
+        )?
+    };
+
+    let model_path = paths
+        .iter()
+        .find(|p| {
+            p.extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.eq_ignore_ascii_case("gguf"))
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| "resolved files did not include a .gguf file".to_string())?;
+    let tokenizer_path = paths.iter().find(|p| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| {
+                let n = n.to_ascii_lowercase();
+                n == "tokenizer.json" || n == "tokenizer.model"
+            })
+            .unwrap_or(false)
+    });
+
+    println!("Rbitnet quickstart for {}", cmd.model_id);
+    println!();
+    if cmd.no_download {
+        println!(
+            "(download skipped; paths below assume files are present under {})",
+            cmd.dir.display()
+        );
+        println!();
+    }
+    println!("PowerShell:");
+    println!("  $env:RBITNET_MODEL=\"{}\"", model_path.display());
+    if let Some(tok) = tokenizer_path {
+        println!("  $env:RBITNET_TOKENIZER=\"{}\"", tok.display());
+    }
+    if let Some(fmt) = &cmd.chat_format {
+        println!("  $env:RBITNET_CHAT_FORMAT=\"{}\"", fmt);
+    }
+    println!("  $env:RBITNET_BIND=\"{}\"", cmd.bind);
+    println!("  rbitnet serve");
+    println!();
+    println!("bash/zsh:");
+    println!("  export RBITNET_MODEL=\"{}\"", model_path.display());
+    if let Some(tok) = tokenizer_path {
+        println!("  export RBITNET_TOKENIZER=\"{}\"", tok.display());
+    }
+    if let Some(fmt) = &cmd.chat_format {
+        println!("  export RBITNET_CHAT_FORMAT=\"{}\"", fmt);
+    }
+    println!("  export RBITNET_BIND=\"{}\"", cmd.bind);
+    println!("  rbitnet serve");
+    println!();
+    println!("Local URL: http://{}", cmd.bind);
+    println!("Models:    curl -s http://{}/v1/models", cmd.bind);
+    println!("Chat:");
+    println!(
+        "  curl -s http://{}/v1/chat/completions -H \"Content-Type: application/json\" -d '{{\"model\":\"rbitnet-llama\",\"messages\":[{{\"role\":\"user\",\"content\":\"Hello from Rbitnet\"}}],\"max_tokens\":64,\"temperature\":0.7}}'",
+        cmd.bind
+    );
+    if tokenizer_path.is_none() {
+        println!();
+        println!(
+            "Note: no tokenizer.json/tokenizer.model was found in the resolved repo file list."
+        );
+        println!("Place a tokenizer beside the GGUF or set RBITNET_TOKENIZER before launching.");
+    }
+    Ok(())
+}
+
 #[derive(Args)]
 struct TrainCmd {
     /// Root of the Rbitnet repository (must contain `training/recipes/`).
-    #[arg(long, env = "RBITNET_REPO_ROOT", default_value = ".", value_name = "DIR")]
+    #[arg(
+        long,
+        env = "RBITNET_REPO_ROOT",
+        default_value = ".",
+        value_name = "DIR"
+    )]
     repo_root: PathBuf,
     /// Path under `training/` to the recipe script.
     #[arg(long, default_value = "recipes/sft_lora.py", value_name = "REL_PATH")]
@@ -200,8 +349,20 @@ fn print_catalog_list(url: &str) -> Result<(), String> {
         println!("id: {}", m.id);
         println!("  repo: {}", m.repo);
         println!("  description: {}", m.description);
+        if let Some(f) = &m.file {
+            println!("  file: {f}");
+        }
         if !m.files.is_empty() {
             println!("  files: {}", m.files.join(", "));
+        }
+        if let Some(ram) = &m.min_ram {
+            println!("  min_ram: {ram}");
+        }
+        if let Some(notes) = &m.notes {
+            println!("  notes: {notes}");
+        }
+        if let Some(tested) = m.tested {
+            println!("  tested: {tested}");
         }
         if let Some(v) = &m.min_rbitnet_version {
             println!("  min_rbitnet_version: {v}");
@@ -220,8 +381,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             token,
             symlink,
         } => {
-            let url = index_url
-                .unwrap_or_else(|| catalog::DEFAULT_MODELS_INDEX_URL.to_string());
+            let url = index_url.unwrap_or_else(|| catalog::DEFAULT_MODELS_INDEX_URL.to_string());
             if interactive {
                 interactive_models::run_catalog_interactive(
                     &url,
@@ -245,7 +405,8 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 return Ok(());
             }
             // clap guarantees bundle_id is Some (required_unless_present = "list")
-            let id = bundle_id.expect("bundle_id guaranteed by clap (required_unless_present = list)");
+            let id =
+                bundle_id.expect("bundle_id guaranteed by clap (required_unless_present = list)");
             bitnet_install::install_bundle(&id, &dir, token.as_deref(), hub_place_mode(symlink))
         }
         ModelsCmd::Search {
@@ -343,7 +504,11 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             }
             Ok(())
         }
-        ModelsCmd::Resolve { repo_id, token, json } => {
+        ModelsCmd::Resolve {
+            repo_id,
+            token,
+            json,
+        } => {
             let resolved = bitnet_install::resolve_model(&repo_id, token.as_deref())?;
             if json {
                 let body = serde_json::to_string_pretty(&resolved)
@@ -413,14 +578,15 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     description: format!(
                         "Auto-discovered on Hugging Face (search query: {query}). Primary GGUF chosen heuristically; not Rbitnet-CI-tested."
                     ),
+                    file: None,
                     files,
+                    notes: None,
+                    min_ram: None,
+                    tested: None,
                     min_rbitnet_version: None,
                 });
             }
-            let cat = catalog::Catalog {
-                version: 1,
-                models,
-            };
+            let cat = catalog::Catalog { version: 1, models };
             if cat.models.is_empty() {
                 eprintln!(
                     "hint: aucun dépôt avec fichiers .gguf trouvé pour cette requête. Essayez `--query gguf` ou `--query tinyllama`, ou augmentez `--max-inspect` / `--search-limit`."
@@ -450,6 +616,7 @@ async fn main() {
 
     let cli = Cli::parse();
     let result = match cli.command {
+        Commands::Quickstart(cmd) => print_quickstart(cmd),
         Commands::Models(m) => run_models(m),
         Commands::Train(cmd) => train_cli::run_train(&cmd.repo_root, &cmd.recipe, &cmd.passthrough),
         Commands::ExportGguf(cmd) => {

@@ -75,9 +75,7 @@ fn merge_speculative_phases(a: PhaseTimings, b: PhaseTimings) -> PhaseTimings {
         prefill_ms: a.prefill_ms.saturating_add(b.prefill_ms),
         decode_ms: a.decode_ms.saturating_add(b.decode_ms),
         prompt_tokens: a.prompt_tokens,
-        completion_tokens: a
-            .completion_tokens
-            .saturating_add(b.completion_tokens),
+        completion_tokens: a.completion_tokens.saturating_add(b.completion_tokens),
     }
 }
 
@@ -125,7 +123,11 @@ impl ContinuousBatchScheduler {
         }
     }
 
-    pub fn run(&self, executor: &dyn ModelExecutor, req: &InferenceRequest) -> Result<InferenceOutput> {
+    pub fn run(
+        &self,
+        executor: &dyn ModelExecutor,
+        req: &InferenceRequest,
+    ) -> Result<InferenceOutput> {
         if self.speculative_enabled {
             self.run_speculative(executor, req)
         } else {
@@ -142,7 +144,11 @@ impl ContinuousBatchScheduler {
     ///
     /// Current MVP executes requests sequentially while preserving a stable API for
     /// future continuous batching and per-wave scheduling.
-    pub fn run_batch(&self, executor: &dyn ModelExecutor, batch: &InferenceBatch) -> Result<Vec<(u64, InferenceOutput)>> {
+    pub fn run_batch(
+        &self,
+        executor: &dyn ModelExecutor,
+        batch: &InferenceBatch,
+    ) -> Result<Vec<(u64, InferenceOutput)>> {
         if self.enabled && batch.requests.len() > 1 {
             tracing::debug!(
                 batch_len = batch.requests.len(),
@@ -162,7 +168,11 @@ impl ContinuousBatchScheduler {
         Ok(out)
     }
 
-    fn run_speculative(&self, executor: &dyn ModelExecutor, req: &InferenceRequest) -> Result<InferenceOutput> {
+    fn run_speculative(
+        &self,
+        executor: &dyn ModelExecutor,
+        req: &InferenceRequest,
+    ) -> Result<InferenceOutput> {
         let mut draft_tokens =
             req.max_tokens.saturating_mul(self.draft_ratio_num) / self.draft_ratio_den;
         if draft_tokens == 0 {
@@ -173,10 +183,7 @@ impl ContinuousBatchScheduler {
             executor.generate_with_timings(&req.prompt, draft_tokens, req.temperature)?;
         if verify_tokens == 0 {
             let stats = InferenceStats::from_phases(draft_phases, true);
-            return Ok(InferenceOutput {
-                text: draft,
-                stats,
-            });
+            return Ok(InferenceOutput { text: draft, stats });
         }
         let verify_prompt = format!("{}\n{}", req.prompt, draft);
         let (verify, verify_phases) =

@@ -5,8 +5,8 @@ use std::time::Instant;
 use crate::backend::{BackendKind, ComputeBackend};
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
-use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::llama::LlamaRuntime;
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::model::ToyLlm;
 use crate::timings::PhaseTimings;
 
@@ -111,9 +111,10 @@ impl ModelExecutor for LlamaExecutor {
         max_tokens: u32,
         temperature: f32,
     ) -> Result<(String, PhaseTimings)> {
-        let mut slot = self.runtime.lock().map_err(|e| {
-            BitNetError::Inference(format!("executor lock poisoned: {e}"))
-        })?;
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
             *slot = Some(LlamaRuntime::load(
                 Arc::clone(&self.gguf),

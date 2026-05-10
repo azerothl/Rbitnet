@@ -50,6 +50,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 
 | Command | Purpose |
 |--------|---------|
+| `rbitnet quickstart <repo_id> [--file NAME] [--dir DIR]` | Resolve/download a Hugging Face GGUF repo, infer local `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths when available, and print exact PowerShell + bash commands plus `/v1/models` and chat `curl` examples. Use `--no-download` to print commands only. |
 | `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
 | `rbitnet models list --interactive` (`-i`) | Same catalog in a **terminal UI** (table + detail panel + download with `d`). Target directory: `--download-dir` or `RBITNET_DOWNLOAD_DIR` (default `models`); optional `HF_TOKEN` for gated downloads. |
 | `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood and an **`rbitnet=`** readiness hint (`ready`, `needs_tokenizer`, `needs_external_tokenizer`, `unsupported_arch_likely`, `experimental_gguf` — see [HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)). **Default mode is strict BitNet filtering** (`likely`/`possible` only). |
@@ -78,6 +79,7 @@ cargo build -p rbitnet-cli --release
 ./target/release/rbitnet models search bitnet -i
 ./target/release/rbitnet models install --list
 ./target/release/rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models
+./target/release/rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 # JSON draft to stdout (or --output data/compatible_models.json)
 ./target/release/rbitnet models generate-catalog --max-entries 40 --output data/compatible_models.json
 # (default: `--query gguf`; for a specific family: `--query llama` + `--max-inspect 400`)
@@ -99,7 +101,7 @@ cargo build -p rbitnet-cli --release
 
 Without a tokenizer, the engine returns `TokenizerMissing` when you try to generate text.
 
-**Chat templates:** Rbitnet builds a simple **plain-text** prompt from `messages` (`role: content` lines). Models that expect a **specific** chat template (Hermes, Llama 3 instruct, Qwen, etc.) should use prompts consistent with how the GGUF was exported — see the upstream model card and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md). Bundles from **`rbitnet models install`** record tokenizer-relative paths in `rbitnet.manifest.json`; align temperature and stop tokens with the upstream recommendation.
+**Chat templates:** By default, Rbitnet builds a simple **plain-text** prompt from `messages` (`role: content` lines). Set **`RBITNET_CHAT_FORMAT=llama3`**, **`chatml`**, or **`raw`** to select a built-in template. For small custom prompts, set **`RBITNET_CHAT_TEMPLATE`**; it supports placeholder replacement for `{messages}` / `{{messages}}`, `{prompt}`, `{system}`, `{user}`, and `{assistant}`. This is intentionally a small subset, not a full Jinja engine. Bundles from **`rbitnet models install`** record tokenizer-relative paths in `rbitnet.manifest.json`; align temperature and stop tokens with the upstream recommendation.
 
 ## Quick start — HTTP server with a GGUF
 
@@ -143,8 +145,10 @@ Use the reported `id` (for example `rbitnet-llama` when `general.architecture` i
 ```bash
 curl -s http://127.0.0.1:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"Hello"}],"max_tokens":64,"temperature":0.8}'
+  -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"Hello"}],"max_tokens":64,"temperature":0.8,"stop":["</s>"]}'
 ```
+
+OpenAI compatibility note: `stop` is applied to returned text after generation. `top_p`, `frequency_penalty`, `presence_penalty`, and `seed` are accepted in request JSON and logged for compatibility, but the current core sampler only honors `temperature`; those fields are no-ops until sampler options are promoted through `bitnet-core`.
 
 ## Modes without a full GGUF
 
@@ -166,6 +170,8 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` if not next to the GGUF (must not contain `..`). |
 | `RBITNET_ARCHITECTURE` | Force the architecture dispatch key (ASCII, case-insensitive); wins over `general.architecture` and `RBITNET_MODEL_FAMILY`. Use to experiment or to force `llama` when a file advertises an unsupported arch (e.g. MoE). |
 | `RBITNET_MODEL_FAMILY` | `llama`, `bitnet`, or `auto` (default): with `auto`, the key is `bitnet` when the GGUF says so, otherwise `general.architecture` (lowercased), else `llama` if that metadata is missing (legacy files). |
+| `RBITNET_CHAT_FORMAT` | Built-in chat prompt format: `raw` (default), `llama3`, or `chatml`. |
+| `RBITNET_CHAT_TEMPLATE` | Simple custom template string. Supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` (also `{{...}}` forms). Overrides `RBITNET_CHAT_FORMAT`. |
 | `RBITNET_STUB` | `1` / `true` / `yes` — stub responses (overrides real inference when set). |
 | `RBITNET_TOY` | `1` — toy LM instead of GGUF. |
 | `RBITNET_TOY_SEED` | Integer seed for the toy LM (default `42`). |

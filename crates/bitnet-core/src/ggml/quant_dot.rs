@@ -3,10 +3,10 @@
 use half::{bf16, f16};
 
 use crate::error::{BitNetError, Result};
-use crate::ggml::types;
 use crate::ggml::dequant::{
     q4_0_block_dequant, q4_k_superblock_dequant, q6_k_superblock_dequant, q8_0_block_dequant,
 };
+use crate::ggml::types;
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 
 const QK_K: usize = 256;
@@ -165,11 +165,7 @@ fn dot_row_q4_k(row: &[u8], x: &[f32]) -> Result<f32> {
 
 /// Decode one matrix row (second index `row`) to `out` (`len == ne0`).
 #[inline]
-pub fn decode_row_to_f32(
-    ty: u32,
-    row_payload: &[u8],
-    out: &mut [f32],
-) -> Result<()> {
+pub fn decode_row_to_f32(ty: u32, row_payload: &[u8], out: &mut [f32]) -> Result<()> {
     if row_payload.len() != types::ggml_row_size(ty, out.len() as u64)? {
         return Err(BitNetError::InvalidGguf("decode_row: row size".into()));
     }
@@ -253,10 +249,14 @@ pub fn matvec_embd_out_mmap(
     ne1: usize,
 ) -> Result<Vec<f32>> {
     if t.dimensions.len() < 2 {
-        return Err(BitNetError::InvalidGguf("matvec: expected 2D tensor".into()));
+        return Err(BitNetError::InvalidGguf(
+            "matvec: expected 2D tensor".into(),
+        ));
     }
     if t.dimensions[0] as usize != ne0 || t.dimensions[1] as usize != ne1 {
-        return Err(BitNetError::Inference("quant matvec: tensor dims mismatch".into()));
+        return Err(BitNetError::Inference(
+            "quant matvec: tensor dims mismatch".into(),
+        ));
     }
     if x.len() != ne0 {
         return Err(BitNetError::Inference("matvec: x len".into()));
@@ -294,10 +294,14 @@ pub fn embedding_row_mmap(
     out: &mut [f32],
 ) -> Result<()> {
     if t.dimensions.len() < 2 {
-        return Err(BitNetError::InvalidGguf("embedding: expected 2D tensor".into()));
+        return Err(BitNetError::InvalidGguf(
+            "embedding: expected 2D tensor".into(),
+        ));
     }
     if t.dimensions[0] as usize != n_embd || t.dimensions[1] as usize != n_vocab {
-        return Err(BitNetError::Inference("embedding: tensor dims mismatch".into()));
+        return Err(BitNetError::Inference(
+            "embedding: tensor dims mismatch".into(),
+        ));
     }
     if tok >= n_vocab {
         return Err(BitNetError::Inference("embedding: token id OOB".into()));

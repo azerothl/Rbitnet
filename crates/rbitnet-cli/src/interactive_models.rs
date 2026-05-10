@@ -259,7 +259,10 @@ impl BrowserApp {
             SearchFilterMode::AllGguf => SearchFilterMode::StrictBitnet,
             SearchFilterMode::StrictBitnet => SearchFilterMode::AllGguf,
         });
-        let strict = matches!(self.search_filter_mode, Some(SearchFilterMode::StrictBitnet));
+        let strict = matches!(
+            self.search_filter_mode,
+            Some(SearchFilterMode::StrictBitnet)
+        );
         let Some(ctx) = &self.search_ctx else {
             self.status = "Contexte de recherche indisponible.".into();
             return;
@@ -278,7 +281,8 @@ impl BrowserApp {
             }
         };
         self.rows = hits.iter().map(ModelBrowserRow::from_search_hit).collect();
-        self.table_state.select(if self.rows.is_empty() { None } else { Some(0) });
+        self.table_state
+            .select(if self.rows.is_empty() { None } else { Some(0) });
         self.detail_scroll = 0;
         let label = match self.search_filter_mode {
             Some(SearchFilterMode::StrictBitnet) => "strict-bitnet",
@@ -309,16 +313,13 @@ impl BrowserApp {
         let title = Paragraph::new(Line::from(vec![
             self.title.as_str().bold(),
             "  ".into(),
-            help_hint.dim().into(),
+            help_hint.dim(),
         ]))
         .style(Style::default().fg(Color::Cyan));
         frame.render_widget(title, title_area);
 
-        let hchunks = Layout::horizontal([
-            Constraint::Percentage(48),
-            Constraint::Percentage(52),
-        ])
-        .split(main_area);
+        let hchunks = Layout::horizontal([Constraint::Percentage(48), Constraint::Percentage(52)])
+            .split(main_area);
         let table_area = hchunks[0];
         let detail_area = hchunks[1];
 
@@ -349,14 +350,8 @@ impl BrowserApp {
                 Row::new(vec![
                     Cell::from(truncate(&r.id, 18)),
                     Cell::from(truncate(&r.repo_id, 24)),
-                    Cell::from(truncate(
-                        r.confidence.as_deref().unwrap_or("-"),
-                        14,
-                    )),
-                    Cell::from(truncate(
-                        r.readiness.as_deref().unwrap_or("-"),
-                        18,
-                    )),
+                    Cell::from(truncate(r.confidence.as_deref().unwrap_or("-"), 14)),
+                    Cell::from(truncate(r.readiness.as_deref().unwrap_or("-"), 18)),
                     Cell::from(format!("{n_files}")),
                     Cell::from(truncate(&r.description, 28)),
                 ])
@@ -419,9 +414,7 @@ impl BrowserApp {
                 .draw(|f| self.draw(f))
                 .map_err(|e| format!("affichage: {e}"))?;
 
-            if !event::poll(Duration::from_millis(200))
-                .map_err(|e| format!("poll: {e}"))?
-            {
+            if !event::poll(Duration::from_millis(200)).map_err(|e| format!("poll: {e}"))? {
                 continue;
             }
             let Event::Key(key) = event::read().map_err(|e| format!("event: {e}"))? else {
@@ -475,17 +468,13 @@ pub fn run_catalog_interactive(
     if cat.models.is_empty() {
         return Err("le catalogue ne contient aucun modèle.".into());
     }
-    let rows: Vec<ModelBrowserRow> = cat.models.iter().map(ModelBrowserRow::from_catalog).collect();
+    let rows: Vec<ModelBrowserRow> = cat
+        .models
+        .iter()
+        .map(ModelBrowserRow::from_catalog)
+        .collect();
     let title = format!("Catalogue ({url})");
-    run_browser(
-        rows,
-        token,
-        download_dir,
-        place_mode,
-        title,
-        None,
-        None,
-    )
+    run_browser(rows, token, download_dir, place_mode, title, None, None)
 }
 
 /// Ouvre le TUI pour les résultats de recherche HF.
@@ -511,7 +500,11 @@ pub fn run_search_interactive(
         );
     }
     let rows: Vec<ModelBrowserRow> = hits.iter().map(ModelBrowserRow::from_search_hit).collect();
-    let mode = if strict_bitnet { "strict-bitnet" } else { "all-gguf" };
+    let mode = if strict_bitnet {
+        "strict-bitnet"
+    } else {
+        "all-gguf"
+    };
     let title = format!("Recherche HF (.gguf, non garanti 1-bit, {mode}) « {query} »");
     let initial_mode = if strict_bitnet {
         Some(SearchFilterMode::StrictBitnet)

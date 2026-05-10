@@ -21,10 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new(&path);
     let arch = GgufArchive::mmap_path(path)?;
     println!("{}", arch.summary_line());
-    println!(
-        "tensor_data_len={} bytes",
-        arch.tensor_data().len()
-    );
+    println!("tensor_data_len={} bytes", arch.tensor_data().len());
 
     let hp = arch.llama_hyper_params();
     println!(

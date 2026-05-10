@@ -55,9 +55,16 @@ fn metadata_i64(md: &std::collections::HashMap<String, GgufValue>, key: &str) ->
     })
 }
 
-fn meta_req_i64(md: &std::collections::HashMap<String, GgufValue>, key: &str, label: &str) -> Result<i64> {
-    metadata_i64(md, key)
-        .ok_or_else(|| BitNetError::Inference(format!("missing or invalid GGUF metadata `{key}` for {label}")))
+fn meta_req_i64(
+    md: &std::collections::HashMap<String, GgufValue>,
+    key: &str,
+    label: &str,
+) -> Result<i64> {
+    metadata_i64(md, key).ok_or_else(|| {
+        BitNetError::Inference(format!(
+            "missing or invalid GGUF metadata `{key}` for {label}"
+        ))
+    })
 }
 
 fn meta_opt_f32(md: &std::collections::HashMap<String, GgufValue>, key: &str) -> Option<f32> {
@@ -113,19 +120,16 @@ impl Qwen35Config {
             "embedding",
         )?;
 
-        let n_vocab_i =
-            match meta_req_i64(md, &format!("{}{}", kv_prefix, "vocab_size"), "vocab") {
-                Ok(v) => v,
-                Err(_) => infer_vocab_from_emb(archive, n_embd_i as usize)
-                    .map(|v| v as i64)
-                    .ok_or_else(|| BitNetError::Inference("missing vocab_size (no token_embd dims)".into()))?,
-            };
+        let n_vocab_i = match meta_req_i64(md, &format!("{}{}", kv_prefix, "vocab_size"), "vocab") {
+            Ok(v) => v,
+            Err(_) => infer_vocab_from_emb(archive, n_embd_i as usize)
+                .map(|v| v as i64)
+                .ok_or_else(|| {
+                    BitNetError::Inference("missing vocab_size (no token_embd dims)".into())
+                })?,
+        };
 
-        let blk_meta = meta_req_i64(
-            md,
-            &format!("{}{}", kv_prefix, "block_count"),
-            "layers",
-        )?;
+        let blk_meta = meta_req_i64(md, &format!("{}{}", kv_prefix, "block_count"), "layers")?;
         let blk_inf = infer_blk_count(archive) as i64;
 
         let n_layer_i = if blk_inf > 0 {
@@ -134,13 +138,13 @@ impl Qwen35Config {
             blk_meta
         };
 
-        let ctx_len = meta_req_i64(
-            md,
-            &format!("{}{}", kv_prefix, "context_length"),
-            "context",
-        )?;
+        let ctx_len = meta_req_i64(md, &format!("{}{}", kv_prefix, "context_length"), "context")?;
 
-        let n_expert_i = meta_req_i64(md, &format!("{}{}", kv_prefix, "expert_count"), "moe experts")?;
+        let n_expert_i = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "expert_count"),
+            "moe experts",
+        )?;
 
         let n_expert_used_i = meta_req_i64(
             md,
@@ -162,11 +166,17 @@ impl Qwen35Config {
             })?,
         };
 
-        let n_ff_exp = metadata_i64(md, &format!("{}{}", kv_prefix, "expert_feed_forward_length"))
-            .unwrap_or(0);
+        let n_ff_exp = metadata_i64(
+            md,
+            &format!("{}{}", kv_prefix, "expert_feed_forward_length"),
+        )
+        .unwrap_or(0);
 
-        let n_ff_shexp = metadata_i64(md, &format!("{}{}", kv_prefix, "expert_shared_feed_forward_length"))
-            .unwrap_or(0);
+        let n_ff_shexp = metadata_i64(
+            md,
+            &format!("{}{}", kv_prefix, "expert_shared_feed_forward_length"),
+        )
+        .unwrap_or(0);
 
         let n_ff_exp_us = std::cmp::max(
             i64_to_usize(n_ff_exp)?
@@ -174,10 +184,13 @@ impl Qwen35Config {
             infer_ff_exp_fallback(archive, n_expert_i as usize)?.unwrap_or(0),
         );
         let dense_us = i64_to_usize(n_ff_dense)?.unwrap_or(0);
-        let n_ff_shexp_us =
-            std::cmp::max(i64_to_usize(n_ff_shexp)?.unwrap_or(dense_us), 0);
+        let n_ff_shexp_us = std::cmp::max(i64_to_usize(n_ff_shexp)?.unwrap_or(dense_us), 0);
 
-        let n_head_i = meta_req_i64(md, &format!("{}{}", kv_prefix, "attention.head_count"), "heads")?;
+        let n_head_i = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "attention.head_count"),
+            "heads",
+        )?;
         let n_head_kv_i = meta_req_i64(
             md,
             &format!("{}{}", kv_prefix, "attention.head_count_kv"),
@@ -187,11 +200,15 @@ impl Qwen35Config {
         let key_len = meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.key_length"))
             .map(|v| v as i64)
             .or_else(|| metadata_i64(md, &format!("{}{}", kv_prefix, "attention.key_length")));
-        let mut head_dim_est = metadata_i64(md, &format!("{}{}", kv_prefix, "rope.dimension_count")).map(|rc| rc as usize);
+        let mut head_dim_est =
+            metadata_i64(md, &format!("{}{}", kv_prefix, "rope.dimension_count"))
+                .map(|rc| rc as usize);
         if head_dim_est.is_none() {
             if let Some(kl) = key_len {
                 if n_head_kv_i > 0 {
-                    head_dim_est = usize::try_from(kl.max(1) / n_head_kv_i.max(1)).ok().filter(|&h| h > 0);
+                    head_dim_est = usize::try_from(kl.max(1) / n_head_kv_i.max(1))
+                        .ok()
+                        .filter(|&h| h > 0);
                 }
             }
         }
@@ -203,10 +220,20 @@ impl Qwen35Config {
                     None
                 }
             })
-            .ok_or_else(|| BitNetError::Inference("unable to derive attention head dimensions".into()))?;
+            .ok_or_else(|| {
+                BitNetError::Inference("unable to derive attention head dimensions".into())
+            })?;
 
-        let mut ssm_conv = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.conv_kernel"), "ssm conv")?;
-        let mut ssm_inner = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.inner_size"), "ssm inner")?;
+        let mut ssm_conv = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "ssm.conv_kernel"),
+            "ssm conv",
+        )?;
+        let mut ssm_inner = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "ssm.inner_size"),
+            "ssm inner",
+        )?;
         // Some GGUF exports carry wrong or stale SSM KV vs tensors; conv1d weight is authoritative (layout `[d_conv, conv_channels]`).
         if let Some(t) = archive.tensor_first_of(&["blk.0.ssm_conv1d.weight", "blk.0.ssm_conv1d"]) {
             if t.dimensions.len() >= 2 {
@@ -218,13 +245,26 @@ impl Qwen35Config {
                 }
             }
         }
-        let ssm_state = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.state_size"), "ssm state")?;
-        let ssm_dt_rank = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.time_step_rank"), "ssm dt")?;
-        let ssm_group = meta_req_i64(md, &format!("{}{}", kv_prefix, "ssm.group_count"), "ssm groups")?;
+        let ssm_state = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "ssm.state_size"),
+            "ssm state",
+        )?;
+        let ssm_dt_rank = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "ssm.time_step_rank"),
+            "ssm dt",
+        )?;
+        let ssm_group = meta_req_i64(
+            md,
+            &format!("{}{}", kv_prefix, "ssm.group_count"),
+            "ssm groups",
+        )?;
 
-        let full_attn_interval = metadata_i64(md, &format!("{}{}", kv_prefix, "full_attention_interval"))
-            .unwrap_or(4)
-            .max(1) as u32;
+        let full_attn_interval =
+            metadata_i64(md, &format!("{}{}", kv_prefix, "full_attention_interval"))
+                .unwrap_or(4)
+                .max(1) as u32;
 
         let n_layer_us = usize::try_from(n_layer_i)
             .map_err(|_| BitNetError::Inference("block_count out of usize range".into()))?;
@@ -233,16 +273,19 @@ impl Qwen35Config {
             recurrent_layers[il] = ((il + 1) % (full_attn_interval as usize)) != 0;
         }
 
-        let norm_eps =
-            meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.layer_norm_rms_epsilon")).unwrap_or(1e-5);
+        let norm_eps = meta_opt_f32(
+            md,
+            &format!("{}{}", kv_prefix, "attention.layer_norm_rms_epsilon"),
+        )
+        .unwrap_or(1e-5);
 
-        let rope_base = meta_opt_f32(md, &format!("{}{}", kv_prefix, "rope.freq_base")).unwrap_or(1e6_f32);
+        let rope_base =
+            meta_opt_f32(md, &format!("{}{}", kv_prefix, "rope.freq_base")).unwrap_or(1e6_f32);
 
         let rope_dim_pairs = parse_rope_dim_pairs(md, &kv_prefix, head_dim)?;
 
-        let attn_scale = meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.scale")).unwrap_or_else(|| {
-            1.0 / (head_dim as f32).sqrt()
-        });
+        let attn_scale = meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.scale"))
+            .unwrap_or_else(|| 1.0 / (head_dim as f32).sqrt());
 
         Ok(Self {
             arch_label: raw_arch.clone(),
@@ -251,7 +294,8 @@ impl Qwen35Config {
                 .ok_or_else(|| BitNetError::Inference("invalid vocab size".into()))?,
             n_embd: i64_to_usize(n_embd_i)?
                 .ok_or_else(|| BitNetError::Inference("invalid embedding size".into()))?,
-            max_seq: usize::try_from(ctx_len).map_err(|_| BitNetError::Inference("context length OOB".into()))?,
+            max_seq: usize::try_from(ctx_len)
+                .map_err(|_| BitNetError::Inference("context length OOB".into()))?,
             n_layer: n_layer_us,
             rope_freq_base: rope_base,
             rope_dim_pairs: rope_dim_pairs / 2 * 2, // pairs
@@ -324,14 +368,9 @@ fn infer_ff_dense_from_tensors(archive: &GgufArchive, n_embd: usize) -> Result<O
     Ok(None)
 }
 
-fn infer_ff_exp_fallback(
-    archive: &GgufArchive,
-    expected_expert: usize,
-) -> Result<Option<usize>> {
+fn infer_ff_exp_fallback(archive: &GgufArchive, expected_expert: usize) -> Result<Option<usize>> {
     for i in [0usize, 1] {
-        if let Some(t) =
-            archive.tensor_by_name(&format!("blk.{i}.ffn_down_exps.weight"))
-        {
+        if let Some(t) = archive.tensor_by_name(&format!("blk.{i}.ffn_down_exps.weight")) {
             if t.dimensions.len() == 3 {
                 let nexp = usize::try_from(t.dimensions[2]).unwrap_or(0);
                 if nexp != expected_expert {
@@ -344,7 +383,11 @@ fn infer_ff_exp_fallback(
     Ok(None)
 }
 
-fn parse_rope_dim_pairs(md: &std::collections::HashMap<String, GgufValue>, kv_prefix: &str, fallback: usize) -> Result<usize> {
+fn parse_rope_dim_pairs(
+    md: &std::collections::HashMap<String, GgufValue>,
+    kv_prefix: &str,
+    fallback: usize,
+) -> Result<usize> {
     let key = format!("{}{}", kv_prefix, "rope.dimension_sections");
     if let Some(GgufValue::Array(arr)) = md.get(&key) {
         let mut sum = 0i64;
@@ -358,7 +401,9 @@ fn parse_rope_dim_pairs(md: &std::collections::HashMap<String, GgufValue>, kv_pr
             };
         }
         if sum <= 0 {
-            return Err(BitNetError::Inference("`rope.dimension_sections` empty".into()));
+            return Err(BitNetError::Inference(
+                "`rope.dimension_sections` empty".into(),
+            ));
         }
         let s = usize::try_from(sum).unwrap_or(fallback);
         Ok(std::cmp::min((s / 2) * 2, (fallback / 2) * 2))

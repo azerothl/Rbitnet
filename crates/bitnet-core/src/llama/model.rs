@@ -5,8 +5,8 @@ use std::sync::Arc;
 use crate::backend::{ComputeBackend, CpuBackend};
 use crate::error::{BitNetError, Result};
 use crate::ggml::{
-    embedding_row_mmap, matvec_embd_out_mmap, matvec_ff_mmap, tensor_to_f32,
-    ggml_type_supported_mmap_matvec,
+    embedding_row_mmap, ggml_type_supported_mmap_matvec, matvec_embd_out_mmap, matvec_ff_mmap,
+    tensor_to_f32,
 };
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 
@@ -74,14 +74,9 @@ impl MatrixWeights {
                 }
                 Ok(())
             }
-            Self::Quant { archive, tensor } => embedding_row_mmap(
-                archive.as_ref(),
-                tensor,
-                tok,
-                n_embd,
-                n_vocab,
-                out,
-            ),
+            Self::Quant { archive, tensor } => {
+                embedding_row_mmap(archive.as_ref(), tensor, tok, n_embd, n_vocab, out)
+            }
         }
     }
 }
@@ -107,9 +102,9 @@ pub struct LlamaModel {
 }
 
 fn load_tensor_dense(archive: &GgufArchive, names: &[&str]) -> Result<Vec<f32>> {
-    let t = archive.tensor_first_of(names).ok_or_else(|| {
-        BitNetError::Inference(format!("missing tensor (tried {:?})", names))
-    })?;
+    let t = archive
+        .tensor_first_of(names)
+        .ok_or_else(|| BitNetError::Inference(format!("missing tensor (tried {:?})", names)))?;
     let payload = archive.tensor_payload(t)?;
     tensor_to_f32(payload, t.ggml_type, &t.dimensions)
 }
@@ -120,9 +115,9 @@ fn load_tensor_strings_dense(archive: &GgufArchive, names: &[String]) -> Result<
 }
 
 fn tensor_info_first(archive: &GgufArchive, names: &[&str]) -> Result<GgufTensorInfo> {
-    let t = archive.tensor_first_of(names).ok_or_else(|| {
-        BitNetError::Inference(format!("missing tensor (tried {:?})", names))
-    })?;
+    let t = archive
+        .tensor_first_of(names)
+        .ok_or_else(|| BitNetError::Inference(format!("missing tensor (tried {:?})", names)))?;
     Ok(t.clone())
 }
 
@@ -156,7 +151,10 @@ pub fn llama_mmap_quant_supported(archive: &GgufArchive) -> Result<()> {
         check(&[&format!("{p}.attn_q.weight")])?;
         check(&[&format!("{p}.attn_k.weight")])?;
         check(&[&format!("{p}.attn_v.weight")])?;
-        check(&[&format!("{p}.attn_output.weight"), &format!("{p}.attn_out.weight")])?;
+        check(&[
+            &format!("{p}.attn_output.weight"),
+            &format!("{p}.attn_out.weight"),
+        ])?;
         check(&[&format!("{p}.ffn_gate.weight")])?;
         check(&[&format!("{p}.ffn_up.weight")])?;
         check(&[&format!("{p}.ffn_down.weight")])?;
@@ -218,9 +216,7 @@ fn softmax_inplace(s: &mut [f32]) {
 }
 
 fn silu(x: &[f32]) -> Vec<f32> {
-    x.iter()
-        .map(|&v| v / (1.0 + (-v).exp()))
-        .collect()
+    x.iter().map(|&v| v / (1.0 + (-v).exp())).collect()
 }
 
 fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
@@ -302,14 +298,17 @@ impl LlamaModel {
         )?);
         if let MatrixWeights::Dense(ref v) = output {
             if v.len() != n_embd * n_vocab {
-                return Err(BitNetError::Inference("output.weight shape mismatch".into()));
+                return Err(BitNetError::Inference(
+                    "output.weight shape mismatch".into(),
+                ));
             }
         }
 
         let mut layers = Vec::with_capacity(cfg.n_layer);
         for i in 0..cfg.n_layer {
             let p = format!("blk.{i}");
-            let attn_norm = load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.attn_norm.weight")])?;
+            let attn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.attn_norm.weight")])?;
             let wq = MatrixWeights::Dense(load_tensor_strings_dense(
                 archive.as_ref(),
                 &[format!("{p}.attn_q.weight")],
@@ -322,11 +321,15 @@ impl LlamaModel {
                 archive.as_ref(),
                 &[format!("{p}.attn_v.weight")],
             )?);
-            let wo = MatrixWeights::Dense(load_tensor_strings_dense(archive.as_ref(), &[
-                format!("{p}.attn_output.weight"),
-                format!("{p}.attn_out.weight"),
-            ])?);
-            let ffn_norm = load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_norm.weight")])?;
+            let wo = MatrixWeights::Dense(load_tensor_strings_dense(
+                archive.as_ref(),
+                &[
+                    format!("{p}.attn_output.weight"),
+                    format!("{p}.attn_out.weight"),
+                ],
+            )?);
+            let ffn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_norm.weight")])?;
             let ffn_gate = MatrixWeights::Dense(load_tensor_strings_dense(
                 archive.as_ref(),
                 &[format!("{p}.ffn_gate.weight")],
@@ -341,19 +344,8 @@ impl LlamaModel {
             )?);
 
             Self::validate_layer_dense(
-                i,
-                &attn_norm,
-                &wq,
-                &wk,
-                &wv,
-                &wo,
-                &ffn_norm,
-                &ffn_gate,
-                &ffn_up,
-                &ffn_down,
-                n_embd,
-                n_embd_kv,
-                n_ff,
+                i, &attn_norm, &wq, &wk, &wv, &wo, &ffn_norm, &ffn_gate, &ffn_up, &ffn_down,
+                n_embd, n_embd_kv, n_ff,
             )?;
 
             layers.push(LayerWeights {
@@ -444,7 +436,8 @@ impl LlamaModel {
         let mut layers = Vec::with_capacity(cfg.n_layer);
         for i in 0..cfg.n_layer {
             let p = format!("blk.{i}");
-            let attn_norm = load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.attn_norm.weight")])?;
+            let attn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.attn_norm.weight")])?;
             let wq = MatrixWeights::Quant {
                 archive: Arc::clone(&archive),
                 tensor: tensor_info_strings(archive.as_ref(), &[format!("{p}.attn_q.weight")])?,
@@ -459,12 +452,16 @@ impl LlamaModel {
             };
             let wo = MatrixWeights::Quant {
                 archive: Arc::clone(&archive),
-                tensor: tensor_info_strings(archive.as_ref(), &[
-                    format!("{p}.attn_output.weight"),
-                    format!("{p}.attn_out.weight"),
-                ])?,
+                tensor: tensor_info_strings(
+                    archive.as_ref(),
+                    &[
+                        format!("{p}.attn_output.weight"),
+                        format!("{p}.attn_out.weight"),
+                    ],
+                )?,
             };
-            let ffn_norm = load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_norm.weight")])?;
+            let ffn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_norm.weight")])?;
             let ffn_gate = MatrixWeights::Quant {
                 archive: Arc::clone(&archive),
                 tensor: tensor_info_strings(archive.as_ref(), &[format!("{p}.ffn_gate.weight")])?,
@@ -597,7 +594,9 @@ impl LlamaModel {
     ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         if pos >= cfg.max_seq {
-            return Err(BitNetError::Inference("sequence position >= max_seq".into()));
+            return Err(BitNetError::Inference(
+                "sequence position >= max_seq".into(),
+            ));
         }
         let tok = token as usize;
         if tok >= cfg.n_vocab {
@@ -645,8 +644,7 @@ impl LlamaModel {
                 let mut scores: Vec<f32> = if backend.kind() == crate::backend::BackendKind::Cpu {
                     (0..=pos)
                         .map(|p| {
-                            let k_slice =
-                                kv.k_head_slice(il, p, kv_h, cfg.head_dim, stride);
+                            let k_slice = kv.k_head_slice(il, p, kv_h, cfg.head_dim, stride);
                             let dot: f32 =
                                 q_slice.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
                             dot * scale
@@ -693,7 +691,6 @@ impl LlamaModel {
         }
 
         let xn = rmsnorm(&x, &self.output_norm, cfg.norm_eps);
-        self.output
-            .matvec_embd_out(&xn, n_embd, cfg.n_vocab)
+        self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab)
     }
 }

@@ -116,7 +116,8 @@ pub struct CudaRuntime {
     _cublas_lib: Option<Library>,
     cuda_malloc: unsafe extern "C" fn(*mut *mut c_void, usize) -> cudaError_t,
     cuda_free: unsafe extern "C" fn(*mut c_void) -> cudaError_t,
-    cuda_memcpy: unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
+    cuda_memcpy:
+        unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
     cuda_device_synchronize: unsafe extern "C" fn() -> cudaError_t,
     cublas_create_v2: Option<unsafe extern "C" fn(*mut cublasHandle_t) -> cublasStatus_t>,
     cublas_destroy_v2: Option<unsafe extern "C" fn(cublasHandle_t) -> cublasStatus_t>,
@@ -178,8 +179,9 @@ impl CudaRuntime {
                 continue;
             };
             let cuda_malloc = unsafe {
-                let sym: libloading::Symbol<unsafe extern "C" fn(*mut *mut c_void, usize) -> cudaError_t> =
-                    lib.get(b"cudaMalloc").ok()?;
+                let sym: libloading::Symbol<
+                    unsafe extern "C" fn(*mut *mut c_void, usize) -> cudaError_t,
+                > = lib.get(b"cudaMalloc").ok()?;
                 *sym
             };
             let cuda_free = unsafe {
@@ -189,7 +191,12 @@ impl CudaRuntime {
             };
             let cuda_memcpy = unsafe {
                 let sym: libloading::Symbol<
-                    unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
+                    unsafe extern "C" fn(
+                        *mut c_void,
+                        *const c_void,
+                        usize,
+                        cudaMemcpyKind,
+                    ) -> cudaError_t,
                 > = lib.get(b"cudaMemcpy").ok()?;
                 *sym
             };
@@ -295,7 +302,13 @@ impl CudaRuntime {
         Some(out)
     }
 
-    fn matvec_cuda(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Option<Vec<f32>> {
+    fn matvec_cuda(
+        &self,
+        w: &[f32],
+        x: &[f32],
+        out_rows: usize,
+        in_cols: usize,
+    ) -> Option<Vec<f32>> {
         let create = self.cublas_create_v2?;
         let destroy = self.cublas_destroy_v2?;
         let sgemv = self.cublas_sgemv_v2?;

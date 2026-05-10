@@ -35,5 +35,7 @@ pub fn build_glm4_moe_executor(
             "glm4moe",
         )));
     }
-    Err(roadmap_unsupported::roadmap_architecture_not_supported(architecture_key))
+    Err(roadmap_unsupported::roadmap_architecture_not_supported(
+        architecture_key,
+    ))
 }

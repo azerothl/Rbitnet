@@ -1,5 +1,7 @@
 # Rbitnet
 
+Canonical local checkout: `C:\www\Rbitnet`. The older prototype at `C:\Users\loicpeaudecerf\rbitnet` is not the active workspace.
+
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
 ## Do I need Python?
@@ -33,6 +35,35 @@ Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF 
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
   - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist
   - [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md) — long-term inference backlog (PagedAttention-class epic)
+
+## Works today
+
+Rbitnet currently runs **Llama-architecture GGUF** models. Native BitNet GGUF forward is still not implemented; files whose `general.architecture` is `bitnet` fail with the explicit loader error in `crates/bitnet-core/src/loaders/registry.rs`. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+
+Concrete public GGUF repos verified through the Hugging Face model API as `gguf.architecture=llama`:
+
+- `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` with `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` (small CPU smoke model).
+- `unsloth/Llama-3.2-1B-Instruct-GGUF` with `Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
+- `NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF` with `Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf` (`RBITNET_CHAT_FORMAT=chatml` recommended).
+
+Install the CLI, download a GGUF, set a tokenizer file, then serve:
+
+```bash
+cargo install --path crates/rbitnet-cli
+rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
+  --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+# If the GGUF repo did not include tokenizer.json/tokenizer.model:
+rbitnet models download TinyLlama/TinyLlama-1.1B-Chat-v1.0 --dir models/tinyllama-tokenizer --file tokenizer.json
+export RBITNET_TOKENIZER="$PWD/models/tinyllama-tokenizer/tokenizer.json"
+rbitnet serve
+```
+
+For Windows quick install:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+```
 
 ## Run the server (real GGUF)
 

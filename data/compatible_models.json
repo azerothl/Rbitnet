@@ -2,13 +2,55 @@
   "version": 1,
   "models": [
     {
-      "id": "tinyllama-1.1b-chat-q4-example",
+      "id": "tinyllama-1.1b-chat-q4-k-m",
       "repo": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
-      "description": "Example curated entry (Llama-family GGUF). Filenames must match the repo; verify on Hugging Face before downloading.",
+      "file": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+      "description": "TinyLlama 1.1B chat, Llama-architecture GGUF. Good first CPU smoke model.",
       "files": [
-        "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
-        "tokenizer.json"
+        "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
       ],
+      "notes": "HF API reports gguf.architecture=llama and context_length=2048. Download tokenizer.json or tokenizer.model from TinyLlama/TinyLlama-1.1B-Chat-v1.0 and set RBITNET_TOKENIZER.",
+      "min_ram": "4 GB for Q4_K_M plus runtime headroom",
+      "tested": false,
+      "min_rbitnet_version": "0.1.0"
+    },
+    {
+      "id": "llama-3.2-1b-instruct-q4-k-m",
+      "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+      "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+      "description": "Meta Llama 3.2 1B Instruct quantized by Unsloth; Llama loader compatible by architecture metadata.",
+      "files": [
+        "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+      ],
+      "notes": "HF API reports gguf.architecture=llama and context_length=131072. Needs tokenizer from the base Meta Llama 3.2 repo or a local exported tokenizer.json.",
+      "min_ram": "4 GB for Q4_K_M plus runtime headroom",
+      "tested": false,
+      "min_rbitnet_version": "0.1.0"
+    },
+    {
+      "id": "llama-3.2-3b-instruct-q4-k-m",
+      "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+      "file": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+      "description": "Meta Llama 3.2 3B Instruct quantized by Unsloth; Llama-architecture GGUF.",
+      "files": [
+        "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+      ],
+      "notes": "HF API reports gguf.architecture=llama and context_length=131072. Needs tokenizer from the base Meta Llama 3.2 repo or a local exported tokenizer.json.",
+      "min_ram": "8 GB for Q4_K_M plus runtime headroom",
+      "tested": false,
+      "min_rbitnet_version": "0.1.0"
+    },
+    {
+      "id": "hermes-2-pro-llama-3-8b-q4-k-m",
+      "repo": "NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF",
+      "file": "Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf",
+      "description": "Hermes 2 Pro on Llama 3 8B, ChatML-style instruct GGUF.",
+      "files": [
+        "Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf"
+      ],
+      "notes": "HF API reports gguf.architecture=llama and context_length=8192. Download tokenizer.json from NousResearch/Hermes-2-Pro-Llama-3-8B and use RBITNET_CHAT_FORMAT=chatml.",
+      "min_ram": "16 GB for Q4_K_M plus runtime headroom",
+      "tested": false,
       "min_rbitnet_version": "0.1.0"
     }
   ]

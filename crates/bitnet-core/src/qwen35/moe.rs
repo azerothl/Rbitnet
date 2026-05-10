@@ -47,10 +47,14 @@ pub fn moe_forward(
     _gate_up_fused: Option<&GgufTensorInfo>,
 ) -> Result<Vec<f32>> {
     if gate_inp.dimensions.len() != 2 {
-        return Err(BitNetError::Inference("ffn_gate_inp: expected 2D tensor".into()));
+        return Err(BitNetError::Inference(
+            "ffn_gate_inp: expected 2D tensor".into(),
+        ));
     }
-    let n_emb_g = usize::try_from(gate_inp.dimensions[0]).map_err(|_| BitNetError::Inference("ne0 gate".into()))?;
-    let n_exp_g = usize::try_from(gate_inp.dimensions[1]).map_err(|_| BitNetError::Inference("ne1 gate".into()))?;
+    let n_emb_g = usize::try_from(gate_inp.dimensions[0])
+        .map_err(|_| BitNetError::Inference("ne0 gate".into()))?;
+    let n_exp_g = usize::try_from(gate_inp.dimensions[1])
+        .map_err(|_| BitNetError::Inference("ne1 gate".into()))?;
     let gi_py = archive.tensor_payload(gate_inp)?;
     let mut router = quant_matmul_vec(gi_py, gate_inp.ggml_type, n_emb_g, n_exp_g, x)?;
     softmax_vec(&mut router);
@@ -59,27 +63,42 @@ pub fn moe_forward(
 
     for t in &[up_exps, gate_exps, down_exps] {
         if t.dimensions.len() != 3 {
-            return Err(BitNetError::Inference("MoE expert tensor: expected rank-3 GGUF layout".into()));
+            return Err(BitNetError::Inference(
+                "MoE expert tensor: expected rank-3 GGUF layout".into(),
+            ));
         }
     }
-    let stride_up =
-        ggml_nbytes(&[up_exps.dimensions[0], up_exps.dimensions[1]], up_exps.ggml_type)?;
-    let stride_gate =
-        ggml_nbytes(&[gate_exps.dimensions[0], gate_exps.dimensions[1]], gate_exps.ggml_type)?;
-    let stride_down =
-        ggml_nbytes(&[down_exps.dimensions[0], down_exps.dimensions[1]], down_exps.ggml_type)?;
-    let n_embd_up =
-        usize::try_from(up_exps.dimensions[0]).map_err(|_| BitNetError::Inference("n_embd experts".into()))?;
-    let n_ff_up = usize::try_from(up_exps.dimensions[1]).map_err(|_| BitNetError::Inference("n_ff up".into()))?;
-    let n_ff_dn = usize::try_from(down_exps.dimensions[0]).map_err(|_| BitNetError::Inference("n_ff dn".into()))?;
-    let n_embd_dn = usize::try_from(down_exps.dimensions[1]).map_err(|_| BitNetError::Inference("n_embd dn".into()))?;
+    let stride_up = ggml_nbytes(
+        &[up_exps.dimensions[0], up_exps.dimensions[1]],
+        up_exps.ggml_type,
+    )?;
+    let stride_gate = ggml_nbytes(
+        &[gate_exps.dimensions[0], gate_exps.dimensions[1]],
+        gate_exps.ggml_type,
+    )?;
+    let stride_down = ggml_nbytes(
+        &[down_exps.dimensions[0], down_exps.dimensions[1]],
+        down_exps.ggml_type,
+    )?;
+    let n_embd_up = usize::try_from(up_exps.dimensions[0])
+        .map_err(|_| BitNetError::Inference("n_embd experts".into()))?;
+    let n_ff_up = usize::try_from(up_exps.dimensions[1])
+        .map_err(|_| BitNetError::Inference("n_ff up".into()))?;
+    let n_ff_dn = usize::try_from(down_exps.dimensions[0])
+        .map_err(|_| BitNetError::Inference("n_ff dn".into()))?;
+    let n_embd_dn = usize::try_from(down_exps.dimensions[1])
+        .map_err(|_| BitNetError::Inference("n_embd dn".into()))?;
 
     let mut acc = vec![0f32; cfg.n_embd];
     let up_payload = archive.tensor_payload(up_exps)?;
     let gate_payload = archive.tensor_payload(gate_exps)?;
     let down_payload = archive.tensor_payload(down_exps)?;
     let fused_payload = if let Some(t) = _gate_up_fused {
-        Some((archive.tensor_payload(t)?, t.ggml_type, t.dimensions.clone()))
+        Some((
+            archive.tensor_payload(t)?,
+            t.ggml_type,
+            t.dimensions.clone(),
+        ))
     } else {
         None
     };
@@ -100,14 +119,8 @@ pub fn moe_forward(
             if n_embd_f == n_embd_up && n_2ff_f >= n_ff_up * 2 {
                 let stride_fused = ggml_nbytes(&[fused_dims[0], fused_dims[1]], *fused_ty)?;
                 let fused_off = e * stride_fused;
-                let gate_up = quant_matmul_vec_offset(
-                    fused_py,
-                    *fused_ty,
-                    n_embd_f,
-                    n_2ff_f,
-                    fused_off,
-                    x,
-                )?;
+                let gate_up =
+                    quant_matmul_vec_offset(fused_py, *fused_ty, n_embd_f, n_2ff_f, fused_off, x)?;
                 let mut gate = vec![0f32; n_ff_up];
                 let mut up = vec![0f32; n_ff_up];
                 gate.copy_from_slice(&gate_up[..n_ff_up]);
@@ -182,7 +195,9 @@ pub fn shared_expert_forward(
     let gv = archive.tensor_payload(gate_vec)?;
     let gvec = tensor_to_f32(gv, gate_vec.ggml_type, &gate_vec.dimensions)?;
     if gvec.len() != x.len() {
-        return Err(BitNetError::Inference("shared expert gate inp length mismatch vs hidden".into()));
+        return Err(BitNetError::Inference(
+            "shared expert gate inp length mismatch vs hidden".into(),
+        ));
     }
     let logit: f32 = gvec.iter().zip(x.iter()).map(|(&w, &xi)| w * xi).sum();
     let g = 1.0 / (1.0 + (-logit).exp());
@@ -195,7 +210,11 @@ pub fn shared_expert_forward(
     let up = quant_matmul_vec(up_py, up_w.ggml_type, cfg.n_embd, n_ff, x)?;
     let gate = quant_matmul_vec(gate_py, gate_w.ggml_type, cfg.n_embd, n_ff, x)?;
     let silu_gate = silu(&gate);
-    let hidden: Vec<f32> = up.iter().zip(silu_gate.iter()).map(|(u, gi)| u * gi).collect();
+    let hidden: Vec<f32> = up
+        .iter()
+        .zip(silu_gate.iter())
+        .map(|(u, gi)| u * gi)
+        .collect();
     let mut y = quant_matmul_vec(down_py, down_w.ggml_type, n_ff, cfg.n_embd, &hidden)?;
     for v in &mut y {
         *v *= g;

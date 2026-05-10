@@ -4,7 +4,9 @@ use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 
 use super::config::Qwen35Config;
-use super::gdn::{gated_delta_net_step, l2_normalize_vec, silu_inplace, ssm_conv_f32, stitch_conv_window_mut};
+use super::gdn::{
+    gated_delta_net_step, l2_normalize_vec, silu_inplace, ssm_conv_f32, stitch_conv_window_mut,
+};
 use super::qmatvec::quant_matmul_vec;
 
 pub struct RecurrentState {
@@ -17,13 +19,14 @@ pub fn first_recurrent_gate_out_dim(archive: &GgufArchive, cfg: &Qwen35Config) -
     for il in 0..cfg.n_layer {
         if cfg.is_recurrent_layer(il) {
             let name = format!("blk.{il}.attn_gate.weight");
-            let t = archive
-                .tensor_by_name(&name)
-                .ok_or_else(|| BitNetError::Inference(format!("missing `{name}` for recurrent value width")))?;
+            let t = archive.tensor_by_name(&name).ok_or_else(|| {
+                BitNetError::Inference(format!("missing `{name}` for recurrent value width"))
+            })?;
             if t.dimensions.len() < 2 {
                 return Err(BitNetError::Inference(format!("`{name}` expected rank-2")));
             }
-            let ne1 = usize::try_from(t.dimensions[1]).map_err(|_| BitNetError::Inference("attn_gate ne1".into()))?;
+            let ne1 = usize::try_from(t.dimensions[1])
+                .map_err(|_| BitNetError::Inference("attn_gate ne1".into()))?;
             return Ok(ne1);
         }
     }
@@ -135,7 +138,9 @@ pub fn recurrent_forward(
 
     let z = quant_matmul_vec(wgate.0, wgate.1, wgate.2, wgate.3, x)?;
     if z.len() != value_dim {
-        return Err(BitNetError::Inference("attn_gate output width mismatch".into()));
+        return Err(BitNetError::Inference(
+            "attn_gate output width mismatch".into(),
+        ));
     }
 
     let beta_logits = quant_matmul_vec(ssm_beta.0, ssm_beta.1, ssm_beta.2, ssm_beta.3, x)?;
@@ -149,7 +154,9 @@ pub fn recurrent_forward(
 
     let alpha = quant_matmul_vec(ssm_alpha.0, ssm_alpha.1, ssm_alpha.2, ssm_alpha.3, x)?;
     if alpha.len() != num_v || ssm_dt_bias.len() != num_v || ssm_a.len() != num_v {
-        return Err(BitNetError::Inference("ssm alpha/dt/a shape mismatch".into()));
+        return Err(BitNetError::Inference(
+            "ssm alpha/dt/a shape mismatch".into(),
+        ));
     }
 
     let mut gate = vec![0f32; num_v];
@@ -197,8 +204,16 @@ pub fn recurrent_forward(
         let v_slice = &v_part[h * sv..(h + 1) * sv];
         let state_off = h * sv * sv;
         let s_in = &st.ssm_state[state_off..state_off + sv * sv];
-        let (attn_chunk, s_new) =
-            gated_delta_net_step(s_in, &q_slice, &k_slice, v_slice, &[gate[h]], beta_v[h], sv, true);
+        let (attn_chunk, s_new) = gated_delta_net_step(
+            s_in,
+            &q_slice,
+            &k_slice,
+            v_slice,
+            &[gate[h]],
+            beta_v[h],
+            sv,
+            true,
+        );
         st.ssm_state[state_off..state_off + sv * sv].copy_from_slice(&s_new);
         attn_flat[h * sv..(h + 1) * sv].copy_from_slice(&attn_chunk);
     }
@@ -236,7 +251,9 @@ pub fn recurrent_forward(
     };
     let y = quant_matmul_vec(ssm_out.0, ssm_out.1, ssm_out.2, ssm_out.3, &normed_proj)?;
     if y.len() != cfg.n_embd {
-        return Err(BitNetError::Inference("ssm_out projection width mismatch".into()));
+        return Err(BitNetError::Inference(
+            "ssm_out projection width mismatch".into(),
+        ));
     }
 
     st.advance_hist(&qkv_strip, d_conv, d_inner);

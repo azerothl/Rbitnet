@@ -16,15 +16,29 @@ use crate::loaders::{
     dispatch_gguf_executor, dispatch_gguf_executor_for_load, family_override_token,
     normalize_architecture_slug, resolve_architecture_key, resolve_architecture_key_for_load,
 };
-use crate::model::{ModelExecutor, ToyLlm};
-use crate::paths::validate_no_parent_components;
 use crate::memory_budget::check_load_memory_budget;
+use crate::model::{ModelExecutor, ToyLlm};
 use crate::paged_kv::PagedKvCache;
+use crate::paths::validate_no_parent_components;
 use crate::registry::KernelRegistry;
 use crate::scheduler::{
     ContinuousBatchScheduler, InferenceBatch, InferenceOutput, InferenceRequest, InferenceStats,
     ScheduledRequest,
 };
+
+/// Metadata surfaced by the HTTP `/v1/models` endpoint.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EngineModelMetadata {
+    pub summary: Option<String>,
+    pub model_path: Option<String>,
+    pub architecture: String,
+    pub context_length: Option<u64>,
+    pub quantization: Option<String>,
+    pub backend: String,
+    pub backend_accelerated: bool,
+    pub ready: bool,
+    pub tensor_count: Option<usize>,
+}
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -252,14 +266,32 @@ impl Engine {
         self.inner.gguf.as_ref().map(|g| g.summary_line())
     }
 
+    pub fn model_metadata(&self) -> EngineModelMetadata {
+        let gguf = self.inner.gguf.as_deref();
+        EngineModelMetadata {
+            summary: gguf.map(|g| g.summary_line()),
+            model_path: self
+                .inner
+                .model_path
+                .as_ref()
+                .map(|p| redact_path_for_display(&p.display().to_string())),
+            architecture: gguf
+                .and_then(|g| g.architecture().map(ToString::to_string))
+                .unwrap_or_else(|| self.inner.model_family.clone()),
+            context_length: gguf.and_then(|g| g.context_length()),
+            quantization: gguf.and_then(|g| g.quantization_summary()),
+            backend: self.inner.backend_kind.as_str().to_string(),
+            backend_accelerated: self.backend_accelerated(),
+            ready: self.is_ready(),
+            tensor_count: gguf.map(|g| g.tensor_count()),
+        }
+    }
+
     pub fn tensor_names_preview(&self, max: usize) -> Option<Vec<String>> {
-        self.inner.gguf.as_ref().map(|g| {
-            g.tensors
-                .iter()
-                .take(max)
-                .map(|t| t.name.clone())
-                .collect()
-        })
+        self.inner
+            .gguf
+            .as_ref()
+            .map(|g| g.tensors.iter().take(max).map(|t| t.name.clone()).collect())
     }
 
     /// Whether chat can run without a missing-tokenizer configuration error.
@@ -318,12 +350,10 @@ impl Engine {
     /// tokenizer-encoded prompt length (for HTTP guards). Stub/toy use a rough character heuristic.
     pub fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
         if self.inner.stub || self.inner.toy.is_some() {
-            return Ok(
-                u32::try_from(prompt.len())
-                    .unwrap_or(u32::MAX)
-                    .saturating_div(4)
-                    .max(1),
-            );
+            return Ok(u32::try_from(prompt.len())
+                .unwrap_or(u32::MAX)
+                .saturating_div(4)
+                .max(1));
         }
         let Some(ex) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);
@@ -493,6 +523,18 @@ fn model_family_when_no_gguf() -> String {
         }
         Err(_) => "llama".into(),
     }
+}
+
+fn redact_path_for_display(path: &str) -> String {
+    let lower = path.to_ascii_lowercase();
+    if lower.contains("hf_")
+        || lower.contains("token=")
+        || lower.contains("apikey")
+        || lower.contains("api_key")
+    {
+        return "<redacted>".into();
+    }
+    path.to_string()
 }
 
 fn build_executor(

@@ -66,9 +66,7 @@ fn ggml_e8m0_to_fp32_half(x: u8) -> f32 {
 }
 
 /// llama.cpp `kvalues_mxfp4` (E2M1 indices, doubled).
-const KVALUES_MXFP4: [i8; 16] = [
-    0, 1, 2, 3, 4, 6, 8, 12, 0, -1, -2, -3, -4, -6, -8, -12,
-];
+const KVALUES_MXFP4: [i8; 16] = [0, 1, 2, 3, 4, 6, 8, 12, 0, -1, -2, -3, -4, -6, -8, -12];
 
 const QK_MXFP4: usize = 32;
 
@@ -269,7 +267,9 @@ fn dequant_q8_1(data: &[u8], n: usize) -> Result<Vec<f32>> {
 /// One Q4_K super-block (144 bytes → 256 `f32`). Used by mmap row dot/decode.
 pub(crate) fn q4_k_superblock_dequant(block: &[u8], y_out: &mut [f32]) -> Result<()> {
     if block.len() < 144 || y_out.len() < 256 {
-        return Err(BitNetError::InvalidGguf("q4_K super-block size mismatch".into()));
+        return Err(BitNetError::InvalidGguf(
+            "q4_K super-block size mismatch".into(),
+        ));
     }
     let o = 0usize;
     let d = fp16_to_f32(u16::from_le_bytes(block[o..o + 2].try_into().unwrap()));
@@ -318,10 +318,14 @@ pub(crate) fn q4_0_block_dequant(block: &[u8], y_out: &mut [f32]) -> Result<()> 
 /// One Q6_K super-block (210 bytes → 256 `f32`).
 pub(crate) fn q6_k_superblock_dequant(block: &[u8], y_out: &mut [f32]) -> Result<()> {
     if block.len() < 210 || y_out.len() < QK_K {
-        return Err(BitNetError::InvalidGguf("q6_K super-block size mismatch".into()));
+        return Err(BitNetError::InvalidGguf(
+            "q6_K super-block size mismatch".into(),
+        ));
     }
     let o = 0usize;
-    let d = fp16_to_f32(u16::from_le_bytes(block[o + 208..o + 210].try_into().unwrap()));
+    let d = fp16_to_f32(u16::from_le_bytes(
+        block[o + 208..o + 210].try_into().unwrap(),
+    ));
     let ql = &block[o..o + 128];
     let qh = &block[o + 128..o + 192];
     let sc = &block[o + 192..o + 208];
@@ -334,14 +338,11 @@ pub(crate) fn q6_k_superblock_dequant(block: &[u8], y_out: &mut [f32]) -> Result
         for l in 0..32 {
             let is = l / 16;
             let q1 = ((ql[ql_o + l] & 0xF) as i32 | ((((qh[qh_o + l] >> 0) & 3) as i32) << 4)) - 32;
-            let q2 = ((ql[ql_o + l + 32] & 0xF) as i32
-                | ((((qh[qh_o + l] >> 2) & 3) as i32) << 4))
-                - 32;
-            let q3 =
-                ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
-            let q4 = ((ql[ql_o + l + 32] >> 4) as i32
-                | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4))
-                - 32;
+            let q2 =
+                ((ql[ql_o + l + 32] & 0xF) as i32 | ((((qh[qh_o + l] >> 2) & 3) as i32) << 4)) - 32;
+            let q3 = ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
+            let q4 =
+                ((ql[ql_o + l + 32] >> 4) as i32 | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4)) - 32;
             yb[yp + l] = d * sc[sc_o + is + 0] as f32 * q1 as f32;
             yb[yp + l + 32] = d * sc[sc_o + is + 2] as f32 * q2 as f32;
             yb[yp + l + 64] = d * sc[sc_o + is + 4] as f32 * q3 as f32;
@@ -586,7 +587,9 @@ fn dequant_q6_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
     let mut y = vec![0.0f32; n];
     for i in 0..nb {
         let o = i * 210;
-        let d = fp16_to_f32(u16::from_le_bytes(data[o + 208..o + 210].try_into().unwrap()));
+        let d = fp16_to_f32(u16::from_le_bytes(
+            data[o + 208..o + 210].try_into().unwrap(),
+        ));
         let ql = &data[o..o + 128];
         let qh = &data[o + 128..o + 192];
         let sc = &data[o + 192..o + 208];
@@ -598,11 +601,13 @@ fn dequant_q6_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
         for _ in 0..2 {
             for l in 0..32 {
                 let is = l / 16;
-                let q1 = ((ql[ql_o + l] & 0xF) as i32 | ((((qh[qh_o + l] >> 0) & 3) as i32) << 4)) - 32;
+                let q1 =
+                    ((ql[ql_o + l] & 0xF) as i32 | ((((qh[qh_o + l] >> 0) & 3) as i32) << 4)) - 32;
                 let q2 = ((ql[ql_o + l + 32] & 0xF) as i32
                     | ((((qh[qh_o + l] >> 2) & 3) as i32) << 4))
                     - 32;
-                let q3 = ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
+                let q3 =
+                    ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
                 let q4 = ((ql[ql_o + l + 32] >> 4) as i32
                     | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4))
                     - 32;
@@ -622,7 +627,9 @@ fn dequant_q6_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
 
 fn dequant_tq1_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
     if n % QK_K != 0 {
-        return Err(BitNetError::InvalidGguf("tq1_0 nelements % 256 != 0".into()));
+        return Err(BitNetError::InvalidGguf(
+            "tq1_0 nelements % 256 != 0".into(),
+        ));
     }
     const QS_LEN: usize = 48;
     const QH_LEN: usize = 4;
@@ -685,7 +692,9 @@ mod mxfp4_tests {
 
 fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
     if n % QK_K != 0 {
-        return Err(BitNetError::InvalidGguf("tq2_0 nelements % 256 != 0".into()));
+        return Err(BitNetError::InvalidGguf(
+            "tq2_0 nelements % 256 != 0".into(),
+        ));
     }
     const QS_LEN: usize = 64;
     let nb = n / QK_K;

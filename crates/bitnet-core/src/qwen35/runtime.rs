@@ -9,10 +9,10 @@ use rand::Rng;
 use crate::backend::BackendKind;
 use crate::cancel::inference_cancelled;
 use crate::error::{BitNetError, Result};
-use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
-use crate::timings::PhaseTimings;
 use crate::ggml::{ggml_nbytes, tensor_to_f32};
 use crate::gguf::{GgufArchive, GgufTensorInfo};
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::timings::PhaseTimings;
 
 use super::attention::{block_full_attention, AttnKvCache};
 use super::config::Qwen35Config;
@@ -70,22 +70,34 @@ fn env_opt_usize(key: &str) -> Option<usize> {
 /// Dequantize LM head weights to F32 once at load (large speedup for quantized logits GEMV).
 /// Default **on**; set `RBITNET_CACHE_OUTPUT_F32` to `0`, `false`, or `no` to disable and save RAM.
 fn env_cache_output_f32_enabled() -> bool {
-    match std::env::var("RBITNET_CACHE_OUTPUT_F32").ok().as_deref().map(|s| s.trim()) {
+    match std::env::var("RBITNET_CACHE_OUTPUT_F32")
+        .ok()
+        .as_deref()
+        .map(|s| s.trim())
+    {
         None | Some("") => true,
-        Some(t) if t == "0" || t.eq_ignore_ascii_case("false") || t.eq_ignore_ascii_case("no") => false,
+        Some(t) if t == "0" || t.eq_ignore_ascii_case("false") || t.eq_ignore_ascii_case("no") => {
+            false
+        }
         Some(_) => true,
     }
 }
 
-fn rms_combine(x: &[f32], w_info: &GgufTensorInfo, archive: &GgufArchive, eps: f32) -> Result<Vec<f32>> {
+fn rms_combine(
+    x: &[f32],
+    w_info: &GgufTensorInfo,
+    archive: &GgufArchive,
+    eps: f32,
+) -> Result<Vec<f32>> {
     let w = tensor_f32_flat(archive, w_info)?;
     if w.len() != x.len() {
-        return Err(BitNetError::Inference("rmsnorm width mismatch vs hidden".into()));
+        return Err(BitNetError::Inference(
+            "rmsnorm width mismatch vs hidden".into(),
+        ));
     }
     let s = x.iter().map(|v| v * v).sum::<f32>() / (x.len().max(1) as f32);
     let sc = 1.0 / (s + eps).sqrt();
-    Ok(x
-        .iter()
+    Ok(x.iter()
         .zip(w.iter())
         .map(|(&xi, &wi)| xi * wi * sc)
         .collect())
@@ -100,15 +112,19 @@ fn logits_project(
     x_norm: &[f32],
     chunk_vocab: usize,
 ) -> Result<Vec<f32>> {
-    let n_embd_w = usize::try_from(head.dimensions[0]).map_err(|_| BitNetError::Inference("out ne0".into()))?;
-    let n_vocab_w = usize::try_from(head.dimensions[1]).map_err(|_| BitNetError::Inference("out ne1".into()))?;
+    let n_embd_w = usize::try_from(head.dimensions[0])
+        .map_err(|_| BitNetError::Inference("out ne0".into()))?;
+    let n_vocab_w = usize::try_from(head.dimensions[1])
+        .map_err(|_| BitNetError::Inference("out ne1".into()))?;
     let py = archive.tensor_payload(head)?;
     let ggml_ty = head.ggml_type;
     let row_stride = ggml_nbytes(&[head.dimensions[0], 1], ggml_ty)
         .map_err(|_| BitNetError::Inference("output row stride".into()))?;
 
     if x_norm.len() != cfg.n_embd || n_embd_w != cfg.n_embd {
-        return Err(BitNetError::Inference("embedding vs output weight mismatch".into()));
+        return Err(BitNetError::Inference(
+            "embedding vs output weight mismatch".into(),
+        ));
     }
 
     let mut logits = vec![0f32; cfg.n_vocab];
@@ -130,12 +146,18 @@ fn logits_project(
                 .checked_add(len)
                 .ok_or_else(|| BitNetError::Inference("output f32 slice end overflow".into()))?;
             if end > full.len() {
-                return Err(BitNetError::Inference("cached output.weight f32 truncated".into()));
+                return Err(BitNetError::Inference(
+                    "cached output.weight f32 truncated".into(),
+                ));
             }
             full[start..end].to_vec()
         } else {
             let chunk_w = hi * row_stride;
-            if slice_off.checked_add(chunk_w).filter(|e| *e <= py.len()).is_none() {
+            if slice_off
+                .checked_add(chunk_w)
+                .filter(|e| *e <= py.len())
+                .is_none()
+            {
                 return Err(BitNetError::Inference("output weight truncated".into()));
             }
             tensor_to_f32(
@@ -145,24 +167,18 @@ fn logits_project(
             )?
         };
 
-        let y = cuda.logits_gemv_maybe(
-            &wchunk,
-            x_norm,
-            hi,
-            n_embd_w,
-            || {
-                let mut out = vec![0f32; hi];
-                for j in 0..hi {
-                    let mut sum = 0f32;
-                    let base = j * cfg.n_embd;
-                    for i in 0..cfg.n_embd {
-                        sum += wchunk[base + i] * x_norm[i];
-                    }
-                    out[j] = sum;
+        let y = cuda.logits_gemv_maybe(&wchunk, x_norm, hi, n_embd_w, || {
+            let mut out = vec![0f32; hi];
+            for j in 0..hi {
+                let mut sum = 0f32;
+                let base = j * cfg.n_embd;
+                for i in 0..cfg.n_embd {
+                    sum += wchunk[base + i] * x_norm[i];
                 }
-                out
-            },
-        );
+                out[j] = sum;
+            }
+            out
+        });
         for i in 0..y.len() {
             logits[vocab_off + i] = y[i];
         }
@@ -334,7 +350,12 @@ impl Qwen35Runtime {
         Ok((text, phases))
     }
 
-    fn forward_one(&mut self, token: u32, pos: usize, archive: &Arc<GgufArchive>) -> Result<Vec<f32>> {
+    fn forward_one(
+        &mut self,
+        token: u32,
+        pos: usize,
+        archive: &Arc<GgufArchive>,
+    ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         let step_t0 = if self.trace_layer_timings {
             Some(Instant::now())
@@ -342,7 +363,9 @@ impl Qwen35Runtime {
             None
         };
         if pos >= cfg.max_seq {
-            return Err(BitNetError::Inference("sequence position >= max_seq".into()));
+            return Err(BitNetError::Inference(
+                "sequence position >= max_seq".into(),
+            ));
         }
         let tok = token as usize;
         if tok >= cfg.n_vocab {
@@ -390,7 +413,9 @@ impl Qwen35Runtime {
                     ])
                     .cloned()
                     .ok_or_else(|| {
-                        BitNetError::Inference(format!("layer {il}: missing ssm_a / ssm_a_noscan tensor"))
+                        BitNetError::Inference(format!(
+                            "layer {il}: missing ssm_a / ssm_a_noscan tensor"
+                        ))
                     })?;
                 let ssm_no = must_tensor(archive, &format!("blk.{il}.ssm_norm.weight"))?;
                 let ssm_out = must_tensor(archive, &format!("blk.{il}.ssm_out.weight"))?;
@@ -491,9 +516,13 @@ impl Qwen35Runtime {
             let post_name = archive
                 .tensor_by_name(&format!("blk.{il}.post_attention_norm.weight"))
                 .or_else(|| archive.tensor_by_name(&format!("blk.{il}.attn_post_norm.weight")))
-                .or_else(|| archive.tensor_by_name(&format!("blk.{il}.attention_norm_after.weight")))
+                .or_else(|| {
+                    archive.tensor_by_name(&format!("blk.{il}.attention_norm_after.weight"))
+                })
                 .ok_or_else(|| {
-                    BitNetError::Inference(format!("layer {il}: missing post-attention RMS norm tensor"))
+                    BitNetError::Inference(format!(
+                        "layer {il}: missing post-attention RMS norm tensor"
+                    ))
                 })?;
 
             let h2 = rms_combine(&x, post_name, archive, cfg.norm_eps)?;
@@ -583,17 +612,18 @@ impl Qwen35Runtime {
 
 fn sample_token(logits: &[f32], temperature: f32, rng: &mut impl Rng) -> u32 {
     if temperature <= 0.0 {
-        let (i, _) = logits
-            .iter()
-            .enumerate()
-            .fold((0usize, f32::NEG_INFINITY), |(pi, pb), (i, v)| {
-                let v = if v.is_nan() { f32::NEG_INFINITY } else { *v };
-                if v > pb {
-                    (i, v)
-                } else {
-                    (pi, pb)
-                }
-            });
+        let (i, _) =
+            logits
+                .iter()
+                .enumerate()
+                .fold((0usize, f32::NEG_INFINITY), |(pi, pb), (i, v)| {
+                    let v = if v.is_nan() { f32::NEG_INFINITY } else { *v };
+                    if v > pb {
+                        (i, v)
+                    } else {
+                        (pi, pb)
+                    }
+                });
         return i as u32;
     }
     let scaled: Vec<f32> = logits.iter().map(|z| z / temperature).collect();

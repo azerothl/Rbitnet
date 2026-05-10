@@ -8,11 +8,11 @@ mod arch_key;
 mod llama;
 pub(crate) mod prompt_tokenizer;
 mod qwen35;
-pub(crate) mod roadmap_unsupported;
-pub(crate) mod tokenizer;
 mod registry;
+pub(crate) mod roadmap_unsupported;
 #[cfg(test)]
 pub(crate) mod test_lock;
+pub(crate) mod tokenizer;
 
 pub use arch_key::{
     family_override_token, normalize_architecture_slug, resolve_architecture_key,

@@ -27,6 +27,8 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 |----------|---------|--------|
 | `RBITNET_MODEL` | (none) | Path to one `.gguf` file. |
 | `RBITNET_TOKENIZER` | (auto beside GGUF) | `tokenizer.json` or `tokenizer.model`. |
+| `RBITNET_CHAT_FORMAT` | `raw` | Server prompt rendering for chat messages: `raw`, `llama3`, or `chatml`. |
+| `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT`. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
 | `RBITNET_BACKEND` | `cpu` | e.g. `cpu`, `cuda` — see [USAGE.md](USAGE.md). |
