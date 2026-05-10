@@ -1,19 +1,22 @@
-//! Stub binary documenting the future runner subprocess contract.
+//! Worker subprocess for `rbitnet-proxy`.
 //!
-//! The parent proxy is not implemented yet. This binary exists so release packages and docs can
-//! pin the child-process interface before supervision and HTTP forwarding land.
+//! The parent sets `RBITNET_MODEL`, `RBITNET_BIND`, and optional tokenizer /
+//! architecture overrides.  This process then runs the same OpenAI-compatible
+//! Axum server as `rbitnet-server`, isolated to one model id.
 
-use std::env;
+use tracing::error;
 
-fn main() {
-    let model = env::var("RBITNET_MODEL").unwrap_or_else(|_| "<unset>".into());
-    let bind = env::var("RBITNET_BIND").unwrap_or_else(|_| "127.0.0.1:0".into());
-    eprintln!("rbitnet-runner stub");
-    eprintln!("contract:");
-    eprintln!("  RBITNET_MODEL={model}");
-    eprintln!("  RBITNET_BIND={bind}");
-    eprintln!("planned:");
-    eprintln!("  child serves /health, /ready, /v1/chat/completions on RBITNET_BIND");
-    eprintln!("  parent proxy starts/stops this process per model id");
-    std::process::exit(64);
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
+    if let Err(e) = bitnet_server::run_server().await {
+        error!(%e, "rbitnet-runner failed");
+        std::process::exit(1);
+    }
 }

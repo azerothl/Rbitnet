@@ -3,10 +3,14 @@ name = "rbitnet-runner"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Stub runner subprocess contract for future Rbitnet proxy mode"
+description = "Worker subprocess for the Rbitnet multi-process runner proxy"
 
 [[bin]]
 name = "rbitnet-runner"
 path = "src/main.rs"
 
 [dependencies]
+bitnet-server = { path = "../bitnet-server" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
