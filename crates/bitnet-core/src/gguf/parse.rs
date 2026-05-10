@@ -40,7 +40,7 @@ pub struct GgufTensorInfo {
     pub offset: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GgufArchive {
     mmap: Arc<Mmap>,
     pub version: u32,

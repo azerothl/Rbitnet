@@ -1,53 +1,49 @@
 //! Tokenizer + generation loop.
 
 use std::path::Path;
+use std::sync::Arc;
+use std::time::Instant;
 
 use rand::Rng;
-use tokenizers::Tokenizer;
 
 use crate::backend::{make_backend, BackendKind, ComputeBackend};
-use crate::error::{BitNetError, Result};
+use crate::error::Result;
 use crate::gguf::GgufArchive;
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::timings::PhaseTimings;
 
-use super::model::{KvCache, LlamaModel};
+use crate::paged_kv::PagedKvCache;
+
+use super::config::LlamaConfig;
+use super::kv_storage::KvStorage;
+use super::model::LlamaModel;
 
 /// Loads [`LlamaModel`] from GGUF and a Hugging Face tokenizer file (`tokenizer.json`, or `tokenizer.model` when loadable).
 pub struct LlamaRuntime {
     model: LlamaModel,
-    tokenizer: Tokenizer,
-    kv: KvCache,
+    tokenizer: LoadedPromptTokenizer,
+    kv: KvStorage,
     backend: Box<dyn ComputeBackend>,
-}
-
-fn load_tokenizer(tokenizer_path: &Path) -> Result<Tokenizer> {
-    let lower = tokenizer_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|s| s.to_ascii_lowercase())
-        .unwrap_or_default();
-    let tokenizer = Tokenizer::from_file(tokenizer_path).map_err(|e| {
-        if lower.ends_with(".model") {
-            BitNetError::Inference(format!(
-                "tokenizer load (tokenizer.model): {e}. If this is a raw SentencePiece protobuf, export tokenizer.json from Hugging Face (Save Pretrained) or use a repo that ships tokenizer.json."
-            ))
-        } else {
-            BitNetError::Inference(format!("tokenizer load: {e}"))
-        }
-    })?;
-    Ok(tokenizer)
+    prefill_chunk_tokens: usize,
 }
 
 impl LlamaRuntime {
-    pub fn load(archive: &GgufArchive, tokenizer_path: &Path, backend_kind: BackendKind) -> Result<Self> {
-        let model = LlamaModel::from_gguf(archive)?;
-        let tokenizer = load_tokenizer(tokenizer_path)?;
-        let kv = KvCache::new(&model.cfg);
+    pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path, backend_kind: BackendKind) -> Result<Self> {
+        let model = LlamaModel::from_gguf_arc(archive)?;
+        let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
+        let kv = llama_kv_from_env(&model.cfg)?;
         let backend = make_backend(backend_kind);
+        let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(128);
         Ok(Self {
             model,
             tokenizer,
             kv,
             backend,
+            prefill_chunk_tokens,
         })
     }
 
@@ -57,29 +53,47 @@ impl LlamaRuntime {
         max_tokens: u32,
         temperature: f32,
     ) -> Result<String> {
+        self.generate_with_timings(prompt, max_tokens, temperature)
+            .map(|(s, _)| s)
+    }
+
+    pub fn generate_with_timings(
+        &mut self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<(String, PhaseTimings)> {
         self.kv.clear();
-        let enc = self
-            .tokenizer
-            .encode(prompt, true)
-            .map_err(|e| BitNetError::Inference(format!("encode: {e}")))?;
-        let prompt_ids: Vec<u32> = enc.get_ids().iter().copied().collect();
+        let t_enc = Instant::now();
+        let prompt_ids = self.tokenizer.encode_ids(prompt, true)?;
+        let encode_ms = t_enc.elapsed().as_millis() as u64;
         if prompt_ids.is_empty() {
-            return Ok(String::new());
+            return Ok((
+                String::new(),
+                PhaseTimings {
+                    encode_ms,
+                    ..Default::default()
+                },
+            ));
         }
 
+        let t_pf = Instant::now();
         let mut logits = Vec::new();
-        for (pos, &tid) in prompt_ids.iter().enumerate() {
-            logits = self
-                .model
-                .forward_with_backend(&mut self.kv, tid, pos, self.backend.as_ref())?;
+        let chunk_sz = self.prefill_chunk_tokens.max(1);
+        for (chunk_idx, chunk) in prompt_ids.chunks(chunk_sz).enumerate() {
+            let chunk_base = chunk_idx * chunk_sz;
+            for (idx, &tid) in chunk.iter().enumerate() {
+                let pos = chunk_base + idx;
+                logits = self
+                    .model
+                    .forward_with_backend(&mut self.kv, tid, pos, self.backend.as_ref())?;
+            }
         }
+        let prefill_ms = t_pf.elapsed().as_millis() as u64;
 
-        let eos_id = self
-            .tokenizer
-            .token_to_id("</s>")
-            .or_else(|| self.tokenizer.token_to_id("<|endoftext|>"))
-            .or_else(|| self.tokenizer.token_to_id("<|im_end|>"));
+        let eos_id = self.tokenizer.eos_token_id();
 
+        let t_dec = Instant::now();
         let mut gen = Vec::new();
         let mut rng = rand::thread_rng();
         let mut pos = prompt_ids.len();
@@ -95,10 +109,30 @@ impl LlamaRuntime {
                 .forward_with_backend(&mut self.kv, next_id, pos, self.backend.as_ref())?;
             pos += 1;
         }
+        let decode_ms = t_dec.elapsed().as_millis() as u64;
 
-        self.tokenizer
-            .decode(&gen, true)
-            .map_err(|e| BitNetError::Inference(format!("decode: {e}")))
+        let text = self.tokenizer.decode_ids(&gen, true)?;
+        let phases = PhaseTimings {
+            encode_ms,
+            prefill_ms,
+            decode_ms,
+            prompt_tokens: prompt_ids.len() as u32,
+            completion_tokens: gen.len() as u32,
+        };
+        Ok((text, phases))
+    }
+}
+
+fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
+    let use_paged = matches!(
+        std::env::var("RBITNET_LLAMA_PAGED_KV").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    );
+    if use_paged {
+        let p = PagedKvCache::from_env();
+        KvStorage::new_paged(cfg, p.page_size_tokens, p.max_pages)
+    } else {
+        Ok(KvStorage::new_dense(cfg))
     }
 }
 
