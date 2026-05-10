@@ -8,6 +8,19 @@
 //! - [`llama`] — Llama-compatible GGUF inference (dequant + transformer)
 //! - [`ggml`] — GGML type sizes and dequantization helpers
 
+#![allow(
+    clippy::get_first,
+    clippy::identity_op,
+    clippy::large_enum_variant,
+    clippy::len_without_is_empty,
+    clippy::manual_clamp,
+    clippy::manual_is_multiple_of,
+    clippy::needless_lifetimes,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
+
 pub mod backend;
 pub mod cancel;
 pub mod deepseek2;
