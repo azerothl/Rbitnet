@@ -1,7 +1,5 @@
 # Rbitnet
 
-Canonical local checkout: `C:\www\Rbitnet`. The older prototype at `C:\Users\loicpeaudecerf\rbitnet` is not the active workspace.
-
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
 ## Do I need Python?
@@ -10,7 +8,7 @@ Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP se
 
 You only need **Python (or other tools)** if you are **converting** a Hugging Face / Safetensors checkpoint into **GGUF** upstream (for example Microsoft BitNet or `llama.cpp` converters). That is export-time, not a runtime dependency.
 
-Optional helper: [`scripts/setup_env.py`](scripts/setup_env.py) — download HF weights (`huggingface_hub`), print `RBITNET_*` lines; **calling Microsoft BitNet is optional** — see [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md).
+Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF weights (`huggingface_hub`), print `RBITNET_`* lines; **calling Microsoft BitNet is optional** — see [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md).
 
 **Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, curl examples).
 
@@ -26,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 
 Tagged releases publish Windows zip assets named like `rbitnet-server-vX.Y.Z-windows-x86_64.zip` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). The zip contains both `rbitnet.exe` and `rbitnet-server.exe`.
 
-WinGet is prepared as a submission template at [`packaging/winget/Rbitnet.Rbitnet.yaml`](packaging/winget/Rbitnet.Rbitnet.yaml). After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
+WinGet is prepared as a submission template at `[packaging/winget/Rbitnet.Rbitnet.yaml](packaging/winget/Rbitnet.Rbitnet.yaml)`. After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
 
 ```powershell
 winget install --manifest .\packaging\winget\Rbitnet.Rbitnet.yaml
@@ -46,7 +44,7 @@ Or install the CLI from the default branch with a curl script (requires Rust/Car
 curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
 ```
 
-Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz`. A documented Homebrew tap formula template lives at [`packaging/homebrew/rbitnet.rb`](packaging/homebrew/rbitnet.rb); it is not a homebrew-core formula. After replacing the release URLs and `sha256` values:
+Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz`. A documented Homebrew tap formula template lives at `[packaging/homebrew/rbitnet.rb](packaging/homebrew/rbitnet.rb)`; it is not a homebrew-core formula. After replacing the release URLs and `sha256` values:
 
 ```bash
 brew install --formula ./packaging/homebrew/rbitnet.rb
@@ -67,7 +65,7 @@ cargo install --path crates/rbitnet-cli --locked
 
 ### Docker
 
-The included [`Dockerfile`](Dockerfile) builds `rbitnet-server` and is usable for server-only deployments:
+The included `[Dockerfile](Dockerfile)` builds `rbitnet-server` and is usable for server-only deployments:
 
 ```bash
 docker build -t rbitnet:local .
@@ -77,7 +75,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
 
 ## Status
 
-- **bitnet-core**: GGUF parse, GGML dequantization, Llama-shaped forward (RMSNorm, RoPE, GQA, KV cache, SiLU FFN), [`Engine`](crates/bitnet-core/src/inference.rs), optional toy LM.
+- **bitnet-core**: GGUF parse, GGML dequantization, Llama-shaped forward (RMSNorm, RoPE, GQA, KV cache, SiLU FFN), `[Engine](crates/bitnet-core/src/inference.rs)`, optional toy LM.
 - **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /ui`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Limits, optional API key, integration tests.
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
@@ -88,7 +86,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - **[docs/PLAN_PRODUCTION.md](docs/PLAN_PRODUCTION.md)** — roadmap and exit criteria for a production-ready release
   - **[CHANGELOG.md](CHANGELOG.md)** — release-facing changes (Keep a Changelog style)
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
-  - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_*` variables
+  - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_`* variables
   - **[docs/NATIVE_FIRST.md](docs/NATIVE_FIRST.md)** — politique native-first: aucun moteur d'inference externe requis
   - **[docs/GPU_NATIVE_ROADMAP.md](docs/GPU_NATIVE_ROADMAP.md)** — feuille de route GPU native dans `bitnet-core`
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
@@ -148,7 +146,7 @@ rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-
 
 ## Run the server (real GGUF)
 
-Place **`tokenizer.json`** (or `tokenizer.model`) beside the `.gguf`, or set `RBITNET_TOKENIZER`.
+Place `**tokenizer.json**` (or `tokenizer.model`) beside the `.gguf`, or set `RBITNET_TOKENIZER`.
 `rbitnet serve` and `rbitnet-server` also read `rbitnet.toml` from the current directory, `RBITNET_CONFIG`, or the user config directory; explicit env vars still win.
 
 ```bash
@@ -226,19 +224,21 @@ See the Akasha repo: `spec/llm_router.example.yaml`.
 
 ### Hermes / Akasha ecosystem (ops)
 
-Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference parity story. For self-hosted SLO alignment with the daemon router, scrape **`GET /metrics`** on Rbitnet and compare with Akasha’s **`GET /api/router/metrics`** (see [docs/USAGE.md](docs/USAGE.md) § correlation). Product parity tracking: [Akasha `spec/dev/roadmap/reference-products-parity-matrix.md`](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/reference-products-parity-matrix.md) and [Akasha `spec/dev/roadmap/hermes-integration-remainder.md`](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/hermes-integration-remainder.md).
+Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference parity story. For self-hosted SLO alignment with the daemon router, scrape `**GET /metrics`** on Rbitnet and compare with Akasha’s `**GET /api/router/metrics**` (see [docs/USAGE.md](docs/USAGE.md) § correlation). Product parity tracking: [Akasha `spec/dev/roadmap/reference-products-parity-matrix.md](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/reference-products-parity-matrix.md)` and [Akasha `spec/dev/roadmap/hermes-integration-remainder.md](https://github.com/azerothl/Akasha/blob/main/spec/dev/roadmap/hermes-integration-remainder.md)`.
 
 ## Environment
 
-| Variable | Meaning |
-|----------|---------|
-| `RBITNET_BIND` | Host:port (default `127.0.0.1:8080`) |
-| `RBITNET_MODEL` | Path to `.gguf` for real inference |
+
+| Variable            | Meaning                                                              |
+| ------------------- | -------------------------------------------------------------------- |
+| `RBITNET_BIND`      | Host:port (default `127.0.0.1:8080`)                                 |
+| `RBITNET_MODEL`     | Path to `.gguf` for real inference                                   |
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` or `tokenizer.model` if not beside the GGUF |
-| `RBITNET_STUB` | `1` = stub text (no inference) |
-| `RBITNET_TOY` | `1` = tiny in-process F32 toy LM (no GGUF) |
-| `RBITNET_TOY_SEED` | Seed for toy weights (default `42`) |
-| `RBITNET_TEST_GGUF` | Optional path for `optional_gguf_from_env_smoke` test only |
+| `RBITNET_STUB`      | `1` = stub text (no inference)                                       |
+| `RBITNET_TOY`       | `1` = tiny in-process F32 toy LM (no GGUF)                           |
+| `RBITNET_TOY_SEED`  | Seed for toy weights (default `42`)                                  |
+| `RBITNET_TEST_GGUF` | Optional path for `optional_gguf_from_env_smoke` test only           |
+
 
 Server tuning (`rbitnet-server`): `RBITNET_MAX_BODY_BYTES`, `RBITNET_MAX_PROMPT_CHARS`, `RBITNET_MAX_TOKENS_CAP`, `RBITNET_MAX_CONCURRENT`, `RBITNET_INFERENCE_TIMEOUT_SECS`, `RBITNET_API_KEY` — see [docs/USAGE.md](docs/USAGE.md).
 
