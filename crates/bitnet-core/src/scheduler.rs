@@ -22,10 +22,18 @@ pub struct InferenceRequest {
 #[derive(Debug, Clone)]
 pub struct InferenceStats {
     /// Time from request start until first output token is ready (encode + prefill), milliseconds.
+    ///
+    /// For speculative decoding this reflects the draft phase only, which is the true
+    /// wall-clock time until the first generated token is available.
     pub ttft_ms: u64,
     pub encode_ms: u64,
     pub prefill_ms: u64,
     pub decode_ms: u64,
+    /// Total wall time across all phases (encode + prefill + decode), milliseconds.
+    ///
+    /// For speculative decoding this is the sum of draft and verify phase times and
+    /// represents the true end-to-end latency of the request.
+    pub total_wall_ms: u64,
     /// Average inter-token latency during decode (microseconds per generated token).
     pub itl_us: u64,
     /// Decode throughput helper: same as `itl_us` for this engine (TPOT-style average).
@@ -39,16 +47,48 @@ impl InferenceStats {
     pub fn from_phases(p: PhaseTimings, speculative_attempted: bool) -> Self {
         let itl = p.itl_us();
         let ttft_ms = p.ttft_ms();
+        let total_wall_ms = p.encode_ms.saturating_add(p.prefill_ms).saturating_add(p.decode_ms);
         Self {
             ttft_ms,
             encode_ms: p.encode_ms,
             prefill_ms: p.prefill_ms,
             decode_ms: p.decode_ms,
+            total_wall_ms,
             itl_us: itl,
             tpot_us: itl,
             prompt_tokens: p.prompt_tokens,
             completion_tokens: p.completion_tokens,
             speculative_attempted,
+        }
+    }
+
+    /// Build stats for a completed speculative-decode request.
+    ///
+    /// `draft` covers the draft generation pass and `verify` covers the
+    /// verification pass.  TTFT is taken from the draft phase only, because
+    /// that is the moment the first output token becomes available.
+    /// `total_wall_ms` accumulates both passes and reflects true end-to-end
+    /// latency.
+    pub fn from_speculative_phases(draft: PhaseTimings, verify: PhaseTimings) -> Self {
+        let ttft_ms = draft.ttft_ms();
+        let encode_ms = draft.encode_ms.saturating_add(verify.encode_ms);
+        let prefill_ms = draft.prefill_ms.saturating_add(verify.prefill_ms);
+        let decode_ms = draft.decode_ms.saturating_add(verify.decode_ms);
+        let total_wall_ms = encode_ms.saturating_add(prefill_ms).saturating_add(decode_ms);
+        let completion_tokens = draft.completion_tokens.saturating_add(verify.completion_tokens);
+        let decode_us = decode_ms.saturating_mul(1000);
+        let itl = if completion_tokens == 0 { 0 } else { decode_us / completion_tokens as u64 };
+        Self {
+            ttft_ms,
+            encode_ms,
+            prefill_ms,
+            decode_ms,
+            total_wall_ms,
+            itl_us: itl,
+            tpot_us: itl,
+            prompt_tokens: draft.prompt_tokens,
+            completion_tokens,
+            speculative_attempted: true,
         }
     }
 }
@@ -68,16 +108,6 @@ pub struct ScheduledRequest {
 #[derive(Debug, Clone)]
 pub struct InferenceBatch {
     pub requests: Vec<ScheduledRequest>,
-}
-
-fn merge_speculative_phases(a: PhaseTimings, b: PhaseTimings) -> PhaseTimings {
-    PhaseTimings {
-        encode_ms: a.encode_ms.saturating_add(b.encode_ms),
-        prefill_ms: a.prefill_ms.saturating_add(b.prefill_ms),
-        decode_ms: a.decode_ms.saturating_add(b.decode_ms),
-        prompt_tokens: a.prompt_tokens,
-        completion_tokens: a.completion_tokens.saturating_add(b.completion_tokens),
-    }
 }
 
 /// MVP scheduler: keeps API stable while preparing for real batching.
@@ -190,10 +220,9 @@ impl ContinuousBatchScheduler {
         let (verify, verify_phases) =
             executor.generate_with_timings(&verify_prompt, verify_tokens, req.sampling)?;
         let text = format!("{draft}{verify}");
-        let merged = merge_speculative_phases(draft_phases, verify_phases);
         Ok(InferenceOutput {
             text,
-            stats: InferenceStats::from_phases(merged, true),
+            stats: InferenceStats::from_speculative_phases(draft_phases, verify_phases),
         })
     }
 }
