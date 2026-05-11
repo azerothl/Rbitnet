@@ -74,7 +74,7 @@ impl InferenceStats {
         let encode_ms = draft.encode_ms.saturating_add(verify.encode_ms);
         let prefill_ms = draft.prefill_ms.saturating_add(verify.prefill_ms);
         let decode_ms = draft.decode_ms.saturating_add(verify.decode_ms);
-        let total_wall_ms = encode_ms.saturating_add(decode_ms);
+        let total_wall_ms = encode_ms.saturating_add(prefill_ms).saturating_add(decode_ms);
         let completion_tokens = draft.completion_tokens.saturating_add(verify.completion_tokens);
         let decode_us = decode_ms.saturating_mul(1000);
         let itl = if completion_tokens == 0 { 0 } else { decode_us / completion_tokens as u64 };
