@@ -34,7 +34,9 @@ pub fn list_bundles_text() -> String {
             b.id, b.description, b.gguf_repo, b.tokenizer_repo
         ));
     }
-    s.push_str("Install example:\n  rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models\n");
+    s.push_str(
+        "Install example:\n  rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models\n",
+    );
     s
 }
 
@@ -103,9 +105,7 @@ fn resolve_tokenizer_downloads(
         return Ok(vec![p]);
     }
 
-    let config_file = tcfg_path
-        .as_deref()
-        .unwrap_or("tokenizer_config.json");
+    let config_file = tcfg_path.as_deref().unwrap_or("tokenizer_config.json");
     let cfg_raw = match fetch_text(tokenizer_repo, config_file, token) {
         Ok(s) => s,
         Err(e) => {
@@ -155,12 +155,74 @@ fn resolve_tokenizer_downloads(
 struct RbitnetManifest {
     version: u32,
     bundle_id: String,
+    #[serde(rename = "source_repo")]
+    source_repo: String,
     #[serde(rename = "RBITNET_MODEL")]
     rbitnet_model: String,
     #[serde(rename = "RBITNET_TOKENIZER", skip_serializing_if = "Option::is_none")]
     rbitnet_tokenizer: Option<String>,
+    #[serde(
+        rename = "RBITNET_TOKENIZER_CONFIG",
+        skip_serializing_if = "Option::is_none"
+    )]
+    rbitnet_tokenizer_config: Option<String>,
+    #[serde(rename = "chat_template", skip_serializing_if = "Option::is_none")]
+    chat_template: Option<String>,
     #[serde(rename = "_comment")]
     comment: &'static str,
+}
+
+#[derive(Serialize)]
+pub struct ResolvedModel {
+    pub repo_id: String,
+    pub gguf: Vec<String>,
+    pub tokenizer_json: Option<String>,
+    pub tokenizer_model: Option<String>,
+    pub tokenizer_config_json: Option<String>,
+    pub suggested_env: Vec<(String, String)>,
+    pub readiness: &'static str,
+}
+
+pub fn resolve_model(repo_id: &str, token: Option<&str>) -> Result<ResolvedModel, String> {
+    let siblings = hf_search::fetch_model_sibling_paths(repo_id, token)?;
+    let mut gguf = siblings
+        .iter()
+        .filter(|n| n.to_ascii_lowercase().ends_with(".gguf"))
+        .cloned()
+        .collect::<Vec<_>>();
+    gguf.sort();
+    gguf.dedup();
+    let (tok_json, tok_model, tok_cfg) = pick_tokenizer_paths(&siblings);
+    let mut suggested_env = Vec::new();
+    if let Some(primary) = catalog::pick_primary_gguf(&gguf) {
+        suggested_env.push(("RBITNET_MODEL".into(), primary));
+    }
+    if let Some(tj) = tok_json.as_ref() {
+        suggested_env.push(("RBITNET_TOKENIZER".into(), tj.clone()));
+    } else if let Some(tm) = tok_model.as_ref() {
+        suggested_env.push(("RBITNET_TOKENIZER".into(), tm.clone()));
+    }
+    if let Some(tc) = tok_cfg.as_ref() {
+        suggested_env.push(("RBITNET_TOKENIZER_CONFIG".into(), tc.clone()));
+    }
+    let readiness = if gguf.is_empty() {
+        "no_gguf"
+    } else if tok_json.is_some() || tok_model.is_some() {
+        "ready"
+    } else if tok_cfg.is_some() {
+        "needs_external_tokenizer"
+    } else {
+        "needs_tokenizer"
+    };
+    Ok(ResolvedModel {
+        repo_id: repo_id.to_string(),
+        gguf,
+        tokenizer_json: tok_json,
+        tokenizer_model: tok_model,
+        tokenizer_config_json: tok_cfg,
+        suggested_env,
+        readiness,
+    })
 }
 
 /// Download a curated bundle into `dir` and write `rbitnet.manifest.json` with relative env paths.
@@ -170,14 +232,9 @@ pub fn install_bundle(
     token: Option<&str>,
     place_mode: HubPlaceMode,
 ) -> Result<(), String> {
-    let bundle = BUNDLES
-        .iter()
-        .find(|b| b.id == bundle_id)
-        .ok_or_else(|| {
-            format!(
-                "unknown bundle id {bundle_id:?}. Run: rbitnet models install --list"
-            )
-        })?;
+    let bundle = BUNDLES.iter().find(|b| b.id == bundle_id).ok_or_else(|| {
+        format!("unknown bundle id {bundle_id:?}. Run: rbitnet models install --list")
+    })?;
 
     fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
 
@@ -190,13 +247,12 @@ pub fn install_bundle(
         .filter(|n| n.to_ascii_lowercase().ends_with(".gguf"))
         .cloned()
         .collect();
-    let primary =
-        catalog::pick_primary_gguf(&ggufs).ok_or_else(|| {
-            format!(
-                "no .gguf files listed for `{}` (Hub siblings empty or unreachable)",
-                bundle.gguf_repo
-            )
-        })?;
+    let primary = catalog::pick_primary_gguf(&ggufs).ok_or_else(|| {
+        format!(
+            "no .gguf files listed for `{}` (Hub siblings empty or unreachable)",
+            bundle.gguf_repo
+        )
+    })?;
 
     let mut jobs: Vec<(String, String)> = Vec::new();
     jobs.push((bundle.gguf_repo.to_string(), primary.clone()));
@@ -207,37 +263,48 @@ pub fn install_bundle(
     let mut written: Vec<PathBuf> = Vec::new();
     for (repo, file) in &jobs {
         let paths =
-            download::download_files(repo, &[file.clone()], dir, token, place_mode)?;
+            download::download_files(repo, std::slice::from_ref(file), dir, token, place_mode)?;
         written.extend(paths);
     }
 
-    let model_rel = path_relative_to_dir(dir, written.iter().find(|p| {
-        p.to_string_lossy().to_ascii_lowercase().ends_with(".gguf")
-    }).ok_or("internal: no .gguf written")?)?;
+    let model_rel = path_relative_to_dir(
+        dir,
+        written
+            .iter()
+            .find(|p| p.to_string_lossy().to_ascii_lowercase().ends_with(".gguf"))
+            .ok_or("internal: no .gguf written")?,
+    )?;
     let tok_rel = tokenizer_files
         .iter()
         .find_map(|tf| {
             written.iter().find(|p| {
                 p.ends_with(tf.as_str())
-                    || p
-                        .file_name()
-                        .and_then(|n| n.to_str())
+                    || p.file_name().and_then(|n| n.to_str())
                         == Path::new(tf).file_name().and_then(|x| x.to_str())
             })
         })
         .and_then(|p| path_relative_to_dir(dir, p).ok());
 
+    validate_installed_bundle(dir, &model_rel, tok_rel.as_ref())?;
+
     let manifest = RbitnetManifest {
         version: 1,
         bundle_id: bundle.id.to_string(),
+        source_repo: bundle.gguf_repo.to_string(),
         rbitnet_model: model_rel,
         rbitnet_tokenizer: tok_rel,
+        rbitnet_tokenizer_config: tokenizer_files
+            .iter()
+            .find(|x| x.to_ascii_lowercase().ends_with("tokenizer_config.json"))
+            .cloned(),
+        chat_template: None,
         comment: "Relative paths from this manifest's directory. Export as env vars or pass absolute paths to rbitnet serve.",
     };
     let manifest_path = dir.join("rbitnet.manifest.json");
-    let json = serde_json::to_string_pretty(&manifest)
-        .map_err(|e| format!("serialize manifest: {e}"))?;
-    fs::write(&manifest_path, json).map_err(|e| format!("write {}: {e}", manifest_path.display()))?;
+    let json =
+        serde_json::to_string_pretty(&manifest).map_err(|e| format!("serialize manifest: {e}"))?;
+    fs::write(&manifest_path, json)
+        .map_err(|e| format!("write {}: {e}", manifest_path.display()))?;
 
     eprintln!(
         "Wrote {} file(s) under {} and {}",
@@ -248,14 +315,52 @@ pub fn install_bundle(
     Ok(())
 }
 
+fn validate_installed_bundle(
+    dir: &Path,
+    model_rel: &str,
+    tokenizer_rel: Option<&String>,
+) -> Result<(), String> {
+    let gguf_path = dir.join(model_rel);
+    if !gguf_path.is_file() {
+        return Err(format!(
+            "GGUF path from manifest is missing on disk: {}",
+            gguf_path.display()
+        ));
+    }
+    let gguf_len = fs::metadata(&gguf_path)
+        .map(|m| m.len())
+        .map_err(|e| format!("stat {}: {e}", gguf_path.display()))?;
+    if gguf_len == 0 {
+        return Err(format!("GGUF file is empty: {}", gguf_path.display()));
+    }
+    if let Some(t) = tokenizer_rel {
+        let tok_path = dir.join(t);
+        if !tok_path.is_file() {
+            return Err(format!(
+                "tokenizer path from manifest is missing on disk: {}",
+                tok_path.display()
+            ));
+        }
+        let lower = t.to_ascii_lowercase();
+        if !lower.ends_with("tokenizer.json") && !lower.ends_with("tokenizer.model") {
+            return Err(
+                "manifest tokenizer path must end with tokenizer.json or tokenizer.model".into(),
+            );
+        }
+        let tok_len = fs::metadata(&tok_path)
+            .map(|m| m.len())
+            .map_err(|e| format!("stat {}: {e}", tok_path.display()))?;
+        if tok_len == 0 {
+            return Err(format!("tokenizer file is empty: {}", tok_path.display()));
+        }
+    }
+    Ok(())
+}
+
 fn path_relative_to_dir(base: &Path, path: &Path) -> Result<String, String> {
-    let rel = path.strip_prefix(base).map_err(|_| {
-        format!(
-            "path {} is not under {}",
-            path.display(),
-            base.display()
-        )
-    })?;
+    let rel = path
+        .strip_prefix(base)
+        .map_err(|_| format!("path {} is not under {}", path.display(), base.display()))?;
     Ok(rel
         .components()
         .map(|c| c.as_os_str().to_string_lossy())
@@ -302,5 +407,21 @@ mod tests {
     fn external_tokenizer_hub_id_ignores_class_name() {
         let v: Value = serde_json::from_str(r#"{"name_or_path": "LlamaTokenizerFast"}"#).unwrap();
         assert!(external_tokenizer_hub_id(&v).is_none());
+    }
+
+    #[test]
+    fn validate_bundle_rejects_empty_tokenizer() {
+        let dir =
+            std::env::temp_dir().join(format!("rbitnet_manifest_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let gguf = dir.join("m.gguf");
+        fs::write(&gguf, b"x").unwrap();
+        let tok_rel = "tokenizer.json".to_string();
+        let tok = dir.join(&tok_rel);
+        fs::write(&tok, b"").unwrap();
+        let err = validate_installed_bundle(&dir, "m.gguf", Some(&tok_rel)).unwrap_err();
+        assert!(err.contains("empty"), "unexpected error message: {err}");
+        let _ = fs::remove_dir_all(&dir);
     }
 }

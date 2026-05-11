@@ -3,14 +3,43 @@
 //! - `RBITNET_STUB=1` — HTTP integration text (Akasha `BitNetProvider`).
 //! - `RBITNET_TOY=1` — tiny in-process F32 toy LM (no GGUF).
 //! - `RBITNET_MODEL` — load GGUF; full Llama-compatible forward + `tokenizer.json` / `tokenizer.model` / `RBITNET_TOKENIZER`.
+//! - `RBITNET_ARCHITECTURE` — optional override for `general.architecture` dispatch (see `loaders/`).
+//! - `RBITNET_MODEL_FAMILY` — `auto`, `bitnet`, or Llama-lineage overrides (`llama`, `mistral`, `deepseek`, …; see [`crate::loaders::family_override_token`]).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use crate::backend::BackendKind;
 use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
-use crate::llama::LlamaRuntime;
-use crate::model::ToyLlm;
+use crate::loaders::{
+    dispatch_gguf_executor, dispatch_gguf_executor_for_load, family_override_token,
+    normalize_architecture_slug, resolve_architecture_key, resolve_architecture_key_for_load,
+};
+use crate::memory_budget::check_load_memory_budget;
+use crate::model::{ModelExecutor, ToyLlm};
+use crate::paged_kv::PagedKvCache;
+use crate::paths::validate_no_parent_components;
+use crate::registry::KernelRegistry;
+use crate::sampling::SamplingOptions;
+use crate::scheduler::{
+    ContinuousBatchScheduler, InferenceBatch, InferenceOutput, InferenceRequest, InferenceStats,
+    ScheduledRequest,
+};
+
+/// Metadata surfaced by the HTTP `/v1/models` endpoint.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EngineModelMetadata {
+    pub summary: Option<String>,
+    pub model_path: Option<String>,
+    pub architecture: String,
+    pub context_length: Option<u64>,
+    pub quantization: Option<String>,
+    pub backend: String,
+    pub backend_accelerated: bool,
+    pub ready: bool,
+    pub tensor_count: Option<usize>,
+}
 
 /// Whether stub responses are enabled (no model required).
 pub fn stub_mode_enabled() -> bool {
@@ -40,49 +69,6 @@ pub fn model_path_from_env() -> Option<PathBuf> {
     std::env::var_os("RBITNET_MODEL").map(PathBuf::from)
 }
 
-/// Reject paths containing `..` so environment-controlled paths cannot escape the intended directory.
-pub fn validate_no_parent_components(path: &Path) -> Result<()> {
-    for c in path.components() {
-        if matches!(c, std::path::Component::ParentDir) {
-            return Err(BitNetError::InvalidGguf(
-                "path must not contain '..' components".into(),
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn tokenizer_path_candidate(pb: &Path) -> bool {
-    if !pb.is_file() {
-        return false;
-    }
-    let Some(name) = pb.file_name().and_then(|n| n.to_str()) else {
-        return false;
-    };
-    let lower = name.to_ascii_lowercase();
-    lower == "tokenizer.json" || lower == "tokenizer.model"
-}
-
-fn resolve_tokenizer_path(model_path: &Path) -> Result<PathBuf> {
-    if let Ok(p) = std::env::var("RBITNET_TOKENIZER") {
-        let pb = PathBuf::from(p);
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-    }
-    if let Some(dir) = model_path.parent() {
-        let pb = dir.join("tokenizer.json");
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-        let pb = dir.join("tokenizer.model");
-        if tokenizer_path_candidate(&pb) {
-            return Ok(pb);
-        }
-    }
-    Err(BitNetError::TokenizerMissing)
-}
-
 /// Shared engine state.
 #[derive(Clone)]
 pub struct Engine {
@@ -92,10 +78,19 @@ pub struct Engine {
 struct EngineInner {
     #[allow(dead_code)]
     model_path: Option<PathBuf>,
-    gguf: Option<GgufArchive>,
+    tokenizer_dir: Option<PathBuf>,
+    gguf: Option<Arc<GgufArchive>>,
     toy: Option<ToyLlm>,
     stub: bool,
-    llama: Mutex<Option<LlamaRuntime>>,
+    backend_kind: BackendKind,
+    model_family: String,
+    scheduler: ContinuousBatchScheduler,
+    prefix_cache_enabled: bool,
+    prefix_cache_max_entries: usize,
+    prefix_cache: Mutex<Vec<(String, InferenceOutput)>>,
+    _kernel_registry: KernelRegistry,
+    _paged_kv: PagedKvCache,
+    executor: Option<Box<dyn ModelExecutor>>,
 }
 
 fn validate_model_path_for_gguf(p: &Path) -> Result<()> {
@@ -121,6 +116,8 @@ impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
         let model_path = model_path_from_env();
+        let tokenizer_dir =
+            tokenizer_dir_for_load(model_path.as_deref(), tokenizer_path_from_env().as_deref());
         if let Some(ref p) = model_path {
             validate_model_path_for_gguf(p)?;
         }
@@ -128,7 +125,9 @@ impl Engine {
             validate_no_parent_components(Path::new(&tok))?;
         }
         let gguf = if let Some(ref p) = model_path {
-            Some(GgufArchive::mmap_path(p)?)
+            let g = Arc::new(GgufArchive::mmap_path(p)?);
+            check_load_memory_budget(g.as_ref())?;
+            Some(g)
         } else {
             None
         };
@@ -138,27 +137,128 @@ impl Engine {
             None
         };
         let stub = stub_mode_enabled();
+        let backend_kind = BackendKind::from_env();
+        let model_family = gguf
+            .as_deref()
+            .map(resolve_architecture_key)
+            .unwrap_or_else(model_family_when_no_gguf);
+        let scheduler = ContinuousBatchScheduler::from_env();
+        let prefix_cache_enabled = matches!(
+            std::env::var("RBITNET_PREFIX_CACHE").as_deref(),
+            Ok("1") | Ok("true") | Ok("yes")
+        );
+        let prefix_cache_max_entries = std::env::var("RBITNET_PREFIX_CACHE_MAX_ENTRIES")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(64);
+        let kernel_registry = KernelRegistry::bootstrap_default();
+        let paged_kv = PagedKvCache::from_env();
+        let executor = build_executor(
+            backend_kind,
+            gguf.as_ref().map(Arc::clone),
+            model_path.as_ref(),
+            stub,
+            toy.is_some(),
+        )?;
         Ok(Self {
             inner: Arc::new(EngineInner {
                 model_path,
+                tokenizer_dir,
                 gguf,
                 toy,
                 stub,
-                llama: Mutex::new(None),
+                backend_kind,
+                model_family,
+                scheduler,
+                prefix_cache_enabled,
+                prefix_cache_max_entries,
+                prefix_cache: Mutex::new(Vec::new()),
+                _kernel_registry: kernel_registry,
+                _paged_kv: paged_kv,
+                executor,
             }),
         })
     }
 
     /// Load and parse a GGUF path.
     pub fn load_path(path: &Path) -> Result<Self> {
-        let gguf = GgufArchive::mmap_path(path)?;
+        let gguf = Arc::new(GgufArchive::mmap_path(path)?);
+        check_load_memory_budget(gguf.as_ref())?;
+        let backend_kind = BackendKind::from_env();
+        let model_family = resolve_architecture_key(&gguf);
+        let model_path = Some(path.to_path_buf());
+        let tokenizer_dir = tokenizer_dir_for_load(Some(path), None);
+        let executor = build_executor(
+            backend_kind,
+            Some(Arc::clone(&gguf)),
+            model_path.as_ref(),
+            false,
+            false,
+        )?;
         Ok(Self {
             inner: Arc::new(EngineInner {
-                model_path: Some(path.to_path_buf()),
+                model_path,
+                tokenizer_dir,
                 gguf: Some(gguf),
                 toy: None,
                 stub: false,
-                llama: Mutex::new(None),
+                backend_kind,
+                model_family,
+                scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
+                _kernel_registry: KernelRegistry::bootstrap_default(),
+                _paged_kv: PagedKvCache::from_env(),
+                executor,
+            }),
+        })
+    }
+
+    /// Load a single GGUF file with optional tokenizer path and architecture slug overrides.
+    ///
+    /// Unlike [`Engine::load_path`], this does not read `RBITNET_TOKENIZER` or `RBITNET_ARCHITECTURE`
+    /// from the environment, so multiple checkpoints can be loaded safely in one process
+    /// (e.g. HTTP `model` selection from a registry).
+    pub fn load_path_with_overrides(
+        path: &Path,
+        tokenizer_override: Option<&Path>,
+        architecture_override: Option<&str>,
+    ) -> Result<Self> {
+        validate_model_path_for_gguf(path)?;
+        if let Some(t) = tokenizer_override {
+            crate::paths::validate_no_parent_components(t)?;
+        }
+        let gguf = Arc::new(GgufArchive::mmap_path(path)?);
+        check_load_memory_budget(gguf.as_ref())?;
+        let backend_kind = BackendKind::from_env();
+        let model_family = resolve_architecture_key_for_load(&gguf, architecture_override);
+        let model_path = Some(path.to_path_buf());
+        let tokenizer_dir = tokenizer_dir_for_load(Some(path), tokenizer_override);
+        let executor = build_executor_for_load(
+            backend_kind,
+            Arc::clone(&gguf),
+            path,
+            tokenizer_override,
+            architecture_override,
+        )?;
+        Ok(Self {
+            inner: Arc::new(EngineInner {
+                model_path,
+                tokenizer_dir,
+                gguf: Some(gguf),
+                toy: None,
+                stub: false,
+                backend_kind,
+                model_family,
+                scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
+                _kernel_registry: KernelRegistry::bootstrap_default(),
+                _paged_kv: PagedKvCache::from_env(),
+                executor: Some(executor),
             }),
         })
     }
@@ -175,14 +275,49 @@ impl Engine {
         self.inner.gguf.as_ref().map(|g| g.summary_line())
     }
 
+    pub fn model_metadata(&self) -> EngineModelMetadata {
+        let gguf = self.inner.gguf.as_deref();
+        EngineModelMetadata {
+            summary: gguf.map(|g| g.summary_line()),
+            model_path: self
+                .inner
+                .model_path
+                .as_ref()
+                .map(|p| redact_path_for_display(&p.display().to_string())),
+            architecture: gguf
+                .and_then(|g| g.architecture().map(ToString::to_string))
+                .unwrap_or_else(|| self.inner.model_family.clone()),
+            context_length: gguf.and_then(|g| g.context_length()),
+            quantization: gguf.and_then(|g| g.quantization_summary()),
+            backend: self.inner.backend_kind.as_str().to_string(),
+            backend_accelerated: self.backend_accelerated(),
+            ready: self.is_ready(),
+            tensor_count: gguf.map(|g| g.tensor_count()),
+        }
+    }
+
+    /// Best-effort Hugging Face chat template from `tokenizer_config.json` next to the tokenizer.
+    pub fn tokenizer_chat_template(&self) -> Option<String> {
+        let path = self
+            .inner
+            .tokenizer_dir
+            .as_ref()?
+            .join("tokenizer_config.json");
+        let text = std::fs::read_to_string(path).ok()?;
+        let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+        value
+            .get("chat_template")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string)
+    }
+
     pub fn tensor_names_preview(&self, max: usize) -> Option<Vec<String>> {
-        self.inner.gguf.as_ref().map(|g| {
-            g.tensors
-                .iter()
-                .take(max)
-                .map(|t| t.name.clone())
-                .collect()
-        })
+        self.inner
+            .gguf
+            .as_ref()
+            .map(|g| g.tensors.iter().take(max).map(|t| t.name.clone()).collect())
     }
 
     /// Whether chat can run without a missing-tokenizer configuration error.
@@ -191,10 +326,11 @@ impl Engine {
         if self.inner.stub || self.inner.toy.is_some() {
             return true;
         }
-        let Some(ref model_path) = self.inner.model_path else {
-            return false;
-        };
-        self.inner.gguf.is_some() && resolve_tokenizer_path(model_path).is_ok()
+        self.inner
+            .executor
+            .as_ref()
+            .map(|e| e.is_ready())
+            .unwrap_or(false)
     }
 
     /// Label for `/v1/models`.
@@ -206,9 +342,49 @@ impl Engine {
             return Some("rbitnet-toy".into());
         }
         self.inner
-            .gguf
+            .executor
             .as_ref()
-            .map(|g| g.suggested_openai_model_id())
+            .and_then(|e| e.openai_model_id(self.inner.gguf.as_deref()))
+            .or_else(|| {
+                self.inner
+                    .gguf
+                    .as_deref()
+                    .map(|g| g.suggested_openai_model_id())
+            })
+    }
+
+    pub fn backend_kind(&self) -> &'static str {
+        self.inner.backend_kind.as_str()
+    }
+
+    pub fn model_family(&self) -> &str {
+        &self.inner.model_family
+    }
+
+    pub fn backend_accelerated(&self) -> bool {
+        self.inner
+            .executor
+            .as_ref()
+            .map(|e| e.backend_accelerated())
+            .unwrap_or(false)
+    }
+
+    pub fn continuous_batching_enabled(&self) -> bool {
+        self.inner.scheduler.enabled
+    }
+
+    /// tokenizer-encoded prompt length (for HTTP guards). Stub/toy use a rough character heuristic.
+    pub fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        if self.inner.stub || self.inner.toy.is_some() {
+            return Ok(u32::try_from(prompt.len())
+                .unwrap_or(u32::MAX)
+                .saturating_div(4)
+                .max(1));
+        }
+        let Some(ex) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        ex.count_prompt_tokens(prompt)
     }
 
     /// Generate completion text from a user-facing prompt string.
@@ -219,25 +395,235 @@ impl Engine {
         if let Some(ref t) = self.inner.toy {
             return Ok(t.generate(prompt, max_tokens, temperature));
         }
-        let Some(gguf) = self.inner.gguf.as_ref() else {
+        let Some(executor) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);
         };
-        let model_path = self
-            .inner
-            .model_path
-            .as_ref()
-            .ok_or(BitNetError::ModelNotLoaded)?;
-        let mut slot = self.inner.llama.lock().map_err(|e| {
-            BitNetError::Inference(format!("engine lock poisoned: {e}"))
-        })?;
-        if slot.is_none() {
-            let tok_path = resolve_tokenizer_path(model_path)?;
-            *slot = Some(LlamaRuntime::load(gguf, &tok_path)?);
-        }
-        slot.as_mut()
-            .unwrap()
-            .generate(prompt, max_tokens, temperature)
+        let req = InferenceRequest {
+            prompt: prompt.to_string(),
+            max_tokens,
+            sampling: SamplingOptions::from_temperature(temperature),
+        };
+        self.inner
+            .scheduler
+            .run(executor, &req)
+            .map(|output| output.text)
     }
+
+    pub fn complete_detailed(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<InferenceOutput> {
+        self.complete_detailed_with_options(
+            prompt,
+            max_tokens,
+            SamplingOptions::from_temperature(temperature),
+        )
+    }
+
+    pub fn complete_detailed_with_options(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<InferenceOutput> {
+        if self.inner.stub {
+            let text = stub_response(prompt, max_tokens);
+            let completion_tokens = text.split_whitespace().count() as u32;
+            return Ok(InferenceOutput {
+                text,
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    itl_us: 1000,
+                    tpot_us: 1000,
+                    prompt_tokens: 0,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            });
+        }
+        if let Some(ref t) = self.inner.toy {
+            let text = t.generate(prompt, max_tokens, sampling.temperature);
+            let completion_tokens = text.split_whitespace().count() as u32;
+            return Ok(InferenceOutput {
+                text,
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    itl_us: 1000,
+                    tpot_us: 1000,
+                    prompt_tokens: 0,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            });
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let req = InferenceRequest {
+            prompt: prompt.to_string(),
+            max_tokens,
+            sampling,
+        };
+        if self.inner.prefix_cache_enabled {
+            let key = format!("{}|{}|{:?}", prompt, max_tokens, sampling);
+            if let Ok(cache) = self.inner.prefix_cache.lock() {
+                if let Some((_, hit)) = cache.iter().find(|(k, _)| k == &key) {
+                    return Ok(hit.clone());
+                }
+            }
+            let output = self.inner.scheduler.run(executor, &req)?;
+            if let Ok(mut cache) = self.inner.prefix_cache.lock() {
+                cache.push((key, output.clone()));
+                if cache.len() > self.inner.prefix_cache_max_entries {
+                    let overflow = cache.len() - self.inner.prefix_cache_max_entries;
+                    cache.drain(0..overflow);
+                }
+            }
+            return Ok(output);
+        }
+        self.inner.scheduler.run(executor, &req)
+    }
+
+    pub fn complete_batch_detailed(
+        &self,
+        requests: &[InferenceRequest],
+    ) -> Result<Vec<InferenceOutput>> {
+        if self.inner.stub || self.inner.toy.is_some() {
+            let mut out = Vec::with_capacity(requests.len());
+            for req in requests {
+                out.push(self.complete_detailed_with_options(
+                    &req.prompt,
+                    req.max_tokens,
+                    req.sampling,
+                )?);
+            }
+            return Ok(out);
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let batch = InferenceBatch {
+            requests: requests
+                .iter()
+                .enumerate()
+                .map(|(i, req)| ScheduledRequest {
+                    id: i as u64,
+                    request: req.clone(),
+                })
+                .collect(),
+        };
+        let mut rows = self.inner.scheduler.run_batch(executor, &batch)?;
+        rows.sort_by_key(|(id, _)| *id);
+        Ok(rows.into_iter().map(|(_, output)| output).collect())
+    }
+}
+
+/// Stub engine: no GGUF, returns synthetic completions (same as `RBITNET_STUB=1`).
+#[must_use]
+pub fn stub_engine() -> Engine {
+    Engine {
+        inner: Arc::new(EngineInner {
+            model_path: None,
+            tokenizer_dir: None,
+            gguf: None,
+            toy: None,
+            stub: true,
+            backend_kind: BackendKind::Cpu,
+            model_family: "stub".into(),
+            scheduler: ContinuousBatchScheduler::from_env(),
+            prefix_cache_enabled: false,
+            prefix_cache_max_entries: 0,
+            prefix_cache: Mutex::new(Vec::new()),
+            _kernel_registry: KernelRegistry::bootstrap_default(),
+            _paged_kv: PagedKvCache::from_env(),
+            executor: None,
+        }),
+    }
+}
+
+/// Label for [`EngineInner::model_family`] when no GGUF is loaded (stub / toy / no `RBITNET_MODEL`).
+fn model_family_when_no_gguf() -> String {
+    if let Ok(v) = std::env::var("RBITNET_ARCHITECTURE") {
+        let t = normalize_architecture_slug(&v);
+        if !t.is_empty() {
+            return t;
+        }
+    }
+    match std::env::var("RBITNET_MODEL_FAMILY") {
+        Ok(f) => {
+            let fam = normalize_architecture_slug(&f);
+            if fam == "bitnet" {
+                return "bitnet".into();
+            }
+            family_override_token(&fam).unwrap_or("llama").to_string()
+        }
+        Err(_) => "llama".into(),
+    }
+}
+
+fn redact_path_for_display(path: &str) -> String {
+    let lower = path.to_ascii_lowercase();
+    if lower.contains("hf_")
+        || lower.contains("token=")
+        || lower.contains("apikey")
+        || lower.contains("api_key")
+    {
+        return "<redacted>".into();
+    }
+    path.to_string()
+}
+
+fn tokenizer_path_from_env() -> Option<PathBuf> {
+    std::env::var_os("RBITNET_TOKENIZER").map(PathBuf::from)
+}
+
+fn tokenizer_dir_for_load(
+    model_path: Option<&Path>,
+    tokenizer_path: Option<&Path>,
+) -> Option<PathBuf> {
+    tokenizer_path
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .or_else(|| model_path.and_then(Path::parent).map(Path::to_path_buf))
+}
+
+fn build_executor(
+    backend_kind: BackendKind,
+    gguf: Option<Arc<GgufArchive>>,
+    model_path: Option<&PathBuf>,
+    stub: bool,
+    toy: bool,
+) -> Result<Option<Box<dyn ModelExecutor>>> {
+    if stub || toy {
+        return Ok(None);
+    }
+    let gguf = gguf.ok_or(BitNetError::ModelNotLoaded)?;
+    let model_path = model_path.ok_or(BitNetError::ModelNotLoaded)?;
+    dispatch_gguf_executor(backend_kind, gguf, model_path.as_path()).map(Some)
+}
+
+fn build_executor_for_load(
+    backend_kind: BackendKind,
+    gguf: Arc<GgufArchive>,
+    model_path: &Path,
+    tokenizer_override: Option<&Path>,
+    architecture_override: Option<&str>,
+) -> Result<Box<dyn ModelExecutor>> {
+    dispatch_gguf_executor_for_load(
+        backend_kind,
+        gguf,
+        model_path,
+        tokenizer_override,
+        architecture_override,
+    )
 }
 
 fn stub_response(prompt: &str, max_tokens: u32) -> String {
@@ -253,25 +639,26 @@ mod tests {
     use crate::model::ToyLlm;
 
     fn stub_engine() -> Engine {
-        Engine {
-            inner: Arc::new(EngineInner {
-                model_path: None,
-                gguf: None,
-                toy: None,
-                stub: true,
-                llama: Mutex::new(None),
-            }),
-        }
+        super::stub_engine()
     }
 
     fn toy_engine() -> Engine {
         Engine {
             inner: Arc::new(EngineInner {
                 model_path: None,
+                tokenizer_dir: None,
                 gguf: None,
                 toy: Some(ToyLlm::new(42)),
                 stub: false,
-                llama: Mutex::new(None),
+                backend_kind: BackendKind::Cpu,
+                model_family: "toy".into(),
+                scheduler: ContinuousBatchScheduler::from_env(),
+                prefix_cache_enabled: false,
+                prefix_cache_max_entries: 0,
+                prefix_cache: Mutex::new(Vec::new()),
+                _kernel_registry: KernelRegistry::bootstrap_default(),
+                _paged_kv: PagedKvCache::from_env(),
+                executor: None,
             }),
         }
     }

@@ -1,0 +1,39 @@
+# WinGet submission template for Rbitnet.
+# TODO(release): replace PackageVersion with the tag without leading "v".
+# TODO(release): InstallerUrl must match release.yml asset:
+#   rbitnet-server-vX.Y.Z-windows-x86_64.zip
+# TODO(release): InstallerSha256 must be the SHA-256 of that uploaded zip.
+# See docs/RELEASE_PACKAGING.md before submitting with wingetcreate or opening a
+# microsoft/winget-pkgs PR.
+PackageIdentifier: Rbitnet.Rbitnet
+PackageVersion: 0.1.0
+PackageLocale: en-US
+Publisher: Rbitnet
+PackageName: Rbitnet
+License: MIT
+ShortDescription: Pure Rust GGUF inference and OpenAI-compatible local HTTP server.
+Description: Rbitnet ships the rbitnet CLI and rbitnet-server, an OpenAI-compatible local server for Llama-compatible GGUF inference.
+Moniker: rbitnet
+Tags:
+  - ai
+  - gguf
+  - llm
+  - openai-compatible
+Homepage: https://github.com/azerothl/Rbitnet
+LicenseUrl: https://github.com/azerothl/Rbitnet/blob/main/LICENSE
+PackageUrl: https://github.com/azerothl/Rbitnet
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: rbitnet.exe
+    PortableCommandAlias: rbitnet
+  - RelativeFilePath: rbitnet-server.exe
+    PortableCommandAlias: rbitnet-server
+  - RelativeFilePath: rbitnet-runner.exe
+    PortableCommandAlias: rbitnet-runner
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/azerothl/Rbitnet/releases/download/v0.1.0/rbitnet-server-v0.1.0-windows-x86_64.zip
+    InstallerSha256: REPLACE_WITH_RELEASE_ZIP_SHA256
+ManifestType: singleton
+ManifestVersion: 1.9.0

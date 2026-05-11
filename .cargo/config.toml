@@ -1,0 +1,4 @@
+# Align MSVC CRT with `esaxx-rs` (tokenizers): `sentencepiece-sys` enables /MT when
+# `crt-static` is set (see its build.rs). Without this, linking fails with LNK2038 on Windows.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -8,6 +8,7 @@
 //! Use this to verify a BitNet-produced GGUF (e.g. after converting
 //! `1bitLLM/bitnet_b1_58-large` with Microsoft BitNet tooling) before enabling `RBITNET_MODEL`.
 
+use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
@@ -20,10 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new(&path);
     let arch = GgufArchive::mmap_path(path)?;
     println!("{}", arch.summary_line());
-    println!(
-        "tensor_data_len={} bytes",
-        arch.tensor_data().len()
-    );
+    println!("tensor_data_len={} bytes", arch.tensor_data().len());
 
     let hp = arch.llama_hyper_params();
     println!(
@@ -48,6 +46,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if arch.tensors.len() > show {
         println!("  ... and {} more", arch.tensors.len() - show);
     }
+
+    let mut hist: HashMap<u32, usize> = HashMap::new();
+    for t in &arch.tensors {
+        *hist.entry(t.ggml_type).or_insert(0) += 1;
+    }
+    let mut pairs: Vec<_> = hist.into_iter().collect();
+    pairs.sort_by_key(|p| p.0);
+    println!("ggml_type histogram (type -> count): {:?}", pairs);
 
     Ok(())
 }

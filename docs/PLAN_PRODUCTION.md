@@ -72,7 +72,7 @@ Paths are **local** (not checked in): update the table in `docs/BENCHMARKS.md` w
 | (Optional) Document **RAM ceiling** per model and hardware notes      | Doc section                                            |
 
 
-*Note: GPU support or calling an external backend can be a **later phase** if the product stance is “Rust CPU only.”*
+*Note: GPU support is a native `bitnet-core` roadmap item. External inference backends are dev-only experiments and must not be required for production operation.*
 
 ---
 

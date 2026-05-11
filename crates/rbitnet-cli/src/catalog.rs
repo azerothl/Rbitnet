@@ -17,10 +17,28 @@ pub struct CatalogModel {
     pub id: String,
     pub repo: String,
     pub description: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
     #[serde(default)]
     pub files: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_case: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_ram_gb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_ram: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tested: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_rbitnet_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smoke_test: Option<String>,
 }
 
 /// Pick one GGUF filename when a repo ships many quantizations (prefers common Q4_K_M-style names).
@@ -75,7 +93,11 @@ mod tests {
         assert_eq!(c.models[0].id, "a");
         assert_eq!(c.models[0].repo, "x/y");
         assert_eq!(c.models[0].files, vec!["m.gguf"]);
+        assert!(c.models[0].use_case.is_empty());
+        assert!(c.models[0].min_ram_gb.is_none());
+        assert!(c.models[0].verified.is_none());
         assert!(c.models[0].min_rbitnet_version.is_none());
+        assert!(c.models[0].smoke_test.is_none());
     }
 
     #[test]
@@ -85,14 +107,14 @@ mod tests {
             "x.Q4_K_M.gguf".into(),
             "x.Q8_0.gguf".into(),
         ];
-        assert_eq!(
-            pick_primary_gguf(&g).as_deref(),
-            Some("x.Q4_K_M.gguf")
-        );
+        assert_eq!(pick_primary_gguf(&g).as_deref(), Some("x.Q4_K_M.gguf"));
     }
 
     #[test]
     fn catalog_id_from_repo_sanitizes() {
-        assert_eq!(catalog_id_from_repo("TheBloke/Llama-2-GGUF"), "thebloke-llama-2-gguf");
+        assert_eq!(
+            catalog_id_from_repo("TheBloke/Llama-2-GGUF"),
+            "thebloke-llama-2-gguf"
+        );
     }
 }

@@ -13,11 +13,18 @@ tracing = { workspace = true }
 memmap2 = { workspace = true }
 half = { workspace = true }
 tokenizers = { workspace = true, default-features = false }
+sentencepiece = { workspace = true }
 rand = { workspace = true }
+libloading = "0.8"
 
 [dev-dependencies]
 criterion = { workspace = true }
+tempfile = "3"
 
 [[bench]]
 name = "kernels"
 harness = false
+
+[[example]]
+name = "engine_smoke"
+path = "examples/engine_smoke.rs"
