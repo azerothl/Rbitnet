@@ -11,6 +11,7 @@ use crate::model::ModelExecutor;
 use super::arch_key::{resolve_architecture_key, resolve_architecture_key_for_load};
 use super::bitnet;
 use super::llama;
+use super::qwen3;
 use super::qwen35;
 
 use crate::deepseek2;
@@ -89,6 +90,16 @@ fn dispatch_gguf_executor_inner(
             ));
         }
         return qwen35::build_qwen35_moe_executor(
+            backend_kind,
+            gguf,
+            model_path,
+            isolated_from_env,
+            tokenizer_override,
+        );
+    }
+
+    if key == "qwen3" {
+        return qwen3::build_qwen3_executor(
             backend_kind,
             gguf,
             model_path,
@@ -223,6 +234,23 @@ mod tests {
         match dispatch_gguf_executor(BackendKind::Cuda, g, &p) {
             Err(BitNetError::TokenizerMissing) => {}
             Err(e) => panic!("expected TokenizerMissing from qwen35moe builder, got {e}"),
+            Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
+        }
+    }
+
+    #[test]
+    fn dispatch_qwen3_cpu_requires_tokenizer_not_llama_metadata() {
+        let _g = env_test_lock();
+        std::env::remove_var("RBITNET_TOKENIZER");
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("qwen3.gguf");
+        write_minimal_gguf_with_arch(&p, "qwen3").unwrap();
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        match dispatch_gguf_executor(BackendKind::Cpu, g, &p) {
+            Err(BitNetError::TokenizerMissing) => {}
+            Err(e) => panic!("expected Qwen3 builder to resolve tokenizer first, got {e}"),
             Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
         }
     }

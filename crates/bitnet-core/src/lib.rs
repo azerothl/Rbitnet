@@ -38,6 +38,7 @@ pub mod model;
 pub mod paged_kv;
 pub mod paths;
 pub mod prefix_kv;
+pub mod qwen3;
 pub mod qwen35;
 pub mod registry;
 pub mod sampling;

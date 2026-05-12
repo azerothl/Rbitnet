@@ -6,6 +6,8 @@ Reproducible numbers belong here for **Phase 2** of [`PLAN_PRODUCTION.md`](PLAN_
 
 For **CPU profiling** workflow (perf, flamegraph, what to inspect in code), see [PROFILING.md](PROFILING.md). Archived per-release notes live under [docs/profiling/](profiling/README.md).
 
+Local one-off model performance notes for the current Windows developer machine live in [LOCAL_PERFORMANCE_2026-05-12.md](LOCAL_PERFORMANCE_2026-05-12.md).
+
 ## Frozen baseline procedure
 
 When you record an official row for a release candidate:

@@ -8,6 +8,7 @@ mod arch_key;
 mod bitnet;
 mod llama;
 pub(crate) mod prompt_tokenizer;
+mod qwen3;
 mod qwen35;
 mod registry;
 pub(crate) mod roadmap_unsupported;

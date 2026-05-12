@@ -144,7 +144,12 @@ pub fn llama_mmap_quant_supported(archive: &GgufArchive) -> Result<()> {
     };
 
     check(&["token_embd.weight", "token_embd"])?;
-    check(&["output.weight", "lm_head.weight"])?;
+    if archive
+        .tensor_first_of(&["output.weight", "lm_head.weight"])
+        .is_some()
+    {
+        check(&["output.weight", "lm_head.weight"])?;
+    }
 
     for i in 0..cfg.n_layer {
         let p = format!("blk.{i}");
@@ -292,10 +297,18 @@ impl LlamaModel {
             ));
         }
 
-        let output = MatrixWeights::Dense(load_tensor_dense(
-            archive.as_ref(),
-            &["output.weight", "lm_head.weight"],
-        )?);
+        let output = if archive
+            .tensor_first_of(&["output.weight", "lm_head.weight"])
+            .is_some()
+        {
+            MatrixWeights::Dense(load_tensor_dense(
+                archive.as_ref(),
+                &["output.weight", "lm_head.weight"],
+            )?)
+        } else {
+            // Some Llama-family GGUFs tie the LM head to token embeddings.
+            token_embd.clone()
+        };
         if let MatrixWeights::Dense(ref v) = output {
             if v.len() != n_embd * n_vocab {
                 return Err(BitNetError::Inference(
@@ -428,9 +441,17 @@ impl LlamaModel {
             ));
         }
 
-        let output = MatrixWeights::Quant {
-            archive: Arc::clone(&archive),
-            tensor: tensor_info_first(archive.as_ref(), &["output.weight", "lm_head.weight"])?,
+        let output = if archive
+            .tensor_first_of(&["output.weight", "lm_head.weight"])
+            .is_some()
+        {
+            MatrixWeights::Quant {
+                archive: Arc::clone(&archive),
+                tensor: tensor_info_first(archive.as_ref(), &["output.weight", "lm_head.weight"])?,
+            }
+        } else {
+            // Some Llama-family GGUFs tie the LM head to token embeddings.
+            token_embd.clone()
         };
 
         let mut layers = Vec::with_capacity(cfg.n_layer);
