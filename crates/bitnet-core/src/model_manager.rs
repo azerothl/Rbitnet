@@ -25,6 +25,8 @@ pub struct ModelProfile {
     #[serde(default)]
     pub hybrid_layers: Option<String>,
     #[serde(default)]
+    pub hybrid_policy: Option<String>,
+    #[serde(default)]
     pub warmup: bool,
 }
 
@@ -37,6 +39,14 @@ pub struct ModelResidency {
     pub estimated_vram_mb: Option<u64>,
     pub estimated_ram_mb: Option<u64>,
     pub fallback_reason: Option<String>,
+    pub offload_decisions: Vec<OffloadDecision>,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct OffloadDecision {
+    pub tensor: String,
+    pub device: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Default)]
@@ -53,6 +63,7 @@ struct LoadedModelState {
     estimated_vram_mb: Option<u64>,
     estimated_ram_mb: Option<u64>,
     fallback_reason: Option<String>,
+    offload_decisions: Vec<OffloadDecision>,
 }
 
 impl ModelManager {
@@ -89,9 +100,17 @@ impl ModelManager {
                 estimated_vram_mb,
                 estimated_ram_mb,
                 fallback_reason,
+                offload_decisions: Vec::new(),
             },
         );
         self.evict_lru()
+    }
+
+    pub fn set_offload_decisions(&mut self, id: &str, decisions: Vec<OffloadDecision>) {
+        if let Some(state) = self.loaded.get_mut(id) {
+            state.offload_decisions = decisions;
+            state.last_used = Instant::now();
+        }
     }
 
     pub fn touch(&mut self, id: &str) {
@@ -113,6 +132,7 @@ impl ModelManager {
                     estimated_vram_mb: state.estimated_vram_mb,
                     estimated_ram_mb: state.estimated_ram_mb,
                     fallback_reason: state.fallback_reason.clone(),
+                    offload_decisions: state.offload_decisions.clone(),
                 });
             } else {
                 out.push(ModelResidency {
@@ -123,6 +143,7 @@ impl ModelManager {
                     estimated_vram_mb: None,
                     estimated_ram_mb: None,
                     fallback_reason: None,
+                    offload_decisions: Vec::new(),
                 });
             }
         }

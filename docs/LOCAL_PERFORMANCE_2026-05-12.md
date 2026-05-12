@@ -110,6 +110,23 @@ smaller than Q4_K_M, the tested path either timed out or hit quantization
 handling issues, so it should not be promoted as a recommended CPU model until
 the dequant kernels are fixed and benchmarked.
 
+### Advanced Optimization Implementation Matrix
+
+Release validation after the advanced plan should run the same model rows as
+above with these toggles. The implementation is now in place; the rows below are
+the benchmark matrix to fill with real timings after the next long smoke pass.
+
+| Phase | Toggle / path | Status | Metrics to capture |
+|-------|---------------|--------|--------------------|
+| KV quantized pages | `RBITNET_LLAMA_PAGED_KV=1`, `RBITNET_KV_QUANT=off/q8/q4` | Implemented for Llama paged KV; K/V heads decode on demand | TTFT, TPOT, `rbitnet_core_kv_*`, quality spot check on long prompts |
+| Paged attention CPU | `RBITNET_LLAMA_PAGED_KV=1` | Implemented CPU path without rebuilding full `k_mat`; CUDA remains GPU-planned/fallback | Decode ms, physical pages, reuse counters |
+| Chunked prefill API | `RBITNET_PREFILL_CHUNK_TOKENS=N` | Llama and Qwen3 expose `prefill_chunk` and `decode_one`; still one forward per token | TTFT on short/medium/long prompts |
+| Radix prefix cache | `PrefixKvBlockCache::insert_tokens` / `longest_token_prefix` | Implemented scoped token trie with model/tokenizer/template/KV/RoPE invalidation | Prefix hit/miss and bytes saved counters |
+| Hot/cold offload | `RBITNET_HYBRID_POLICY=layers/hotcold/auto` | Implemented policy selection and registry/profile metadata | Hybrid load summary, VRAM, decode ms |
+| Speculative draft | `RBITNET_SPECULATIVE=1`, `RBITNET_DRAFT_PATH=ngram/toy` | Implemented local draft path and counters; `RBITNET_DRAFT_MODEL` recognized for GGUF follow-up | Draft, verified, accepted token counters, TTFT/TPOT |
+| Structured output mask | `RBITNET_STRUCTURED_OUTPUT=json/tool` | Implemented byte/ASCII JSON FSM before sampling | Invalid JSON rate, regeneration count in Akasha |
+| Fused small ops | default Llama CPU path | Implemented RMSNorm-to-scratch, head RoPE loop, residual add and SwiGLU multiply fusion | Scratch reuse, allocations, token latency |
+
 The local RTX 3050 Ti can run the native Qwen35MoE CUDA path, but a 1-token smoke
 still takes about a minute. The model is useful to prove that the CUDA path loads
 and generates, not as a practical local assistant target on this 4 GiB laptop GPU.

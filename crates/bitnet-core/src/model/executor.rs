@@ -117,7 +117,8 @@ impl ModelExecutor for LlamaExecutor {
     fn offload_metadata(&self) -> Option<String> {
         if self.backend_kind == BackendKind::Hybrid {
             Some(format!(
-                "hybrid policy: layers={}, max_vram_mb={}, min_rows={}, output={}",
+                "hybrid policy: mode={}, layers={}, max_vram_mb={}, min_rows={}, output={}",
+                std::env::var("RBITNET_HYBRID_POLICY").unwrap_or_else(|_| "layers".into()),
                 std::env::var("RBITNET_HYBRID_LAYERS").unwrap_or_else(|_| "auto".into()),
                 std::env::var("RBITNET_HYBRID_MAX_VRAM_MB").unwrap_or_else(|_| "512".into()),
                 std::env::var("RBITNET_HYBRID_MIN_ROWS").unwrap_or_else(|_| "512".into()),

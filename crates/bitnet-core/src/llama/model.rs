@@ -242,20 +242,11 @@ impl LlamaOffloadPlan {
             .and_then(|v| v.trim().parse::<usize>().ok())
             .unwrap_or(512)
             .saturating_mul(1024 * 1024);
-        let layers = if let Ok(spec) = std::env::var("RBITNET_HYBRID_LAYERS") {
-            parse_layer_spec(&spec, cfg.n_layer)
-        } else {
-            let mut selected = vec![false; cfg.n_layer];
-            let max_layers = if layer_bytes == 0 {
-                0
-            } else {
-                (max_bytes / layer_bytes).max(1).min(cfg.n_layer)
-            };
-            for enabled in selected.iter_mut().take(max_layers) {
-                *enabled = true;
-            }
-            selected
-        };
+        let policy = std::env::var("RBITNET_HYBRID_POLICY")
+            .unwrap_or_else(|_| "layers".into())
+            .trim()
+            .to_ascii_lowercase();
+        let layers = hybrid_layer_policy(&policy, cfg, layer_bytes, max_bytes);
         let layer_count = layers.iter().filter(|&&v| v).count();
         let output = matches!(
             std::env::var("RBITNET_HYBRID_OUTPUT").as_deref(),
@@ -279,9 +270,9 @@ impl LlamaOffloadPlan {
             output,
             estimated_weight_bytes,
             reason: if enabled {
-                format!("hybrid offload selected {layer_count} layers")
+                format!("hybrid offload policy={policy} selected {layer_count} layers")
             } else {
-                "hybrid backend selected but no layers fit policy".into()
+                format!("hybrid backend selected but policy={policy} selected no layers")
             },
         }
     }
@@ -300,6 +291,46 @@ impl LlamaOffloadPlan {
             self.reason
         )
     }
+}
+
+fn hybrid_layer_policy(
+    policy: &str,
+    cfg: &LlamaConfig,
+    layer_bytes: usize,
+    max_bytes: usize,
+) -> Vec<bool> {
+    if let Ok(spec) = std::env::var("RBITNET_HYBRID_LAYERS") {
+        if policy == "layers" || policy == "auto" {
+            return parse_layer_spec(&spec, cfg.n_layer);
+        }
+    }
+    let mut selected = vec![false; cfg.n_layer];
+    let max_layers = if layer_bytes == 0 {
+        0
+    } else {
+        (max_bytes / layer_bytes).max(1).min(cfg.n_layer)
+    };
+    match policy {
+        // Keep the first N layers for compatibility with the initial hybrid implementation.
+        "layers" => {
+            for enabled in selected.iter_mut().take(max_layers) {
+                *enabled = true;
+            }
+        }
+        // A simple PowerInfer-style proxy until per-tensor activation telemetry is persisted:
+        // retain deeper layers first because they dominate decode reuse and are hit every token.
+        "hotcold" | "auto" => {
+            for idx in (0..cfg.n_layer).rev().take(max_layers) {
+                selected[idx] = true;
+            }
+        }
+        _ => {
+            for enabled in selected.iter_mut().take(max_layers) {
+                *enabled = true;
+            }
+        }
+    }
+    selected
 }
 
 fn llama_layer_f32_bytes(cfg: &LlamaConfig) -> usize {
@@ -397,13 +428,12 @@ fn matvec_ff_embd_dense(w: &[f32], x: &[f32], n_ff: usize, n_embd: usize) -> Vec
     y
 }
 
-fn rmsnorm(x: &[f32], w: &[f32], eps: f32) -> Vec<f32> {
+fn rmsnorm_into(x: &[f32], w: &[f32], eps: f32, out: &mut [f32]) {
     let s = x.iter().map(|v| v * v).sum::<f32>() / (x.len() as f32);
     let scale = 1.0 / (s + eps).sqrt();
-    x.iter()
-        .zip(w.iter())
-        .map(|(&xi, &wi)| xi * wi * scale)
-        .collect()
+    for i in 0..x.len() {
+        out[i] = x[i] * w[i] * scale;
+    }
 }
 
 fn softmax_inplace(s: &mut [f32]) {
@@ -420,10 +450,6 @@ fn softmax_inplace(s: &mut [f32]) {
     }
 }
 
-fn silu(x: &[f32]) -> Vec<f32> {
-    x.iter().map(|&v| v / (1.0 + (-v).exp())).collect()
-}
-
 fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
     let h = slice.len();
     assert!(h % 2 == 0);
@@ -437,6 +463,26 @@ fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
         let x1 = slice[2 * i + 1];
         slice[2 * i] = x0 * c - x1 * s;
         slice[2 * i + 1] = x0 * s + x1 * c;
+    }
+}
+
+fn rope_heads_inplace(x: &mut [f32], n_head: usize, head_dim: usize, pos: usize, theta: f32) {
+    for h in 0..n_head {
+        let s = &mut x[h * head_dim..(h + 1) * head_dim];
+        rope_inplace(s, pos, theta);
+    }
+}
+
+fn silu_mul_into(gate: &[f32], up: &[f32], out: &mut [f32]) {
+    for i in 0..out.len() {
+        let g = gate[i];
+        out[i] = (g / (1.0 + (-g).exp())) * up[i];
+    }
+}
+
+fn add_residual_inplace(x: &mut [f32], y: &[f32]) {
+    for i in 0..x.len() {
+        x[i] += y[i];
     }
 }
 
@@ -1012,7 +1058,8 @@ impl LlamaModel {
         let n_rep = cfg.n_head / cfg.n_kv;
 
         for (il, layer) in self.layers.iter().enumerate() {
-            let h = rmsnorm(&x, &layer.attn_norm, cfg.norm_eps);
+            let mut h = scratch.take(n_embd);
+            rmsnorm_into(&x, &layer.attn_norm, cfg.norm_eps, &mut h);
             let q = layer.wq.matvec_embd_out(&h, n_embd, n_embd)?;
             let k = layer
                 .wk
@@ -1020,18 +1067,13 @@ impl LlamaModel {
             let v = layer
                 .wv
                 .matvec_embd_out(&h, n_embd, cfg.n_kv * cfg.head_dim)?;
+            scratch.recycle(h);
 
             let mut q_heads = q;
-            for h in 0..cfg.n_head {
-                let s = &mut q_heads[h * cfg.head_dim..(h + 1) * cfg.head_dim];
-                rope_inplace(s, pos, cfg.rope_theta);
-            }
+            rope_heads_inplace(&mut q_heads, cfg.n_head, cfg.head_dim, pos, cfg.rope_theta);
 
             let mut k_heads = k;
-            for h in 0..cfg.n_kv {
-                let s = &mut k_heads[h * cfg.head_dim..(h + 1) * cfg.head_dim];
-                rope_inplace(s, pos, cfg.rope_theta);
-            }
+            rope_heads_inplace(&mut k_heads, cfg.n_kv, cfg.head_dim, pos, cfg.rope_theta);
 
             let stride = cfg.n_kv * cfg.head_dim;
             kv.write_layer_kv(il, pos, &k_heads, &v, stride)?;
@@ -1070,41 +1112,41 @@ impl LlamaModel {
                 };
                 softmax_inplace(&mut scores);
                 let mut comb = scratch.take(cfg.head_dim);
+                let mut v_values = scratch.take(cfg.head_dim);
                 for p in 0..=pos {
-                    let v_slice = kv.v_head_slice(il, p, kv_h, cfg.head_dim, stride);
+                    kv.fill_v_head_values(il, p, kv_h, cfg.head_dim, stride, &mut v_values);
                     let sp = scores[p];
                     for i in 0..cfg.head_dim {
-                        comb[i] += sp * v_slice[i];
+                        comb[i] += sp * v_values[i];
                     }
                 }
                 let dst = qh * cfg.head_dim;
                 attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
                 scratch.recycle(scores);
                 scratch.recycle(comb);
+                scratch.recycle(v_values);
             }
 
             let y = layer.wo.matvec_embd_out(&attn_out, n_embd, n_embd)?;
             scratch.recycle(attn_out);
-            for i in 0..n_embd {
-                x[i] += y[i];
-            }
+            add_residual_inplace(&mut x, &y);
 
-            let h2 = rmsnorm(&x, &layer.ffn_norm, cfg.norm_eps);
-            let gate = silu(&layer.ffn_gate.matvec_embd_out(&h2, n_embd, cfg.n_ff)?);
+            let mut h2 = scratch.take(n_embd);
+            rmsnorm_into(&x, &layer.ffn_norm, cfg.norm_eps, &mut h2);
+            let gate = layer.ffn_gate.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
             let up = layer.ffn_up.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
             let mut tmp = scratch.take(cfg.n_ff);
-            for i in 0..cfg.n_ff {
-                tmp[i] = gate[i] * up[i];
-            }
+            silu_mul_into(&gate, &up, &mut tmp);
+            scratch.recycle(h2);
             let y2 = layer.ffn_down.matvec_ff(&tmp, cfg.n_ff, n_embd)?;
             scratch.recycle(tmp);
-            for i in 0..n_embd {
-                x[i] += y2[i];
-            }
+            add_residual_inplace(&mut x, &y2);
         }
 
-        let xn = rmsnorm(&x, &self.output_norm, cfg.norm_eps);
+        let mut xn = scratch.take(n_embd);
+        rmsnorm_into(&x, &self.output_norm, cfg.norm_eps, &mut xn);
         let logits = self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab);
+        scratch.recycle(xn);
         scratch.recycle(x);
         logits
     }

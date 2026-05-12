@@ -222,18 +222,22 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_BACKEND=hybrid` | CPU/GPU hybrid mode for Llama-lineage GGUFs. The CPU keeps orchestration and fallback while selected f32-dequantized layer weights are uploaded once to CUDA device buffers. |
 | `RBITNET_QUANT_KERNEL` | Quantized matvec backend: `auto` (CPU parallel), `scalar`, or `cuda` to call optional `rbitnet_cuda_quant*` native symbols for `Q4_K`, `Q6_K`, `Q4_0`, and `Q8_0` with CPU fallback. |
 | `RBITNET_QUANT_PAR_MIN_ROWS` | Output-row threshold for CPU parallel quant matvec (default `256`). |
+| `RBITNET_HYBRID_POLICY` | `layers`, `hotcold`, or `auto`. `layers` preserves explicit/early-layer behavior; `hotcold` selects deeper decode-hot layers first within the VRAM budget; `auto` honors `RBITNET_HYBRID_LAYERS` when set, otherwise hot/cold selection. |
 | `RBITNET_HYBRID_LAYERS` | Optional comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, early layers are selected within `RBITNET_HYBRID_MAX_VRAM_MB`. |
 | `RBITNET_HYBRID_MAX_VRAM_MB` | Soft upload budget for automatic hybrid layer selection (default `512`). |
 | `RBITNET_HYBRID_MIN_ROWS` | Minimum matrix output rows for hybrid upload (default `512`). Smaller matrices stay on CPU. |
 | `RBITNET_HYBRID_OUTPUT` | Set to `1` to try offloading the Llama output head. This can consume substantial VRAM. |
 | `RBITNET_KV_BACKEND` | KV backend hint: `cpu` by default; `gpu`/`cuda` marks paged KV as GPU-planned while preserving CPU fallback. |
-| `RBITNET_PREFILL_CHUNK_TOKENS` | Positive integer (default `128`). Llama and Qwen35 runtimes process the prompt prefill in slices of this many tokens (cancellation granularity and scheduling hooks). Each slice still runs **one forward step per token**; this is **not** batched-matrix multi-token prefill as in large serving stacks. |
+| `RBITNET_KV_QUANT` | Paged Llama KV format: `off`/`f32`, `q8`, or `q4`. Quantized pages store K/V compactly and decode heads on demand for attention; keep `off` for maximum numerical safety. |
+| `RBITNET_PREFILL_CHUNK_TOKENS` | Positive integer (default `128`). Llama and Qwen3 runtimes now call explicit `prefill_chunk(tokens)` and `decode_one(token)` APIs; each chunk still runs one forward step per token until batched multi-position kernels are added. |
+| `RBITNET_STRUCTURED_OUTPUT` | `off`, `json`, or `tool`. JSON/tool enables a lightweight FSM mask before sampling for byte/ASCII-compatible tokenizers. |
 | `RBITNET_PREFIX_CACHE` | `1` / `true` / `yes` enables an **exact-match cache of prior completions**: same prompt string, `max_tokens`, and `temperature`. This is **not** Hugging Face / OpenAI–style **prompt caching** that reuses **KV blocks** for a shared prefix across requests. See [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | LRU-ish cap for prefix-cache entries (default `64`). |
 | `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | **`dense`** (full `f32` weight materialization, high RAM), **`mmap_quant`** (quantized weights in mmap + row GEMV; fails if a matrix uses an unsupported GGML type), **`auto`** (mmap when all Llama weight tensors are supported, else `dense`). |
 | `RBITNET_LLAMA_PAGED_KV` | `0` | **`1` / `true` / `yes`** — use **paged KV slabs** for Llama-lineage GGUF (Inference stack v2 phase A). Uses `RBITNET_PAGED_KV_PAGE_TOKENS` and `RBITNET_PAGED_KV_MAX_PAGES` (see [`paged_kv.rs`](../crates/bitnet-core/src/paged_kv.rs)). Default remains dense buffers. |
 | `RBITNET_PAGED_KV_PAGE_TOKENS`, `RBITNET_PAGED_KV_MAX_PAGES` | `16`, `4096` | Page size and per-layer physical page cap when **`RBITNET_LLAMA_PAGED_KV`** is enabled; also tune experimental Qwen35 attention metadata (see code). |
-| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_NUM`, `RBITNET_SPEC_DRAFT_RATIO_DEN` | Scheduler flags (see `crates/bitnet-core/src/scheduler.rs`). Batching is still **sequential** per request; speculative mode runs a **draft** then **verify** generate (MVP), not a separate draft model. |
+| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_NUM`, `RBITNET_SPEC_DRAFT_RATIO_DEN` | Scheduler flags (see `crates/bitnet-core/src/scheduler.rs`). Batching is still sequential per request; speculative mode now supports `RBITNET_DRAFT_PATH=ngram|toy` and records draft/verify counters. |
+| `RBITNET_DRAFT_PATH`, `RBITNET_DRAFT_MODEL` | Draft source for speculative decoding. `ngram` and `toy` are local lightweight drafts; `RBITNET_DRAFT_MODEL` accepts a GGUF path and currently falls back to n-gram while the separate draft executor is completed. |
 
 **Programmatic phase stats:** `Engine::complete_detailed` returns `InferenceOutput.stats` with `encode_ms`, `prefill_ms`, `decode_ms`, `ttft_ms`, `itl_us`, `tpot_us`, and tokenizer token counts when a real `ModelExecutor` is loaded.
 

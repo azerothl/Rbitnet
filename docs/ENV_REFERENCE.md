@@ -50,10 +50,14 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | `64` | Prefix response cache size. |
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
-| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler / speculative MVP; see [USAGE.md](USAGE.md). |
+| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler, chunked prefill hooks, and speculative draft path; see [USAGE.md](USAGE.md). |
+| `RBITNET_DRAFT_PATH` | `target` | Speculative draft source when `RBITNET_SPECULATIVE=1`: `target`, `ngram`, or `toy`. |
+| `RBITNET_DRAFT_MODEL` | (none) | Path reserved for a small GGUF draft model. Current builds recognize the path and fall back to the lightweight n-gram draft until separate draft-model verification is wired. |
+| `RBITNET_STRUCTURED_OUTPUT` | `off` | Optional sampler mask: `json` / `tool` enables the ASCII/byte-token JSON FSM mask before sampling. |
 | `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | Llama-lineage matrices: **`dense`** (legacy: full `tensor_to_f32` at load, high RAM), **`mmap_quant`** (quantized weights stay in the GGUF mmap; row-wise GEMV), **`auto`** (mmap when every weight tensor uses a supported GGML type for mmap GEMV; otherwise dense). |
 | `RBITNET_QUANT_KERNEL` | `auto` | Quantized matvec backend: `auto`/CPU parallel, `scalar`, or `cuda` to use optional native `rbitnet_cuda_quant*` symbols for `Q4_K`, `Q6_K`, `Q4_0`, `Q8_0` with CPU fallback. |
 | `RBITNET_QUANT_PAR_MIN_ROWS` | `256` | Minimum output rows before the CPU quantized matvec path splits work across available threads. |
+| `RBITNET_HYBRID_POLICY` | `layers` | Hybrid layer-selection policy: `layers` keeps explicit/early-layer behavior, `hotcold` selects deeper hot decode layers first, `auto` uses explicit `RBITNET_HYBRID_LAYERS` when present then hot/cold selection. |
 | `RBITNET_HYBRID_LAYERS` | `auto` | With `RBITNET_BACKEND=hybrid`, comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, the loader selects early layers within `RBITNET_HYBRID_MAX_VRAM_MB`. |
 | `RBITNET_HYBRID_MAX_VRAM_MB` | `512` | Approximate f32 weight upload budget for automatic Llama hybrid offload. This is a soft planning budget, not a hard CUDA allocator limit. |
 | `RBITNET_HYBRID_MIN_ROWS` | `512` | Minimum matrix output rows for Llama hybrid upload; smaller matrices stay on CPU. |
@@ -61,6 +65,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_HYBRID_LOG` | off | Reserved flag for verbose hybrid diagnostics; current builds always log the selected offload plan at runtime creation. |
 | `RBITNET_LLAMA_PAGED_KV` | off | **`1`** enables paged KV storage for **Llama** GGUF (see [USAGE.md](USAGE.md)). |
 | `RBITNET_KV_BACKEND` | `cpu` | KV backend hint. `gpu`/`cuda` marks paged KV as GPU-planned and keeps CPU fallback until native KV device storage is available. |
+| `RBITNET_KV_QUANT` | `off` | Paged Llama KV format: `off`/`f32`, `q8`, or `q4`. Quantized pages decode K/V heads on demand during attention. |
 | `RBITNET_PAGED_KV`, `RBITNET_PAGED_KV_*` | varies | Qwen35 attention scaffolding; Llama paged mode reads `PAGE_TOKENS` / `MAX_PAGES` via [`PagedKvCache`](../crates/bitnet-core/src/paged_kv.rs). |
 
 ## Tests only

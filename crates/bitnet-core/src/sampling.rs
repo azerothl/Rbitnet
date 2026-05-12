@@ -55,6 +55,7 @@ pub fn sample_token(
         options.frequency_penalty,
         options.presence_penalty,
     );
+    apply_structured_output_mask_from_env(&mut adjusted, prior_tokens);
 
     if options.temperature <= 0.0 {
         return argmax(&adjusted);
@@ -83,6 +84,139 @@ pub fn sample_token(
         sample_top_p(&scaled, top_p, rng).unwrap_or_else(|| sample_multinomial(&scaled, rng))
     } else {
         sample_multinomial(&scaled, rng)
+    }
+}
+
+fn apply_structured_output_mask_from_env(logits: &mut [f32], prior_tokens: &[u32]) {
+    let mode = std::env::var("RBITNET_STRUCTURED_OUTPUT")
+        .unwrap_or_else(|_| "off".into())
+        .trim()
+        .to_ascii_lowercase();
+    if !matches!(mode.as_str(), "json" | "tool" | "tool-call" | "tool_call") {
+        return;
+    }
+    if logits.len() < 128 {
+        return;
+    }
+    let allowed = json_allowed_ascii(prior_tokens);
+    let mut kept = 0usize;
+    for (idx, logit) in logits.iter_mut().enumerate() {
+        if idx < 128 {
+            let c = idx as u8 as char;
+            if allowed(c) {
+                kept += 1;
+                continue;
+            }
+        }
+        *logit = f32::NEG_INFINITY;
+    }
+    if kept == 0 {
+        for logit in logits.iter_mut() {
+            if !logit.is_finite() {
+                *logit = 0.0;
+            }
+        }
+    }
+}
+
+fn json_allowed_ascii(prior_tokens: &[u32]) -> impl Fn(char) -> bool {
+    let state = JsonFsm::from_ascii_tokens(prior_tokens);
+    move |c| state.allows(c)
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct JsonFsm {
+    started: bool,
+    depth: i32,
+    in_string: bool,
+    escaped: bool,
+    complete: bool,
+}
+
+impl JsonFsm {
+    fn from_ascii_tokens(tokens: &[u32]) -> Self {
+        let mut s = Self::default();
+        for &tok in tokens {
+            let Some(c) = char::from_u32(tok) else {
+                continue;
+            };
+            if !c.is_ascii() {
+                continue;
+            }
+            s.feed(c);
+        }
+        s
+    }
+
+    fn feed(&mut self, c: char) {
+        if !self.started && c.is_ascii_whitespace() {
+            return;
+        }
+        if self.complete {
+            return;
+        }
+        if self.in_string {
+            if self.escaped {
+                self.escaped = false;
+            } else if c == '\\' {
+                self.escaped = true;
+            } else if c == '"' {
+                self.in_string = false;
+            }
+            return;
+        }
+        match c {
+            '{' | '[' => {
+                self.started = true;
+                self.depth += 1;
+            }
+            '}' | ']' => {
+                self.depth -= 1;
+                if self.started && self.depth <= 0 {
+                    self.complete = true;
+                    self.depth = 0;
+                }
+            }
+            '"' => {
+                self.started = true;
+                self.in_string = true;
+            }
+            _ => {
+                if !c.is_ascii_whitespace() {
+                    self.started = true;
+                }
+            }
+        }
+    }
+
+    fn allows(self, c: char) -> bool {
+        if self.complete {
+            return c.is_ascii_whitespace();
+        }
+        if !self.started {
+            return matches!(c, '{' | '[') || c.is_ascii_whitespace();
+        }
+        if self.in_string {
+            return c.is_ascii_graphic() || c == ' ';
+        }
+        matches!(
+            c,
+            '{' | '}' | '[' | ']' | ':' | ',' | '"' | '-' | '+' | '.' | '0'
+                ..='9'
+                    | 't'
+                    | 'r'
+                    | 'u'
+                    | 'e'
+                    | 'f'
+                    | 'a'
+                    | 'l'
+                    | 's'
+                    | 'n'
+                    | ' '
+                    | '\n'
+                    | '\r'
+                    | '\t'
+        )
     }
 }
 
@@ -215,5 +349,20 @@ mod tests {
         };
         let mut rng = StdRng::seed_from_u64(7);
         assert_eq!(sample_token(&[0.0, 1.0, 0.5], &options, &[1], &mut rng), 2);
+    }
+
+    #[test]
+    fn json_mask_starts_with_object_or_array() {
+        std::env::set_var("RBITNET_STRUCTURED_OUTPUT", "json");
+        let mut logits = vec![0.0f32; 128];
+        logits[b'x' as usize] = 99.0;
+        logits[b'{' as usize] = 1.0;
+        let options = SamplingOptions {
+            temperature: 0.0,
+            ..SamplingOptions::default()
+        };
+        let mut rng = StdRng::seed_from_u64(7);
+        assert_eq!(sample_token(&logits, &options, &[], &mut rng), b'{' as u32);
+        std::env::remove_var("RBITNET_STRUCTURED_OUTPUT");
     }
 }

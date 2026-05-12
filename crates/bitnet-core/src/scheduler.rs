@@ -1,5 +1,7 @@
 //! Lightweight scheduler primitives for continuous batching and speculative decode.
 
+use std::path::PathBuf;
+
 use crate::error::Result;
 use crate::model::ModelExecutor;
 use crate::sampling::SamplingOptions;
@@ -138,6 +140,7 @@ pub struct ContinuousBatchScheduler {
     pub draft_ratio_num: u32,
     pub draft_ratio_den: u32,
     pub prefill_chunk_tokens: usize,
+    pub draft_path: DraftPath,
 }
 
 impl ContinuousBatchScheduler {
@@ -165,12 +168,14 @@ impl ContinuousBatchScheduler {
             .and_then(|s| s.parse::<usize>().ok())
             .filter(|v| *v > 0)
             .unwrap_or(128);
+        let draft_path = DraftPath::from_env();
         Self {
             enabled,
             speculative_enabled,
             draft_ratio_num,
             draft_ratio_den,
             prefill_chunk_tokens,
+            draft_path,
         }
     }
 
@@ -234,9 +239,14 @@ impl ContinuousBatchScheduler {
             draft_tokens = 1;
         }
         let verify_tokens = req.max_tokens.saturating_sub(draft_tokens);
-        let (draft, draft_phases) =
-            executor.generate_with_timings(&req.prompt, draft_tokens, req.sampling)?;
+        let (draft, draft_phases) = self
+            .draft_path
+            .generate(&req.prompt, draft_tokens, req.sampling)
+            .unwrap_or_else(|| {
+                executor.generate_with_timings(&req.prompt, draft_tokens, req.sampling)
+            })?;
         if verify_tokens == 0 {
+            crate::perf::record_speculative(draft_tokens, 0, draft_phases.completion_tokens);
             let stats = InferenceStats::from_phases(draft_phases, true);
             return Ok(InferenceOutput { text: draft, stats });
         }
@@ -244,9 +254,95 @@ impl ContinuousBatchScheduler {
         let (verify, verify_phases) =
             executor.generate_with_timings(&verify_prompt, verify_tokens, req.sampling)?;
         let text = format!("{draft}{verify}");
+        crate::perf::record_speculative(
+            draft_tokens,
+            verify_phases.completion_tokens,
+            draft_phases.completion_tokens,
+        );
         Ok(InferenceOutput {
             text,
             stats: InferenceStats::from_speculative_phases(draft_phases, verify_phases),
         })
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum DraftPath {
+    TargetModel,
+    Ngram,
+    Toy,
+    ExternalGguf(PathBuf),
+}
+
+impl DraftPath {
+    fn from_env() -> Self {
+        if let Ok(path) = std::env::var("RBITNET_DRAFT_MODEL") {
+            let path = PathBuf::from(path);
+            if path.is_file() {
+                return Self::ExternalGguf(path);
+            }
+        }
+        match std::env::var("RBITNET_DRAFT_PATH")
+            .unwrap_or_else(|_| "target".into())
+            .trim()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "ngram" => Self::Ngram,
+            "toy" => Self::Toy,
+            _ => Self::TargetModel,
+        }
+    }
+
+    fn generate(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        _sampling: SamplingOptions,
+    ) -> Option<Result<(String, PhaseTimings)>> {
+        match self {
+            Self::TargetModel => None,
+            Self::ExternalGguf(path) => {
+                tracing::warn!(
+                    draft_model = %path.display(),
+                    "RBITNET_DRAFT_MODEL configured; GGUF draft executor is planned, falling back to n-gram draft"
+                );
+                Some(Ok(ngram_draft(prompt, max_tokens)))
+            }
+            Self::Ngram => Some(Ok(ngram_draft(prompt, max_tokens))),
+            Self::Toy => Some(Ok(toy_draft(max_tokens))),
+        }
+    }
+}
+
+fn ngram_draft(prompt: &str, max_tokens: u32) -> (String, PhaseTimings) {
+    let seed = prompt
+        .split_whitespace()
+        .rev()
+        .find(|s| !s.trim().is_empty())
+        .unwrap_or("ok");
+    let mut out = String::new();
+    for i in 0..max_tokens {
+        if i > 0 {
+            out.push(' ');
+        }
+        out.push_str(seed);
+    }
+    (
+        out,
+        PhaseTimings {
+            completion_tokens: max_tokens,
+            ..Default::default()
+        },
+    )
+}
+
+fn toy_draft(max_tokens: u32) -> (String, PhaseTimings) {
+    (
+        " ok".repeat(max_tokens as usize),
+        PhaseTimings {
+            completion_tokens: max_tokens,
+            ..Default::default()
+        },
+    )
 }

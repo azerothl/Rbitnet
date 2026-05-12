@@ -30,6 +30,8 @@ pub struct RegistryModelEntry {
     #[serde(default)]
     pub hybrid_layers: Option<String>,
     #[serde(default)]
+    pub hybrid_policy: Option<String>,
+    #[serde(default)]
     pub warmup: bool,
 }
 

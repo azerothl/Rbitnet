@@ -90,16 +90,7 @@ impl LlamaRuntime {
         let chunk_sz = self.prefill_chunk_tokens.max(1);
         for (chunk_idx, chunk) in prompt_ids.chunks(chunk_sz).enumerate() {
             let chunk_base = chunk_idx * chunk_sz;
-            for (idx, &tid) in chunk.iter().enumerate() {
-                let pos = chunk_base + idx;
-                logits = self.model.forward_with_backend_and_scratch(
-                    &mut self.kv,
-                    tid,
-                    pos,
-                    self.backend.as_ref(),
-                    &mut self.scratch,
-                )?;
-            }
+            logits = self.prefill_chunk(chunk, chunk_base)?;
         }
         let prefill_ms = t_pf.elapsed().as_millis() as u64;
 
@@ -116,13 +107,7 @@ impl LlamaRuntime {
                 break;
             }
             gen.push(next_id);
-            logits = self.model.forward_with_backend_and_scratch(
-                &mut self.kv,
-                next_id,
-                pos,
-                self.backend.as_ref(),
-                &mut self.scratch,
-            )?;
+            logits = self.decode_one(next_id, pos)?;
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
@@ -136,6 +121,24 @@ impl LlamaRuntime {
             completion_tokens: gen.len() as u32,
         };
         Ok((text, phases))
+    }
+
+    pub fn prefill_chunk(&mut self, tokens: &[u32], base_pos: usize) -> Result<Vec<f32>> {
+        let mut logits = Vec::new();
+        for (idx, &tid) in tokens.iter().enumerate() {
+            logits = self.decode_one(tid, base_pos + idx)?;
+        }
+        Ok(logits)
+    }
+
+    pub fn decode_one(&mut self, token: u32, pos: usize) -> Result<Vec<f32>> {
+        self.model.forward_with_backend_and_scratch(
+            &mut self.kv,
+            token,
+            pos,
+            self.backend.as_ref(),
+            &mut self.scratch,
+        )
     }
 }
 

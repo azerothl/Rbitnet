@@ -228,11 +228,15 @@ impl Qwen3Runtime {
             ));
         }
 
-        let archive = Arc::clone(&self.archive);
         let t_pf = Instant::now();
         let mut logits = Vec::new();
-        for (pos, &tid) in prompt_ids.iter().enumerate() {
-            logits = self.forward_one(tid, pos, archive.as_ref())?;
+        let chunk_sz = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(128);
+        for (chunk_idx, chunk) in prompt_ids.chunks(chunk_sz).enumerate() {
+            logits = self.prefill_chunk(chunk, chunk_idx * chunk_sz)?;
         }
         let prefill_ms = t_pf.elapsed().as_millis() as u64;
 
@@ -250,7 +254,7 @@ impl Qwen3Runtime {
                 break;
             }
             generated.push(next_id);
-            logits = self.forward_one(next_id, pos, archive.as_ref())?;
+            logits = self.decode_one(next_id, pos)?;
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
@@ -266,6 +270,19 @@ impl Qwen3Runtime {
                 completion_tokens: generated.len() as u32,
             },
         ))
+    }
+
+    pub fn prefill_chunk(&mut self, tokens: &[u32], base_pos: usize) -> Result<Vec<f32>> {
+        let mut logits = Vec::new();
+        for (idx, &tid) in tokens.iter().enumerate() {
+            logits = self.decode_one(tid, base_pos + idx)?;
+        }
+        Ok(logits)
+    }
+
+    pub fn decode_one(&mut self, token: u32, pos: usize) -> Result<Vec<f32>> {
+        let archive = Arc::clone(&self.archive);
+        self.forward_one(token, pos, archive.as_ref())
     }
 
     fn forward_one(&mut self, token: u32, pos: usize, archive: &GgufArchive) -> Result<Vec<f32>> {

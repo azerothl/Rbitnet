@@ -332,6 +332,7 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
                             "max_vram_mb": entry.max_vram_mb,
                             "max_ram_mb": entry.max_ram_mb,
                             "hybrid_layers": entry.hybrid_layers.as_deref(),
+                            "hybrid_policy": entry.hybrid_policy.as_deref(),
                             "warmup": entry.warmup
                         },
                         "perf": serde_json::Value::Null,
