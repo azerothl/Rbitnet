@@ -1,6 +1,10 @@
 //! Row-wise dot products and matmul helpers over mmap GGUF payloads without full-tensor dequant.
 
 use half::{bf16, f16};
+use libloading::Library;
+use std::ffi::c_void;
+use std::thread;
+use std::time::Instant;
 
 use crate::error::{BitNetError, Result};
 use crate::ggml::dequant::{
@@ -11,6 +15,145 @@ use crate::gguf::{GgufArchive, GgufTensorInfo};
 
 const QK_K: usize = 256;
 const QK4_0: usize = 32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuantKernelBackend {
+    CpuScalar,
+    CpuParallel,
+    CudaQuantStub,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct QuantMatvecKernel {
+    backend: QuantKernelBackend,
+    parallel_min_rows: usize,
+}
+
+impl Default for QuantMatvecKernel {
+    fn default() -> Self {
+        Self::from_env()
+    }
+}
+
+impl QuantMatvecKernel {
+    pub fn from_env() -> Self {
+        let backend = match std::env::var("RBITNET_QUANT_KERNEL")
+            .unwrap_or_else(|_| "auto".into())
+            .trim()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "scalar" | "cpu-scalar" => QuantKernelBackend::CpuScalar,
+            "cuda" | "gpu" => QuantKernelBackend::CudaQuantStub,
+            _ => QuantKernelBackend::CpuParallel,
+        };
+        let parallel_min_rows = std::env::var("RBITNET_QUANT_PAR_MIN_ROWS")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(256);
+        Self {
+            backend,
+            parallel_min_rows,
+        }
+    }
+
+    pub fn matvec_mmap(
+        &self,
+        archive: &GgufArchive,
+        t: &GgufTensorInfo,
+        x: &[f32],
+        ne0: usize,
+        ne1: usize,
+    ) -> Result<Vec<f32>> {
+        validate_matvec_shape(t, x, ne0, ne1)?;
+        let started = Instant::now();
+        let ty = t.ggml_type;
+        let payload = archive.tensor_payload(t)?;
+        let row_bytes = types::ggml_row_size(ty, ne0 as u64)?;
+        let y = match self.backend {
+            QuantKernelBackend::CpuScalar => matvec_rows_scalar(ty, payload, row_bytes, x, ne1),
+            QuantKernelBackend::CpuParallel if ne1 >= self.parallel_min_rows => {
+                matvec_rows_parallel(ty, payload, row_bytes, x, ne1)
+            }
+            QuantKernelBackend::CudaQuantStub => {
+                if let Some(result) =
+                    matvec_rows_cuda_quant_optional(ty, payload, row_bytes, x, ne1)
+                {
+                    result
+                } else {
+                    matvec_rows_parallel(ty, payload, row_bytes, x, ne1)
+                }
+            }
+            QuantKernelBackend::CpuParallel => matvec_rows_scalar(ty, payload, row_bytes, x, ne1),
+        }?;
+        crate::perf::record_quant_matvec(
+            ty,
+            ne1,
+            ne0,
+            started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        );
+        Ok(y)
+    }
+
+    pub fn matvec_payload(
+        &self,
+        ggml_type: u32,
+        payload: &[u8],
+        x: &[f32],
+        ne0: usize,
+        ne1: usize,
+    ) -> Result<Vec<f32>> {
+        if x.len() != ne0 {
+            return Err(BitNetError::Inference("matvec payload: x len".into()));
+        }
+        let started = Instant::now();
+        let row_bytes = types::ggml_row_size(ggml_type, ne0 as u64)?;
+        let need = row_bytes
+            .checked_mul(ne1)
+            .ok_or_else(|| BitNetError::Inference("matvec payload size overflow".into()))?;
+        if payload.len() < need {
+            return Err(BitNetError::Inference("matvec payload truncated".into()));
+        }
+        let y = match self.backend {
+            QuantKernelBackend::CpuScalar => {
+                matvec_rows_scalar(ggml_type, payload, row_bytes, x, ne1)
+            }
+            QuantKernelBackend::CpuParallel if ne1 >= self.parallel_min_rows => {
+                matvec_rows_parallel(ggml_type, payload, row_bytes, x, ne1)
+            }
+            QuantKernelBackend::CudaQuantStub => {
+                if let Some(result) =
+                    matvec_rows_cuda_quant_optional(ggml_type, payload, row_bytes, x, ne1)
+                {
+                    result
+                } else {
+                    matvec_rows_parallel(ggml_type, payload, row_bytes, x, ne1)
+                }
+            }
+            QuantKernelBackend::CpuParallel => {
+                matvec_rows_scalar(ggml_type, payload, row_bytes, x, ne1)
+            }
+        }?;
+        crate::perf::record_quant_matvec(
+            ggml_type,
+            ne1,
+            ne0,
+            started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        );
+        Ok(y)
+    }
+}
+
+pub fn matvec_payload_quant(
+    ggml_type: u32,
+    payload: &[u8],
+    x: &[f32],
+    ne0: usize,
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    QuantMatvecKernel::default().matvec_payload(ggml_type, payload, x, ne0, ne1)
+}
 
 #[inline]
 fn fp16_to_f32(bits: u16) -> f32 {
@@ -54,9 +197,30 @@ fn dot_row_f32(row: &[u8], x: &[f32]) -> Result<f32> {
         return Err(BitNetError::InvalidGguf("f32 row size".into()));
     }
     let mut s = 0.0f32;
-    for i in 0..x.len() {
+    let mut i = 0;
+    while i + 4 <= x.len() {
+        let w0 = f32::from_bits(u32::from_le_bytes(
+            row[i * 4..i * 4 + 4].try_into().unwrap(),
+        ));
+        let w1 = f32::from_bits(u32::from_le_bytes(
+            row[(i + 1) * 4..(i + 1) * 4 + 4].try_into().unwrap(),
+        ));
+        let w2 = f32::from_bits(u32::from_le_bytes(
+            row[(i + 2) * 4..(i + 2) * 4 + 4].try_into().unwrap(),
+        ));
+        let w3 = f32::from_bits(u32::from_le_bytes(
+            row[(i + 3) * 4..(i + 3) * 4 + 4].try_into().unwrap(),
+        ));
+        s = w0.mul_add(x[i], s);
+        s = w1.mul_add(x[i + 1], s);
+        s = w2.mul_add(x[i + 2], s);
+        s = w3.mul_add(x[i + 3], s);
+        i += 4;
+    }
+    while i < x.len() {
         let b = u32::from_le_bytes(row[i * 4..i * 4 + 4].try_into().unwrap());
-        s += f32::from_bits(b) * x[i];
+        s = f32::from_bits(b).mul_add(x[i], s);
+        i += 1;
     }
     Ok(s)
 }
@@ -68,7 +232,7 @@ fn dot_row_f16(row: &[u8], x: &[f32]) -> Result<f32> {
     let mut s = 0.0f32;
     for i in 0..x.len() {
         let h = u16::from_le_bytes(row[i * 2..i * 2 + 2].try_into().unwrap());
-        s += fp16_to_f32(h) * x[i];
+        s = fp16_to_f32(h).mul_add(x[i], s);
     }
     Ok(s)
 }
@@ -80,7 +244,7 @@ fn dot_row_bf16(row: &[u8], x: &[f32]) -> Result<f32> {
     let mut s = 0.0f32;
     for i in 0..x.len() {
         let h = u16::from_le_bytes(row[i * 2..i * 2 + 2].try_into().unwrap());
-        s += bf16_to_f32(h) * x[i];
+        s = bf16_to_f32(h).mul_add(x[i], s);
     }
     Ok(s)
 }
@@ -99,7 +263,7 @@ fn dot_row_q4_0(row: &[u8], x: &[f32]) -> Result<f32> {
         q4_0_block_dequant(&row[b * 18..b * 18 + 18], &mut buf)?;
         let xb = &x[b * QK4_0..(b + 1) * QK4_0];
         for i in 0..QK4_0 {
-            acc += buf[i] * xb[i];
+            acc = buf[i].mul_add(xb[i], acc);
         }
     }
     Ok(acc)
@@ -119,7 +283,7 @@ fn dot_row_q8_0(row: &[u8], x: &[f32]) -> Result<f32> {
         q8_0_block_dequant(&row[b * 34..b * 34 + 34], &mut buf)?;
         let xb = &x[b * 32..(b + 1) * 32];
         for i in 0..32 {
-            acc += buf[i] * xb[i];
+            acc = buf[i].mul_add(xb[i], acc);
         }
     }
     Ok(acc)
@@ -139,7 +303,7 @@ fn dot_row_q6_k(row: &[u8], x: &[f32]) -> Result<f32> {
         q6_k_superblock_dequant(&row[b * 210..b * 210 + 210], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
         for i in 0..QK_K {
-            acc += buf[i] * xb[i];
+            acc = buf[i].mul_add(xb[i], acc);
         }
     }
     Ok(acc)
@@ -159,7 +323,7 @@ fn dot_row_q4_k(row: &[u8], x: &[f32]) -> Result<f32> {
         q4_k_superblock_dequant(&row[b * 144..b * 144 + 144], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
         for i in 0..QK_K {
-            acc += buf[i] * xb[i];
+            acc = buf[i].mul_add(xb[i], acc);
         }
     }
     Ok(acc)
@@ -350,6 +514,10 @@ pub fn matvec_embd_out_mmap(
     ne0: usize,
     ne1: usize,
 ) -> Result<Vec<f32>> {
+    QuantMatvecKernel::default().matvec_mmap(archive, t, x, ne0, ne1)
+}
+
+fn validate_matvec_shape(t: &GgufTensorInfo, x: &[f32], ne0: usize, ne1: usize) -> Result<()> {
     if t.dimensions.len() < 2 {
         return Err(BitNetError::InvalidGguf(
             "matvec: expected 2D tensor".into(),
@@ -363,9 +531,16 @@ pub fn matvec_embd_out_mmap(
     if x.len() != ne0 {
         return Err(BitNetError::Inference("matvec: x len".into()));
     }
-    let ty = t.ggml_type;
-    let payload = archive.tensor_payload(t)?;
-    let row_bytes = types::ggml_row_size(ty, ne0 as u64)?;
+    Ok(())
+}
+
+fn matvec_rows_scalar(
+    ty: u32,
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Result<Vec<f32>> {
     let mut y = vec![0.0f32; ne1];
     for o in 0..ne1 {
         let row_start = o * row_bytes;
@@ -373,6 +548,109 @@ pub fn matvec_embd_out_mmap(
         y[o] = dot_row(ty, row, x)?;
     }
     Ok(y)
+}
+
+fn matvec_rows_parallel(
+    ty: u32,
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    let threads = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .min(ne1.max(1));
+    if threads <= 1 {
+        return matvec_rows_scalar(ty, payload, row_bytes, x, ne1);
+    }
+    let chunk_rows = (ne1 + threads - 1) / threads;
+    let mut rows = Vec::with_capacity(threads);
+    thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for chunk_start in (0..ne1).step_by(chunk_rows) {
+            let chunk_end = (chunk_start + chunk_rows).min(ne1);
+            handles.push(scope.spawn(move || -> Result<(usize, Vec<f32>)> {
+                let mut y = vec![0.0f32; chunk_end - chunk_start];
+                for (local, o) in (chunk_start..chunk_end).enumerate() {
+                    let row_start = o * row_bytes;
+                    let row = &payload[row_start..row_start + row_bytes];
+                    y[local] = dot_row(ty, row, x)?;
+                }
+                Ok((chunk_start, y))
+            }));
+        }
+        for handle in handles {
+            match handle.join() {
+                Ok(Ok(chunk)) => rows.push(chunk),
+                Ok(Err(e)) => return Err(e),
+                Err(_) => {
+                    return Err(BitNetError::Inference(
+                        "quant matvec worker thread panicked".into(),
+                    ))
+                }
+            }
+        }
+        Ok(())
+    })?;
+    let mut y = vec![0.0f32; ne1];
+    for (start, chunk) in rows {
+        y[start..start + chunk.len()].copy_from_slice(&chunk);
+    }
+    Ok(y)
+}
+
+type CudaQuantMatvecFn =
+    unsafe extern "C" fn(*const c_void, usize, *const f32, usize, usize, *mut f32) -> i32;
+
+fn matvec_rows_cuda_quant_optional(
+    ty: u32,
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Option<Result<Vec<f32>>> {
+    let symbol = match ty {
+        2 => b"rbitnet_cuda_q4_0_matvec\0".as_slice(),
+        8 => b"rbitnet_cuda_q8_0_matvec\0".as_slice(),
+        12 => b"rbitnet_cuda_q4_k_matvec\0".as_slice(),
+        14 => b"rbitnet_cuda_q6_k_matvec\0".as_slice(),
+        _ => return None,
+    };
+    let lib = load_cuda_quant_library()?;
+    let kernel = unsafe { lib.get::<CudaQuantMatvecFn>(symbol).ok()? };
+    let mut y = vec![0.0f32; ne1];
+    let status = unsafe {
+        kernel(
+            payload.as_ptr().cast::<c_void>(),
+            row_bytes,
+            x.as_ptr(),
+            x.len(),
+            ne1,
+            y.as_mut_ptr(),
+        )
+    };
+    if status == 0 {
+        Some(Ok(y))
+    } else {
+        Some(Err(BitNetError::Inference(format!(
+            "CUDA quant matvec kernel failed for ggml_type={ty} status={status}"
+        ))))
+    }
+}
+
+fn load_cuda_quant_library() -> Option<Library> {
+    for path in [
+        "rbitnet_cuda_quant64.dll",
+        "rbitnet_cuda_quant.dll",
+        "librbitnet_cuda_quant.so",
+        "librbitnet_cuda_quant.dylib",
+    ] {
+        if let Ok(lib) = unsafe { Library::new(path) } {
+            return Some(lib);
+        }
+    }
+    None
 }
 
 /// `ffn_down`: shape `[n_ff, n_embd]` — `y[o] = dot(W[o,:], x)` for `o` in `0..n_embd`, `x.len()==n_ff`.

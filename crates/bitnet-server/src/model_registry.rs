@@ -17,6 +17,20 @@ pub struct RegistryModelEntry {
     pub tokenizer: Option<PathBuf>,
     #[serde(default)]
     pub architecture: Option<String>,
+    #[serde(default)]
+    pub backend: Option<String>,
+    #[serde(default)]
+    pub context_length: Option<u64>,
+    #[serde(default)]
+    pub chat_template: Option<String>,
+    #[serde(default)]
+    pub max_vram_mb: Option<u64>,
+    #[serde(default)]
+    pub max_ram_mb: Option<u64>,
+    #[serde(default)]
+    pub hybrid_layers: Option<String>,
+    #[serde(default)]
+    pub warmup: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]

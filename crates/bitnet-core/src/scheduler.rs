@@ -12,6 +12,15 @@ pub struct PrefillDecodeQueue {
     pub decode_seq_ids: Vec<u64>,
 }
 
+impl PrefillDecodeQueue {
+    pub fn from_batch(batch: &InferenceBatch) -> Self {
+        Self {
+            prefill_seq_ids: batch.requests.iter().map(|r| r.id).collect(),
+            decode_seq_ids: batch.requests.iter().map(|r| r.id).collect(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct InferenceRequest {
     pub prompt: String,
@@ -47,7 +56,10 @@ impl InferenceStats {
     pub fn from_phases(p: PhaseTimings, speculative_attempted: bool) -> Self {
         let itl = p.itl_us();
         let ttft_ms = p.ttft_ms();
-        let total_wall_ms = p.encode_ms.saturating_add(p.prefill_ms).saturating_add(p.decode_ms);
+        let total_wall_ms = p
+            .encode_ms
+            .saturating_add(p.prefill_ms)
+            .saturating_add(p.decode_ms);
         Self {
             ttft_ms,
             encode_ms: p.encode_ms,
@@ -74,10 +86,18 @@ impl InferenceStats {
         let encode_ms = draft.encode_ms.saturating_add(verify.encode_ms);
         let prefill_ms = draft.prefill_ms.saturating_add(verify.prefill_ms);
         let decode_ms = draft.decode_ms.saturating_add(verify.decode_ms);
-        let total_wall_ms = encode_ms.saturating_add(prefill_ms).saturating_add(decode_ms);
-        let completion_tokens = draft.completion_tokens.saturating_add(verify.completion_tokens);
+        let total_wall_ms = encode_ms
+            .saturating_add(prefill_ms)
+            .saturating_add(decode_ms);
+        let completion_tokens = draft
+            .completion_tokens
+            .saturating_add(verify.completion_tokens);
         let decode_us = decode_ms.saturating_mul(1000);
-        let itl = if completion_tokens == 0 { 0 } else { decode_us / completion_tokens as u64 };
+        let itl = if completion_tokens == 0 {
+            0
+        } else {
+            decode_us / completion_tokens as u64
+        };
         Self {
             ttft_ms,
             encode_ms,
@@ -180,10 +200,14 @@ impl ContinuousBatchScheduler {
         executor: &dyn ModelExecutor,
         batch: &InferenceBatch,
     ) -> Result<Vec<(u64, InferenceOutput)>> {
+        crate::perf::record_scheduler_batch(batch.requests.len());
+        let queue = PrefillDecodeQueue::from_batch(batch);
         if self.enabled && batch.requests.len() > 1 {
             tracing::debug!(
                 batch_len = batch.requests.len(),
-                "continuous batching: sequential wave (shared batched forward not yet implemented)"
+                prefill = ?queue.prefill_seq_ids,
+                decode = ?queue.decode_seq_ids,
+                "continuous batching: planned prefill/decode wave (shared batched forward not yet implemented)"
             );
         }
         let mut out = Vec::with_capacity(batch.requests.len());

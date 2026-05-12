@@ -35,14 +35,17 @@ pub mod llama;
 pub mod loaders;
 pub mod memory_budget;
 pub mod model;
+pub mod model_manager;
 pub mod paged_kv;
 pub mod paths;
+pub mod perf;
 pub mod prefix_kv;
 pub mod qwen3;
 pub mod qwen35;
 pub mod registry;
 pub mod sampling;
 pub mod scheduler;
+pub mod scratch;
 pub mod timings;
 
 pub use backend::CudaRuntime;

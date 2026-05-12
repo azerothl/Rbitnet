@@ -279,12 +279,14 @@ async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let mut text = state.metrics.prometheus_text();
+    text.push_str(&bitnet_core::perf::prometheus_text());
     (
         [(
             axum::http::header::CONTENT_TYPE,
             HeaderValue::from_static("text/plain; version=0.0.4"),
         )],
-        state.metrics.prometheus_text(),
+        text,
     )
 }
 
@@ -323,6 +325,16 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
                         "quantization": null,
                         "backend": active_metadata.backend,
                         "backend_accelerated": active_metadata.backend_accelerated,
+                        "profile": {
+                            "backend": entry.backend.as_deref(),
+                            "context_length": entry.context_length,
+                            "chat_template": entry.chat_template.as_deref(),
+                            "max_vram_mb": entry.max_vram_mb,
+                            "max_ram_mb": entry.max_ram_mb,
+                            "hybrid_layers": entry.hybrid_layers.as_deref(),
+                            "warmup": entry.warmup
+                        },
+                        "perf": serde_json::Value::Null,
                         "ready": false,
                         "loaded": false,
                         "tokenizer_path": entry.tokenizer.as_ref().map(|p| redact_display_path(&p.display().to_string()))

@@ -363,6 +363,7 @@ impl CudaRuntime {
         if ok {
             self.upload_bytes
                 .fetch_add(nbytes as u64, Ordering::Relaxed);
+            crate::perf::record_gpu_transfer(nbytes as u64, 0, 0);
         }
         ok
     }
@@ -373,6 +374,7 @@ impl CudaRuntime {
         if ok {
             self.download_bytes
                 .fetch_add(nbytes as u64, Ordering::Relaxed);
+            crate::perf::record_gpu_transfer(0, nbytes as u64, 0);
         }
         ok
     }
@@ -428,6 +430,7 @@ impl CudaRuntime {
         let ok = status == CUBLAS_STATUS_SUCCESS;
         if ok {
             self.gemv_calls.fetch_add(1, Ordering::Relaxed);
+            crate::perf::record_gpu_transfer(0, 0, 1);
         }
         ok
     }

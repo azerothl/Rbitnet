@@ -220,10 +220,13 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_TEST_GGUF` | Used only by the `optional_gguf_from_env_smoke` test in `bitnet-core`. |
 | `RBITNET_CACHE_OUTPUT_F32` | **Default on** for the experimental **`qwen35moe`** CUDA path: load `output.weight` / `lm_head` as F32 once and reuse for logits (much lower per-token dequant overhead). Costs extra **host RAM** on the order of `vocab × hidden × 4` bytes. Set to `0`, `false`, or `no` to keep weights quantized in memory during logits (slower logits, less RAM). |
 | `RBITNET_BACKEND=hybrid` | CPU/GPU hybrid mode for Llama-lineage GGUFs. The CPU keeps orchestration and fallback while selected f32-dequantized layer weights are uploaded once to CUDA device buffers. |
+| `RBITNET_QUANT_KERNEL` | Quantized matvec backend: `auto` (CPU parallel), `scalar`, or `cuda` to call optional `rbitnet_cuda_quant*` native symbols for `Q4_K`, `Q6_K`, `Q4_0`, and `Q8_0` with CPU fallback. |
+| `RBITNET_QUANT_PAR_MIN_ROWS` | Output-row threshold for CPU parallel quant matvec (default `256`). |
 | `RBITNET_HYBRID_LAYERS` | Optional comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, early layers are selected within `RBITNET_HYBRID_MAX_VRAM_MB`. |
 | `RBITNET_HYBRID_MAX_VRAM_MB` | Soft upload budget for automatic hybrid layer selection (default `512`). |
 | `RBITNET_HYBRID_MIN_ROWS` | Minimum matrix output rows for hybrid upload (default `512`). Smaller matrices stay on CPU. |
 | `RBITNET_HYBRID_OUTPUT` | Set to `1` to try offloading the Llama output head. This can consume substantial VRAM. |
+| `RBITNET_KV_BACKEND` | KV backend hint: `cpu` by default; `gpu`/`cuda` marks paged KV as GPU-planned while preserving CPU fallback. |
 | `RBITNET_PREFILL_CHUNK_TOKENS` | Positive integer (default `128`). Llama and Qwen35 runtimes process the prompt prefill in slices of this many tokens (cancellation granularity and scheduling hooks). Each slice still runs **one forward step per token**; this is **not** batched-matrix multi-token prefill as in large serving stacks. |
 | `RBITNET_PREFIX_CACHE` | `1` / `true` / `yes` enables an **exact-match cache of prior completions**: same prompt string, `max_tokens`, and `temperature`. This is **not** Hugging Face / OpenAI–style **prompt caching** that reuses **KV blocks** for a shared prefix across requests. See [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | LRU-ish cap for prefix-cache entries (default `64`). |

@@ -8,6 +8,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use crate::backend::BackendKind;
 use crate::error::{BitNetError, Result};
@@ -38,6 +39,7 @@ pub struct EngineModelMetadata {
     pub backend: String,
     pub backend_accelerated: bool,
     pub hybrid_offload: Option<String>,
+    pub perf: crate::perf::PerfSnapshot,
     pub ready: bool,
     pub tensor_count: Option<usize>,
 }
@@ -116,6 +118,7 @@ fn validate_model_path_for_gguf(p: &Path) -> Result<()> {
 impl Engine {
     /// Load from env: optional GGUF path, optional toy LM.
     pub fn from_env() -> Result<Self> {
+        let load_start = Instant::now();
         let model_path = model_path_from_env();
         let tokenizer_dir =
             tokenizer_dir_for_load(model_path.as_deref(), tokenizer_path_from_env().as_deref());
@@ -162,7 +165,7 @@ impl Engine {
             stub,
             toy.is_some(),
         )?;
-        Ok(Self {
+        let engine = Self {
             inner: Arc::new(EngineInner {
                 model_path,
                 tokenizer_dir,
@@ -179,11 +182,14 @@ impl Engine {
                 _paged_kv: paged_kv,
                 executor,
             }),
-        })
+        };
+        crate::perf::record_model_load(load_start.elapsed().as_millis() as u64);
+        Ok(engine)
     }
 
     /// Load and parse a GGUF path.
     pub fn load_path(path: &Path) -> Result<Self> {
+        let load_start = Instant::now();
         let gguf = Arc::new(GgufArchive::mmap_path(path)?);
         check_load_memory_budget(gguf.as_ref())?;
         let backend_kind = BackendKind::from_env();
@@ -197,7 +203,7 @@ impl Engine {
             false,
             false,
         )?;
-        Ok(Self {
+        let engine = Self {
             inner: Arc::new(EngineInner {
                 model_path,
                 tokenizer_dir,
@@ -214,7 +220,9 @@ impl Engine {
                 _paged_kv: PagedKvCache::from_env(),
                 executor,
             }),
-        })
+        };
+        crate::perf::record_model_load(load_start.elapsed().as_millis() as u64);
+        Ok(engine)
     }
 
     /// Load a single GGUF file with optional tokenizer path and architecture slug overrides.
@@ -227,6 +235,7 @@ impl Engine {
         tokenizer_override: Option<&Path>,
         architecture_override: Option<&str>,
     ) -> Result<Self> {
+        let load_start = Instant::now();
         validate_model_path_for_gguf(path)?;
         if let Some(t) = tokenizer_override {
             crate::paths::validate_no_parent_components(t)?;
@@ -244,7 +253,7 @@ impl Engine {
             tokenizer_override,
             architecture_override,
         )?;
-        Ok(Self {
+        let engine = Self {
             inner: Arc::new(EngineInner {
                 model_path,
                 tokenizer_dir,
@@ -261,7 +270,9 @@ impl Engine {
                 _paged_kv: PagedKvCache::from_env(),
                 executor: Some(executor),
             }),
-        })
+        };
+        crate::perf::record_model_load(load_start.elapsed().as_millis() as u64);
+        Ok(engine)
     }
 
     pub fn has_gguf(&self) -> bool {
@@ -297,6 +308,7 @@ impl Engine {
                 .executor
                 .as_ref()
                 .and_then(|e| e.offload_metadata()),
+            perf: crate::perf::snapshot(),
             ready: self.is_ready(),
             tensor_count: gguf.map(|g| g.tensor_count()),
         }

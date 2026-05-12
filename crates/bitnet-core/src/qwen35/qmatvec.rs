@@ -1,7 +1,7 @@
 //! Quantised matmul for GGUF-packed weights (row-major stripes along `ne[0]`).
 
 use crate::error::{BitNetError, Result};
-use crate::ggml::{ggml_row_size, tensor_to_f32};
+use crate::ggml::{ggml_row_size, matvec_payload_quant, tensor_to_f32};
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 
 /// Embedding row `token_embd[token_id]` for matrix `[ne0=n_embd, ne1=vocab]` (Llama GGUF convention).
@@ -66,15 +66,7 @@ pub fn quant_matmul_vec(
             ));
         }
     }
-    let mut y = Vec::with_capacity(ne1);
-    for j in 0..ne1 {
-        let row_start = j * stride;
-        let slice = &payload[row_start..row_start + stride];
-        let row = tensor_to_f32(slice, ggml_ty, &[ne0 as u64])?;
-        let dot: f32 = row.iter().zip(x.iter()).map(|(wi, xi)| wi * xi).sum();
-        y.push(dot);
-    }
-    Ok(y)
+    matvec_payload_quant(ggml_ty, &payload[..need], x, ne0, ne1)
 }
 
 /// Matmul for slab `payload[slice_start..]` covering `[ne0, ne1]`.

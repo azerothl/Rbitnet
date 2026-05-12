@@ -9,6 +9,7 @@ use crate::ggml::{
     tensor_to_f32,
 };
 use crate::gguf::{GgufArchive, GgufTensorInfo};
+use crate::scratch::ScratchArena;
 
 use super::config::LlamaConfig;
 use super::kv_storage::{KvCache, KvStorage};
@@ -980,6 +981,18 @@ impl LlamaModel {
         pos: usize,
         backend: &dyn ComputeBackend,
     ) -> Result<Vec<f32>> {
+        let mut scratch = ScratchArena::default();
+        self.forward_with_backend_and_scratch(kv, token, pos, backend, &mut scratch)
+    }
+
+    pub fn forward_with_backend_and_scratch(
+        &self,
+        kv: &mut KvStorage,
+        token: u32,
+        pos: usize,
+        backend: &dyn ComputeBackend,
+        scratch: &mut ScratchArena,
+    ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         if pos >= cfg.max_seq {
             return Err(BitNetError::Inference(
@@ -992,7 +1005,7 @@ impl LlamaModel {
         }
 
         let n_embd = cfg.n_embd;
-        let mut x = vec![0.0f32; n_embd];
+        let mut x = scratch.take(n_embd);
         self.token_embd
             .embed_row(tok, n_embd, cfg.n_vocab, &mut x)?;
 
@@ -1023,32 +1036,40 @@ impl LlamaModel {
             let stride = cfg.n_kv * cfg.head_dim;
             kv.write_layer_kv(il, pos, &k_heads, &v, stride)?;
 
-            let mut attn_out = vec![0.0f32; n_embd];
+            let mut attn_out = scratch.take(n_embd);
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
 
             for qh in 0..cfg.n_head {
                 let kv_h = qh / n_rep;
                 let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                let mut scores: Vec<f32> = if backend.kind() == crate::backend::BackendKind::Cpu {
-                    (0..=pos)
-                        .map(|p| {
-                            let k_slice = kv.k_head_slice(il, p, kv_h, cfg.head_dim, stride);
-                            let dot: f32 =
-                                q_slice.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
-                            dot * scale
-                        })
-                        .collect()
+                let mut scores: Vec<f32> = if matches!(
+                    backend.kind(),
+                    crate::backend::BackendKind::Cpu | crate::backend::BackendKind::Hybrid
+                ) {
+                    let mut scores = scratch.take(pos + 1);
+                    kv.attention_scores_cpu(
+                        il,
+                        pos,
+                        kv_h,
+                        cfg.head_dim,
+                        stride,
+                        q_slice,
+                        scale,
+                        &mut scores,
+                    );
+                    scores
                 } else {
-                    let mut k_mat = vec![0.0f32; (pos + 1) * cfg.head_dim];
+                    let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
                     kv.fill_k_rows_gpu(il, pos, kv_h, cfg.head_dim, stride, &mut k_mat);
                     let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
+                    scratch.recycle(k_mat);
                     for v in &mut s {
                         *v *= scale;
                     }
                     s
                 };
                 softmax_inplace(&mut scores);
-                let mut comb = vec![0.0f32; cfg.head_dim];
+                let mut comb = scratch.take(cfg.head_dim);
                 for p in 0..=pos {
                     let v_slice = kv.v_head_slice(il, p, kv_h, cfg.head_dim, stride);
                     let sp = scores[p];
@@ -1058,9 +1079,12 @@ impl LlamaModel {
                 }
                 let dst = qh * cfg.head_dim;
                 attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
+                scratch.recycle(scores);
+                scratch.recycle(comb);
             }
 
             let y = layer.wo.matvec_embd_out(&attn_out, n_embd, n_embd)?;
+            scratch.recycle(attn_out);
             for i in 0..n_embd {
                 x[i] += y[i];
             }
@@ -1068,17 +1092,20 @@ impl LlamaModel {
             let h2 = rmsnorm(&x, &layer.ffn_norm, cfg.norm_eps);
             let gate = silu(&layer.ffn_gate.matvec_embd_out(&h2, n_embd, cfg.n_ff)?);
             let up = layer.ffn_up.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
-            let mut tmp = vec![0.0f32; cfg.n_ff];
+            let mut tmp = scratch.take(cfg.n_ff);
             for i in 0..cfg.n_ff {
                 tmp[i] = gate[i] * up[i];
             }
             let y2 = layer.ffn_down.matvec_ff(&tmp, cfg.n_ff, n_embd)?;
+            scratch.recycle(tmp);
             for i in 0..n_embd {
                 x[i] += y2[i];
             }
         }
 
         let xn = rmsnorm(&x, &self.output_norm, cfg.norm_eps);
-        self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab)
+        let logits = self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab);
+        scratch.recycle(x);
+        logits
     }
 }

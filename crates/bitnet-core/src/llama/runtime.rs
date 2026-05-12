@@ -12,6 +12,7 @@ use crate::error::Result;
 use crate::gguf::GgufArchive;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::{sample_token, SamplingOptions};
+use crate::scratch::ScratchArena;
 use crate::timings::PhaseTimings;
 
 use crate::paged_kv::PagedKvCache;
@@ -27,6 +28,7 @@ pub struct LlamaRuntime {
     kv: KvStorage,
     backend: Box<dyn ComputeBackend>,
     prefill_chunk_tokens: usize,
+    scratch: ScratchArena,
 }
 
 impl LlamaRuntime {
@@ -50,6 +52,7 @@ impl LlamaRuntime {
             kv,
             backend,
             prefill_chunk_tokens,
+            scratch: ScratchArena::default(),
         })
     }
 
@@ -89,11 +92,12 @@ impl LlamaRuntime {
             let chunk_base = chunk_idx * chunk_sz;
             for (idx, &tid) in chunk.iter().enumerate() {
                 let pos = chunk_base + idx;
-                logits = self.model.forward_with_backend(
+                logits = self.model.forward_with_backend_and_scratch(
                     &mut self.kv,
                     tid,
                     pos,
                     self.backend.as_ref(),
+                    &mut self.scratch,
                 )?;
             }
         }
@@ -112,11 +116,12 @@ impl LlamaRuntime {
                 break;
             }
             gen.push(next_id);
-            logits = self.model.forward_with_backend(
+            logits = self.model.forward_with_backend_and_scratch(
                 &mut self.kv,
                 next_id,
                 pos,
                 self.backend.as_ref(),
+                &mut self.scratch,
             )?;
             pos += 1;
         }

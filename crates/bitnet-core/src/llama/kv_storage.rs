@@ -4,6 +4,23 @@ use crate::error::{BitNetError, Result};
 
 use super::config::LlamaConfig;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum KvBackendKind {
+    DenseCpu,
+    PagedCpu,
+    PagedGpuPlanned,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize)]
+pub struct KvBackendStats {
+    pub backend: &'static str,
+    pub page_tokens: Option<usize>,
+    pub max_pages: Option<usize>,
+    pub physical_pages: usize,
+    pub new_phys_pages: usize,
+    pub reused_phys_pages: usize,
+}
+
 /// Dense per-layer KV buffer (legacy layout).
 pub struct KvCache {
     /// Per layer: flattened `k` / `v` with stride `n_kv * head_dim` per sequence position.
@@ -220,9 +237,22 @@ impl KvStorage {
                 let off = pos * stride;
                 kv.k[layer][off..off + stride].copy_from_slice(k);
                 kv.v[layer][off..off + stride].copy_from_slice(v);
+                crate::perf::record_kv_write(
+                    2usize
+                        .saturating_mul(stride)
+                        .saturating_mul(std::mem::size_of::<f32>()),
+                );
                 Ok(())
             }
-            Self::Paged(p) => p.write_kv_layer(layer, pos, k, v),
+            Self::Paged(p) => {
+                p.write_kv_layer(layer, pos, k, v)?;
+                crate::perf::record_kv_write(
+                    2usize
+                        .saturating_mul(stride)
+                        .saturating_mul(std::mem::size_of::<f32>()),
+                );
+                Ok(())
+            }
         }
     }
 
@@ -274,6 +304,64 @@ impl KvStorage {
             let row_off = p * head_dim;
             let src = self.k_head_slice(layer, p, kv_head, head_dim, stride);
             dst[row_off..row_off + head_dim].copy_from_slice(src);
+        }
+    }
+
+    pub fn attention_scores_cpu(
+        &self,
+        layer: usize,
+        pos: usize,
+        kv_head: usize,
+        head_dim: usize,
+        stride: usize,
+        q: &[f32],
+        scale: f32,
+        out: &mut [f32],
+    ) {
+        for p in 0..=pos {
+            let k_slice = self.k_head_slice(layer, p, kv_head, head_dim, stride);
+            let dot: f32 = q.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
+            out[p] = dot * scale;
+        }
+    }
+
+    pub fn backend_kind(&self) -> KvBackendKind {
+        match self {
+            Self::Dense(_) => KvBackendKind::DenseCpu,
+            Self::Paged(_) => {
+                if matches!(
+                    std::env::var("RBITNET_KV_BACKEND").as_deref(),
+                    Ok("gpu") | Ok("cuda")
+                ) {
+                    KvBackendKind::PagedGpuPlanned
+                } else {
+                    KvBackendKind::PagedCpu
+                }
+            }
+        }
+    }
+
+    pub fn stats(&self) -> KvBackendStats {
+        match self {
+            Self::Dense(kv) => KvBackendStats {
+                backend: "dense_cpu",
+                physical_pages: kv.k.len(),
+                ..Default::default()
+            },
+            Self::Paged(p) => {
+                let pool = p.pool_stats();
+                KvBackendStats {
+                    backend: match self.backend_kind() {
+                        KvBackendKind::PagedGpuPlanned => "paged_gpu_planned",
+                        _ => "paged_cpu",
+                    },
+                    page_tokens: Some(p.page_tokens()),
+                    max_pages: Some(p.max_pages()),
+                    physical_pages: p.physical_counts().iter().sum(),
+                    new_phys_pages: pool.new_phys_pages,
+                    reused_phys_pages: pool.reused_phys_pages,
+                }
+            }
         }
     }
 

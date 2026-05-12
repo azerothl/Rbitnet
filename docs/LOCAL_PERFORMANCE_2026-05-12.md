@@ -65,6 +65,46 @@ from about 44 seconds to about 37 seconds. TinyLlama remains better on CPU
 because it is too small to amortize the GPU work. Mistral 7B needs more tuning:
 one offloaded f32 layer is slower than both CPU and CUDA MVP.
 
+## Optimization Phase Notes
+
+After the hybrid baseline, the engine now has an instrumented quantized matvec
+interface shared by Llama, Mistral, Qwen3 and Qwen35. `RBITNET_QUANT_KERNEL=auto`
+uses a CPU parallel path for large row counts; `RBITNET_QUANT_KERNEL=cuda` can
+dispatch to optional native `rbitnet_cuda_quant*` kernels when present and falls
+back to CPU otherwise. `/metrics` now includes core counters for quant matvec
+calls/time, GPU transfer bytes, scratch arena reuse, KV writes, scheduler batch
+waves and model load time.
+
+The next benchmark pass should compare the rows above with:
+
+```powershell
+$env:RBITNET_QUANT_KERNEL = "auto"
+$env:RBITNET_QUANT_PAR_MIN_ROWS = "256"
+# Optional native ABI path if rbitnet_cuda_quant*.dll is available:
+# $env:RBITNET_QUANT_KERNEL = "cuda"
+```
+
+Expected first-order effect: CPU and hybrid paths should benefit most on large
+matrices (`Llama 3.2 3B`, `Mistral 7B`, `Qwen3 4B`, `Qwen35`) because quantized
+matvec no longer has to stay purely scalar row-by-row.
+
+### Quant Kernel Auto Smoke
+
+Release build after the quant-kernel interface and scratch/KV instrumentation:
+
+| Model | Backend | Settings | Result |
+|-------|---------|----------|--------|
+| TinyLlama 1.1B Chat Q4_K_M | CPU | `RBITNET_QUANT_KERNEL=auto`, 4 tokens | 11.67 s total; prefill 6909 ms; decode 4610 ms; TPOT 1.15 s/token; 1550 quant matvec calls |
+| Llama 3.2 3B Instruct Q4_K_M | Hybrid layer `0` | `RBITNET_QUANT_KERNEL=auto`, 2 tokens | 27.68 s total; prefill 19460 ms; decode 6453 ms; TPOT 3.23 s/token; 1520 quant matvec calls |
+| Mistral 7B Instruct v0.2 Q4_K_M | Hybrid layer `0` | `RBITNET_QUANT_KERNEL=auto`, 2 tokens | 62.23 s total; prefill 46283 ms; decode 14542 ms; TPOT 7.27 s/token; 1744 quant matvec calls |
+| Qwen3 4B Q4_K_M | Hybrid fallback | `RBITNET_QUANT_KERNEL=auto`, 1 token | 29.07 s total; prefill 23549 ms; decode 4341 ms; TPOT 4.34 s/token; 1518 quant matvec calls |
+
+This phase materially improves the previous hybrid smoke on Llama 3.2 3B
+(`36.89 s -> 27.68 s`), Mistral 7B (`101.76 s -> 62.23 s`), and Qwen3 4B
+(`37.98 s -> 29.07 s`). TinyLlama stays roughly flat, which matches the earlier
+observation that small models are dominated by fixed overhead and have less room
+to amortize parallel matvec work.
+
 Mistral Q2_K is not a safe optimization shortcut today. Although the file is
 smaller than Q4_K_M, the tested path either timed out or hit quantization
 handling issues, so it should not be promoted as a recommended CPU model until
