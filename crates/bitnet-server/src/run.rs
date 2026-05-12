@@ -124,7 +124,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
 
     let (app, app_state) = app_factory();
 
-    if let Some(reg) = app_state.registry.as_ref() {
+    if let Some(reg) = app_state.registry.read().await.as_ref() {
         info!(
             models = ?reg.models.keys().collect::<Vec<_>>(),
             "multi-model registry: chat `model` selects GGUF; initial load follows default / RBITNET_ACTIVE_MODEL_ID"
@@ -172,7 +172,7 @@ fn spawn_idle_unload_watcher(state: AppState, idle_secs: u64) {
                 let mut lid = state.loaded_registry_model_id.write().await;
                 *lid = None;
             }
-            if state.registry.is_none() {
+            if state.registry.read().await.is_none() {
                 let mut exp = state.expected_request_model_id.write().await;
                 *exp = None;
             }

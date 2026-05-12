@@ -18,8 +18,9 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CORS_ANY` | flag | off | If `1`, allow any origin on CORS (dev-style). |
 | `RBITNET_MODEL_REGISTRY` | path | (none) | JSON registry for multi-model; see [USAGE.md](USAGE.md). |
 | `RBITNET_ACTIVE_MODEL_ID` | string | (none) | Registry key when JSON has no `default`. |
-| `RBITNET_ADMIN_TOKEN` | string | (none) | Enables `POST /v1/admin/unload` with matching header. |
+| `RBITNET_ADMIN_TOKEN` | string | (none) | Enables `POST /v1/admin/unload` and `POST /v1/admin/reload` with matching header. |
 | `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, swap engine for stub to free mmap. |
+| `RBITNET_CHAT_BASE_URL` | URL | `http://127.0.0.1:8080/v1` | Default base URL for `rbitnet chat`; `/v1` is appended when omitted. |
 
 ## Runner proxy (`rbitnet-proxy`)
 

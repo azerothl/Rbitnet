@@ -2,6 +2,7 @@
 
 mod bitnet_install;
 mod catalog;
+mod chat_tui;
 mod download;
 mod hf_search;
 mod hub_http;
@@ -53,6 +54,8 @@ enum Commands {
     Serve(ServeCmd),
     /// Run the server and open the bundled local web UI.
     Ui(UiCmd),
+    /// Open a terminal chatbot for quick inference tests.
+    Chat(ChatCmd),
 }
 
 #[derive(Args)]
@@ -76,6 +79,81 @@ struct UiCmd {
     /// Listen address host:port (only if `RBITNET_BIND` is not already set).
     #[arg(long, env = "RBITNET_BIND")]
     bind: Option<String>,
+}
+
+#[derive(Args)]
+struct ChatCmd {
+    /// OpenAI-compatible base URL. `/v1` is added when omitted.
+    #[arg(
+        long,
+        env = "RBITNET_CHAT_BASE_URL",
+        default_value = "http://127.0.0.1:8080/v1"
+    )]
+    base_url: String,
+    /// Model id sent in chat requests.
+    #[arg(long)]
+    model: Option<String>,
+    /// API key for protected `/v1/*` routes.
+    #[arg(long, env = "RBITNET_API_KEY")]
+    api_key: Option<String>,
+    /// Admin token for reload/unload actions.
+    #[arg(long, env = "RBITNET_ADMIN_TOKEN")]
+    admin_token: Option<String>,
+    /// Launch and manage a local `rbitnet-server` child process.
+    #[arg(long)]
+    serve: bool,
+    /// Listen address for `--serve`.
+    #[arg(long, env = "RBITNET_BIND", default_value = "127.0.0.1:8080")]
+    bind: String,
+    /// Server binary used by `--serve` (defaults to sibling `rbitnet-server`).
+    #[arg(long)]
+    server_bin: Option<PathBuf>,
+    /// GGUF path passed to the managed server.
+    #[arg(long = "model-path", env = "RBITNET_MODEL")]
+    model_path: Option<PathBuf>,
+    /// Tokenizer path passed to the managed server.
+    #[arg(long, env = "RBITNET_TOKENIZER")]
+    tokenizer: Option<PathBuf>,
+    /// Chat format passed to the managed server.
+    #[arg(long, env = "RBITNET_CHAT_FORMAT")]
+    chat_format: Option<String>,
+    /// Initial max_tokens.
+    #[arg(long, default_value_t = 64)]
+    max_tokens: u32,
+    /// Initial temperature.
+    #[arg(long, default_value_t = 0.7)]
+    temperature: f32,
+    /// Initial top_p.
+    #[arg(long)]
+    top_p: Option<f32>,
+    /// Optional seed.
+    #[arg(long)]
+    seed: Option<u64>,
+    /// Append prompt/reply rows as JSONL.
+    #[arg(long)]
+    transcript: Option<PathBuf>,
+}
+
+impl From<ChatCmd> for chat_tui::ChatOptions {
+    fn from(cmd: ChatCmd) -> Self {
+        Self {
+            base_url: cmd.base_url,
+            model: cmd.model,
+            api_key: cmd.api_key,
+            admin_token: cmd.admin_token,
+            serve: cmd.serve,
+            bind: cmd.bind,
+            server_bin: cmd.server_bin,
+            model_path: cmd.model_path,
+            tokenizer: cmd.tokenizer,
+            chat_format: cmd.chat_format,
+            max_tokens: cmd.max_tokens,
+            temperature: cmd.temperature,
+            top_p: cmd.top_p,
+            seed: cmd.seed,
+            transcript: cmd.transcript,
+        }
+    }
 }
 
 #[derive(Args)]
@@ -288,9 +366,11 @@ fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
     for component in rel.components() {
         match component {
             std::path::Component::Normal(_) | std::path::Component::CurDir => {}
-            _ => return Err(format!(
+            _ => {
+                return Err(format!(
                 "unsafe path component in '{file}': only relative paths without '..' are allowed"
-            )),
+            ))
+            }
         }
     }
     Ok(dir.join(rel))
@@ -979,6 +1059,7 @@ async fn main() {
             open_url_in_browser_soon(url);
             bitnet_server::run_server().await.map_err(|e| e.to_string())
         }
+        Commands::Chat(cmd) => chat_tui::run_chat_tui(cmd.into()),
     };
 
     if let Err(e) = result {

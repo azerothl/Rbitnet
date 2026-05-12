@@ -64,6 +64,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models inspect <PATH>` | Inspect a local model file or directory and print model, tokenizer, and template-source paths. |
 | `rbitnet models rm <PATH> --yes` | Remove a local model file or directory. The command refuses deletion without `--yes`. Alias: `models remove`. |
 | `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). |
+| `rbitnet chat` | Terminal chatbot TUI for fast local tests. Connects to an existing server with `--base-url`, or launches one with `--serve`. |
 | `rbitnet-proxy` | Parent OpenAI-compatible proxy. Requires `RBITNET_MODEL_REGISTRY`; spawns one native `rbitnet-runner` child per requested model id. No external inference engine is required. |
 
 **Compatibility:** Only entries in the **curated** list are maintained for Rbitnet testing. Search hits are **best-effort** Hub results based on `.gguf` file presence only. **Important:** `.gguf` does **not** imply BitNet 1-bit weights nor guaranteed Rbitnet compatibility.
@@ -181,6 +182,96 @@ curl -s http://127.0.0.1:8080/v1/models
 ```
 
 Use the reported `id` (for example `rbitnet-llama` when `general.architecture` is `llama`) as the `model` field in chat requests.
+
+## Hot Reload and Terminal Chat TUI
+
+Set `RBITNET_ADMIN_TOKEN` to enable runtime model management without restarting
+the server process:
+
+```powershell
+$env:RBITNET_ADMIN_TOKEN = "dev-secret"
+```
+
+Unload the active model and keep the HTTP process alive:
+
+```powershell
+Invoke-WebRequest `
+  "http://127.0.0.1:8080/v1/admin/unload" `
+  -Method POST `
+  -Headers @{ "X-Rbitnet-Admin-Token" = "dev-secret" }
+```
+
+Reload the current env/config model:
+
+```powershell
+Invoke-WebRequest `
+  "http://127.0.0.1:8080/v1/admin/reload" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers @{ "X-Rbitnet-Admin-Token" = "dev-secret" } `
+  -Body "{}"
+```
+
+Reload a registry model:
+
+```powershell
+Invoke-WebRequest `
+  "http://127.0.0.1:8080/v1/admin/reload" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers @{ "X-Rbitnet-Admin-Token" = "dev-secret" } `
+  -Body '{"active_model_id":"tiny"}'
+```
+
+Reload a single GGUF path:
+
+```powershell
+Invoke-WebRequest `
+  "http://127.0.0.1:8080/v1/admin/reload" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers @{ "X-Rbitnet-Admin-Token" = "dev-secret" } `
+  -Body '{"model":"C:/models/tiny.gguf","tokenizer":"C:/models/tokenizer.json","architecture":"llama"}'
+```
+
+Metrics include `rbitnet_model_reloads_total`,
+`rbitnet_model_reload_failures_total`, and `rbitnet_model_reload_ms_sum`.
+
+### `rbitnet chat`
+
+Connect to an already running server:
+
+```powershell
+cargo run -p rbitnet-cli -- chat `
+  --base-url http://127.0.0.1:8080/v1 `
+  --model rbitnet-llama `
+  --admin-token dev-secret
+```
+
+Launch a managed local server and open the TUI:
+
+```powershell
+cargo run -p rbitnet-cli -- chat --serve `
+  --model-path C:\models\tiny.gguf `
+  --tokenizer C:\models\tokenizer.json `
+  --chat-format raw `
+  --admin-token dev-secret
+```
+
+Useful keys in the TUI:
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send the current prompt. |
+| `Ctrl+R` | Call `POST /v1/admin/reload`. |
+| `Ctrl+U` | Call `POST /v1/admin/unload`. |
+| `m` | Fetch `/v1/models` and show model ids in the status bar. |
+| `F2` / `F3` | Decrease / increase `max_tokens`. |
+| `-` / `+` | Decrease / increase `temperature`. |
+| `q` with empty prompt or `Ctrl+C` | Quit. |
+
+Use `--transcript chat.jsonl` to append prompt/reply rows for quick regression
+checks.
 
 **Chat completion (non-streaming):**
 

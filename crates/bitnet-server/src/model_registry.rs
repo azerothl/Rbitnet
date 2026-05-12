@@ -50,28 +50,37 @@ pub struct ModelRegistry {
 }
 
 impl ModelRegistry {
+    pub fn load_path(path: impl Into<PathBuf>) -> Result<(Arc<Self>, Option<String>), String> {
+        let path = path.into();
+        if !path.is_file() {
+            return Err(format!("model registry is not a file: {}", path.display()));
+        }
+        let text =
+            std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
+        let reg: RegistryFile =
+            serde_json::from_str(&text).map_err(|e| format!("registry JSON: {e}"))?;
+        Ok((
+            Arc::new(ModelRegistry {
+                default_model: reg.default_model.clone(),
+                models: reg.models,
+            }),
+            reg.default_model,
+        ))
+    }
+
     /// Read and parse the registry file from `RBITNET_MODEL_REGISTRY`, or `Ok(None)` if unset.
     pub fn load_from_env() -> Result<Option<(Arc<Self>, String)>, String> {
         let path = match std::env::var("RBITNET_MODEL_REGISTRY") {
             Ok(p) if !p.trim().is_empty() => PathBuf::from(p.trim()),
             _ => return Ok(None),
         };
-        if !path.is_file() {
-            return Err(format!(
-                "RBITNET_MODEL_REGISTRY is not a file: {}",
-                path.display()
-            ));
-        }
-        let text =
-            std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
-        let reg: RegistryFile =
-            serde_json::from_str(&text).map_err(|e| format!("registry JSON: {e}"))?;
+        let (reg, default_model) = Self::load_path(path)?;
 
         let active = std::env::var("RBITNET_ACTIVE_MODEL_ID")
             .ok()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .or(reg.default_model.clone())
+            .or(default_model)
             .ok_or_else(|| {
                 "RBITNET_MODEL_REGISTRY is set: define \"default\" in JSON or set RBITNET_ACTIVE_MODEL_ID"
                     .to_string()
@@ -81,10 +90,6 @@ impl ModelRegistry {
             return Err(format!("registry: unknown model id '{active}'"));
         }
 
-        let mr = ModelRegistry {
-            default_model: reg.default_model,
-            models: reg.models,
-        };
-        Ok(Some((Arc::new(mr), active)))
+        Ok(Some((reg, active)))
     }
 }

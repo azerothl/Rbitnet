@@ -10,6 +10,7 @@ mod run;
 pub use run::run_server;
 
 use std::convert::Infallible;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -36,6 +37,7 @@ use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
+use config::apply_runtime_config_env;
 pub use config::ServerConfig;
 use metrics::ServerMetrics;
 pub use model_registry::ModelRegistry;
@@ -50,7 +52,7 @@ pub struct AppState {
     /// When `Some` and [`AppState::registry`] is `None`, `/v1/chat/completions` must use this exact `model` string.
     pub expected_request_model_id: Arc<RwLock<Option<String>>>,
     /// When set, `model` must be a key in this registry and weights are loaded per request id.
-    pub registry: Option<Arc<ModelRegistry>>,
+    pub registry: Arc<RwLock<Option<Arc<ModelRegistry>>>>,
     /// Which registry key’s GGUF is currently in [`AppState::engine`] (`None` after stub unload).
     pub loaded_registry_model_id: Arc<RwLock<Option<String>>>,
     pub last_inference_activity_ms: Arc<AtomicU64>,
@@ -82,7 +84,7 @@ pub fn build_app_state_with_registry(
         metrics: Arc::new(ServerMetrics::default()),
         semaphore: Arc::new(Semaphore::new(max_concurrent)),
         expected_request_model_id: Arc::new(RwLock::new(expected_request_model_id)),
-        registry,
+        registry: Arc::new(RwLock::new(registry)),
         loaded_registry_model_id: Arc::new(RwLock::new(loaded_registry_model_id)),
         last_inference_activity_ms: Arc::new(AtomicU64::new(crate::unix_now_ms())),
     }
@@ -169,7 +171,8 @@ fn router_with_state(state: AppState, max_body_bytes: usize) -> Router {
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
         .route("/v1/completions", post(completions))
-        .route("/v1/admin/unload", post(admin_unload));
+        .route("/v1/admin/unload", post(admin_unload))
+        .route("/v1/admin/reload", post(admin_reload));
 
     Router::new()
         .merge(public)
@@ -301,7 +304,8 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
     if let Err(r) = check_auth(&state, &headers) {
         return *r;
     }
-    if let Some(reg) = &state.registry {
+    let registry = state.registry.read().await.clone();
+    if let Some(reg) = registry {
         let mut ids: Vec<&String> = reg.models.keys().collect();
         ids.sort();
         let loaded_id = state.loaded_registry_model_id.read().await.clone();
@@ -451,7 +455,7 @@ async fn admin_unload(
         let mut lid = state.loaded_registry_model_id.write().await;
         *lid = None;
     }
-    if state.registry.is_none() {
+    if state.registry.read().await.is_none() {
         let mut exp = state.expected_request_model_id.write().await;
         *exp = None;
     }
@@ -460,6 +464,207 @@ async fn admin_unload(
         .model_unloads_total
         .fetch_add(1, Ordering::Relaxed);
     Ok((StatusCode::OK, "unloaded\n").into_response())
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AdminReloadRequest {
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub tokenizer: Option<String>,
+    #[serde(default)]
+    pub architecture: Option<String>,
+    #[serde(default)]
+    pub registry: Option<String>,
+    #[serde(default)]
+    pub active_model_id: Option<String>,
+    #[serde(default)]
+    pub clear_cache: bool,
+}
+
+async fn admin_reload(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Option<Json<AdminReloadRequest>>,
+) -> Result<Response, Infallible> {
+    let started = Instant::now();
+    if state.config.admin_token.is_none() {
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({
+                "error": {
+                    "message": "admin reload disabled (set RBITNET_ADMIN_TOKEN)",
+                    "type": "invalid_request_error"
+                }
+            })),
+        )
+            .into_response());
+    }
+    if !admin_token_ok(&state.config, &headers) {
+        state
+            .metrics
+            .unauthorized_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": {
+                    "message": "invalid or missing admin token",
+                    "type": "authentication_error"
+                }
+            })),
+        )
+            .into_response());
+    }
+
+    let req = body.map(|Json(v)| v).unwrap_or_default();
+    let result = if req.registry.is_some()
+        || std::env::var_os("RBITNET_MODEL_REGISTRY").is_some()
+        || state.registry.read().await.is_some()
+    {
+        reload_registry_engine(&state, &req).await
+    } else {
+        reload_single_engine(&state, &req).await
+    };
+
+    match result {
+        Ok(model_id) => {
+            let elapsed = started.elapsed().as_millis() as u64;
+            state
+                .metrics
+                .model_reloads_total
+                .fetch_add(1, Ordering::Relaxed);
+            state
+                .metrics
+                .model_reload_ms_total
+                .fetch_add(elapsed, Ordering::Relaxed);
+            Ok((
+                StatusCode::OK,
+                Json(json!({
+                    "status": "reloaded",
+                    "model": model_id,
+                    "elapsed_ms": elapsed,
+                    "clear_cache": req.clear_cache
+                })),
+            )
+                .into_response())
+        }
+        Err(message) => {
+            state
+                .metrics
+                .model_reload_failures_total
+                .fetch_add(1, Ordering::Relaxed);
+            Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "message": message,
+                        "type": "rbitnet_error"
+                    }
+                })),
+            )
+                .into_response())
+        }
+    }
+}
+
+async fn reload_registry_engine(
+    state: &AppState,
+    req: &AdminReloadRequest,
+) -> Result<String, String> {
+    let loaded_registry = if let Some(path) = req.registry.as_deref() {
+        let (reg, _) = ModelRegistry::load_path(PathBuf::from(path))?;
+        Some(reg)
+    } else if let Ok(path) = std::env::var("RBITNET_MODEL_REGISTRY") {
+        let (reg, _) = ModelRegistry::load_path(PathBuf::from(path.trim()))?;
+        Some(reg)
+    } else {
+        state.registry.read().await.clone()
+    };
+    let Some(reg) = loaded_registry else {
+        return Err("no registry available for reload".into());
+    };
+    let active = req
+        .active_model_id
+        .as_deref()
+        .or(req.model.as_deref())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .or_else(|| reg.default_model.clone())
+        .ok_or_else(|| {
+            "reload registry requires active_model_id, model, or registry default".to_string()
+        })?;
+    let entry = reg
+        .models
+        .get(&active)
+        .ok_or_else(|| format!("registry: unknown model id '{active}'"))?;
+    let new_engine = Arc::new(
+        Engine::load_path_with_overrides(
+            &entry.gguf,
+            entry.tokenizer.as_deref(),
+            entry.architecture.as_deref(),
+        )
+        .map_err(|e| format!("failed to load model '{active}': {e:?}"))?,
+    );
+    {
+        let mut eng = state.engine.write().await;
+        *eng = new_engine;
+    }
+    {
+        let mut registry = state.registry.write().await;
+        *registry = Some(reg);
+    }
+    {
+        let mut lid = state.loaded_registry_model_id.write().await;
+        *lid = Some(active.clone());
+    }
+    Ok(active)
+}
+
+async fn reload_single_engine(
+    state: &AppState,
+    req: &AdminReloadRequest,
+) -> Result<String, String> {
+    let new_engine = if let Some(model) = req
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let model_path = PathBuf::from(model);
+        Arc::new(
+            Engine::load_path_with_overrides(
+                &model_path,
+                req.tokenizer.as_deref().map(std::path::Path::new),
+                req.architecture.as_deref(),
+            )
+            .map_err(|e| format!("failed to load model '{}': {e:?}", model))?,
+        )
+    } else {
+        apply_runtime_config_env().map_err(|e| format!("invalid runtime config: {e}"))?;
+        Arc::new(Engine::from_env().map_err(|e| format!("failed to init engine from env: {e:?}"))?)
+    };
+    let model_id = new_engine
+        .openai_model_id()
+        .unwrap_or_else(|| "rbitnet-stub".into());
+    {
+        let mut eng = state.engine.write().await;
+        *eng = new_engine;
+    }
+    {
+        let mut registry = state.registry.write().await;
+        *registry = None;
+    }
+    {
+        let mut lid = state.loaded_registry_model_id.write().await;
+        *lid = None;
+    }
+    if state.config.require_model_match {
+        let mut exp = state.expected_request_model_id.write().await;
+        *exp = Some(model_id.clone());
+    }
+    Ok(model_id)
 }
 
 #[derive(Debug, Deserialize)]
@@ -695,7 +900,7 @@ fn apply_stop_sequences(mut text: String, stop: Option<&StopSequence>) -> String
 
 /// Load GGUF for `requested` when it differs from the in-memory registry selection (engine-first lock order).
 async fn ensure_registry_model_loaded(state: &AppState, requested: &str) -> Result<(), Response> {
-    let Some(reg) = state.registry.as_ref() else {
+    let Some(reg) = state.registry.read().await.clone() else {
         return Ok(());
     };
     let Some(entry) = reg.models.get(requested) else {
@@ -749,7 +954,7 @@ async fn default_request_model(state: &AppState, requested: Option<&str>) -> Str
     if let Some(model) = requested.map(str::trim).filter(|s| !s.is_empty()) {
         return model.to_string();
     }
-    if let Some(reg) = state.registry.as_ref() {
+    if let Some(reg) = state.registry.read().await.clone() {
         if let Some(default) = reg.default_model.as_ref() {
             return default.clone();
         }
@@ -864,7 +1069,7 @@ async fn chat_completions(
 
     let request_model = default_request_model(&state, req.model.as_deref()).await;
 
-    if let Some(reg) = state.registry.as_ref() {
+    if let Some(reg) = state.registry.read().await.clone() {
         if !reg.models.contains_key(&request_model) {
             state
                 .metrics

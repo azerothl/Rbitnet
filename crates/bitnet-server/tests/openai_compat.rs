@@ -150,6 +150,163 @@ async fn openai_stub_models_and_chat() {
 }
 
 #[tokio::test]
+async fn admin_reload_requires_enabled_admin_token() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/admin/reload")
+                .header("content-type", "application/json")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .expect("reload response");
+    assert_eq!(res.status(), http::StatusCode::NOT_IMPLEMENTED);
+}
+
+#[tokio::test]
+async fn admin_reload_rejects_wrong_token() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let mut cfg = ServerConfig::test_defaults();
+    cfg.admin_token = Some("secret".into());
+    let app = create_app_with_config(engine, Arc::new(cfg));
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/admin/reload")
+                .header("content-type", "application/json")
+                .header("x-rbitnet-admin-token", "wrong")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .expect("reload response");
+    assert_eq!(res.status(), http::StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn admin_reload_swaps_engine_and_records_metrics() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let mut cfg = ServerConfig::test_defaults();
+    cfg.admin_token = Some("secret".into());
+    let app = create_app_with_config(engine, Arc::new(cfg));
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/admin/reload")
+                .header("content-type", "application/json")
+                .header("x-rbitnet-admin-token", "secret")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .expect("reload response");
+    assert!(res.status().is_success());
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(v["status"], "reloaded");
+    assert_eq!(v["model"], "rbitnet-stub");
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("metrics response");
+    assert!(res.status().is_success());
+    let text =
+        String::from_utf8(res.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+    assert!(text.contains("rbitnet_model_reloads_total 1"));
+}
+
+#[tokio::test]
+async fn admin_reload_failure_keeps_old_engine() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let mut cfg = ServerConfig::test_defaults();
+    cfg.admin_token = Some("secret".into());
+    let app = create_app_with_config(engine, Arc::new(cfg));
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/admin/reload")
+                .header("content-type", "application/json")
+                .header("x-rbitnet-admin-token", "secret")
+                .body(Body::from(
+                    serde_json::json!({ "model": "missing-file.gguf" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("reload response");
+    assert_eq!(res.status(), http::StatusCode::INTERNAL_SERVER_ERROR);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/v1/models")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("models response");
+    assert!(res.status().is_success());
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(v["data"][0]["id"], "rbitnet-stub");
+}
+
+#[tokio::test]
 async fn chat_defaults_model_when_omitted() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[
