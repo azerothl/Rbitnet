@@ -83,9 +83,9 @@ fn dispatch_gguf_executor_inner(
     }
 
     if key == "qwen35moe" {
-        if backend_kind != BackendKind::Cuda {
+        if !matches!(backend_kind, BackendKind::Cuda | BackendKind::Hybrid) {
             return Err(BitNetError::Inference(
-                "GGUF `qwen35moe`: native CUDA path requires `RBITNET_BACKEND=cuda` (Phase 1; CPU Llama-compatible loader is unsupported for this topology)."
+                "GGUF `qwen35moe`: native CUDA path requires `RBITNET_BACKEND=cuda` or `hybrid` (CPU Llama-compatible loader is unsupported for this topology)."
                     .into(),
             ));
         }

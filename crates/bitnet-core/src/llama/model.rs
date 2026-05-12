@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::backend::{ComputeBackend, CpuBackend};
+use crate::backend::{BackendKind, ComputeBackend, CpuBackend, CudaDeviceMatrix, CudaRuntime};
 use crate::error::{BitNetError, Result};
 use crate::ggml::{
     embedding_row_mmap, ggml_type_supported_mmap_matvec, matvec_embd_out_mmap, matvec_ff_mmap,
@@ -41,6 +41,11 @@ pub fn llama_weight_mode_from_env() -> LlamaWeightMode {
 #[derive(Clone)]
 pub enum MatrixWeights {
     Dense(Vec<f32>),
+    CudaDense {
+        host: Vec<f32>,
+        device: CudaDeviceMatrix,
+        label: String,
+    },
     Quant {
         archive: Arc<GgufArchive>,
         tensor: GgufTensorInfo,
@@ -51,6 +56,17 @@ impl MatrixWeights {
     fn matvec_embd_out(&self, x: &[f32], ne0: usize, ne1: usize) -> Result<Vec<f32>> {
         match self {
             Self::Dense(w) => Ok(matvec_embd_out_dense(w, x, ne0, ne1)),
+            Self::CudaDense {
+                host,
+                device,
+                label,
+            } => match device.matvec(x) {
+                Some(out) => Ok(out),
+                None => {
+                    tracing::warn!(tensor = label.as_str(), "hybrid matvec fallback to CPU");
+                    Ok(matvec_embd_out_dense(host, x, ne0, ne1))
+                }
+            },
             Self::Quant { archive, tensor } => {
                 matvec_embd_out_mmap(archive.as_ref(), tensor, x, ne0, ne1)
             }
@@ -60,6 +76,17 @@ impl MatrixWeights {
     fn matvec_ff(&self, x: &[f32], n_ff: usize, n_embd: usize) -> Result<Vec<f32>> {
         match self {
             Self::Dense(w) => Ok(matvec_ff_embd_dense(w, x, n_ff, n_embd)),
+            Self::CudaDense {
+                host,
+                device,
+                label,
+            } => match device.matvec(x) {
+                Some(out) => Ok(out),
+                None => {
+                    tracing::warn!(tensor = label.as_str(), "hybrid ffn_down fallback to CPU");
+                    Ok(matvec_ff_embd_dense(host, x, n_ff, n_embd))
+                }
+            },
             Self::Quant { archive, tensor } => {
                 matvec_ff_mmap(archive.as_ref(), tensor, x, n_ff, n_embd)
             }
@@ -71,6 +98,12 @@ impl MatrixWeights {
             Self::Dense(v) => {
                 for j in 0..n_embd {
                     out[j] = v[j + tok * n_embd];
+                }
+                Ok(())
+            }
+            Self::CudaDense { host, .. } => {
+                for j in 0..n_embd {
+                    out[j] = host[j + tok * n_embd];
                 }
                 Ok(())
             }
@@ -171,6 +204,172 @@ fn llama_mmap_quant_supported_ok(archive: &GgufArchive) -> bool {
     llama_mmap_quant_supported(archive).is_ok()
 }
 
+#[derive(Clone, Debug)]
+pub struct LlamaOffloadPlan {
+    enabled: bool,
+    layers: Vec<bool>,
+    min_rows: usize,
+    output: bool,
+    estimated_weight_bytes: usize,
+    reason: String,
+}
+
+impl LlamaOffloadPlan {
+    pub fn disabled(reason: impl Into<String>, n_layer: usize) -> Self {
+        Self {
+            enabled: false,
+            layers: vec![false; n_layer],
+            min_rows: usize::MAX,
+            output: false,
+            estimated_weight_bytes: 0,
+            reason: reason.into(),
+        }
+    }
+
+    pub fn from_env(kind: BackendKind, cfg: &LlamaConfig) -> Self {
+        if kind != BackendKind::Hybrid {
+            return Self::disabled("backend is not hybrid", cfg.n_layer);
+        }
+        let min_rows = std::env::var("RBITNET_HYBRID_MIN_ROWS")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(512);
+        let layer_bytes = llama_layer_f32_bytes(cfg);
+        let max_bytes = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .unwrap_or(512)
+            .saturating_mul(1024 * 1024);
+        let layers = if let Ok(spec) = std::env::var("RBITNET_HYBRID_LAYERS") {
+            parse_layer_spec(&spec, cfg.n_layer)
+        } else {
+            let mut selected = vec![false; cfg.n_layer];
+            let max_layers = if layer_bytes == 0 {
+                0
+            } else {
+                (max_bytes / layer_bytes).max(1).min(cfg.n_layer)
+            };
+            for enabled in selected.iter_mut().take(max_layers) {
+                *enabled = true;
+            }
+            selected
+        };
+        let layer_count = layers.iter().filter(|&&v| v).count();
+        let output = matches!(
+            std::env::var("RBITNET_HYBRID_OUTPUT").as_deref(),
+            Ok("1") | Ok("true") | Ok("yes")
+        );
+        let estimated_weight_bytes =
+            layer_count
+                .saturating_mul(layer_bytes)
+                .saturating_add(if output {
+                    cfg.n_embd
+                        .saturating_mul(cfg.n_vocab)
+                        .saturating_mul(std::mem::size_of::<f32>())
+                } else {
+                    0
+                });
+        let enabled = layer_count > 0 || output;
+        Self {
+            enabled,
+            layers,
+            min_rows,
+            output,
+            estimated_weight_bytes,
+            reason: if enabled {
+                format!("hybrid offload selected {layer_count} layers")
+            } else {
+                "hybrid backend selected but no layers fit policy".into()
+            },
+        }
+    }
+
+    pub fn layer_enabled(&self, layer: usize) -> bool {
+        self.enabled && self.layers.get(layer).copied().unwrap_or(false)
+    }
+
+    pub fn summary(&self) -> String {
+        format!(
+            "enabled={} layers={} output={} estimated_weight_mb={} reason={}",
+            self.enabled,
+            self.layers.iter().filter(|&&v| v).count(),
+            self.output,
+            self.estimated_weight_bytes / (1024 * 1024),
+            self.reason
+        )
+    }
+}
+
+fn llama_layer_f32_bytes(cfg: &LlamaConfig) -> usize {
+    let n_embd = cfg.n_embd;
+    let n_kv = cfg.n_kv * cfg.head_dim;
+    let n_ff = cfg.n_ff;
+    let elems = n_embd
+        .saturating_mul(n_embd) // wq
+        .saturating_add(n_embd.saturating_mul(n_kv)) // wk
+        .saturating_add(n_embd.saturating_mul(n_kv)) // wv
+        .saturating_add(n_embd.saturating_mul(n_embd)) // wo
+        .saturating_add(n_embd.saturating_mul(n_ff)) // gate
+        .saturating_add(n_embd.saturating_mul(n_ff)) // up
+        .saturating_add(n_ff.saturating_mul(n_embd)); // down
+    elems.saturating_mul(std::mem::size_of::<f32>())
+}
+
+fn parse_layer_spec(spec: &str, n_layer: usize) -> Vec<bool> {
+    let mut layers = vec![false; n_layer];
+    for part in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        if let Some((a, b)) = part.split_once('-') {
+            let Some(start) = a.trim().parse::<usize>().ok() else {
+                continue;
+            };
+            let Some(end) = b.trim().parse::<usize>().ok() else {
+                continue;
+            };
+            for idx in start.min(end)..=start.max(end) {
+                if let Some(slot) = layers.get_mut(idx) {
+                    *slot = true;
+                }
+            }
+        } else if let Ok(idx) = part.parse::<usize>() {
+            if let Some(slot) = layers.get_mut(idx) {
+                *slot = true;
+            }
+        }
+    }
+    layers
+}
+
+fn maybe_cuda_dense(
+    rt: Option<&Arc<CudaRuntime>>,
+    plan: &LlamaOffloadPlan,
+    label: String,
+    host: Vec<f32>,
+    out_rows: usize,
+    in_cols: usize,
+) -> MatrixWeights {
+    let Some(rt) = rt else {
+        return MatrixWeights::Dense(host);
+    };
+    if out_rows < plan.min_rows {
+        return MatrixWeights::Dense(host);
+    }
+    match CudaDeviceMatrix::upload(Arc::clone(rt), &host, out_rows, in_cols) {
+        Some(device) => MatrixWeights::CudaDense {
+            host,
+            device,
+            label,
+        },
+        None => {
+            tracing::warn!(
+                tensor = label.as_str(),
+                "hybrid upload failed; using CPU dense"
+            );
+            MatrixWeights::Dense(host)
+        }
+    }
+}
+
 /// `y[out] = sum_i W[i + out * n_embd] * x[i]` — GGUF layout `ne[0]=n_embd`, `ne[1]=out`.
 fn matvec_embd_out_dense(w: &[f32], x: &[f32], n_embd: usize, n_out: usize) -> Vec<f32> {
     let mut y = vec![0.0f32; n_out];
@@ -248,6 +447,16 @@ impl LlamaModel {
 
     /// Preferred entry: keeps a single `Arc` to the mmap-backed archive for quant weights.
     pub fn from_gguf_arc(archive: Arc<GgufArchive>) -> Result<Self> {
+        Self::from_gguf_arc_for_backend(archive, BackendKind::Cpu)
+    }
+
+    pub fn from_gguf_arc_for_backend(
+        archive: Arc<GgufArchive>,
+        backend_kind: BackendKind,
+    ) -> Result<Self> {
+        if backend_kind == BackendKind::Hybrid {
+            return Self::from_gguf_hybrid_internal(archive);
+        }
         let mode = llama_weight_mode_from_env();
         match mode {
             LlamaWeightMode::Dense => Self::from_gguf_dense_internal(archive),
@@ -269,6 +478,164 @@ impl LlamaModel {
                 }
             }
         }
+    }
+
+    fn from_gguf_hybrid_internal(archive: Arc<GgufArchive>) -> Result<Self> {
+        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
+        let plan = LlamaOffloadPlan::from_env(BackendKind::Hybrid, &cfg);
+        let cuda = if plan.enabled {
+            CudaRuntime::try_load()
+        } else {
+            None
+        };
+        tracing::info!(
+            summary = plan.summary(),
+            cuda = cuda.is_some(),
+            "llama hybrid offload plan"
+        );
+
+        let n_embd = cfg.n_embd;
+        let n_vocab = cfg.n_vocab;
+        let n_ff = cfg.n_ff;
+        let n_embd_kv = cfg.n_kv * cfg.head_dim;
+
+        let token_embd = MatrixWeights::Quant {
+            archive: Arc::clone(&archive),
+            tensor: tensor_info_first(archive.as_ref(), &["token_embd.weight", "token_embd"])?,
+        };
+
+        let output_norm = load_tensor_dense(archive.as_ref(), &["output_norm.weight"])?;
+        if output_norm.len() != n_embd {
+            return Err(BitNetError::Inference(
+                "output_norm.weight shape mismatch".into(),
+            ));
+        }
+
+        let output = if plan.output {
+            let output_host = if archive
+                .tensor_first_of(&["output.weight", "lm_head.weight"])
+                .is_some()
+            {
+                load_tensor_dense(archive.as_ref(), &["output.weight", "lm_head.weight"])?
+            } else {
+                load_tensor_dense(archive.as_ref(), &["token_embd.weight", "token_embd"])?
+            };
+            maybe_cuda_dense(
+                cuda.as_ref(),
+                &plan,
+                "output.weight".into(),
+                output_host,
+                n_vocab,
+                n_embd,
+            )
+        } else if archive
+            .tensor_first_of(&["output.weight", "lm_head.weight"])
+            .is_some()
+        {
+            MatrixWeights::Quant {
+                archive: Arc::clone(&archive),
+                tensor: tensor_info_first(archive.as_ref(), &["output.weight", "lm_head.weight"])?,
+            }
+        } else {
+            token_embd.clone()
+        };
+
+        let mut layers = Vec::with_capacity(cfg.n_layer);
+        for i in 0..cfg.n_layer {
+            let p = format!("blk.{i}");
+            let attn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.attn_norm.weight")])?;
+            let ffn_norm =
+                load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_norm.weight")])?;
+            let offload = plan.layer_enabled(i) && cuda.is_some();
+            let make_embd_out =
+                |names: Vec<String>, out_rows: usize, in_cols: usize| -> Result<MatrixWeights> {
+                    if offload {
+                        let label = names.first().cloned().unwrap_or_default();
+                        Ok(maybe_cuda_dense(
+                            cuda.as_ref(),
+                            &plan,
+                            label,
+                            load_tensor_strings_dense(archive.as_ref(), &names)?,
+                            out_rows,
+                            in_cols,
+                        ))
+                    } else {
+                        Ok(MatrixWeights::Quant {
+                            archive: Arc::clone(&archive),
+                            tensor: tensor_info_strings(archive.as_ref(), &names)?,
+                        })
+                    }
+                };
+            let wq = make_embd_out(vec![format!("{p}.attn_q.weight")], n_embd, n_embd)?;
+            let wk = make_embd_out(vec![format!("{p}.attn_k.weight")], n_embd_kv, n_embd)?;
+            let wv = make_embd_out(vec![format!("{p}.attn_v.weight")], n_embd_kv, n_embd)?;
+            let wo = make_embd_out(
+                vec![
+                    format!("{p}.attn_output.weight"),
+                    format!("{p}.attn_out.weight"),
+                ],
+                n_embd,
+                n_embd,
+            )?;
+            let ffn_gate = make_embd_out(vec![format!("{p}.ffn_gate.weight")], n_ff, n_embd)?;
+            let ffn_up = make_embd_out(vec![format!("{p}.ffn_up.weight")], n_ff, n_embd)?;
+            let ffn_down = if offload {
+                maybe_cuda_dense(
+                    cuda.as_ref(),
+                    &plan,
+                    format!("{p}.ffn_down.weight"),
+                    load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_down.weight")])?,
+                    n_embd,
+                    n_ff,
+                )
+            } else {
+                MatrixWeights::Quant {
+                    archive: Arc::clone(&archive),
+                    tensor: tensor_info_strings(
+                        archive.as_ref(),
+                        &[format!("{p}.ffn_down.weight")],
+                    )?,
+                }
+            };
+
+            Self::validate_layer_mmap(
+                archive.as_ref(),
+                i,
+                &attn_norm,
+                &wq,
+                &wk,
+                &wv,
+                &wo,
+                &ffn_norm,
+                &ffn_gate,
+                &ffn_up,
+                &ffn_down,
+                n_embd,
+                n_embd_kv,
+                n_ff,
+            )?;
+
+            layers.push(LayerWeights {
+                attn_norm,
+                wq,
+                wk,
+                wv,
+                wo,
+                ffn_norm,
+                ffn_gate,
+                ffn_up,
+                ffn_down,
+            });
+        }
+
+        Ok(Self {
+            cfg,
+            token_embd,
+            layers,
+            output_norm,
+            output,
+        })
     }
 
     fn from_gguf_dense_internal(archive: Arc<GgufArchive>) -> Result<Self> {
@@ -401,6 +768,7 @@ impl LlamaModel {
         let len = |m: &MatrixWeights| -> Result<usize> {
             match m {
                 MatrixWeights::Dense(v) => Ok(v.len()),
+                MatrixWeights::CudaDense { host, .. } => Ok(host.len()),
                 MatrixWeights::Quant { .. } => Err(BitNetError::Inference(
                     "validate_layer_dense: expected dense matrix".into(),
                 )),
@@ -553,9 +921,8 @@ impl LlamaModel {
     ) -> Result<()> {
         let nelements = |m: &MatrixWeights| -> Result<usize> {
             match m {
-                MatrixWeights::Dense(_) => Err(BitNetError::Inference(
-                    "validate mmap: unexpected dense".into(),
-                )),
+                MatrixWeights::Dense(v) => Ok(v.len()),
+                MatrixWeights::CudaDense { host, .. } => Ok(host.len()),
                 MatrixWeights::Quant { tensor, .. } => Ok(tensor
                     .dimensions
                     .iter()

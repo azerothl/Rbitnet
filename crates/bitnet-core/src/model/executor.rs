@@ -18,6 +18,10 @@ pub trait ModelExecutor: Send + Sync {
     fn is_ready(&self) -> bool;
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String>;
 
+    fn offload_metadata(&self) -> Option<String> {
+        None
+    }
+
     /// Tokenizer-encoded prompt length (used for HTTP limits).
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32>;
 
@@ -110,6 +114,20 @@ impl ModelExecutor for LlamaExecutor {
         gguf.map(|g| g.suggested_openai_model_id())
     }
 
+    fn offload_metadata(&self) -> Option<String> {
+        if self.backend_kind == BackendKind::Hybrid {
+            Some(format!(
+                "hybrid policy: layers={}, max_vram_mb={}, min_rows={}, output={}",
+                std::env::var("RBITNET_HYBRID_LAYERS").unwrap_or_else(|_| "auto".into()),
+                std::env::var("RBITNET_HYBRID_MAX_VRAM_MB").unwrap_or_else(|_| "512".into()),
+                std::env::var("RBITNET_HYBRID_MIN_ROWS").unwrap_or_else(|_| "512".into()),
+                std::env::var("RBITNET_HYBRID_OUTPUT").unwrap_or_else(|_| "0".into()),
+            ))
+        } else {
+            None
+        }
+    }
+
     fn generate_with_timings(
         &self,
         prompt: &str,
@@ -183,6 +201,12 @@ impl ModelExecutor for BitNetNativeExecutor {
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
         gguf.map(|g| g.suggested_openai_model_id())
             .or_else(|| Some("rbitnet-bitnet".into()))
+    }
+
+    fn offload_metadata(&self) -> Option<String> {
+        (self.backend_kind == BackendKind::Hybrid).then(|| {
+            "hybrid selected; BitNet currently uses Llama-shaped CPU fallback/offload hooks".into()
+        })
     }
 
     fn generate_with_timings(

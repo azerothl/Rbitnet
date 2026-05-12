@@ -37,6 +37,7 @@ pub struct EngineModelMetadata {
     pub quantization: Option<String>,
     pub backend: String,
     pub backend_accelerated: bool,
+    pub hybrid_offload: Option<String>,
     pub ready: bool,
     pub tensor_count: Option<usize>,
 }
@@ -291,6 +292,11 @@ impl Engine {
             quantization: gguf.and_then(|g| g.quantization_summary()),
             backend: self.inner.backend_kind.as_str().to_string(),
             backend_accelerated: self.backend_accelerated(),
+            hybrid_offload: self
+                .inner
+                .executor
+                .as_ref()
+                .and_then(|e| e.offload_metadata()),
             ready: self.is_ready(),
             tensor_count: gguf.map(|g| g.tensor_count()),
         }

@@ -25,8 +25,9 @@ release baselines. For release-quality rows, use the procedure in
 
 - Server: `target\release\rbitnet-server.exe`.
 - Real GGUF inference only. Stub and toy modes are excluded.
-- Backends: CPU (`RBITNET_BACKEND` unset / CPU path) and CUDA
-  (`RBITNET_BACKEND=cuda`) for the comparison pass.
+- Backends: CPU (`RBITNET_BACKEND` unset / CPU path), CUDA
+  (`RBITNET_BACKEND=cuda`), and hybrid CPU/GPU (`RBITNET_BACKEND=hybrid`)
+  for the comparison pass.
 - Prompt: short smoke prompt, usually `Say hello.`
 - Chat format: `raw` for the recorded smokes.
 - Timing source: wall-clock HTTP request time plus `/metrics` phase counters when
@@ -39,14 +40,14 @@ release baselines. For release-quality rows, use the procedure in
 
 ## Results
 
-| Model | File / quant | CPU result | CUDA result | Comparison / notes |
-|-------|--------------|------------|-------------|--------------------|
-| TinyLlama 1.1B Chat | `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` | Works: 4 tokens in about 11.65 s; prefill about 6698 ms; decode about 4791 ms; TPOT about 1.20 s/token | Works: 4 tokens in about 28.71 s; prefill about 16929 ms; decode about 11633 ms; TPOT about 2.91 s/token | CUDA MVP is about 2.5x slower here. The raw prompt/template still produced poor text (`act...`) on both backends. |
-| Llama 3.2 3B Instruct | `llama-3.2-3b-instruct-q4_k_m.gguf` | Works after tied-output fallback: 2 tokens in about 44.03 s; prefill about 35425 ms; decode about 7518 ms; TPOT about 3.76 s/token | Works: 2 tokens in about 59.00 s; prefill about 42324 ms; decode about 15333 ms; TPOT about 7.67 s/token | Useful middle-weight Llama-compatible test. CUDA is slower than CPU in the current MVP backend. Raw prompt output was `..`, so quality still needs the Llama 3 chat template. |
-| Mistral 7B Instruct v0.2 | `mistral-7b-instruct-v0.2.Q4_K_M.gguf` | Works, but too slow: 2 tokens in about 86.96 s; prefill about 69176 ms; decode about 16611 ms; TPOT about 8.31 s/token | Works: 2 tokens in about 86.64 s; prefill about 66491 ms; decode about 19409 ms; TPOT about 9.70 s/token | CUDA and CPU are effectively tied for this smoke. Prefill improved slightly, decode regressed, and overall latency stayed non-interactive. |
-| Mistral 7B Instruct v0.2 | `mistral-7b-instruct-v0.2.Q2_K.gguf` | Fails / not usable: HTTP 504 after 120 s for 2 requested tokens | Fails / not usable: HTTP 504 after 120.82 s for 2 requested tokens | CUDA does not rescue this quant path. An earlier debug run also exposed a `dequant_q3_k` assertion path, so this quant is not currently a good target. |
-| Qwen3 4B | `Qwen3-4B-Q4_K_M.gguf` | Works after the local dense Qwen3 loader integration: 1 token in about 37.53 s; prefill about 29140 ms; decode about 7018 ms | Loads as `backend="cuda"` / `backend_accelerated=true`, but generation fails immediately: `dense qwen3 MVP currently supports CPU backend only` | The current Qwen3 loader is a CPU correctness MVP. CUDA support still needs to be wired into the dense Qwen3 runtime. |
-| Qwen3.6 35B A3B MoE | `Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf` | Startup failure: `qwen35moe` requires `RBITNET_BACKEND=cuda` | Works for a 1-token smoke: 1 token in about 62.40 s; prefill about 48533 ms; decode about 9121 ms; TPOT about 9.12 s/token | CUDA is mandatory and functional for this native MoE path, but the 35B A3B checkpoint is still far too slow for interactive local use on a 4 GiB laptop GPU. |
+| Model | File / quant | CPU result | CUDA result | Hybrid result | Comparison / notes |
+|-------|--------------|------------|-------------|---------------|--------------------|
+| TinyLlama 1.1B Chat | `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` | Works: 4 tokens in about 11.65 s; prefill about 6698 ms; decode about 4791 ms; TPOT about 1.20 s/token | Works: 4 tokens in about 28.71 s; prefill about 16929 ms; decode about 11633 ms; TPOT about 2.91 s/token | Works with layers `0-3`: 4 tokens in about 13.78 s; prefill about 7996 ms; decode about 4854 ms; TPOT about 1.21 s/token | Hybrid avoids most CUDA regression but is still slightly slower than CPU for this tiny model. |
+| Llama 3.2 3B Instruct | `llama-3.2-3b-instruct-q4_k_m.gguf` | Works after tied-output fallback: 2 tokens in about 44.03 s; prefill about 35425 ms; decode about 7518 ms; TPOT about 3.76 s/token | Works: 2 tokens in about 59.00 s; prefill about 42324 ms; decode about 15333 ms; TPOT about 7.67 s/token | Works with layer `0`: 2 tokens in about 36.89 s; prefill about 26756 ms; decode about 8311 ms; TPOT about 4.16 s/token | Hybrid is the best backend for this smoke and beats CPU by about 16%. Raw prompt output was `..`, so quality still needs the Llama 3 chat template. |
+| Mistral 7B Instruct v0.2 | `mistral-7b-instruct-v0.2.Q4_K_M.gguf` | Works, but too slow: 2 tokens in about 86.96 s; prefill about 69176 ms; decode about 16611 ms; TPOT about 8.31 s/token | Works: 2 tokens in about 86.64 s; prefill about 66491 ms; decode about 19409 ms; TPOT about 9.70 s/token | Works with layer `0`: 2 tokens in about 101.76 s; prefill about 80414 ms; decode about 19756 ms; TPOT about 9.88 s/token | Hybrid regresses at this size with only one offloaded f32 layer; copy/dequant tradeoffs need more tuning. |
+| Mistral 7B Instruct v0.2 | `mistral-7b-instruct-v0.2.Q2_K.gguf` | Fails / not usable: HTTP 504 after 120 s for 2 requested tokens | Fails / not usable: HTTP 504 after 120.82 s for 2 requested tokens | Not retested | CUDA does not rescue this quant path. An earlier debug run also exposed a `dequant_q3_k` assertion path, so this quant is not currently a good target. |
+| Qwen3 4B | `Qwen3-4B-Q4_K_M.gguf` | Works after the local dense Qwen3 loader integration: 1 token in about 37.53 s; prefill about 29140 ms; decode about 7018 ms | Loads as `backend="cuda"` / `backend_accelerated=true`, but generation fails immediately: `dense qwen3 MVP currently supports CPU backend only` | Works in hybrid fallback: 1 token in about 37.98 s | The current Qwen3 loader is a CPU correctness MVP. Hybrid routing is accepted, but Qwen3 tensor offload is not wired yet. |
+| Qwen3.6 35B A3B MoE | `Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf` | Startup failure: `qwen35moe` requires `RBITNET_BACKEND=cuda` | Works for a 1-token smoke: 1 token in about 62.40 s; prefill about 48533 ms; decode about 9121 ms; TPOT about 9.12 s/token | Works via CUDA-required Qwen35 path: 1 token in about 76.39 s | CUDA/hybrid is mandatory and functional for this native MoE path, but the 35B A3B checkpoint is still far too slow for interactive local use on a 4 GiB laptop GPU. |
 
 ## Interpretation
 
@@ -58,11 +59,11 @@ path proves the runtime works but does not prove assistant quality.
 
 Llama 3.2 3B fills the missing middle ground between TinyLlama and Mistral 7B.
 It now runs after adding support for GGUFs that tie `output.weight` to
-`token_embd.weight`, but it is still a correctness/performance smoke rather than
-an interactive target. Mistral 7B Q4 runs on both CPU and CUDA, but the current
-CUDA path does not materially improve end-to-end latency. Qwen3 4B runs on CPU
-only today; the new loader is a correctness MVP, not an optimized CUDA inference
-path.
+`token_embd.weight`. The hybrid backend is useful on this model: offloading one
+early layer with persistent CUDA weight buffers improves the local 2-token smoke
+from about 44 seconds to about 37 seconds. TinyLlama remains better on CPU
+because it is too small to amortize the GPU work. Mistral 7B needs more tuning:
+one offloaded f32 layer is slower than both CPU and CUDA MVP.
 
 Mistral Q2_K is not a safe optimization shortcut today. Although the file is
 smaller than Q4_K_M, the tested path either timed out or hit quantization

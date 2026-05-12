@@ -43,7 +43,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT` / tokenizer config discovery. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
-| `RBITNET_BACKEND` | `cpu` | e.g. `cpu`, `cuda` — see [USAGE.md](USAGE.md). |
+| `RBITNET_BACKEND` | `cpu` | e.g. `cpu`, `cuda`, `hybrid` — see [USAGE.md](USAGE.md). |
 | `RBITNET_ARCHITECTURE` | (from GGUF) | Override `general.architecture`. |
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |
@@ -52,6 +52,11 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler / speculative MVP; see [USAGE.md](USAGE.md). |
 | `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | Llama-lineage matrices: **`dense`** (legacy: full `tensor_to_f32` at load, high RAM), **`mmap_quant`** (quantized weights stay in the GGUF mmap; row-wise GEMV), **`auto`** (mmap when every weight tensor uses a supported GGML type for mmap GEMV; otherwise dense). |
+| `RBITNET_HYBRID_LAYERS` | `auto` | With `RBITNET_BACKEND=hybrid`, comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, the loader selects early layers within `RBITNET_HYBRID_MAX_VRAM_MB`. |
+| `RBITNET_HYBRID_MAX_VRAM_MB` | `512` | Approximate f32 weight upload budget for automatic Llama hybrid offload. This is a soft planning budget, not a hard CUDA allocator limit. |
+| `RBITNET_HYBRID_MIN_ROWS` | `512` | Minimum matrix output rows for Llama hybrid upload; smaller matrices stay on CPU. |
+| `RBITNET_HYBRID_OUTPUT` | off | If enabled, also attempts to offload the Llama output head. This can use substantial VRAM. |
+| `RBITNET_HYBRID_LOG` | off | Reserved flag for verbose hybrid diagnostics; current builds always log the selected offload plan at runtime creation. |
 | `RBITNET_LLAMA_PAGED_KV` | off | **`1`** enables paged KV storage for **Llama** GGUF (see [USAGE.md](USAGE.md)). |
 | `RBITNET_PAGED_KV`, `RBITNET_PAGED_KV_*` | varies | Qwen35 attention scaffolding; Llama paged mode reads `PAGE_TOKENS` / `MAX_PAGES` via [`PagedKvCache`](../crates/bitnet-core/src/paged_kv.rs). |
 

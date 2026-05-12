@@ -4,13 +4,15 @@ use crate::error::Result;
 use libloading::Library;
 use std::ffi::c_void;
 use std::ptr::null_mut;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// Backend identifiers used by runtime selection and metrics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendKind {
     Cpu,
     Cuda,
+    Hybrid,
     Rocm,
     Vulkan,
     Metal,
@@ -21,6 +23,7 @@ impl BackendKind {
         match self {
             BackendKind::Cpu => "cpu",
             BackendKind::Cuda => "cuda",
+            BackendKind::Hybrid => "hybrid",
             BackendKind::Rocm => "rocm",
             BackendKind::Vulkan => "vulkan",
             BackendKind::Metal => "metal",
@@ -32,6 +35,7 @@ impl BackendKind {
         match raw.trim().to_ascii_lowercase().as_str() {
             "cpu" => BackendKind::Cpu,
             "cuda" => BackendKind::Cuda,
+            "hybrid" | "cpu-gpu" | "gpu-cpu" => BackendKind::Hybrid,
             "rocm" => BackendKind::Rocm,
             "vulkan" => BackendKind::Vulkan,
             "metal" => BackendKind::Metal,
@@ -141,6 +145,10 @@ pub struct CudaRuntime {
             i32,
         ) -> cublasStatus_t,
     >,
+    cublas_handle: Mutex<Option<usize>>,
+    upload_bytes: AtomicU64,
+    download_bytes: AtomicU64,
+    gemv_calls: AtomicU64,
 }
 
 impl std::fmt::Debug for CudaRuntime {
@@ -173,6 +181,56 @@ impl CudaRuntime {
         self.cublas_create_v2.is_some()
             && self.cublas_destroy_v2.is_some()
             && self.cublas_sgemv_v2.is_some()
+    }
+
+    pub fn metrics_snapshot(&self) -> CudaRuntimeMetrics {
+        CudaRuntimeMetrics {
+            upload_bytes: self.upload_bytes.load(Ordering::Relaxed),
+            download_bytes: self.download_bytes.load(Ordering::Relaxed),
+            gemv_calls: self.gemv_calls.load(Ordering::Relaxed),
+        }
+    }
+
+    pub fn upload_f32(self: &Arc<Self>, src: &[f32]) -> Option<CudaDeviceBuffer> {
+        let nbytes = src.len().checked_mul(std::mem::size_of::<f32>())?;
+        let ptr = self.alloc_device(nbytes)?;
+        if !self.copy_host_to_device(ptr, src.as_ptr().cast::<c_void>(), nbytes) {
+            self.free_device(ptr);
+            return None;
+        }
+        Some(CudaDeviceBuffer {
+            rt: Arc::clone(self),
+            ptr: ptr as usize,
+            len: src.len(),
+        })
+    }
+
+    pub fn gemv_device_weight_f32(
+        &self,
+        d_w: *mut c_void,
+        x: &[f32],
+        out_rows: usize,
+        in_cols: usize,
+    ) -> Option<Vec<f32>> {
+        if x.len() != in_cols {
+            return None;
+        }
+        let x_bytes = x.len().checked_mul(std::mem::size_of::<f32>())?;
+        let y_bytes = out_rows.checked_mul(std::mem::size_of::<f32>())?;
+        let d_x = self.alloc_device(x_bytes)?;
+        let d_y = self.alloc_device(y_bytes)?;
+        let mut out = vec![0.0f32; out_rows];
+        let ok = self.copy_host_to_device(d_x, x.as_ptr().cast::<c_void>(), x_bytes)
+            && self.cublas_sgemv_device(d_w, d_x, d_y, out_rows, in_cols)
+            && self.copy_device_to_host(out.as_mut_ptr().cast::<c_void>(), d_y, y_bytes);
+        let _ = unsafe { (self.cuda_device_synchronize)() };
+        self.free_device(d_x);
+        self.free_device(d_y);
+        if ok {
+            Some(out)
+        } else {
+            None
+        }
     }
 
     fn load() -> Option<Self> {
@@ -278,9 +336,100 @@ impl CudaRuntime {
                 cublas_create_v2,
                 cublas_destroy_v2,
                 cublas_sgemv_v2,
+                cublas_handle: Mutex::new(None),
+                upload_bytes: AtomicU64::new(0),
+                download_bytes: AtomicU64::new(0),
+                gemv_calls: AtomicU64::new(0),
             });
         }
         None
+    }
+
+    fn alloc_device(&self, nbytes: usize) -> Option<*mut c_void> {
+        let mut dev_ptr: *mut c_void = null_mut();
+        let ok = unsafe { (self.cuda_malloc)(&mut dev_ptr, nbytes) } == CUDA_SUCCESS;
+        ok.then_some(dev_ptr)
+    }
+
+    fn free_device(&self, ptr: *mut c_void) {
+        if !ptr.is_null() {
+            let _ = unsafe { (self.cuda_free)(ptr) };
+        }
+    }
+
+    fn copy_host_to_device(&self, dst: *mut c_void, src: *const c_void, nbytes: usize) -> bool {
+        let ok = unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_HOST_TO_DEVICE) }
+            == CUDA_SUCCESS;
+        if ok {
+            self.upload_bytes
+                .fetch_add(nbytes as u64, Ordering::Relaxed);
+        }
+        ok
+    }
+
+    fn copy_device_to_host(&self, dst: *mut c_void, src: *const c_void, nbytes: usize) -> bool {
+        let ok = unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_DEVICE_TO_HOST) }
+            == CUDA_SUCCESS;
+        if ok {
+            self.download_bytes
+                .fetch_add(nbytes as u64, Ordering::Relaxed);
+        }
+        ok
+    }
+
+    fn cublas_handle(&self) -> Option<cublasHandle_t> {
+        let create = self.cublas_create_v2?;
+        let mut guard = self.cublas_handle.lock().ok()?;
+        if let Some(raw) = *guard {
+            return Some(raw as cublasHandle_t);
+        }
+        let mut handle: cublasHandle_t = null_mut();
+        let ok = unsafe { create(&mut handle as *mut cublasHandle_t) } == CUBLAS_STATUS_SUCCESS;
+        if ok {
+            *guard = Some(handle as usize);
+            Some(handle)
+        } else {
+            None
+        }
+    }
+
+    fn cublas_sgemv_device(
+        &self,
+        d_w: *const c_void,
+        d_x: *const c_void,
+        d_y: *mut c_void,
+        out_rows: usize,
+        in_cols: usize,
+    ) -> bool {
+        let Some(sgemv) = self.cublas_sgemv_v2 else {
+            return false;
+        };
+        let Some(handle) = self.cublas_handle() else {
+            return false;
+        };
+        let alpha: f32 = 1.0;
+        let beta: f32 = 0.0;
+        let status = unsafe {
+            sgemv(
+                handle,
+                CUBLAS_OP_T,
+                in_cols as i32,
+                out_rows as i32,
+                &alpha as *const f32,
+                d_w.cast::<f32>(),
+                in_cols as i32,
+                d_x.cast::<f32>(),
+                1,
+                &beta as *const f32,
+                d_y.cast::<f32>(),
+                1,
+            )
+        };
+        let ok = status == CUBLAS_STATUS_SUCCESS;
+        if ok {
+            self.gemv_calls.fetch_add(1, Ordering::Relaxed);
+        }
+        ok
     }
 
     fn roundtrip_f32(&self, src: &[f32]) -> Option<Vec<f32>> {
@@ -319,85 +468,115 @@ impl CudaRuntime {
         out_rows: usize,
         in_cols: usize,
     ) -> Option<Vec<f32>> {
-        let create = self.cublas_create_v2?;
-        let destroy = self.cublas_destroy_v2?;
-        let sgemv = self.cublas_sgemv_v2?;
         let w_bytes = w.len().checked_mul(std::mem::size_of::<f32>())?;
         let x_bytes = x.len().checked_mul(std::mem::size_of::<f32>())?;
         let y_bytes = out_rows.checked_mul(std::mem::size_of::<f32>())?;
-        let mut d_w: *mut c_void = null_mut();
-        let mut d_x: *mut c_void = null_mut();
-        let mut d_y: *mut c_void = null_mut();
+        let d_w = self.alloc_device(w_bytes)?;
+        let d_x = self.alloc_device(x_bytes)?;
+        let d_y = self.alloc_device(y_bytes)?;
         let mut out = vec![0.0f32; out_rows];
-        let alpha: f32 = 1.0;
-        let beta: f32 = 0.0;
-        unsafe {
-            if (self.cuda_malloc)(&mut d_w, w_bytes) != CUDA_SUCCESS
-                || (self.cuda_malloc)(&mut d_x, x_bytes) != CUDA_SUCCESS
-                || (self.cuda_malloc)(&mut d_y, y_bytes) != CUDA_SUCCESS
-            {
-                let _ = (self.cuda_free)(d_w);
-                let _ = (self.cuda_free)(d_x);
-                let _ = (self.cuda_free)(d_y);
-                return None;
-            }
-            let ok_h2d = (self.cuda_memcpy)(
-                d_w,
-                w.as_ptr().cast::<c_void>(),
-                w_bytes,
-                CUDA_MEMCPY_HOST_TO_DEVICE,
-            ) == CUDA_SUCCESS
-                && (self.cuda_memcpy)(
-                    d_x,
-                    x.as_ptr().cast::<c_void>(),
-                    x_bytes,
-                    CUDA_MEMCPY_HOST_TO_DEVICE,
-                ) == CUDA_SUCCESS;
-            if !ok_h2d {
-                let _ = (self.cuda_free)(d_w);
-                let _ = (self.cuda_free)(d_x);
-                let _ = (self.cuda_free)(d_y);
-                return None;
-            }
-            let mut handle: cublasHandle_t = null_mut();
-            if create(&mut handle as *mut cublasHandle_t) != CUBLAS_STATUS_SUCCESS {
-                let _ = (self.cuda_free)(d_w);
-                let _ = (self.cuda_free)(d_x);
-                let _ = (self.cuda_free)(d_y);
-                return None;
-            }
-            // W is row-major (out_rows x in_cols). Use cublas column-major view of W^T and op=T.
-            let gemv_status = sgemv(
-                handle,
-                CUBLAS_OP_T,
-                in_cols as i32,
-                out_rows as i32,
-                &alpha as *const f32,
-                d_w.cast::<f32>(),
-                in_cols as i32,
-                d_x.cast::<f32>(),
-                1,
-                &beta as *const f32,
-                d_y.cast::<f32>(),
-                1,
-            );
-            let ok_d2h = gemv_status == CUBLAS_STATUS_SUCCESS
-                && (self.cuda_memcpy)(
-                    out.as_mut_ptr().cast::<c_void>(),
-                    d_y,
-                    y_bytes,
-                    CUDA_MEMCPY_DEVICE_TO_HOST,
-                ) == CUDA_SUCCESS;
-            let _ = (self.cuda_device_synchronize)();
-            let _ = destroy(handle);
-            let _ = (self.cuda_free)(d_w);
-            let _ = (self.cuda_free)(d_x);
-            let _ = (self.cuda_free)(d_y);
-            if !ok_d2h {
-                return None;
-            }
+        let ok = self.copy_host_to_device(d_w, w.as_ptr().cast::<c_void>(), w_bytes)
+            && self.copy_host_to_device(d_x, x.as_ptr().cast::<c_void>(), x_bytes)
+            && self.cublas_sgemv_device(d_w, d_x, d_y, out_rows, in_cols)
+            && self.copy_device_to_host(out.as_mut_ptr().cast::<c_void>(), d_y, y_bytes);
+        let _ = unsafe { (self.cuda_device_synchronize)() };
+        self.free_device(d_w);
+        self.free_device(d_x);
+        self.free_device(d_y);
+        if !ok {
+            return None;
         }
         Some(out)
+    }
+}
+
+impl Drop for CudaRuntime {
+    fn drop(&mut self) {
+        if let (Some(destroy), Ok(mut guard)) = (self.cublas_destroy_v2, self.cublas_handle.lock())
+        {
+            if let Some(raw) = guard.take() {
+                let _ = unsafe { destroy(raw as cublasHandle_t) };
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CudaRuntimeMetrics {
+    pub upload_bytes: u64,
+    pub download_bytes: u64,
+    pub gemv_calls: u64,
+}
+
+#[derive(Debug)]
+pub struct CudaDeviceBuffer {
+    rt: Arc<CudaRuntime>,
+    ptr: usize,
+    len: usize,
+}
+
+unsafe impl Send for CudaDeviceBuffer {}
+unsafe impl Sync for CudaDeviceBuffer {}
+
+impl CudaDeviceBuffer {
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn download_f32(&self) -> Option<Vec<f32>> {
+        let nbytes = self.len.checked_mul(std::mem::size_of::<f32>())?;
+        let mut out = vec![0.0f32; self.len];
+        let ok = self.rt.copy_device_to_host(
+            out.as_mut_ptr().cast::<c_void>(),
+            self.ptr as *const c_void,
+            nbytes,
+        );
+        ok.then_some(out)
+    }
+}
+
+impl Drop for CudaDeviceBuffer {
+    fn drop(&mut self) {
+        self.rt.free_device(self.ptr as *mut c_void);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CudaDeviceMatrix {
+    buffer: Arc<CudaDeviceBuffer>,
+    out_rows: usize,
+    in_cols: usize,
+}
+
+impl CudaDeviceMatrix {
+    pub fn upload(
+        rt: Arc<CudaRuntime>,
+        w: &[f32],
+        out_rows: usize,
+        in_cols: usize,
+    ) -> Option<Self> {
+        if w.len() != out_rows.checked_mul(in_cols)? {
+            return None;
+        }
+        let buffer = Arc::new(rt.upload_f32(w)?);
+        Some(Self {
+            buffer,
+            out_rows,
+            in_cols,
+        })
+    }
+
+    pub fn matvec(&self, x: &[f32]) -> Option<Vec<f32>> {
+        self.buffer.rt.gemv_device_weight_f32(
+            self.buffer.ptr as *mut c_void,
+            x,
+            self.out_rows,
+            self.in_cols,
+        )
+    }
+
+    pub fn bytes(&self) -> usize {
+        self.buffer.len() * std::mem::size_of::<f32>()
     }
 }
 
@@ -433,6 +612,53 @@ impl ComputeBackend for CudaBackend {
     fn matvec(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Result<Vec<f32>> {
         if let Some(rt) = &self.runtime {
             if let Some(out) = rt.matvec_cuda(w, x, out_rows, in_cols) {
+                return Ok(out);
+            }
+        }
+        self.cpu.matvec(w, x, out_rows, in_cols)
+    }
+}
+
+/// Hybrid CPU/GPU backend: CPU for orchestration and fallback, CUDA for model-specific offload.
+#[derive(Debug)]
+pub struct HybridBackend {
+    cpu: CpuBackend,
+    runtime: Option<Arc<CudaRuntime>>,
+}
+
+impl Default for HybridBackend {
+    fn default() -> Self {
+        Self {
+            cpu: CpuBackend,
+            runtime: CudaRuntime::try_load(),
+        }
+    }
+}
+
+impl ComputeBackend for HybridBackend {
+    fn kind(&self) -> BackendKind {
+        BackendKind::Hybrid
+    }
+
+    fn is_native_accelerated(&self) -> bool {
+        self.runtime.is_some()
+    }
+
+    fn alloc(&self, len: usize) -> Result<Vec<f32>> {
+        self.cpu.alloc(len)
+    }
+
+    fn copy_from_host(&self, src: &[f32]) -> Result<Vec<f32>> {
+        self.cpu.copy_from_host(src)
+    }
+
+    fn copy_to_host(&self, src: &[f32]) -> Result<Vec<f32>> {
+        self.cpu.copy_to_host(src)
+    }
+
+    fn matvec(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Result<Vec<f32>> {
+        if let Some(rt) = &self.runtime {
+            if let Some(out) = rt.gemv_host_f32(w, x, out_rows, in_cols) {
                 return Ok(out);
             }
         }
@@ -596,6 +822,7 @@ pub fn make_backend(kind: BackendKind) -> Box<dyn ComputeBackend> {
     match kind {
         BackendKind::Cpu => Box::<CpuBackend>::default(),
         BackendKind::Cuda => Box::<CudaBackend>::default(),
+        BackendKind::Hybrid => Box::<HybridBackend>::default(),
         BackendKind::Rocm => Box::<RocmBackend>::default(),
         BackendKind::Vulkan => Box::<VulkanBackend>::default(),
         BackendKind::Metal => Box::<MetalBackend>::default(),

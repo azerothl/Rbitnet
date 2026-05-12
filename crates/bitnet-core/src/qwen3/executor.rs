@@ -60,6 +60,11 @@ impl crate::model::ModelExecutor for Qwen3Executor {
             .or_else(|| Some("rbitnet-qwen3".into()))
     }
 
+    fn offload_metadata(&self) -> Option<String> {
+        (self.backend_kind == BackendKind::Hybrid)
+            .then(|| "hybrid selected; dense Qwen3 currently uses CPU fallback".into())
+    }
+
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
         let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
         Ok(tok.encode_ids(prompt, true)?.len() as u32)
@@ -71,10 +76,15 @@ impl crate::model::ModelExecutor for Qwen3Executor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
-        if self.backend_kind != BackendKind::Cpu {
+        if self.backend_kind == BackendKind::Cuda {
             return Err(BitNetError::Inference(
                 "dense qwen3 MVP currently supports CPU backend only".into(),
             ));
+        }
+        if self.backend_kind == BackendKind::Hybrid {
+            tracing::info!(
+                "dense qwen3 hybrid selected; using CPU runtime until Qwen3 offload is wired"
+            );
         }
         let mut slot = self
             .runtime

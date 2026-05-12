@@ -67,15 +67,20 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         gguf.map(|g| g.suggested_openai_model_id())
     }
 
+    fn offload_metadata(&self) -> Option<String> {
+        (self.backend_kind == BackendKind::Hybrid)
+            .then(|| "hybrid selected; qwen35moe uses its CUDA-required native path".into())
+    }
+
     fn generate_with_timings(
         &self,
         prompt: &str,
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
-        if self.backend_kind != BackendKind::Cuda {
+        if !matches!(self.backend_kind, BackendKind::Cuda | BackendKind::Hybrid) {
             return Err(BitNetError::Inference(
-                "native qwen35moe requires CUDA for this phase (`RBITNET_BACKEND=cuda`).".into(),
+                "native qwen35moe requires CUDA for this phase (`RBITNET_BACKEND=cuda` or `hybrid`).".into(),
             ));
         }
         let cuda = self.cuda_ctx.clone().ok_or_else(|| {

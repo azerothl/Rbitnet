@@ -35,7 +35,7 @@ impl LlamaRuntime {
         tokenizer_path: &Path,
         backend_kind: BackendKind,
     ) -> Result<Self> {
-        let model = LlamaModel::from_gguf_arc(archive)?;
+        let model = LlamaModel::from_gguf_arc_for_backend(archive, backend_kind)?;
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
         let kv = llama_kv_from_env(&model.cfg)?;
         let backend = make_backend(backend_kind);
