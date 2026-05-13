@@ -39,6 +39,9 @@ pub struct CatalogModel {
     pub min_rbitnet_version: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub smoke_test: Option<String>,
+    /// Golden parity badge from the curated index: `verified_golden` (documented llama.cpp match) or `best_effort`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub golden_tier: Option<String>,
 }
 
 /// Pick one GGUF filename when a repo ships many quantizations (prefers common Q4_K_M-style names).

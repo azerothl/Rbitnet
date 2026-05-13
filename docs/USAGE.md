@@ -52,6 +52,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 |--------|---------|
 | `rbitnet quickstart <repo_id> [--file NAME] [--dir DIR] [--write-config]` | Resolve/download a Hugging Face GGUF repo, infer local `RBITNET_MODEL` / `RBITNET_TOKENIZER` paths when available, and print exact PowerShell + bash commands plus `/v1/models` and chat `curl` examples. Use `--no-download` to print commands only. `--write-config` writes `rbitnet.toml` (or `--user-config`) so `serve` works without model env vars. |
 | `rbitnet up <repo_id> [--file NAME] [--dir DIR]` | Same resolver/downloader as `quickstart`, but writes `rbitnet.toml` by default. |
+| `rbitnet welcome` | Print a short **first-run guide (FR)** and pointers to `docs/DEMARRAGE_5MIN.md` and `docs/USAGE.md`. |
 | `rbitnet models list` | Print the curated catalog (default: raw `data/compatible_models.json` on GitHub). Override with `RBITNET_MODELS_INDEX_URL`. |
 | `rbitnet models list --interactive` (`-i`) | Same catalog in a **terminal UI** (table + detail panel + download with `d`). Target directory: `--download-dir` or `RBITNET_DOWNLOAD_DIR` (default `models`); optional `HF_TOKEN` for gated downloads. |
 | `rbitnet models search <query>` | Query the Hub API and show repos that have at least one `.gguf` (not project-tested — see stderr warning). Includes a heuristic `confidence` label for BitNet likelihood and an **`rbitnet=`** readiness hint (`ready`, `needs_tokenizer`, `needs_external_tokenizer`, `unsupported_arch_likely`, `experimental_gguf` — see [HF_BITNET_RBITNET_GAP.md](HF_BITNET_RBITNET_GAP.md)). **Default mode is strict BitNet filtering** (`likely`/`possible` only). |
@@ -63,7 +64,7 @@ The **`rbitnet`** binary (crate `rbitnet-cli`) lists a **curated** model index, 
 | `rbitnet models download <repo_id> [--dir DIR] [--file NAME]... [--symlink]` | Download files (repeat `--file`; if omitted, all `.gguf` plus tokenizer files when present). Optional **`--symlink`** : symlink into `--dir` instead of hard link / copy. |
 | `rbitnet models inspect <PATH>` | Inspect a local model file or directory and print model, tokenizer, and template-source paths. |
 | `rbitnet models rm <PATH> --yes` | Remove a local model file or directory. The command refuses deletion without `--yes`. Alias: `models remove`. |
-| `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). |
+| `rbitnet serve` | Same HTTP server as `rbitnet-server` (same `RBITNET_*` env vars). Optional **`--api-key`** / **`--bind`** apply only when `RBITNET_API_KEY` / `RBITNET_BIND` are unset (CLI does not override existing env). **`--init`** writes a template `rbitnet.toml` in the current directory when none exists (no overwrite). |
 | `rbitnet chat` | Terminal chatbot TUI for fast local tests. Connects to an existing server with `--base-url`, or launches one with `--serve`. |
 | `rbitnet-proxy` | Parent OpenAI-compatible proxy. Requires `RBITNET_MODEL_REGISTRY`; spawns one native `rbitnet-runner` child per requested model id. No external inference engine is required. |
 

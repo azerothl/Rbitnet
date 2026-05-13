@@ -1,5 +1,6 @@
 # Homebrew tap formula template for Rbitnet.
 #
+# Before publishing: optional Llama golden on reference hardware (docs/GOLDEN_TESTS.md) when advertising Llama parity.
 # Local test from the repository:
 #   brew install --formula ./packaging/homebrew/rbitnet.rb
 #

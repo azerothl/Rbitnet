@@ -1,4 +1,5 @@
 # WinGet submission template for Rbitnet.
+# Before publishing: run optional Llama golden on your reference GGUF when you claim parity (docs/GOLDEN_TESTS.md).
 # TODO(release): replace PackageVersion with the tag without leading "v".
 # TODO(release): InstallerUrl must match release.yml asset:
 #   rbitnet-server-vX.Y.Z-windows-x86_64.zip

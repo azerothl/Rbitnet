@@ -19,6 +19,9 @@ pub struct LlamaConfig {
     pub rope_theta: f32,
     pub norm_eps: f32,
     pub max_seq: usize,
+    /// When set (e.g. Mistral-family GGUF `llama.attention.sliding_window`), attention masks keys
+    /// older than this many tokens (inclusive of the current position).
+    pub sliding_window: Option<usize>,
 }
 
 fn u32_val(v: &GgufValue) -> Option<u32> {
@@ -157,6 +160,10 @@ impl LlamaConfig {
             .unwrap_or(2048)
             .min(8192);
 
+        let sliding_window = metadata_u32_any(archive, &["llama.attention.sliding_window"])
+            .map(|w| w as usize)
+            .filter(|&w| w > 0);
+
         Ok(Self {
             n_embd,
             n_vocab,
@@ -169,6 +176,16 @@ impl LlamaConfig {
             rope_theta,
             norm_eps,
             max_seq,
+            sliding_window,
         })
+    }
+
+    /// Earliest key position (inclusive) visible at decode position `pos` under sliding-window attention.
+    #[inline]
+    pub fn sliding_window_key_start(&self, pos: usize) -> usize {
+        match self.sliding_window {
+            None | Some(0) | Some(1) => 0,
+            Some(w) => pos.saturating_sub(w.saturating_sub(1)),
+        }
     }
 }

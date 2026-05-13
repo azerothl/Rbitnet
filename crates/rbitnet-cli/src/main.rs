@@ -44,6 +44,8 @@ enum Commands {
     Quickstart(QuickstartCmd),
     /// Download/resolve a GGUF repo and write runnable local config defaults.
     Up(UpCmd),
+    /// Print a short first-run guide (FR) and links to documentation.
+    Welcome,
     #[command(subcommand, about = "Curated catalog, HF search, and downloads")]
     Models(ModelsCmd),
     /// Run an optional LoRA/SFT Python recipe under `training/` (requires a repo checkout + Python).
@@ -69,6 +71,9 @@ struct ServeCmd {
     /// Open the bundled local web UI (`/ui`) in the default browser before serving.
     #[arg(long)]
     open_ui: bool,
+    /// Create a template `rbitnet.toml` in the working directory if none exists (does not overwrite).
+    #[arg(long)]
+    init: bool,
 }
 
 #[derive(Args)]
@@ -359,6 +364,31 @@ impl From<UpCmd> for QuickstartCmd {
             user_config: cmd.user_config,
         }
     }
+}
+
+fn maybe_write_init_config(init: bool) -> Result<(), String> {
+    if !init {
+        return Ok(());
+    }
+    let path = Path::new("rbitnet.toml");
+    if path.exists() {
+        eprintln!(
+            "info: {} already exists; --init did not overwrite it.",
+            path.display()
+        );
+        return Ok(());
+    }
+    let body = include_str!("../templates/rbitnet-init.toml");
+    fs::write(path, body).map_err(|e| format!("write {}: {e}", path.display()))?;
+    eprintln!(
+        "Created {} — edit model/tokenizer, or use RBITNET_STUB=1 for a quick HTTP smoke test.",
+        path.display()
+    );
+    Ok(())
+}
+
+fn print_welcome_text() {
+    print!("{}", include_str!("../templates/welcome.txt"));
 }
 
 fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
@@ -998,6 +1028,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     use_case: vec!["chat".into()],
                     min_ram_gb: None,
                     verified: Some(false),
+                    golden_tier: Some("best_effort".into()),
                     min_ram: None,
                     tested: None,
                     min_rbitnet_version: None,
@@ -1042,15 +1073,23 @@ async fn main() {
             train_cli::print_export_gguf_hint(cmd.checkpoint.as_deref());
             Ok(())
         }
+        Commands::Welcome => {
+            print_welcome_text();
+            Ok(())
+        }
         Commands::Serve(cmd) => {
             apply_serve_cli_env(&cmd);
-            if cmd.open_ui {
-                let url = ui_url_from_env();
-                eprintln!("Opening Rbitnet UI: {url}");
-                open_url_in_browser_soon(url);
+            if let Err(e) = maybe_write_init_config(cmd.init) {
+                Err(e)
+            } else {
+                if cmd.open_ui {
+                    let url = ui_url_from_env();
+                    eprintln!("Opening Rbitnet UI: {url}");
+                    open_url_in_browser_soon(url);
+                }
+                eprintln!("Rbitnet UI: {}", ui_url_from_env());
+                bitnet_server::run_server().await.map_err(|e| e.to_string())
             }
-            eprintln!("Rbitnet UI: {}", ui_url_from_env());
-            bitnet_server::run_server().await.map_err(|e| e.to_string())
         }
         Commands::Ui(cmd) => {
             apply_ui_cli_env(&cmd);

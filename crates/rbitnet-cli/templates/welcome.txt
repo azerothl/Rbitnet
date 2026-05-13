@@ -1,0 +1,25 @@
+Bienvenue dans Rbitnet — démarrage express
+=========================================
+
+1) Vérifiez que le binaire `rbitnet` est installé (release GitHub ou `cargo install`).
+
+2) Téléchargez un petit modèle du catalogue :
+   rbitnet models install tinyllama-1.1b-chat-q4-k-m --dir ./models
+
+   (Installe aussi tokenizer.json / tokenizer.model quand le dépôt HF le fournit.)
+
+3) Écrivez la config locale (chemins GGUF + tokenizer + bind) :
+   rbitnet up tinyllama-1.1b-chat-q4-k-m --dir ./models
+
+4) Lancez le serveur HTTP compatible OpenAI :
+   rbitnet serve
+
+   Astuce : `rbitnet serve --init` crée un `rbitnet.toml` modèle dans le répertoire courant
+   si aucun fichier n’existe encore.
+
+5) Mode sans modèle (vérifiez l’installation) :
+   PowerShell : $env:RBITNET_STUB="1"; rbitnet serve
+   bash       : RBITNET_STUB=1 rbitnet serve
+
+Documentation : docs/DEMARRAGE_5MIN.md (FR), docs/USAGE.md, docs/LIMITATIONS.md.
+Parité numérique (golden) : docs/GOLDEN_TESTS.md.

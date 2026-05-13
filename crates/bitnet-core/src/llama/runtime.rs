@@ -158,6 +158,40 @@ impl LlamaRuntime {
             &mut self.scratch,
         )
     }
+
+    /// After a full prompt, return the **greedy** next token id (temperature 0, no penalties).
+    /// Used by golden / doctor checks; not a full chat template.
+    pub fn greedy_next_token_id_after_prompt(&mut self, prompt: &str) -> Result<u32> {
+        self.kv.clear();
+        let prompt_ids = self
+            .tokenizer
+            .encode_ids(prompt, llama_encode_add_special_tokens())?;
+        if prompt_ids.is_empty() {
+            return Err(crate::error::BitNetError::Inference(
+                "greedy_next_token: empty prompt encoding".into(),
+            ));
+        }
+        let mut logits = Vec::new();
+        let chunk_sz = self.prefill_chunk_tokens.max(1);
+        for (chunk_idx, chunk) in prompt_ids.chunks(chunk_sz).enumerate() {
+            let chunk_base = chunk_idx * chunk_sz;
+            logits = self.prefill_chunk(chunk, chunk_base)?;
+        }
+        let mut rng = seeded_rng(Some(0));
+        let tok = crate::sampling::sample_token(
+            &logits,
+            &SamplingOptions {
+                temperature: 0.0,
+                top_p: None,
+                seed: Some(0),
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+            },
+            &[],
+            &mut rng,
+        );
+        Ok(tok)
+    }
 }
 
 fn seeded_rng(seed: Option<u64>) -> StdRng {

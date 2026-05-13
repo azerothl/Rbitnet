@@ -10,7 +10,7 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
 
 Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF weights (`huggingface_hub`), print `RBITNET_`* lines; **calling Microsoft BitNet is optional** — see [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md).
 
-**Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, hot reload, TUI chat, curl examples).
+**Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, hot reload, TUI chat, curl examples). **Quick start (FR):** [docs/DEMARRAGE_5MIN.md](docs/DEMARRAGE_5MIN.md).
 
 ## Installation
 

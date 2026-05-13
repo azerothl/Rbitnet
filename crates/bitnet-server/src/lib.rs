@@ -1198,15 +1198,18 @@ async fn chat_completions(
                     .metrics
                     .chat_errors_total
                     .fetch_add(1, Ordering::Relaxed);
-                let status = match &e {
-                    BitNetError::ModelNotLoaded => StatusCode::SERVICE_UNAVAILABLE,
-                    _ => StatusCode::BAD_REQUEST,
-                };
+                let status = StatusCode::from_u16(e.http_status_for_chat_completion())
+                    .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+                let mut msg = e.to_string();
+                if let Some(hint) = e.user_troubleshooting_hint() {
+                    msg.push_str(" — ");
+                    msg.push_str(hint);
+                }
                 return Ok((
                     status,
                     Json(json!({
                         "error": {
-                            "message": e.to_string(),
+                            "message": msg,
                             "type": "invalid_request_error"
                         }
                     })),
@@ -1400,19 +1403,25 @@ async fn chat_completions(
                 .metrics
                 .chat_errors_total
                 .fetch_add(1, Ordering::Relaxed);
-            let (status, msg): (StatusCode, String) = match &e {
-                BitNetError::ModelNotLoaded => (
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "model not loaded: set RBITNET_MODEL, RBITNET_STUB=1, or RBITNET_TOY=1".into(),
-                ),
-                BitNetError::NotImplemented(m) => (StatusCode::NOT_IMPLEMENTED, m.to_string()),
-                BitNetError::Inference(s) => (StatusCode::INTERNAL_SERVER_ERROR, s.clone()),
-                other => (StatusCode::INTERNAL_SERVER_ERROR, other.to_string()),
+            let status = StatusCode::from_u16(e.http_status_for_chat_completion())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            let mut msg = e.to_string();
+            if let Some(hint) = e.user_troubleshooting_hint() {
+                msg.push_str(" — ");
+                msg.push_str(hint);
+            }
+            let err_type = if status.is_server_error() {
+                "rbitnet_error"
+            } else {
+                "invalid_request_error"
             };
             return Ok((
                 status,
                 Json(json!({
-                    "error": { "message": msg, "type": "rbitnet_error" }
+                    "error": {
+                        "message": msg,
+                        "type": err_type
+                    }
                 })),
             )
                 .into_response());

@@ -121,6 +121,10 @@ pub struct LayerWeights {
     pub wk: MatrixWeights,
     pub wv: MatrixWeights,
     pub wo: MatrixWeights,
+    /// Optional per-head RMSNorm on Q (length `head_dim`), applied before RoPE when present.
+    pub attn_q_norm: Option<Vec<f32>>,
+    /// Optional per-head RMSNorm on K before RoPE.
+    pub attn_k_norm: Option<Vec<f32>>,
     pub ffn_norm: Vec<f32>,
     pub ffn_gate: MatrixWeights,
     pub ffn_up: MatrixWeights,
@@ -549,6 +553,49 @@ fn silu_mul_into(gate: &[f32], up: &[f32], out: &mut [f32]) {
     }
 }
 
+fn load_optional_head_rmsnorm(
+    archive: &GgufArchive,
+    tensor_name: &str,
+    head_dim: usize,
+) -> Option<Vec<f32>> {
+    let t = archive.tensor_first_of(&[tensor_name])?;
+    if t.dimensions.len() != 1 || t.dimensions[0] as usize != head_dim {
+        tracing::warn!(
+            tensor = tensor_name,
+            dims = ?t.dimensions,
+            expected = head_dim,
+            "attn q/k norm: unexpected shape; skipping"
+        );
+        return None;
+    }
+    let payload = archive.tensor_payload(t).ok()?;
+    tensor_to_f32(payload, t.ggml_type, &t.dimensions).ok()
+}
+
+fn apply_optional_head_rmsnorm_inplace(
+    heads: &mut [f32],
+    n_heads: usize,
+    head_dim: usize,
+    w: &[f32],
+    eps: f32,
+    scratch: &mut ScratchArena,
+) {
+    for h in 0..n_heads {
+        let lo = h * head_dim;
+        let hi = lo + head_dim;
+        let mut t = scratch.take(head_dim);
+        rmsnorm_into(&heads[lo..hi], w, eps, &mut t);
+        heads[lo..hi].copy_from_slice(&t);
+        scratch.recycle(t);
+    }
+}
+
+fn mask_sliding_window_scores(scores: &mut [f32], window_start: usize) {
+    for p in 0..scores.len().min(window_start) {
+        scores[p] = f32::NEG_INFINITY;
+    }
+}
+
 fn add_residual_inplace(x: &mut [f32], y: &[f32]) {
     for i in 0..x.len() {
         x[i] += y[i];
@@ -686,6 +733,16 @@ impl LlamaModel {
             let wq = make_embd_out(vec![format!("{p}.attn_q.weight")], n_embd, n_embd)?;
             let wk = make_embd_out(vec![format!("{p}.attn_k.weight")], n_embd_kv, n_embd)?;
             let wv = make_embd_out(vec![format!("{p}.attn_v.weight")], n_embd_kv, n_embd)?;
+            let attn_q_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_q_norm.weight"),
+                cfg.head_dim,
+            );
+            let attn_k_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_k_norm.weight"),
+                cfg.head_dim,
+            );
             let wo = make_embd_out(
                 vec![
                     format!("{p}.attn_output.weight"),
@@ -737,6 +794,8 @@ impl LlamaModel {
                 wq,
                 wk,
                 wv,
+                attn_q_norm,
+                attn_k_norm,
                 wo,
                 ffn_norm,
                 ffn_gate,
@@ -821,6 +880,16 @@ impl LlamaModel {
                 archive.as_ref(),
                 &[format!("{p}.attn_v.weight")],
             )?);
+            let attn_q_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_q_norm.weight"),
+                cfg.head_dim,
+            );
+            let attn_k_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_k_norm.weight"),
+                cfg.head_dim,
+            );
             let wo = MatrixWeights::Dense(load_tensor_strings_dense(
                 archive.as_ref(),
                 &[
@@ -853,6 +922,8 @@ impl LlamaModel {
                 wq,
                 wk,
                 wv,
+                attn_q_norm,
+                attn_k_norm,
                 wo,
                 ffn_norm,
                 ffn_gate,
@@ -963,6 +1034,16 @@ impl LlamaModel {
                 archive: Arc::clone(&archive),
                 tensor: tensor_info_strings(archive.as_ref(), &[format!("{p}.attn_v.weight")])?,
             };
+            let attn_q_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_q_norm.weight"),
+                cfg.head_dim,
+            );
+            let attn_k_norm = load_optional_head_rmsnorm(
+                archive.as_ref(),
+                &format!("{p}.attn_k_norm.weight"),
+                cfg.head_dim,
+            );
             let wo = MatrixWeights::Quant {
                 archive: Arc::clone(&archive),
                 tensor: tensor_info_strings(
@@ -1010,6 +1091,8 @@ impl LlamaModel {
                 wq,
                 wk,
                 wv,
+                attn_q_norm,
+                attn_k_norm,
                 wo,
                 ffn_norm,
                 ffn_gate,
@@ -1151,6 +1234,16 @@ impl LlamaModel {
             scratch.recycle(h);
 
             let mut q_heads = q;
+            if let Some(w) = &layer.attn_q_norm {
+                apply_optional_head_rmsnorm_inplace(
+                    &mut q_heads,
+                    cfg.n_head,
+                    cfg.head_dim,
+                    w,
+                    cfg.norm_eps,
+                    scratch,
+                );
+            }
             rope_heads_inplace(
                 &mut q_heads,
                 cfg.n_head,
@@ -1162,6 +1255,16 @@ impl LlamaModel {
             );
 
             let mut k_heads = k;
+            if let Some(w) = &layer.attn_k_norm {
+                apply_optional_head_rmsnorm_inplace(
+                    &mut k_heads,
+                    cfg.n_kv,
+                    cfg.head_dim,
+                    w,
+                    cfg.norm_eps,
+                    scratch,
+                );
+            }
             rope_heads_inplace(
                 &mut k_heads,
                 cfg.n_kv,
@@ -1177,6 +1280,7 @@ impl LlamaModel {
 
             let mut attn_out = scratch.take(n_embd);
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
+            let sw_start = cfg.sliding_window_key_start(pos);
 
             for qh in 0..cfg.n_head {
                 let kv_h = qh / n_rep;
@@ -1196,6 +1300,7 @@ impl LlamaModel {
                         scale,
                         &mut scores,
                     );
+                    mask_sliding_window_scores(&mut scores, sw_start);
                     scores
                 } else {
                     let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
@@ -1205,6 +1310,7 @@ impl LlamaModel {
                     for v in &mut s {
                         *v *= scale;
                     }
+                    mask_sliding_window_scores(&mut s, sw_start);
                     s
                 };
                 softmax_inplace(&mut scores);

@@ -16,6 +16,7 @@ fn tiny_cfg() -> LlamaConfig {
         max_seq: 128,
         norm_eps: 1e-5,
         rope_theta: 10000.0,
+        sliding_window: None,
     }
 }
 

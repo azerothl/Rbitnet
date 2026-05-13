@@ -16,6 +16,7 @@ Each archive contains `rbitnet`, `rbitnet-server`, `rbitnet-runner`, and `rbitne
 
 ## Checklist
 
+0. **Optional Llama golden** (recommended before claiming public “parity”): follow `docs/GOLDEN_TESTS.md`, run `scripts/run-golden-test.sh` (or `.ps1`) on a **reduced matrix** (one OS + one reference GGUF). WinGet/Homebrew metadata should only be published after this passes on your release hardware when you advertise Llama parity.
 1. Create and push a tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 2. Wait for the Release workflow to upload all archives.
 3. Download the archives and compute SHA-256 values:
