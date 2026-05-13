@@ -11,6 +11,7 @@ fn tiny_cfg() -> LlamaConfig {
         n_head: 4,
         n_kv: 4,
         head_dim: 8,
+        rope_rot_dims: 8,
         n_ff: 64,
         max_seq: 128,
         norm_eps: 1e-5,

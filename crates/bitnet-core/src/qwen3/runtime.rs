@@ -88,6 +88,7 @@ fn rmsnorm_inplace(x: &mut [f32], w: &[f32], eps: f32) -> Result<()> {
     Ok(())
 }
 
+/// GPT-NeoX style RoPE (same layout as Llama / Qwen GGUF in llama.cpp).
 fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
     let h = slice.len();
     debug_assert!(h % 2 == 0);
@@ -97,10 +98,10 @@ fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
         let angle = pos as f32 * inv_freq;
         let c = angle.cos();
         let s = angle.sin();
-        let x0 = slice[2 * i];
-        let x1 = slice[2 * i + 1];
-        slice[2 * i] = x0 * c - x1 * s;
-        slice[2 * i + 1] = x0 * s + x1 * c;
+        let x0 = slice[i];
+        let x1 = slice[i + half];
+        slice[i] = x0 * c - x1 * s;
+        slice[i + half] = x0 * s + x1 * c;
     }
 }
 

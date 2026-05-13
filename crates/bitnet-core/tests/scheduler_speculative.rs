@@ -3,7 +3,7 @@ use bitnet_core::gguf::GgufArchive;
 use bitnet_core::model::ModelExecutor;
 use bitnet_core::sampling::SamplingOptions;
 use bitnet_core::scheduler::{
-    ContinuousBatchScheduler, InferenceBatch, InferenceRequest, ScheduledRequest,
+    ContinuousBatchScheduler, DraftPath, InferenceBatch, InferenceRequest, ScheduledRequest,
 };
 use bitnet_core::PhaseTimings;
 use bitnet_core::Result;
@@ -61,6 +61,7 @@ fn scheduler_regular_mode_passthrough() {
         draft_ratio_num: 1,
         draft_ratio_den: 4,
         prefill_chunk_tokens: 128,
+        draft_path: DraftPath::TargetModel,
     };
     let req = InferenceRequest {
         prompt: "hello".into(),
@@ -80,6 +81,7 @@ fn scheduler_speculative_combines_draft_and_verify() {
         draft_ratio_num: 1,
         draft_ratio_den: 2,
         prefill_chunk_tokens: 128,
+        draft_path: DraftPath::TargetModel,
     };
     let req = InferenceRequest {
         prompt: "hi".into(),
@@ -100,6 +102,7 @@ fn scheduler_batch_two_preserves_order() {
         draft_ratio_num: 1,
         draft_ratio_den: 4,
         prefill_chunk_tokens: 128,
+        draft_path: DraftPath::TargetModel,
     };
     let batch = InferenceBatch {
         requests: vec![

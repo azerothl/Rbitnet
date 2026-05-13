@@ -277,20 +277,21 @@ fn softmax_inplace(s: &mut [f32]) {
 }
 
 fn rope_inplace_partial(slice: &mut [f32], pos: usize, theta: f32, rot_dims: usize) {
-    let h = slice.len().min(rot_dims);
+    let mut h = rot_dims.min(slice.len());
     if h < 2 {
         return;
     }
+    h -= h % 2;
     let half = h / 2;
     for i in 0..half {
-        let inv_freq = 1.0 / theta.powf(2.0 * (i as f32) / (h.max(2) as f32));
+        let inv_freq = 1.0 / theta.powf(2.0 * (i as f32) / (h as f32));
         let angle = pos as f32 * inv_freq;
         let c = angle.cos();
         let s = angle.sin();
-        let x0 = slice[2 * i];
-        let x1 = slice[2 * i + 1];
-        slice[2 * i] = x0 * c - x1 * s;
-        slice[2 * i + 1] = x0 * s + x1 * c;
+        let x0 = slice[i];
+        let x1 = slice[i + half];
+        slice[i] = x0 * c - x1 * s;
+        slice[i + half] = x0 * s + x1 * c;
     }
 }
 

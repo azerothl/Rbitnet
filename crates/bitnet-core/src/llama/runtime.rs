@@ -21,6 +21,20 @@ use super::config::LlamaConfig;
 use super::kv_storage::KvStorage;
 use super::model::LlamaModel;
 
+fn llama_encode_add_special_tokens() -> bool {
+    !matches!(
+        std::env::var("RBITNET_LLAMA_ENCODE_ADD_SPECIAL").as_deref(),
+        Ok("0") | Ok("false") | Ok("no")
+    )
+}
+
+fn llama_decode_skip_special_tokens() -> bool {
+    !matches!(
+        std::env::var("RBITNET_LLAMA_DECODE_SKIP_SPECIAL").as_deref(),
+        Ok("0") | Ok("false") | Ok("no")
+    )
+}
+
 /// Loads [`LlamaModel`] from GGUF and a Hugging Face tokenizer file (`tokenizer.json`, or `tokenizer.model` when loadable).
 pub struct LlamaRuntime {
     model: LlamaModel,
@@ -73,7 +87,9 @@ impl LlamaRuntime {
     ) -> Result<(String, PhaseTimings)> {
         self.kv.clear();
         let t_enc = Instant::now();
-        let prompt_ids = self.tokenizer.encode_ids(prompt, true)?;
+        let prompt_ids = self
+            .tokenizer
+            .encode_ids(prompt, llama_encode_add_special_tokens())?;
         let encode_ms = t_enc.elapsed().as_millis() as u64;
         if prompt_ids.is_empty() {
             return Ok((
@@ -112,7 +128,9 @@ impl LlamaRuntime {
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
 
-        let text = self.tokenizer.decode_ids(&gen, true)?;
+        let text = self
+            .tokenizer
+            .decode_ids(&gen, llama_decode_skip_special_tokens())?;
         let phases = PhaseTimings {
             encode_ms,
             prefill_ms,

@@ -34,6 +34,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         hp.head_count_kv,
         hp.vocab_size
     );
+    for k in [
+        "llama.rope.dimension_count",
+        "llama.attention.key_length",
+        "llama.rope.freq_base",
+        "llama.attention.sliding_window",
+    ] {
+        if let Some(v) = arch.metadata.get(k) {
+            println!("metadata {k} = {v:?}");
+        }
+    }
 
     let show = 20.min(arch.tensors.len());
     println!("First {show} tensors:");

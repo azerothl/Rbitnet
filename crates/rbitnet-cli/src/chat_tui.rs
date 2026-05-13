@@ -80,7 +80,7 @@ impl ChatApp {
             },
             turns: Vec::new(),
             input: String::new(),
-            status: "Enter: send | Ctrl+R: reload | Ctrl+U: unload | F2/F3 tokens | +/- temp | m models | q quit".into(),
+            status: "Enter: send | Ctrl+R: reload | Ctrl+U: unload | F2/F3 tokens | F4 models | +/- temp | Esc/Ctrl+C quit".into(),
             transcript: opts.transcript,
         }
     }
@@ -178,15 +178,15 @@ fn run_loop(terminal: &mut DefaultTerminal, app: &mut ChatApp) -> Result<(), Str
             continue;
         }
         match key.code {
-            KeyCode::Char('q') if app.input.is_empty() => return Ok(()),
+            KeyCode::Esc => return Ok(()),
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => return Ok(()),
             KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => app.reload(),
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => app.unload(),
-            KeyCode::Char('m') if app.input.is_empty() => app.list_models(),
             KeyCode::Enter => app.send(),
             KeyCode::Backspace => {
                 app.input.pop();
             }
+            KeyCode::F(4) => app.list_models(),
             KeyCode::F(2) => {
                 app.params.max_tokens = app.params.max_tokens.saturating_sub(1).max(1);
             }
@@ -199,6 +199,7 @@ fn run_loop(terminal: &mut DefaultTerminal, app: &mut ChatApp) -> Result<(), Str
             KeyCode::Char('-') => {
                 app.params.temperature = (app.params.temperature - 0.1).max(0.0);
             }
+            KeyCode::Char(_) if key.modifiers.contains(KeyModifiers::CONTROL) => {}
             KeyCode::Char(c) => app.input.push(c),
             _ => {}
         }

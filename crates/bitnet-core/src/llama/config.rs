@@ -13,6 +13,9 @@ pub struct LlamaConfig {
     pub n_kv: usize,
     pub n_ff: usize,
     pub head_dim: usize,
+    /// RoPE applies to the first `rope_rot_dims` elements of each head; the tail `head_dim -
+    /// rope_rot_dims` are left unchanged (matches `ggml_compute_forward_rope` when `n_dims < ne0`).
+    pub rope_rot_dims: usize,
     pub rope_theta: f32,
     pub norm_eps: f32,
     pub max_seq: usize,
@@ -88,6 +91,20 @@ impl LlamaConfig {
             ));
         }
 
+        let mut rope_rot_dims = metadata_u32_any(archive, &["llama.rope.dimension_count"])
+            .map(|v| v as usize)
+            .unwrap_or(head_dim)
+            .min(head_dim);
+        if rope_rot_dims == 0 {
+            rope_rot_dims = head_dim;
+        }
+        if rope_rot_dims % 2 != 0 {
+            rope_rot_dims = rope_rot_dims.saturating_sub(1);
+        }
+        if rope_rot_dims == 0 {
+            rope_rot_dims = head_dim;
+        }
+
         let n_ff = m
             .get("llama.feed_forward_length")
             .and_then(u32_val)
@@ -148,6 +165,7 @@ impl LlamaConfig {
             n_kv,
             n_ff,
             head_dim,
+            rope_rot_dims,
             rope_theta,
             norm_eps,
             max_seq,

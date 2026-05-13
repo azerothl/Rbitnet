@@ -265,10 +265,10 @@ Useful keys in the TUI:
 | `Enter` | Send the current prompt. |
 | `Ctrl+R` | Call `POST /v1/admin/reload`. |
 | `Ctrl+U` | Call `POST /v1/admin/unload`. |
-| `m` | Fetch `/v1/models` and show model ids in the status bar. |
+| `F4` | Fetch `/v1/models` and show model ids in the status bar. |
 | `F2` / `F3` | Decrease / increase `max_tokens`. |
 | `-` / `+` | Decrease / increase `temperature`. |
-| `q` with empty prompt or `Ctrl+C` | Quit. |
+| `Esc` or `Ctrl+C` | Quit. |
 
 Use `--transcript chat.jsonl` to append prompt/reply rows for quick regression
 checks.

@@ -10,7 +10,7 @@ You only need **Python (or other tools)** if you are **converting** a Hugging Fa
 
 Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF weights (`huggingface_hub`), print `RBITNET_`* lines; **calling Microsoft BitNet is optional** — see [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md).
 
-**Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, curl examples).
+**Start here:** [docs/USAGE.md](docs/USAGE.md) (models, tokenizer, env vars, hot reload, TUI chat, curl examples).
 
 ## Installation
 
@@ -75,8 +75,9 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
 
 ## Status
 
-- **bitnet-core**: GGUF parse, GGML dequantization, Llama-shaped forward (RMSNorm, RoPE, GQA, KV cache, SiLU FFN), `[Engine](crates/bitnet-core/src/inference.rs)`, optional toy LM.
-- **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /ui`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE). Limits, optional API key, integration tests.
+- **bitnet-core**: GGUF parse, GGML dequantization, Llama/Qwen3-shaped forward paths, native BitNet GGUF path, mmap quantized matvec, CPU parallel quant kernels, scratch arena reuse, paged/quantized KV cache hooks, hybrid CPU/GPU offload planning, structured-output sampling mask, and optional toy LM.
+- **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /ui`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE), `POST /v1/admin/unload`, and `POST /v1/admin/reload`. Supports runtime model reload without stopping the HTTP process.
+- **rbitnet CLI** (`rbitnet`): curated model list/search/download/install, `quickstart`, `up`, `serve`, local web UI launcher, and terminal chatbot TUI via `rbitnet chat`.
 - **Docs (English)**:
   - **[docs/USAGE.md](docs/USAGE.md)** — how to run a model (no Python at runtime)
   - **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** — curl, Python OpenAI, Node OpenAI, LiteLLM, Akasha
@@ -87,6 +88,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - **[CHANGELOG.md](CHANGELOG.md)** — release-facing changes (Keep a Changelog style)
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
   - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_`* variables
+  - **[docs/LOCAL_PERFORMANCE_2026-05-12.md](docs/LOCAL_PERFORMANCE_2026-05-12.md)** — local CPU/CUDA/hybrid performance notes and post-optimization comparison
   - **[docs/NATIVE_FIRST.md](docs/NATIVE_FIRST.md)** — politique native-first: aucun moteur d'inference externe requis
   - **[docs/GPU_NATIVE_ROADMAP.md](docs/GPU_NATIVE_ROADMAP.md)** — feuille de route GPU native dans `bitnet-core`
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
@@ -106,6 +108,14 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
 ## Works Today
 
 Rbitnet runs **Llama-architecture GGUF** models and now has a native BitNet GGUF path for Llama-shaped BitNet b1.58 / ternary exports tagged with `general.architecture=bitnet`. The first curated target is the Microsoft `microsoft-bitnet-b1.58-2b-4t` bundle; see [docs/BITNET_NATIVE.md](docs/BITNET_NATIVE.md) and [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+
+Recent inference-engine features include:
+
+- `RBITNET_QUANT_KERNEL=auto` for the shared CPU-parallel quantized matvec path.
+- `RBITNET_BACKEND=hybrid` plus `RBITNET_HYBRID_POLICY={layers,hotcold,auto}` for CPU/GPU offload planning.
+- `RBITNET_LLAMA_PAGED_KV=1` and `RBITNET_KV_QUANT={off,q8,q4}` for paged Llama KV experiments.
+- `RBITNET_PREFILL_CHUNK_TOKENS`, speculative draft hooks (`RBITNET_DRAFT_PATH`), and JSON/tool structured-output masking (`RBITNET_STRUCTURED_OUTPUT`).
+- Runtime admin reload through `POST /v1/admin/reload`, useful for switching models/configs while the server stays up.
 
 Concrete public GGUF repos verified through the Hugging Face model API as `gguf.architecture=llama`:
 
@@ -177,6 +187,74 @@ RBITNET_STUB=1 rbitnet serve --open-ui
 # or visit http://127.0.0.1:8080/ui
 ```
 
+## Quick terminal testing
+
+Use the terminal chatbot TUI to test a running server:
+
+```bash
+rbitnet chat --base-url http://127.0.0.1:8080/v1 --model rbitnet-llama
+```
+
+Or let the TUI launch and manage a local server:
+
+```bash
+rbitnet chat --serve \
+  --model-path /absolute/path/to/model.gguf \
+  --tokenizer /absolute/path/to/tokenizer.json \
+  --chat-format raw
+```
+
+Useful keys:
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send the prompt. |
+| `F2` / `F3` | Decrease / increase `max_tokens`. |
+| `-` / `+` | Decrease / increase `temperature`. |
+| `F4` | Fetch `/v1/models`. |
+| `Ctrl+R` | Call `POST /v1/admin/reload` when `RBITNET_ADMIN_TOKEN` is set. |
+| `Ctrl+U` | Call `POST /v1/admin/unload` when `RBITNET_ADMIN_TOKEN` is set. |
+| `Esc` or `Ctrl+C` | Quit. |
+
+Add `--transcript chat.jsonl` to append prompt/reply rows during quick regression tests.
+
+## Hot reload
+
+Set an admin token before starting the server:
+
+```bash
+export RBITNET_ADMIN_TOKEN=dev-secret
+```
+
+Reload the current env/config model without restarting the HTTP process:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/v1/admin/reload \
+  -H 'X-Rbitnet-Admin-Token: dev-secret' \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+Reload a registry model:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/v1/admin/reload \
+  -H 'X-Rbitnet-Admin-Token: dev-secret' \
+  -H 'Content-Type: application/json' \
+  -d '{"active_model_id":"tiny"}'
+```
+
+Reload a specific GGUF:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/v1/admin/reload \
+  -H 'X-Rbitnet-Admin-Token: dev-secret' \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"/models/tiny.gguf","tokenizer":"/models/tokenizer.json","architecture":"llama"}'
+```
+
+Reload metrics are exposed as `rbitnet_model_reloads_total`, `rbitnet_model_reload_failures_total`, and `rbitnet_model_reload_ms_sum`.
+
 ## Benchmarks
 
 Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for appended rows. The helper scripts start a stub server by default for API-overhead smoke checks; for real numbers, start a model yourself and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`.
@@ -231,13 +309,19 @@ Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference
 
 | Variable            | Meaning                                                              |
 | ------------------- | -------------------------------------------------------------------- |
-| `RBITNET_BIND`      | Host:port (default `127.0.0.1:8080`)                                 |
-| `RBITNET_MODEL`     | Path to `.gguf` for real inference                                   |
+| `RBITNET_BIND` | Host:port (default `127.0.0.1:8080`) |
+| `RBITNET_MODEL` | Path to `.gguf` for real inference |
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` or `tokenizer.model` if not beside the GGUF |
-| `RBITNET_STUB`      | `1` = stub text (no inference)                                       |
-| `RBITNET_TOY`       | `1` = tiny in-process F32 toy LM (no GGUF)                           |
-| `RBITNET_TOY_SEED`  | Seed for toy weights (default `42`)                                  |
-| `RBITNET_TEST_GGUF` | Optional path for `optional_gguf_from_env_smoke` test only           |
+| `RBITNET_STUB` | `1` = stub text (no inference) |
+| `RBITNET_TOY` | `1` = tiny in-process F32 toy LM (no GGUF) |
+| `RBITNET_BACKEND` | `cpu`, `cuda`, or `hybrid` |
+| `RBITNET_QUANT_KERNEL` | `auto`, `scalar`, or `cuda` quantized matvec backend |
+| `RBITNET_HYBRID_POLICY` | `layers`, `hotcold`, or `auto` layer offload policy |
+| `RBITNET_LLAMA_PAGED_KV` / `RBITNET_KV_QUANT` | Enable paged KV and choose `off`, `q8`, or `q4` KV format |
+| `RBITNET_ADMIN_TOKEN` | Enables `POST /v1/admin/unload` and `POST /v1/admin/reload` |
+| `RBITNET_CHAT_BASE_URL` | Default base URL for `rbitnet chat` |
+| `RBITNET_TOY_SEED` | Seed for toy weights (default `42`) |
+| `RBITNET_TEST_GGUF` | Optional path for `optional_gguf_from_env_smoke` test only |
 
 
 Server tuning (`rbitnet-server`): `RBITNET_MAX_BODY_BYTES`, `RBITNET_MAX_PROMPT_CHARS`, `RBITNET_MAX_TOKENS_CAP`, `RBITNET_MAX_CONCURRENT`, `RBITNET_INFERENCE_TIMEOUT_SECS`, `RBITNET_API_KEY` — see [docs/USAGE.md](docs/USAGE.md).

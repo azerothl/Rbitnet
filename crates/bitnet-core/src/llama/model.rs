@@ -133,6 +133,10 @@ pub struct LlamaModel {
     pub layers: Vec<LayerWeights>,
     pub output_norm: Vec<f32>,
     pub output: MatrixWeights,
+    /// Optional per-dimension inverse frequencies from GGUF `rope_freqs.weight` (Llama 3+).
+    /// Length `head_dim / 2`. Used only when values match the analytic inv-freq from `theta`
+    /// (otherwise the tensor may include Yarn/NTK scaling we do not apply yet — fall back to metadata).
+    pub rope_inv_freq: Option<Vec<f32>>,
 }
 
 fn load_tensor_dense(archive: &GgufArchive, names: &[&str]) -> Result<Vec<f32>> {
@@ -162,6 +166,52 @@ fn tensor_info_strings(archive: &GgufArchive, names: &[String]) -> Result<GgufTe
 
 fn matrix_mmap_supported(t: &GgufTensorInfo) -> bool {
     ggml_type_supported_mmap_matvec(t.ggml_type)
+}
+
+/// Newer Llama-3 GGUFs may ship `rope_freqs.weight` `[rope_rot_dims/2]`. If it matches the analytic
+/// inv-frequencies from `theta`, use it; otherwise it may encode Yarn/NTK scaling — ignore it.
+fn try_load_rope_inv_freq(
+    archive: &GgufArchive,
+    rope_rot_dims: usize,
+    theta: f32,
+) -> Option<Vec<f32>> {
+    let half = rope_rot_dims.checked_div(2)?;
+    let t = archive.tensor_first_of(&["rope_freqs.weight"])?;
+    if t.dimensions.len() != 1 || t.dimensions[0] as usize != half {
+        tracing::warn!(
+            got_dims = ?t.dimensions,
+            expected_len = half,
+            "rope_freqs.weight: unexpected shape; using analytic RoPE from metadata"
+        );
+        return None;
+    }
+    let payload = archive.tensor_payload(t).ok()?;
+    let v = tensor_to_f32(payload, t.ggml_type, &t.dimensions).ok()?;
+    if v.len() != half {
+        return None;
+    }
+    let h = rope_rot_dims as f32;
+    let analytical: Vec<f32> = (0..half)
+        .map(|i| 1.0 / theta.powf(2.0 * (i as f32) / h))
+        .collect();
+    let tol = 1e-3_f32;
+    let close = v
+        .iter()
+        .zip(analytical.iter())
+        .take(half.min(8))
+        .all(|(a, b)| (a - b).abs() <= tol * b.abs().max(1e-6));
+    if close {
+        tracing::info!(
+            len = half,
+            "llama: using rope_freqs.weight (matches analytic inv_freq)"
+        );
+        Some(v)
+    } else {
+        tracing::warn!(
+            "rope_freqs.weight differs from analytic inv_freq (likely scaled RoPE); using metadata theta only"
+        );
+        None
+    }
 }
 
 /// Returns `Ok(())` if every Llama weight matrix uses a GGML type we can mmap-GEMV.
@@ -450,12 +500,21 @@ fn softmax_inplace(s: &mut [f32]) {
     }
 }
 
-fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
+/// Llama-family RoPE as in llama.cpp `LLAMA_ROPE_TYPE_NORM` (`LLM_ARCH_LLAMA`, …): rotate **adjacent**
+/// dimension pairs `(2i, 2i+1)` with `inv_freq[i] = 1/θ^(2i/head_dim)`.
+///
+/// This differs from `LLAMA_ROPE_TYPE_NEOX` (pairs offset by `head_dim/2`) used by Qwen2/3, Phi, Gemma, …
+/// — see `qwen3/runtime.rs` and `qwen35/attention.rs`.
+///
+/// `inv_freq_flat`: when `Some`, length ≥ `head_dim/2`; entry `i` replaces the analytic `inv_freq` for band `i`.
+fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32, inv_freq_flat: Option<&[f32]>) {
     let h = slice.len();
     assert!(h % 2 == 0);
     let half = h / 2;
     for i in 0..half {
-        let inv_freq = 1.0 / theta.powf(2.0 * (i as f32) / (h as f32));
+        let inv_freq = inv_freq_flat
+            .and_then(|v| v.get(i).copied())
+            .unwrap_or_else(|| 1.0 / theta.powf(2.0 * (i as f32) / (h as f32)));
         let angle = pos as f32 * inv_freq;
         let c = angle.cos();
         let s = angle.sin();
@@ -466,10 +525,20 @@ fn rope_inplace(slice: &mut [f32], pos: usize, theta: f32) {
     }
 }
 
-fn rope_heads_inplace(x: &mut [f32], n_head: usize, head_dim: usize, pos: usize, theta: f32) {
+fn rope_heads_inplace(
+    x: &mut [f32],
+    n_head: usize,
+    head_dim: usize,
+    rope_rot_dims: usize,
+    pos: usize,
+    theta: f32,
+    inv_freq: Option<&[f32]>,
+) {
+    assert!(rope_rot_dims <= head_dim);
+    assert!(rope_rot_dims % 2 == 0);
     for h in 0..n_head {
         let s = &mut x[h * head_dim..(h + 1) * head_dim];
-        rope_inplace(s, pos, theta);
+        rope_inplace(&mut s[..rope_rot_dims], pos, theta, inv_freq);
     }
 }
 
@@ -676,12 +745,16 @@ impl LlamaModel {
             });
         }
 
+        let rope_inv_freq =
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+
         Ok(Self {
             cfg,
             token_embd,
             layers,
             output_norm,
             output,
+            rope_inv_freq,
         })
     }
 
@@ -788,12 +861,16 @@ impl LlamaModel {
             });
         }
 
+        let rope_inv_freq =
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+
         Ok(Self {
             cfg,
             token_embd,
             layers,
             output_norm,
             output,
+            rope_inv_freq,
         })
     }
 
@@ -941,12 +1018,16 @@ impl LlamaModel {
             });
         }
 
+        let rope_inv_freq =
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+
         Ok(Self {
             cfg,
             token_embd,
             layers,
             output_norm,
             output,
+            rope_inv_freq,
         })
     }
 
@@ -1070,10 +1151,26 @@ impl LlamaModel {
             scratch.recycle(h);
 
             let mut q_heads = q;
-            rope_heads_inplace(&mut q_heads, cfg.n_head, cfg.head_dim, pos, cfg.rope_theta);
+            rope_heads_inplace(
+                &mut q_heads,
+                cfg.n_head,
+                cfg.head_dim,
+                cfg.rope_rot_dims,
+                pos,
+                cfg.rope_theta,
+                self.rope_inv_freq.as_deref(),
+            );
 
             let mut k_heads = k;
-            rope_heads_inplace(&mut k_heads, cfg.n_kv, cfg.head_dim, pos, cfg.rope_theta);
+            rope_heads_inplace(
+                &mut k_heads,
+                cfg.n_kv,
+                cfg.head_dim,
+                cfg.rope_rot_dims,
+                pos,
+                cfg.rope_theta,
+                self.rope_inv_freq.as_deref(),
+            );
 
             let stride = cfg.n_kv * cfg.head_dim;
             kv.write_layer_kv(il, pos, &k_heads, &v, stride)?;
@@ -1149,5 +1246,40 @@ impl LlamaModel {
         scratch.recycle(xn);
         scratch.recycle(x);
         logits
+    }
+}
+
+#[cfg(test)]
+mod rope_norm_tests {
+    use super::rope_inplace;
+
+    #[test]
+    fn rope_pos_zero_is_identity() {
+        let mut v = vec![1.0_f32, 2.0, 3.0, 4.0];
+        rope_inplace(&mut v, 0, 10_000.0, None);
+        assert_eq!(v, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn rope_norm_rotates_adjacent_pairs() {
+        let theta = 10_000.0_f32;
+        let h = 4_usize;
+        let pos = 1_usize;
+        let mut expected = vec![1.0_f32, 2.0, 3.0, 4.0];
+        for i in 0..2 {
+            let inv_freq = 1.0 / theta.powf(2.0 * (i as f32) / (h as f32));
+            let angle = pos as f32 * inv_freq;
+            let c = angle.cos();
+            let s = angle.sin();
+            let x0 = expected[2 * i];
+            let x1 = expected[2 * i + 1];
+            expected[2 * i] = x0 * c - x1 * s;
+            expected[2 * i + 1] = x0 * s + x1 * c;
+        }
+        let mut v = vec![1.0_f32, 2.0, 3.0, 4.0];
+        rope_inplace(&mut v, pos, theta, None);
+        for (a, b) in v.iter().zip(expected.iter()) {
+            assert!((a - b).abs() < 1e-5, "got {v:?} expected {expected:?}");
+        }
     }
 }
