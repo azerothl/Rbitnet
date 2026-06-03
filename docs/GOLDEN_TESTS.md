@@ -75,6 +75,8 @@ Or use `scripts/run-golden-test.sh` / `scripts/run-golden-test.ps1`.
 
 ## Tolerance and scope
 
+- Optional **`RBITNET_BLAS=1`** (OpenBLAS) and **`RBITNET_LLAMA_MATMUL=ggml`** (experimental hook) should keep the same greedy first token on CPU for a given GGUF; if a golden run fails after enabling them, treat it as a regression in the fast path or document a deliberate numerical change.
+
 - **Greedy token id** is exact: no float tolerance.
 - For **logit vectors** (optional future extension), start with `max(abs diff)) < 5e-2` on CPU
   after prefill for the last prompt position, then tighten once kernels are stable.

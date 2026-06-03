@@ -196,6 +196,7 @@ dependencies = [
  "libloading",
  "memmap2",
  "rand 0.8.6",
+ "rayon",
  "sentencepiece",
  "serde",
  "serde_json",

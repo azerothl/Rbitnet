@@ -16,6 +16,14 @@ tokenizers = { workspace = true, default-features = false }
 sentencepiece = { workspace = true }
 rand = { workspace = true }
 libloading = "0.8"
+rayon = { workspace = true }
+
+[features]
+default = []
+# Optional: link-time hook for future ggml-backed matmul (see llama/ggml_bridge.rs).
+experimental-ggml-kernels = []
+# Documents optional OpenBLAS acceleration (`RBITNET_BLAS=1`); BLAS is loaded dynamically at runtime.
+blas-llama = []
 
 [dev-dependencies]
 criterion = { workspace = true }

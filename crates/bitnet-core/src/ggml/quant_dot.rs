@@ -2,7 +2,10 @@
 
 use half::{bf16, f16};
 use libloading::Library;
+use rayon::prelude::*;
+use rayon::ThreadPool;
 use std::ffi::c_void;
+use std::sync::OnceLock;
 use std::thread;
 use std::time::Instant;
 
@@ -51,7 +54,7 @@ impl QuantMatvecKernel {
             .ok()
             .and_then(|s| s.parse::<usize>().ok())
             .filter(|v| *v > 0)
-            .unwrap_or(256);
+            .unwrap_or(128);
         Self {
             backend,
             parallel_min_rows,
@@ -73,7 +76,8 @@ impl QuantMatvecKernel {
         let row_bytes = types::ggml_row_size(ty, ne0 as u64)?;
         let y = match self.backend {
             QuantKernelBackend::CpuScalar => matvec_rows_scalar(ty, payload, row_bytes, x, ne1),
-            QuantKernelBackend::CpuParallel if ne1 >= self.parallel_min_rows => {
+            QuantKernelBackend::CpuParallel
+                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) => {
                 matvec_rows_parallel(ty, payload, row_bytes, x, ne1)
             }
             QuantKernelBackend::CudaQuantStub => {
@@ -119,7 +123,8 @@ impl QuantMatvecKernel {
             QuantKernelBackend::CpuScalar => {
                 matvec_rows_scalar(ggml_type, payload, row_bytes, x, ne1)
             }
-            QuantKernelBackend::CpuParallel if ne1 >= self.parallel_min_rows => {
+            QuantKernelBackend::CpuParallel
+                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) => {
                 matvec_rows_parallel(ggml_type, payload, row_bytes, x, ne1)
             }
             QuantKernelBackend::CudaQuantStub => {
@@ -534,6 +539,33 @@ fn validate_matvec_shape(t: &GgufTensorInfo, x: &[f32], ne0: usize, ne1: usize) 
     Ok(())
 }
 
+fn quant_matvec_thread_pool() -> &'static ThreadPool {
+    static POOL: OnceLock<ThreadPool> = OnceLock::new();
+    POOL.get_or_init(|| {
+        let threads = thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1)
+            .max(1);
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .thread_name(|i| format!("rbitnet-quant-{i}"))
+            .build()
+            .expect("quant matvec thread pool")
+    })
+}
+
+fn effective_parallel_min_rows(cfg_min: usize, ne0: usize, ne1: usize) -> usize {
+    // Large inner dimension: parallelize smaller output rows too.
+    let boosted = if ne0 >= 2048 {
+        cfg_min / 2
+    } else if ne0 >= 1024 {
+        (cfg_min * 3) / 4
+    } else {
+        cfg_min
+    };
+    boosted.max(32).min(ne1.max(1))
+}
+
 fn matvec_rows_scalar(
     ty: u32,
     payload: &[u8],
@@ -560,17 +592,20 @@ fn matvec_rows_parallel(
     let threads = thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
+        .max(1)
         .min(ne1.max(1));
-    if threads <= 1 {
+    let pool = quant_matvec_thread_pool();
+    if threads <= 1 || ne1 < 2 {
         return matvec_rows_scalar(ty, payload, row_bytes, x, ne1);
     }
     let chunk_rows = (ne1 + threads - 1) / threads;
-    let mut rows = Vec::with_capacity(threads);
-    thread::scope(|scope| {
-        let mut handles = Vec::new();
-        for chunk_start in (0..ne1).step_by(chunk_rows) {
-            let chunk_end = (chunk_start + chunk_rows).min(ne1);
-            handles.push(scope.spawn(move || -> Result<(usize, Vec<f32>)> {
+    let chunk_starts: Vec<usize> = (0..ne1).step_by(chunk_rows).collect();
+    let chunk_results: Vec<std::result::Result<(usize, Vec<f32>), BitNetError>> = pool.install(|| {
+        chunk_starts
+            .par_iter()
+            .copied()
+            .map(|chunk_start| {
+                let chunk_end = (chunk_start + chunk_rows).min(ne1);
                 let mut y = vec![0.0f32; chunk_end - chunk_start];
                 for (local, o) in (chunk_start..chunk_end).enumerate() {
                     let row_start = o * row_bytes;
@@ -578,21 +613,14 @@ fn matvec_rows_parallel(
                     y[local] = dot_row(ty, row, x)?;
                 }
                 Ok((chunk_start, y))
-            }));
-        }
-        for handle in handles {
-            match handle.join() {
-                Ok(Ok(chunk)) => rows.push(chunk),
-                Ok(Err(e)) => return Err(e),
-                Err(_) => {
-                    return Err(BitNetError::Inference(
-                        "quant matvec worker thread panicked".into(),
-                    ))
-                }
-            }
-        }
-        Ok(())
-    })?;
+            })
+            .collect()
+    });
+    let mut rows = Vec::with_capacity(chunk_results.len());
+    for r in chunk_results {
+        rows.push(r?);
+    }
+    rows.sort_by_key(|(start, _)| *start);
     let mut y = vec![0.0f32; ne1];
     for (start, chunk) in rows {
         y[start..start + chunk.len()].copy_from_slice(&chunk);

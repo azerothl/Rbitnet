@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 
+use rayon::prelude::*;
+
 use crate::backend::{BackendKind, ComputeBackend, CpuBackend, CudaDeviceMatrix, CudaRuntime};
 use crate::error::{BitNetError, Result};
 use crate::ggml::{
@@ -11,7 +13,9 @@ use crate::ggml::{
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 use crate::scratch::ScratchArena;
 
+use super::blas_runtime;
 use super::config::LlamaConfig;
+use super::ggml_bridge;
 use super::kv_storage::{KvCache, KvStorage};
 
 /// How Llama matrices are stored / executed (`RBITNET_LLAMA_WEIGHT_MODE`).
@@ -459,6 +463,13 @@ fn maybe_cuda_dense(
 /// `y[out] = sum_i W[i + out * n_embd] * x[i]` — GGUF layout `ne[0]=n_embd`, `ne[1]=out`.
 fn matvec_embd_out_dense(w: &[f32], x: &[f32], n_embd: usize, n_out: usize) -> Vec<f32> {
     let mut y = vec![0.0f32; n_out];
+    if blas_runtime::blas_attention_enabled()
+        && blas_runtime::blas_ready()
+        && blas_runtime::sgemv_row_major_notrans(w, n_out, n_embd, n_embd, 1.0, x, &mut y, 0.0)
+            .is_ok()
+    {
+        return y;
+    }
     for o in 0..n_out {
         let mut acc = 0.0f32;
         for i in 0..n_embd {
@@ -472,6 +483,13 @@ fn matvec_embd_out_dense(w: &[f32], x: &[f32], n_embd: usize, n_out: usize) -> V
 /// `ffn_down`: `ne[0]=n_ff`, `ne[1]=n_embd` — `y[out] = sum_i W[i + out * n_ff] * x[i]`.
 fn matvec_ff_embd_dense(w: &[f32], x: &[f32], n_ff: usize, n_embd: usize) -> Vec<f32> {
     let mut y = vec![0.0f32; n_embd];
+    if blas_runtime::blas_attention_enabled()
+        && blas_runtime::blas_ready()
+        && blas_runtime::sgemv_row_major_notrans(w, n_embd, n_ff, n_ff, 1.0, x, &mut y, 0.0)
+            .is_ok()
+    {
+        return y;
+    }
     for o in 0..n_embd {
         let mut acc = 0.0f32;
         for i in 0..n_ff {
@@ -594,6 +612,82 @@ fn mask_sliding_window_scores(scores: &mut [f32], window_start: usize) {
     for p in 0..scores.len().min(window_start) {
         scores[p] = f32::NEG_INFINITY;
     }
+}
+
+/// One query head on the CPU / hybrid attention path (scores → softmax → V combination).
+///
+/// # Safety contract for callers
+///
+/// `kv` must only be **read** for layer `il` and positions `0..=pos` (no concurrent writers).
+fn llama_cpu_attention_one_head(
+    kv: &KvStorage,
+    il: usize,
+    pos: usize,
+    qh: usize,
+    n_rep: usize,
+    head_dim: usize,
+    stride: usize,
+    q_heads: &[f32],
+    scale: f32,
+    sw_start: usize,
+    use_blas_scores: bool,
+) -> (usize, Vec<f32>) {
+    let kv_h = qh / n_rep;
+    let q_slice = &q_heads[qh * head_dim..(qh + 1) * head_dim];
+    let mut scores = vec![0.0f32; pos + 1];
+    if use_blas_scores {
+        let mut k_mat = vec![0.0f32; (pos + 1) * head_dim];
+        kv.fill_k_rows_gpu(il, pos, kv_h, head_dim, stride, &mut k_mat);
+        let blas_ok = blas_runtime::sgemv_row_major_notrans(
+            &k_mat,
+            pos + 1,
+            head_dim,
+            head_dim,
+            scale,
+            q_slice,
+            &mut scores,
+            0.0,
+        )
+        .is_ok();
+        if blas_ok {
+            mask_sliding_window_scores(&mut scores, sw_start);
+        } else {
+            kv.attention_scores_cpu(
+                il,
+                pos,
+                kv_h,
+                head_dim,
+                stride,
+                q_slice,
+                scale,
+                &mut scores,
+            );
+            mask_sliding_window_scores(&mut scores, sw_start);
+        }
+    } else {
+        kv.attention_scores_cpu(
+            il,
+            pos,
+            kv_h,
+            head_dim,
+            stride,
+            q_slice,
+            scale,
+            &mut scores,
+        );
+        mask_sliding_window_scores(&mut scores, sw_start);
+    }
+    softmax_inplace(&mut scores);
+    let mut comb = vec![0.0f32; head_dim];
+    let mut v_values = vec![0.0f32; head_dim];
+    for p in 0..=pos {
+        kv.fill_v_head_values(il, p, kv_h, head_dim, stride, &mut v_values);
+        let sp = scores[p];
+        for i in 0..head_dim {
+            comb[i] += sp * v_values[i];
+        }
+    }
+    (qh, comb)
 }
 
 fn add_residual_inplace(x: &mut [f32], y: &[f32]) {
@@ -1214,6 +1308,8 @@ impl LlamaModel {
             return Err(BitNetError::Inference("token id out of range".into()));
         }
 
+        ggml_bridge::warn_if_ggml_env_without_bridge();
+
         let n_embd = cfg.n_embd;
         let mut x = scratch.take(n_embd);
         self.token_embd
@@ -1282,52 +1378,69 @@ impl LlamaModel {
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
             let sw_start = cfg.sliding_window_key_start(pos);
 
-            for qh in 0..cfg.n_head {
-                let kv_h = qh / n_rep;
-                let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                let mut scores: Vec<f32> = if matches!(
-                    backend.kind(),
-                    crate::backend::BackendKind::Cpu | crate::backend::BackendKind::Hybrid
-                ) {
-                    let mut scores = scratch.take(pos + 1);
-                    kv.attention_scores_cpu(
-                        il,
-                        pos,
-                        kv_h,
-                        cfg.head_dim,
-                        stride,
-                        q_slice,
-                        scale,
-                        &mut scores,
-                    );
-                    mask_sliding_window_scores(&mut scores, sw_start);
-                    scores
-                } else {
-                    let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
-                    kv.fill_k_rows_gpu(il, pos, kv_h, cfg.head_dim, stride, &mut k_mat);
-                    let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
-                    scratch.recycle(k_mat);
-                    for v in &mut s {
-                        *v *= scale;
-                    }
-                    mask_sliding_window_scores(&mut s, sw_start);
-                    s
-                };
-                softmax_inplace(&mut scores);
-                let mut comb = scratch.take(cfg.head_dim);
-                let mut v_values = scratch.take(cfg.head_dim);
-                for p in 0..=pos {
-                    kv.fill_v_head_values(il, p, kv_h, cfg.head_dim, stride, &mut v_values);
-                    let sp = scores[p];
-                    for i in 0..cfg.head_dim {
-                        comb[i] += sp * v_values[i];
-                    }
+            if matches!(
+                backend.kind(),
+                BackendKind::Cpu | BackendKind::Hybrid
+            ) {
+                let use_blas_scores =
+                    blas_runtime::blas_attention_enabled() && blas_runtime::blas_ready();
+                // SAFETY: `write_layer_kv` for this layer/position finished above; attention only
+                // reads KV for `il` and positions `0..=pos` until the next layer iteration.
+                let kv_ro: &KvStorage = unsafe { &*(kv as *mut KvStorage as *const KvStorage) };
+                let mut head_parts: Vec<(usize, Vec<f32>)> = (0..cfg.n_head)
+                    .into_par_iter()
+                    .map(|qh| {
+                        llama_cpu_attention_one_head(
+                            kv_ro,
+                            il,
+                            pos,
+                            qh,
+                            n_rep,
+                            cfg.head_dim,
+                            stride,
+                            &q_heads,
+                            scale,
+                            sw_start,
+                            use_blas_scores,
+                        )
+                    })
+                    .collect();
+                head_parts.sort_by_key(|(qh, _)| *qh);
+                for (qh, comb) in head_parts {
+                    let dst = qh * cfg.head_dim;
+                    attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
                 }
-                let dst = qh * cfg.head_dim;
-                attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
-                scratch.recycle(scores);
-                scratch.recycle(comb);
-                scratch.recycle(v_values);
+            } else {
+                for qh in 0..cfg.n_head {
+                    let kv_h = qh / n_rep;
+                    let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
+                    let mut scores: Vec<f32> = {
+                        let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
+                        kv.fill_k_rows_gpu(il, pos, kv_h, cfg.head_dim, stride, &mut k_mat);
+                        let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
+                        scratch.recycle(k_mat);
+                        for v in &mut s {
+                            *v *= scale;
+                        }
+                        mask_sliding_window_scores(&mut s, sw_start);
+                        s
+                    };
+                    softmax_inplace(&mut scores);
+                    let mut comb = scratch.take(cfg.head_dim);
+                    let mut v_values = scratch.take(cfg.head_dim);
+                    for p in 0..=pos {
+                        kv.fill_v_head_values(il, p, kv_h, cfg.head_dim, stride, &mut v_values);
+                        let sp = scores[p];
+                        for i in 0..cfg.head_dim {
+                            comb[i] += sp * v_values[i];
+                        }
+                    }
+                    let dst = qh * cfg.head_dim;
+                    attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
+                    scratch.recycle(scores);
+                    scratch.recycle(comb);
+                    scratch.recycle(v_values);
+                }
             }
 
             let y = layer.wo.matvec_embd_out(&attn_out, n_embd, n_embd)?;

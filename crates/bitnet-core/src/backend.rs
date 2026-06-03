@@ -92,9 +92,8 @@ impl ComputeBackend for CpuBackend {
 
 /// CUDA MVP backend: API-compatible with CPU path, using native cuBLAS GEMV when available.
 ///
-/// Host copy operations intentionally remain host-side until the backend exposes real reusable
-/// device buffers; copying host -> device -> host here only adds latency without preserving GPU
-/// state across calls.
+/// Generic host `matvec` paths reuse pooled device buffers inside [`CudaRuntime`] (see
+/// [`CudaRuntime::gemv_host_f32`]) instead of allocating per call.
 #[derive(Debug)]
 pub struct CudaBackend {
     cpu: CpuBackend,
@@ -119,6 +118,10 @@ const CUBLAS_OP_T: i32 = 1;
 /// CUDA bootstrap state (CUDA runtime + optional cuBLAS) used by [`CudaBackend`] and native Qwen paths.
 ///
 /// Loaded dynamically from the system CUDA stack; callers should treat failures as unavailable GPU.
+///
+/// `matvec_cuda` / [`CudaRuntime::gemv_device_weight_f32`] reuse a small triple of device buffers
+/// (`d_w`, `d_x`, `d_y`) to avoid per-call `cudaMalloc` / `cudaFree` when shapes fit within the
+/// pooled capacities (they grow as needed and are released on [`Drop`]).
 pub struct CudaRuntime {
     _lib: Library,
     _cublas_lib: Option<Library>,
@@ -146,10 +149,26 @@ pub struct CudaRuntime {
         ) -> cublasStatus_t,
     >,
     cublas_handle: Mutex<Option<usize>>,
+    pooled_gemv: Mutex<PooledGemvBufs>,
     upload_bytes: AtomicU64,
     download_bytes: AtomicU64,
     gemv_calls: AtomicU64,
 }
+
+/// Reusable device allocations for the generic `f32` GEMV helper (`matvec_cuda`).
+#[derive(Default)]
+struct PooledGemvBufs {
+    d_w: *mut c_void,
+    d_x: *mut c_void,
+    d_y: *mut c_void,
+    cap_w: usize,
+    cap_x: usize,
+    cap_y: usize,
+}
+
+// Device pointers are owned by this struct and only accessed while holding `pooled_gemv` lock
+// on `CudaRuntime` (CUDA API is not thread-safe across arbitrary concurrent callers anyway).
+unsafe impl Send for PooledGemvBufs {}
 
 impl std::fmt::Debug for CudaRuntime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -217,15 +236,16 @@ impl CudaRuntime {
         }
         let x_bytes = x.len().checked_mul(std::mem::size_of::<f32>())?;
         let y_bytes = out_rows.checked_mul(std::mem::size_of::<f32>())?;
-        let d_x = self.alloc_device(x_bytes)?;
-        let d_y = self.alloc_device(y_bytes)?;
+        let mut guard = self.pooled_gemv.lock().ok()?;
+        let pool = &mut *guard;
+        self.pooled_ensure_xy(pool, x_bytes, y_bytes)?;
+        let d_x = pool.d_x;
+        let d_y = pool.d_y;
         let mut out = vec![0.0f32; out_rows];
         let ok = self.copy_host_to_device(d_x, x.as_ptr().cast::<c_void>(), x_bytes)
             && self.cublas_sgemv_device(d_w, d_x, d_y, out_rows, in_cols)
             && self.copy_device_to_host(out.as_mut_ptr().cast::<c_void>(), d_y, y_bytes);
         let _ = unsafe { (self.cuda_device_synchronize)() };
-        self.free_device(d_x);
-        self.free_device(d_y);
         if ok {
             Some(out)
         } else {
@@ -337,6 +357,7 @@ impl CudaRuntime {
                 cublas_destroy_v2,
                 cublas_sgemv_v2,
                 cublas_handle: Mutex::new(None),
+                pooled_gemv: Mutex::new(PooledGemvBufs::default()),
                 upload_bytes: AtomicU64::new(0),
                 download_bytes: AtomicU64::new(0),
                 gemv_calls: AtomicU64::new(0),
@@ -377,6 +398,61 @@ impl CudaRuntime {
             crate::perf::record_gpu_transfer(0, nbytes as u64, 0);
         }
         ok
+    }
+
+    fn pooled_ensure_triple(
+        &self,
+        pool: &mut PooledGemvBufs,
+        w_bytes: usize,
+        x_bytes: usize,
+        y_bytes: usize,
+    ) -> Option<()> {
+        if pool.cap_w < w_bytes {
+            self.free_device(pool.d_w);
+            pool.d_w = null_mut();
+            pool.cap_w = 0;
+            pool.d_w = self.alloc_device(w_bytes)?;
+            pool.cap_w = w_bytes;
+        }
+        if pool.cap_x < x_bytes {
+            self.free_device(pool.d_x);
+            pool.d_x = null_mut();
+            pool.cap_x = 0;
+            pool.d_x = self.alloc_device(x_bytes)?;
+            pool.cap_x = x_bytes;
+        }
+        if pool.cap_y < y_bytes {
+            self.free_device(pool.d_y);
+            pool.d_y = null_mut();
+            pool.cap_y = 0;
+            pool.d_y = self.alloc_device(y_bytes)?;
+            pool.cap_y = y_bytes;
+        }
+        Some(())
+    }
+
+    /// Resize only `d_x` / `d_y` for [`Self::gemv_device_weight_f32`] (weight already on device).
+    fn pooled_ensure_xy(
+        &self,
+        pool: &mut PooledGemvBufs,
+        x_bytes: usize,
+        y_bytes: usize,
+    ) -> Option<()> {
+        if pool.cap_x < x_bytes {
+            self.free_device(pool.d_x);
+            pool.d_x = null_mut();
+            pool.cap_x = 0;
+            pool.d_x = self.alloc_device(x_bytes)?;
+            pool.cap_x = x_bytes;
+        }
+        if pool.cap_y < y_bytes {
+            self.free_device(pool.d_y);
+            pool.d_y = null_mut();
+            pool.cap_y = 0;
+            pool.d_y = self.alloc_device(y_bytes)?;
+            pool.cap_y = y_bytes;
+        }
+        Some(())
     }
 
     fn cublas_handle(&self) -> Option<cublasHandle_t> {
@@ -474,18 +550,18 @@ impl CudaRuntime {
         let w_bytes = w.len().checked_mul(std::mem::size_of::<f32>())?;
         let x_bytes = x.len().checked_mul(std::mem::size_of::<f32>())?;
         let y_bytes = out_rows.checked_mul(std::mem::size_of::<f32>())?;
-        let d_w = self.alloc_device(w_bytes)?;
-        let d_x = self.alloc_device(x_bytes)?;
-        let d_y = self.alloc_device(y_bytes)?;
+        let mut guard = self.pooled_gemv.lock().ok()?;
+        let pool = &mut *guard;
+        self.pooled_ensure_triple(pool, w_bytes, x_bytes, y_bytes)?;
+        let d_w = pool.d_w;
+        let d_x = pool.d_x;
+        let d_y = pool.d_y;
         let mut out = vec![0.0f32; out_rows];
         let ok = self.copy_host_to_device(d_w, w.as_ptr().cast::<c_void>(), w_bytes)
             && self.copy_host_to_device(d_x, x.as_ptr().cast::<c_void>(), x_bytes)
             && self.cublas_sgemv_device(d_w, d_x, d_y, out_rows, in_cols)
             && self.copy_device_to_host(out.as_mut_ptr().cast::<c_void>(), d_y, y_bytes);
         let _ = unsafe { (self.cuda_device_synchronize)() };
-        self.free_device(d_w);
-        self.free_device(d_x);
-        self.free_device(d_y);
         if !ok {
             return None;
         }
@@ -495,6 +571,17 @@ impl CudaRuntime {
 
 impl Drop for CudaRuntime {
     fn drop(&mut self) {
+        if let Ok(mut pool) = self.pooled_gemv.lock() {
+            self.free_device(pool.d_w);
+            self.free_device(pool.d_x);
+            self.free_device(pool.d_y);
+            pool.d_w = null_mut();
+            pool.d_x = null_mut();
+            pool.d_y = null_mut();
+            pool.cap_w = 0;
+            pool.cap_x = 0;
+            pool.cap_y = 0;
+        }
         if let (Some(destroy), Ok(mut guard)) = (self.cublas_destroy_v2, self.cublas_handle.lock())
         {
             if let Some(raw) = guard.take() {

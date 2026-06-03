@@ -53,6 +53,45 @@ Use `--release` implicitly via Criterion’s profile. Capture the **CPU model**,
 2. Send repeated `POST /v1/chat/completions` requests with a **fixed** JSON body (same `messages`, `max_tokens`, `temperature`).
 3. Record **p50 / p95** latency and **tokens/s** (approximate from response length / wall time).
 
+## Comparison vs llama.cpp (reference CPU)
+
+Rbitnet does **not** ship llama.cpp; this section defines a **fair** procedure to measure the gap on your machine before claiming parity.
+
+**Rules**
+
+1. **Same GGUF file** for both engines.
+2. **Same thread budget**: set llama.cpp `-t N` to match `RBITNET_THREADS` / physical cores you intend to use (avoid oversubscription vs Rbitnet’s internal pool).
+3. **Comparable workload**: prefill-heavy vs decode-heavy — use `llama-bench` with fixed `-p` / `-n`, and Rbitnet `bench_backend_compare.py` with a prompt of similar **character length** and the same `max_tokens`.
+4. Record **git SHA** of llama.cpp and Rbitnet, **rustc**, OS, CPU model.
+
+**llama.cpp**
+
+Build [llama.cpp](https://github.com/ggerganov/llama.cpp) and run `llama-bench` (example):
+
+```bash
+./build/bin/llama-bench -m /path/model.Q4_K_M.gguf -t 8 -p 512 -n 64
+```
+
+**Rbitnet**
+
+Start `rbitnet-server` with `RBITNET_BACKEND=cpu`, `RBITNET_MODEL`, `RBITNET_TOKENIZER`, then:
+
+```bash
+export RBITNET_GGUF=/path/model.Q4_K_M.gguf
+export RBITNET_THREADS=8
+./scripts/compare_llamacpp_rbitnet.sh
+```
+
+PowerShell: `.\scripts\compare_llamacpp_rbitnet.ps1` (set `RBITNET_GGUF`, optional `LLAMA_BENCH`).
+
+**Baseline row (fill in after first run)**
+
+| Date | CPU | llama.cpp SHA | Rbitnet SHA | GGUF | threads | llama-bench tok/s (reported) | Rbitnet mean_tok_s (HTTP) | ratio |
+|------|-----|---------------|-------------|------|---------|------------------------------|---------------------------|-------|
+| *(fill)* | | | | | | | | |
+
+Add refreshed rows here when changing kernels (quant pool, BLAS, CUDA cache).
+
 ## Gate A benchmark harness (CPU vs CUDA)
 
 Use the helper script to produce comparable JSON output per backend:

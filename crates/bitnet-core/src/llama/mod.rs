@@ -1,6 +1,8 @@
 //! Llama-compatible transformer (GGUF weights dequantized to F32).
 
+mod blas_runtime;
 mod config;
+mod ggml_bridge;
 pub mod kv_storage;
 mod model;
 mod runtime;

@@ -134,6 +134,20 @@ cargo run -p bitnet-server --bin rbitnet-server --release
 
 **Local config:** `rbitnet serve` / `rbitnet-server` read flat `rbitnet.toml` defaults from the current directory, `RBITNET_CONFIG`, then the user config directory (`%APPDATA%\Rbitnet\rbitnet.toml` on Windows, `$XDG_CONFIG_HOME/rbitnet/rbitnet.toml` or `~/.config/rbitnet/rbitnet.toml` on Unix). Supported keys: `model`, `tokenizer`, `bind`, `chat_format`, `model_registry`, `active_model_id`. Environment variables keep priority.
 
+### Optional OpenBLAS (`RBITNET_BLAS`)
+
+For **Llama** runs on `RBITNET_BACKEND=cpu` or `hybrid`, setting **`RBITNET_BLAS=1`** (or `true` / `yes`) makes `bitnet-core` try to **load OpenBLAS dynamically** and route attention score GEMV and small **dense `f32` matvec** helpers through `cblas_sgemv` when the symbol resolves. There is **no** compile-time BLAS dependency: if the library is missing, inference falls back to the existing scalar loops and logs a one-time warning.
+
+**Install hints**
+
+- **Windows:** install a build that ships `libopenblas.dll` or `openblas.dll` (for example [OpenBLAS releases](https://github.com/OpenMathLib/OpenBLAS/releases) or a vcpkg `openblas` triplet) and ensure the DLL directory is on **`PATH`**.
+- **Linux:** `libopenblas0` / `libopenblas64-0` / distro package providing `libopenblas.so` on the dynamic linker path.
+- **macOS:** `brew install openblas` — you may need `DYLD_LIBRARY_PATH` pointing at `$(brew --prefix openblas)/lib` for the loader to see the dylib.
+
+### Experimental ggml hook (`RBITNET_LLAMA_MATMUL=ggml`)
+
+Rebuild `bitnet-core` with **`--features experimental-ggml-kernels`** if you want the env var recognized in logs; **kernels remain Rust** until a separate native bridge is added. See `crates/bitnet-core/src/llama/ggml_bridge.rs` and [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md).
+
 ## Multi-process proxy
 
 Use `rbitnet-proxy` when you want one parent OpenAI-compatible base URL with isolated child processes per model. Each child is a real `rbitnet-runner` server with its own `RBITNET_MODEL`, bind port, mmap, tokenizer, and crash boundary.

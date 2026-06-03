@@ -16,6 +16,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Llama **golden** parity (llama.cpp reference)                 | **Optional** — `docs/GOLDEN_TESTS.md`, `cargo test -p bitnet-core optional_golden_*`, workflow `.github/workflows/golden-optional.yml` |
 | Optional train/export docs + Python recipe + `rbitnet train`     | **Done** — see [`training/README.md`](../training/README.md), [`TRAINING_AND_COMPATIBILITY.md`](TRAINING_AND_COMPATIBILITY.md) |
 | Performance baselines (published numbers)                      | **Frozen procedure + rows** — see `[BENCHMARKS.md](BENCHMARKS.md)` |
+| **Perf vs llama.cpp (CPU)**                                    | **Measured gap** — compare with `llama-bench` vs `scripts/compare_llamacpp_rbitnet.*`; parity is **not** claimed until frozen rows show it (optional BLAS / future ggml bridge narrow the gap) |
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
 | Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Not in scope today** — see [Advanced inference stack gaps](#advanced-inference-stack-gaps-vs-industry-serving) |
 | KV memory (PagedAttention-style), aggressive cache scheduling | **Not implemented** — dense per-request KV; see same section |
