@@ -20,6 +20,7 @@ rayon = { workspace = true }
 
 [features]
 default = []
+experimental-flashinfer = []
 # Optional: link-time hook for future ggml-backed matmul (see llama/ggml_bridge.rs).
 experimental-ggml-kernels = []
 # Documents optional OpenBLAS acceleration (`RBITNET_BLAS=1`); BLAS is loaded dynamically at runtime.

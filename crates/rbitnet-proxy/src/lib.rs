@@ -323,8 +323,25 @@ async fn ready(State(state): State<ProxyState>) -> Response {
     }
 }
 
-async fn metrics() -> impl IntoResponse {
-    (StatusCode::OK, "rbitnet_proxy_up 1\n")
+async fn metrics(State(state): State<ProxyState>) -> impl IntoResponse {
+    let mut body = String::from("rbitnet_proxy_up 1\n");
+    for (id, worker) in &state.workers {
+        let runtime = worker.runtime.lock().await;
+        if let Some(base) = runtime.base_url.as_ref() {
+            let url = format!("{base}/metrics");
+            if let Ok(resp) = state.client.get(&url).send().await {
+                if let Ok(text) = resp.text().await {
+                    for line in text.lines() {
+                        if line.starts_with('#') || line.trim().is_empty() {
+                            continue;
+                        }
+                        body.push_str(&format!("worker_{id}_{line}\n"));
+                    }
+                }
+            }
+        }
+    }
+    (StatusCode::OK, body)
 }
 
 async fn root_health(State(state): State<ProxyState>, headers: HeaderMap) -> Response {

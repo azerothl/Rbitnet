@@ -3,6 +3,7 @@
 mod blas_runtime;
 mod config;
 pub mod cuda_graph;
+pub mod fusion;
 mod ggml_bridge;
 pub mod kv_storage;
 mod model;
