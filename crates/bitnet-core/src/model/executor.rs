@@ -9,6 +9,7 @@ use crate::llama::LlamaRuntime;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::model::ToyLlm;
 use crate::sampling::SamplingOptions;
+use crate::stream::StreamEvent;
 use crate::timings::PhaseTimings;
 
 pub trait ModelExecutor: Send + Sync {
@@ -39,6 +40,24 @@ pub trait ModelExecutor: Send + Sync {
             SamplingOptions::from_temperature(temperature),
         )
         .map(|(s, _)| s)
+    }
+
+    /// Default: run full generation then emit a single delta + done (stub/toy compatibility).
+    fn generate_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let (text, phases) = self.generate_with_timings(prompt, max_tokens, sampling)?;
+        if !text.is_empty() {
+            on_event(StreamEvent::Delta { text: text.clone() })?;
+        }
+        on_event(StreamEvent::Done(crate::scheduler::InferenceOutput {
+            text,
+            stats: crate::scheduler::InferenceStats::from_phases(phases, false),
+        }))
     }
 }
 
@@ -150,6 +169,29 @@ impl ModelExecutor for LlamaExecutor {
             .unwrap()
             .generate_with_timings(prompt, max_tokens, sampling)
     }
+
+    fn generate_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(LlamaRuntime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+            )?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate_streaming(prompt, max_tokens, sampling, on_event)
+    }
 }
 
 pub struct BitNetNativeExecutor {
@@ -231,6 +273,29 @@ impl ModelExecutor for BitNetNativeExecutor {
             .unwrap()
             .generate_with_timings(prompt, max_tokens, sampling)
     }
+
+    fn generate_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(LlamaRuntime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+            )?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate_streaming(prompt, max_tokens, sampling, on_event)
+    }
 }
 
 pub struct BitNetExecutor {
@@ -290,5 +355,44 @@ impl ModelExecutor for BitNetExecutor {
             text,
             PhaseTimings::from_total_wall_ms(total_ms, completion_tokens),
         ))
+    }
+
+    fn generate_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let generated = self
+            .toy
+            .generate(prompt, max_tokens, sampling.temperature);
+        let words: Vec<&str> = generated.split_whitespace().collect();
+        let mut full = String::new();
+        for w in words {
+            let piece = if full.is_empty() {
+                w.to_string()
+            } else {
+                format!(" {w}")
+            };
+            full.push_str(&piece);
+            on_event(StreamEvent::Delta { text: piece })?;
+        }
+        let completion_tokens = full.split_whitespace().count() as u32;
+        on_event(StreamEvent::Done(crate::scheduler::InferenceOutput {
+            text: full.clone(),
+            stats: crate::scheduler::InferenceStats {
+                ttft_ms: 1,
+                encode_ms: 0,
+                prefill_ms: 1,
+                decode_ms: 0,
+                total_wall_ms: 1,
+                itl_us: 1000,
+                tpot_us: 1000,
+                prompt_tokens: 0,
+                completion_tokens,
+                speculative_attempted: false,
+            },
+        }))
     }
 }

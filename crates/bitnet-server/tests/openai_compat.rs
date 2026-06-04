@@ -150,6 +150,49 @@ async fn openai_stub_models_and_chat() {
 }
 
 #[tokio::test]
+async fn openai_stub_chat_streams_token_deltas() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let (engine, _guard) = {
+        let _guard = EnvGuard::set(&[
+            ("RBITNET_MODEL", None),
+            ("RBITNET_STUB", Some("1")),
+        ]);
+        let engine = Arc::new(Engine::from_env().expect("engine"));
+        (engine, _guard)
+    };
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 32,
+        "stream": true
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("stream response");
+    assert!(res.status().is_success());
+    let ct = res
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert!(ct.contains("text/event-stream"));
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(text.contains("chat.completion.chunk"));
+    assert!(text.contains(r#""delta""#));
+    assert!(text.contains("[DONE]"));
+}
+
+#[tokio::test]
 async fn admin_reload_requires_enabled_admin_token() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[

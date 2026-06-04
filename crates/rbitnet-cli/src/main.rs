@@ -7,6 +7,7 @@ mod download;
 mod hf_search;
 mod hub_http;
 mod interactive_models;
+mod recipes;
 mod train_cli;
 
 use std::fs;
@@ -58,6 +59,17 @@ enum Commands {
     Ui(UiCmd),
     /// Open a terminal chatbot for quick inference tests.
     Chat(ChatCmd),
+    /// Apply a versioned JSON serve recipe (sets env, then prints `rbitnet serve`).
+    Recipe(RecipeCmd),
+}
+
+#[derive(Args)]
+struct RecipeCmd {
+    /// Path to `*.recipe.json` (see `recipes/example-qwen3.recipe.json`).
+    path: PathBuf,
+    /// Export env to stdout without starting the server.
+    #[arg(long)]
+    print_only: bool,
 }
 
 #[derive(Args)]
@@ -1099,6 +1111,19 @@ async fn main() {
             bitnet_server::run_server().await.map_err(|e| e.to_string())
         }
         Commands::Chat(cmd) => chat_tui::run_chat_tui(cmd.into()),
+        Commands::Recipe(cmd) => match recipes::load_recipe(&cmd.path) {
+            Ok(recipe) => {
+                recipes::print_recipe_plan(&recipe, &cmd.path);
+                if !cmd.print_only {
+                    recipes::apply_recipe_env(&recipe);
+                    eprintln!("\nEnvironment applied. Starting server…");
+                    bitnet_server::run_server().await.map_err(|e| e.to_string())
+                } else {
+                    Ok(())
+                }
+            }
+            Err(e) => Err(e),
+        },
     };
 
     if let Err(e) = result {

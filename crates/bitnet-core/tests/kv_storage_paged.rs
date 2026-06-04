@@ -1,6 +1,6 @@
 //! Dense vs paged KV layout equivalence (Inference stack v2 phase A.1).
 
-use bitnet_core::llama::kv_storage::{KvCache, KvStorage, PagedSeqKv};
+use bitnet_core::llama::kv_storage::{KvCache, KvStorage, PagedKvPool, PagedSeqKv};
 use bitnet_core::llama::LlamaConfig;
 
 fn tiny_cfg() -> LlamaConfig {
@@ -95,4 +95,28 @@ fn kv_storage_dense_gpu_fill_matches_rows() {
         let row_off = p * cfg.head_dim;
         assert_eq!(&dst[row_off..row_off + cfg.head_dim], src);
     }
+}
+
+#[test]
+fn paged_kv_pool_opens_multiple_sequences() {
+    let cfg = tiny_cfg();
+    let mut pool = PagedKvPool::from_env(&cfg).expect("pool");
+    let a = pool.open_sequence().expect("seq a");
+    let b = pool.open_sequence().expect("seq b");
+    assert_ne!(a, b);
+    assert_eq!(pool.active_sequences(), 2);
+    let stride = cfg.n_kv * cfg.head_dim;
+    let k: Vec<f32> = (0..stride).map(|i| i as f32).collect();
+    let v = k.clone();
+    pool.sequence_mut(a)
+        .expect("seq a")
+        .write_kv_layer(0, 0, &k, &v)
+        .expect("write a");
+    pool.close_sequence(a);
+    assert_eq!(pool.active_sequences(), 1);
+    pool.sequence_mut(b)
+        .expect("seq b")
+        .write_kv_layer(0, 1, &k, &v)
+        .expect("write b");
+    assert!(pool.aggregate_pool_stats().new_phys_pages >= 1);
 }

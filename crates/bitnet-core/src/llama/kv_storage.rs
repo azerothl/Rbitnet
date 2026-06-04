@@ -1,5 +1,7 @@
 //! KV layouts for Llama: dense (legacy) and paged (Inference stack v2 phase A).
 
+use std::collections::HashMap;
+
 use crate::error::{BitNetError, Result};
 
 use super::config::LlamaConfig;
@@ -566,6 +568,65 @@ impl KvStorage {
             Self::Paged(p) => Some(p),
             Self::Dense(_) => None,
         }
+    }
+}
+
+/// Multi-sequence paged KV pool: one physical page free-list budget shared across sequences.
+#[derive(Debug)]
+pub struct PagedKvPool {
+    cfg: LlamaConfig,
+    page_tokens: usize,
+    max_pages_per_seq: usize,
+    sequences: HashMap<u64, PagedSeqKv>,
+    next_seq_id: u64,
+}
+
+impl PagedKvPool {
+    pub fn from_env(cfg: &LlamaConfig) -> Result<Self> {
+        let p = crate::paged_kv::PagedKvCache::from_env();
+        let max_per = std::env::var("RBITNET_KV_POOL_MAX_SEQS")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(8);
+        let pages_each = p.max_pages / max_per.max(1);
+        Ok(Self {
+            cfg: cfg.clone(),
+            page_tokens: p.page_size_tokens,
+            max_pages_per_seq: pages_each.max(1),
+            sequences: HashMap::new(),
+            next_seq_id: 1,
+        })
+    }
+
+    pub fn open_sequence(&mut self) -> Result<u64> {
+        let id = self.next_seq_id;
+        self.next_seq_id = self.next_seq_id.saturating_add(1);
+        let kv = PagedSeqKv::new(&self.cfg, self.page_tokens, self.max_pages_per_seq)?;
+        self.sequences.insert(id, kv);
+        Ok(id)
+    }
+
+    pub fn close_sequence(&mut self, seq_id: u64) {
+        self.sequences.remove(&seq_id);
+    }
+
+    pub fn sequence_mut(&mut self, seq_id: u64) -> Option<&mut PagedSeqKv> {
+        self.sequences.get_mut(&seq_id)
+    }
+
+    pub fn active_sequences(&self) -> usize {
+        self.sequences.len()
+    }
+
+    pub fn aggregate_pool_stats(&self) -> KvPoolStats {
+        let mut stats = KvPoolStats::default();
+        for seq in self.sequences.values() {
+            let s = seq.pool_stats();
+            stats.new_phys_pages += s.new_phys_pages;
+            stats.reused_phys_pages += s.reused_phys_pages;
+        }
+        stats
     }
 }
 

@@ -27,9 +27,13 @@ use axum::Router;
 use bitnet_core::inference::{stub_engine, Engine};
 use bitnet_core::sampling::SamplingOptions;
 use bitnet_core::scheduler::{InferenceRequest, InferenceStats};
+use bitnet_core::stream::StreamEvent;
 use bitnet_core::BitNetError;
 use bitnet_core::{clear_inference_cancel, request_inference_cancel};
-use futures::stream::{self, StreamExt};
+use futures::stream::{self, poll_fn, StreamExt};
+use futures::Future;
+use std::pin::pin;
+use std::task::Poll;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::{RwLock, Semaphore};
@@ -721,6 +725,7 @@ pub struct ChatMessage {
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
+#[derive(Clone)]
 pub enum StopSequence {
     One(String),
     Many(Vec<String>),
@@ -1249,6 +1254,21 @@ async fn chat_completions(
     };
     clear_inference_cancel();
     let engine = state.engine.read().await.clone();
+
+    if req.stream == Some(true) {
+        return Ok(live_stream_chat_completion(
+            state,
+            headers,
+            permit,
+            engine,
+            request_model,
+            prompt,
+            max_tokens,
+            sampling,
+            req.stop.clone(),
+        )
+        .await);
+    }
     let backend_kind = engine.backend_kind().to_string();
     let model_family = engine.model_family().to_string();
     let backend_accelerated = engine.backend_accelerated();
@@ -1429,11 +1449,7 @@ async fn chat_completions(
     };
 
     let text = apply_stop_sequences(output.text, req.stop.as_ref());
-    if req.stream == Some(true) {
-        Ok(stream_completion(&request_model, &text).into_response())
-    } else {
-        Ok(json_completion(&request_model, &text, &output.stats).into_response())
-    }
+    Ok(json_completion(&request_model, &text, &output.stats).into_response())
 }
 
 pub fn unix_now() -> u64 {
@@ -1477,6 +1493,197 @@ fn json_completion(model: &str, text: &str, stats: &InferenceStats) -> impl Into
     }))
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn live_stream_chat_completion(
+    state: AppState,
+    headers: HeaderMap,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+    engine: Arc<Engine>,
+    model: String,
+    prompt: String,
+    max_tokens: u32,
+    sampling: SamplingOptions,
+    stop: Option<StopSequence>,
+) -> Response {
+    let created = unix_now();
+    let id = format!("chatcmpl-stream-{}", created);
+    let request_id = headers
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-")
+        .to_string();
+    let metrics = state.metrics.clone();
+    let timeout_dur = state.config.inference_timeout;
+    let backend_kind = engine.backend_kind().to_string();
+    let model_family = engine.model_family().to_string();
+    let backend_accelerated = engine.backend_accelerated();
+
+    let (event_tx, mut event_rx) = tokio::sync::mpsc::channel::<Result<StreamEvent, String>>(64);
+    let prompt_for_stop = prompt.clone();
+    let mut join = tokio::task::spawn_blocking(move || {
+        let handle = tokio::runtime::Handle::current();
+        let mut on_event = |ev: StreamEvent| -> bitnet_core::Result<()> {
+            handle
+                .block_on(event_tx.send(Ok(ev)))
+                .map_err(|e| BitNetError::Inference(format!("stream send failed: {e}")))?;
+            Ok(())
+        };
+        match engine.complete_streaming(&prompt, max_tokens, sampling, &mut on_event) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                let _ = handle.block_on(event_tx.send(Err(e.to_string())));
+                Err(e)
+            }
+        }
+    });
+
+    let model_sse = model.clone();
+    let id_sse = id.clone();
+    let stop = stop.clone();
+    let start = Instant::now();
+    let mut role_sent = false;
+    let mut finished = false;
+    let body_stream = poll_fn(move |cx| {
+        let join = &mut join;
+        if finished {
+            return Poll::Ready(None::<Result<String, std::convert::Infallible>>);
+        }
+        let recv_fut = event_rx.recv();
+        let mut recv_fut = pin!(recv_fut);
+        match recv_fut.as_mut().poll(cx) {
+            Poll::Ready(Some(Ok(StreamEvent::FirstToken { .. }))) => {
+                if !role_sent {
+                    role_sent = true;
+                    let chunk = json!({
+                        "id": id_sse.as_str(),
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model_sse.as_str(),
+                        "choices": [{
+                            "index": 0,
+                            "delta": { "role": "assistant" },
+                            "finish_reason": serde_json::Value::Null
+                        }]
+                    });
+                    return Poll::Ready(Some(Ok(format!("data: {}\n\n", chunk))));
+                }
+                Poll::Pending
+            }
+            Poll::Ready(Some(Ok(StreamEvent::Delta { text }))) => {
+                let piece = apply_stop_sequences_stream_delta(&text, stop.as_ref());
+                if piece.is_empty() {
+                    return Poll::Pending;
+                }
+                let chunk = json!({
+                    "id": id_sse.as_str(),
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": model_sse.as_str(),
+                    "choices": [{
+                        "index": 0,
+                        "delta": { "content": piece },
+                        "finish_reason": serde_json::Value::Null
+                    }]
+                });
+                Poll::Ready(Some(Ok(format!("data: {}\n\n", chunk))))
+            }
+            Poll::Ready(Some(Ok(StreamEvent::Done(output)))) => {
+                let ms = start.elapsed().as_millis() as u64;
+                metrics.inference_ms_total.fetch_add(ms, Ordering::Relaxed);
+                metrics.inference_calls_total.fetch_add(1, Ordering::Relaxed);
+                metrics.record_backend_family_call(&backend_kind, &model_family);
+                metrics
+                    .inference_ttft_ms_total
+                    .fetch_add(output.stats.ttft_ms, Ordering::Relaxed);
+                metrics
+                    .completion_tokens_total
+                    .fetch_add(output.stats.completion_tokens as u64, Ordering::Relaxed);
+                if backend_accelerated {
+                    metrics
+                        .native_accelerated_calls_total
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                finished = true;
+                let finish = json!({
+                    "id": id_sse.as_str(),
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": model_sse.as_str(),
+                    "choices": [{
+                        "index": 0,
+                        "delta": {},
+                        "finish_reason": "stop"
+                    }]
+                });
+                Poll::Ready(Some(Ok(format!(
+                    "data: {}\n\ndata: [DONE]\n\n",
+                    finish
+                ))))
+            }
+            Poll::Ready(Some(Err(msg))) => {
+                metrics.chat_errors_total.fetch_add(1, Ordering::Relaxed);
+                finished = true;
+                let err = json!({
+                    "error": { "message": msg, "type": "rbitnet_error" }
+                });
+                Poll::Ready(Some(Ok(format!("data: {}\n\n", err))))
+            }
+            Poll::Ready(None) => {
+                let _ = pin!(join).as_mut().poll(cx);
+                Poll::Ready(None::<Result<String, std::convert::Infallible>>)
+            }
+            Poll::Pending => {
+                if start.elapsed() > timeout_dur {
+                    request_inference_cancel();
+                    let _ = pin!(join).as_mut().poll(cx);
+                    metrics.inference_timeouts_total.fetch_add(1, Ordering::Relaxed);
+                    metrics.chat_errors_total.fetch_add(1, Ordering::Relaxed);
+                    tracing::warn!(
+                        request_id = %request_id,
+                        model = %model_sse,
+                        "streaming inference timeout"
+                    );
+                    finished = true;
+                    let err = json!({
+                        "error": { "message": "inference timed out", "type": "timeout_error" }
+                    });
+                    return Poll::Ready(Some(Ok(format!("data: {}\n\n", err))));
+                }
+                Poll::Pending
+            }
+        }
+    });
+
+    let _ = prompt_for_stop;
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/event-stream; charset=utf-8")
+        .header("cache-control", "no-cache")
+        .body(Body::from_stream(body_stream))
+        .unwrap()
+}
+
+fn apply_stop_sequences_stream_delta(text: &str, stop: Option<&StopSequence>) -> String {
+    let mut out = text.to_string();
+    let Some(stop) = stop else {
+        return out;
+    };
+    let mut cut = None;
+    for s in stop.as_strings() {
+        if s.is_empty() {
+            continue;
+        }
+        if let Some(pos) = out.find(&s) {
+            cut = Some(cut.map_or(pos, |prev: usize| prev.min(pos)));
+        }
+    }
+    if let Some(pos) = cut {
+        out.truncate(pos);
+    }
+    out
+}
+
+#[allow(dead_code)]
 fn stream_completion(model: &str, full_text: &str) -> Response {
     let created = unix_now();
     let id = format!("chatcmpl-stream-{}", created);

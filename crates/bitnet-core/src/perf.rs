@@ -30,6 +30,8 @@ pub struct PerfSnapshot {
     pub speculative_draft_tokens: u64,
     pub speculative_verified_tokens: u64,
     pub speculative_accepted_tokens: u64,
+    pub cuda_graph_replays: u64,
+    pub scheduler_decode_waves: u64,
 }
 
 #[derive(Debug, Default)]
@@ -58,6 +60,8 @@ struct PerfCounters {
     speculative_draft_tokens: AtomicU64,
     speculative_verified_tokens: AtomicU64,
     speculative_accepted_tokens: AtomicU64,
+    cuda_graph_replays: AtomicU64,
+    scheduler_decode_waves: AtomicU64,
     quant_by_type: Mutex<Vec<(u32, QuantTypeStats)>>,
 }
 
@@ -168,6 +172,16 @@ pub fn record_prefix_cache_miss() {
     perf().prefix_cache_misses.fetch_add(1, Ordering::Relaxed);
 }
 
+pub fn record_cuda_graph_replay() {
+    perf().cuda_graph_replays.fetch_add(1, Ordering::Relaxed);
+}
+
+pub fn record_scheduler_decode_wave(steps: usize) {
+    perf()
+        .scheduler_decode_waves
+        .fetch_add(steps as u64, Ordering::Relaxed);
+}
+
 pub fn record_speculative(draft_tokens: u32, verified_tokens: u32, accepted_tokens: u32) {
     let p = perf();
     p.speculative_draft_tokens
@@ -205,6 +219,8 @@ pub fn snapshot() -> PerfSnapshot {
         speculative_draft_tokens: p.speculative_draft_tokens.load(Ordering::Relaxed),
         speculative_verified_tokens: p.speculative_verified_tokens.load(Ordering::Relaxed),
         speculative_accepted_tokens: p.speculative_accepted_tokens.load(Ordering::Relaxed),
+        cuda_graph_replays: p.cuda_graph_replays.load(Ordering::Relaxed),
+        scheduler_decode_waves: p.scheduler_decode_waves.load(Ordering::Relaxed),
     }
 }
 
@@ -332,6 +348,16 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_speculative_accepted_tokens_total",
         "Draft tokens accepted by the lightweight verifier path",
         snap.speculative_accepted_tokens
+    );
+    counter!(
+        "rbitnet_core_cuda_graph_replays_total",
+        "Decode steps recorded under CUDA graph mode",
+        snap.cuda_graph_replays
+    );
+    counter!(
+        "rbitnet_core_scheduler_decode_waves_total",
+        "Decode wave steps planned by continuous batching scheduler",
+        snap.scheduler_decode_waves
     );
 
     let by_type = match perf().quant_by_type.lock() {

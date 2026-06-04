@@ -27,6 +27,7 @@ use crate::scheduler::{
     ContinuousBatchScheduler, InferenceBatch, InferenceOutput, InferenceRequest, InferenceStats,
     ScheduledRequest,
 };
+use crate::stream::StreamEvent;
 
 /// Metadata surfaced by the HTTP `/v1/models` endpoint.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -510,6 +511,88 @@ impl Engine {
             return Ok(output);
         }
         self.inner.scheduler.run(executor, &req)
+    }
+
+    /// Stream token deltas through `on_event` (used by HTTP SSE).
+    pub fn complete_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        if self.inner.stub {
+            let text = stub_response(prompt, max_tokens);
+            if !text.is_empty() {
+                for word in text.split_whitespace() {
+                    let piece = format!(" {word}");
+                    on_event(StreamEvent::Delta {
+                        text: piece.trim_start().to_string() + " ",
+                    })?;
+                }
+            }
+            let completion_tokens = text.split_whitespace().count() as u32;
+            on_event(StreamEvent::Done(InferenceOutput {
+                text,
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    total_wall_ms: 1,
+                    itl_us: 1000,
+                    tpot_us: 1000,
+                    prompt_tokens: 0,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            }))?;
+            return Ok(());
+        }
+        if self.inner.toy.is_some() {
+            let text = self
+                .inner
+                .toy
+                .as_ref()
+                .unwrap()
+                .generate(prompt, max_tokens, sampling.temperature);
+            let mut full = String::new();
+            for w in text.split_whitespace() {
+                let piece = if full.is_empty() {
+                    w.to_string()
+                } else {
+                    format!(" {w}")
+                };
+                full.push_str(&piece);
+                on_event(StreamEvent::Delta { text: piece })?;
+            }
+            let completion_tokens = full.split_whitespace().count() as u32;
+            on_event(StreamEvent::Done(InferenceOutput {
+                text: full.clone(),
+                stats: InferenceStats {
+                    ttft_ms: 1,
+                    encode_ms: 0,
+                    prefill_ms: 1,
+                    decode_ms: 0,
+                    total_wall_ms: 1,
+                    itl_us: 1000,
+                    tpot_us: 1000,
+                    prompt_tokens: 0,
+                    completion_tokens,
+                    speculative_attempted: false,
+                },
+            }))?;
+            return Ok(());
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let req = InferenceRequest {
+            prompt: prompt.to_string(),
+            max_tokens,
+            sampling,
+        };
+        self.inner.scheduler.run_streaming(executor, &req, on_event)
     }
 
     pub fn complete_batch_detailed(

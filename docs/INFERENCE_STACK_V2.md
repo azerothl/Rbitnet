@@ -40,6 +40,9 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | A.2 | `PagedSeqKv::pool_stats()` — allocation vs reuse counters after `clear()`. |
 | B.1 | [`scheduler.rs`](../crates/bitnet-core/src/scheduler.rs) — `run_batch` logs when `RBITNET_CONTINUOUS_BATCHING` packs multiple requests (still sequential forward until batched matmul lands). |
 | B.2 | `PrefillDecodeQueue` placeholder struct (same module). |
-| C.1 | [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs) — `PrefixKvBlockCache` + `hash_prefix_tokens` scaffold. |
+| C.1 | [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs) + [`prefix_kv_exec.rs`](../crates/bitnet-core/src/prefix_kv_exec.rs) — radix scaffold + dense KV snapshot reuse (`RBITNET_PREFIX_KV`). |
+| C.1b | Token streaming SSE — [`stream.rs`](../crates/bitnet-core/src/stream.rs), live path in `bitnet-server`. |
+| A.2b | [`PagedKvPool`](../crates/bitnet-core/src/llama/kv_storage.rs) — multi-sequence paged KV API. |
+| D.0 | [`cuda_graph.rs`](../crates/bitnet-core/src/llama/cuda_graph.rs) — decode graph scaffold + metrics. |
 | C.2 | [DEPLOYMENT.md](DEPLOYMENT.md) — replica / hash routing sketch. |
 | D | [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) — native GPU work; [DELEGATION.md](DELEGATION.md) is dev-only. |

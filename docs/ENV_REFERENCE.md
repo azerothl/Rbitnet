@@ -49,6 +49,13 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | `64` | Prefix response cache size. |
+| `RBITNET_PREFIX_KV` | off | Dense KV snapshot reuse for shared prompt prefixes (prefill skip). |
+| `RBITNET_PREFIX_KV_MAX_ENTRIES` | `32` | LRU size for execution-time prefix KV snapshots. |
+| `RBITNET_CUDA_GRAPH` | off | Enable CUDA graph decode metrics path (`llama/cuda_graph.rs`). |
+| `RBITNET_MTP_K` | `1` | Multi-token burst width when `>1` (Atlas-style MTP scheduler hook). |
+| `RBITNET_KV_POOL_MAX_SEQS` | `8` | Max concurrent sequences in `PagedKvPool`. |
+| `RBITNET_KV_SIDECAR_URL` | (none) | Optional external KV sidecar base URL; see [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md). |
+| `RBITNET_KV_SIDECAR_TIMEOUT_SECS` | `30` | Sidecar HTTP timeout. |
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler, chunked prefill hooks, and speculative draft path; see [USAGE.md](USAGE.md). |

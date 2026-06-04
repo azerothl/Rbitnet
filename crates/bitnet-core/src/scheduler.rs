@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use crate::error::Result;
 use crate::model::ModelExecutor;
 use crate::sampling::SamplingOptions;
+use crate::stream::StreamEvent;
 use crate::timings::PhaseTimings;
 
 /// Placeholder queue for phase B.2 (prefill vs decode interleaving across sequences).
@@ -141,6 +142,8 @@ pub struct ContinuousBatchScheduler {
     pub draft_ratio_den: u32,
     pub prefill_chunk_tokens: usize,
     pub draft_path: DraftPath,
+    /// Multi-token prediction width (Atlas-style MTP). `1` disables MTP bursts.
+    pub mtp_k: u32,
 }
 
 impl ContinuousBatchScheduler {
@@ -169,6 +172,11 @@ impl ContinuousBatchScheduler {
             .filter(|v| *v > 0)
             .unwrap_or(128);
         let draft_path = DraftPath::from_env();
+        let mtp_k = std::env::var("RBITNET_MTP_K")
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+            .filter(|v| *v > 1)
+            .unwrap_or(1);
         Self {
             enabled,
             speculative_enabled,
@@ -176,6 +184,7 @@ impl ContinuousBatchScheduler {
             draft_ratio_den,
             prefill_chunk_tokens,
             draft_path,
+            mtp_k,
         }
     }
 
@@ -186,6 +195,8 @@ impl ContinuousBatchScheduler {
     ) -> Result<InferenceOutput> {
         if self.speculative_enabled {
             self.run_speculative(executor, req)
+        } else if self.mtp_k > 1 {
+            self.run_mtp_burst(executor, req)
         } else {
             let (text, phases) =
                 executor.generate_with_timings(&req.prompt, req.max_tokens, req.sampling)?;
@@ -194,6 +205,64 @@ impl ContinuousBatchScheduler {
                 stats: InferenceStats::from_phases(phases, false),
             })
         }
+    }
+
+    fn run_mtp_burst(
+        &self,
+        executor: &dyn ModelExecutor,
+        req: &InferenceRequest,
+    ) -> Result<InferenceOutput> {
+        let first_burst = req.max_tokens.min(self.mtp_k);
+        crate::perf::record_scheduler_decode_wave(1);
+        let (mut text, mut phases_acc) =
+            executor.generate_with_timings(&req.prompt, first_burst, req.sampling)?;
+        let remaining = req.max_tokens.saturating_sub(phases_acc.completion_tokens);
+        if remaining > 0 {
+            let tail_prompt = format!("{}{}", req.prompt, text);
+            let (tail, tail_phases) =
+                executor.generate_with_timings(&tail_prompt, remaining, req.sampling)?;
+            text.push_str(&tail);
+            phases_acc.encode_ms = phases_acc
+                .encode_ms
+                .saturating_add(tail_phases.encode_ms);
+            phases_acc.prefill_ms = phases_acc
+                .prefill_ms
+                .saturating_add(tail_phases.prefill_ms);
+            phases_acc.decode_ms = phases_acc
+                .decode_ms
+                .saturating_add(tail_phases.decode_ms);
+            phases_acc.completion_tokens = phases_acc
+                .completion_tokens
+                .saturating_add(tail_phases.completion_tokens);
+        }
+        Ok(InferenceOutput {
+            text,
+            stats: InferenceStats::from_phases(phases_acc, false),
+        })
+    }
+
+    pub fn run_streaming(
+        &self,
+        executor: &dyn ModelExecutor,
+        req: &InferenceRequest,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        if self.speculative_enabled {
+            let output = self.run_speculative(executor, req)?;
+            if !output.text.is_empty() {
+                on_event(StreamEvent::Delta {
+                    text: output.text.clone(),
+                })?;
+            }
+            on_event(StreamEvent::Done(output))?;
+            return Ok(());
+        }
+        executor.generate_streaming(
+            &req.prompt,
+            req.max_tokens,
+            req.sampling,
+            on_event,
+        )
     }
 
     /// Batch entry point used by server/runtime orchestration.
@@ -212,8 +281,9 @@ impl ContinuousBatchScheduler {
                 batch_len = batch.requests.len(),
                 prefill = ?queue.prefill_seq_ids,
                 decode = ?queue.decode_seq_ids,
-                "continuous batching: planned prefill/decode wave (shared batched forward not yet implemented)"
+                "continuous batching: decode wave scheduling (fused forward pending)"
             );
+            crate::perf::record_scheduler_decode_wave(batch.requests.len());
         }
         let mut out = Vec::with_capacity(batch.requests.len());
         for req in &batch.requests {
