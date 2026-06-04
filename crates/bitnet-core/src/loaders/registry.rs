@@ -167,6 +167,61 @@ fn dispatch_gguf_executor_inner(
     )
 }
 
+/// Validate GGUF path, `general.architecture` dispatch, and tokenizer files before serving.
+pub fn validate_gguf_serving_bundle(
+    gguf: &GgufArchive,
+    model_path: &Path,
+    tokenizer_dir: Option<&Path>,
+) -> Result<()> {
+    use std::fs;
+
+    if !model_path.is_file() {
+        return Err(BitNetError::InvalidGguf(format!(
+            "model path is not a file: {}",
+            model_path.display()
+        )));
+    }
+    let len = fs::metadata(model_path)
+        .map_err(|e| BitNetError::InvalidGguf(format!("stat model: {e}")))?
+        .len();
+    if len == 0 {
+        return Err(BitNetError::InvalidGguf(format!(
+            "GGUF file is empty: {}",
+            model_path.display()
+        )));
+    }
+
+    let key = resolve_architecture_key(gguf);
+    if let Some(msg) = unsupported_non_llama_gguf_architecture(&key) {
+        return Err(BitNetError::InvalidGguf(format!(
+            "architecture `{key}` cannot be served: {msg}"
+        )));
+    }
+
+    let tok_ok = tokenizer_dir
+        .map(|d| {
+            d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file()
+        })
+        .unwrap_or(false)
+        || model_path
+            .parent()
+            .map(|d| {
+                d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file()
+            })
+            .unwrap_or(false);
+    if !tok_ok {
+        return Err(BitNetError::TokenizerMissing);
+    }
+
+    if key == "bitnet" {
+        tracing::info!(
+            arch = %key,
+            "BitNet b1.58 checkpoint — use RBITNET_ARCHITECTURE=bitnet and see docs/BITNET_NATIVE.md"
+        );
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -20,4 +20,6 @@ pub use arch_key::{
     family_override_token, normalize_architecture_slug, resolve_architecture_key,
     resolve_architecture_key_for_load,
 };
-pub use registry::{dispatch_gguf_executor, dispatch_gguf_executor_for_load};
+pub use registry::{
+    dispatch_gguf_executor, dispatch_gguf_executor_for_load, validate_gguf_serving_bundle,
+};

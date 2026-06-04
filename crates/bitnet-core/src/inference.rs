@@ -15,7 +15,8 @@ use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 use crate::loaders::{
     dispatch_gguf_executor, dispatch_gguf_executor_for_load, family_override_token,
-    normalize_architecture_slug, resolve_architecture_key, resolve_architecture_key_for_load,
+    normalize_architecture_slug, validate_gguf_serving_bundle, resolve_architecture_key,
+    resolve_architecture_key_for_load,
 };
 use crate::memory_budget::check_load_memory_budget;
 use crate::model::{ModelExecutor, ToyLlm};
@@ -132,6 +133,7 @@ impl Engine {
         let gguf = if let Some(ref p) = model_path {
             let g = Arc::new(GgufArchive::mmap_path(p)?);
             check_load_memory_budget(g.as_ref())?;
+            validate_gguf_serving_bundle(g.as_ref(), p, tokenizer_dir.as_deref())?;
             Some(g)
         } else {
             None
