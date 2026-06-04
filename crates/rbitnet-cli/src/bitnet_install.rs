@@ -168,6 +168,9 @@ struct RbitnetManifest {
     rbitnet_tokenizer_config: Option<String>,
     #[serde(rename = "chat_template", skip_serializing_if = "Option::is_none")]
     chat_template: Option<String>,
+    /// Optional path to a serve recipe JSON (relative to manifest dir). Use `rbitnet up --recipe`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    recipe: Option<String>,
     #[serde(rename = "_comment")]
     comment: &'static str,
 }
@@ -298,6 +301,7 @@ pub fn install_bundle(
             .find(|x| x.to_ascii_lowercase().ends_with("tokenizer_config.json"))
             .cloned(),
         chat_template: None,
+        recipe: Some("recipes/bitnet-b158.recipe.json".into()),
         comment: "Relative paths from this manifest's directory. Export as env vars or pass absolute paths to rbitnet serve.",
     };
     let manifest_path = dir.join("rbitnet.manifest.json");

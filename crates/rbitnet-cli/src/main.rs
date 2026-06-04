@@ -9,6 +9,7 @@ mod hub_http;
 mod interactive_models;
 mod recipes;
 mod train_cli;
+mod tune;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -61,6 +62,17 @@ enum Commands {
     Chat(ChatCmd),
     /// Apply a versioned JSON serve recipe (sets env, then prints `rbitnet serve`).
     Recipe(RecipeCmd),
+    /// Apply battery / latency / throughput env presets (mistral.rs-style tuning).
+    Tune(TuneCmd),
+}
+
+#[derive(Args)]
+struct TuneCmd {
+    /// Profile: battery, latency, or throughput.
+    profile: String,
+    /// Print shell `export`/`set` lines instead of setting env in-process.
+    #[arg(long)]
+    export: bool,
 }
 
 #[derive(Args)]
@@ -205,6 +217,9 @@ struct QuickstartCmd {
     /// Write config to the user config directory instead of the current directory.
     #[arg(long)]
     user_config: bool,
+    /// Optional serve recipe applied before download/config.
+    #[arg(long, value_name = "PATH")]
+    recipe: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -236,6 +251,9 @@ struct UpCmd {
     /// Write config to the user config directory instead of the current directory.
     #[arg(long)]
     user_config: bool,
+    /// Optional serve recipe (SSOT); applies env before download/config (see `recipes/`).
+    #[arg(long, value_name = "PATH")]
+    recipe: Option<PathBuf>,
 }
 
 fn apply_serve_cli_env(cmd: &ServeCmd) {
@@ -374,6 +392,7 @@ impl From<UpCmd> for QuickstartCmd {
             write_config: true,
             config: cmd.config,
             user_config: cmd.user_config,
+            recipe: cmd.recipe,
         }
     }
 }
@@ -419,6 +438,11 @@ fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
 }
 
 fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
+    if let Some(ref recipe_path) = cmd.recipe {
+        let recipe = recipes::load_recipe(recipe_path)?;
+        recipes::print_recipe_plan(&recipe, recipe_path);
+        recipes::apply_recipe_env(&recipe);
+    }
     let resolved =
         download::resolve_download_files(&cmd.model_id, &cmd.files, cmd.token.as_deref())?;
     if resolved.is_empty() {
@@ -1123,6 +1147,16 @@ async fn main() {
                 }
             }
             Err(e) => Err(e),
+        },
+        Commands::Tune(cmd) => match tune::TuneProfile::parse(&cmd.profile) {
+            Some(profile) => {
+                tune::apply_profile(profile, cmd.export);
+                Ok(())
+            }
+            None => Err(format!(
+                "unknown tune profile '{}'; use battery, latency, or throughput",
+                cmd.profile
+            )),
         },
     };
 
