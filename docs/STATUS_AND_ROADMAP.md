@@ -142,15 +142,19 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 
 ### Serving pipeline (orchestration)
 
-| Feature | Notes for Rbitnet |
-|---------|-------------------|
-| **Continuous batching** | Not present — requests are **not** dynamically packed into a single forward wave |
-| **Chunked prefill** | **Partial** — Llama and Qwen35 split the **prompt loop** into slices of `RBITNET_PREFILL_CHUNK_TOKENS` (still **one forward step per token**); no production-grade interleaving with decode waves |
-| **Prefix caching** | **Partial** — `RBITNET_PREFIX_CACHE` caches **full duplicate completions**, not **KV reuse** for shared prefixes (see [LIMITATIONS.md](LIMITATIONS.md)) |
-| **CUDA / HIP graphs** | Not present — graph capture would require stable shapes and fused regions |
-| **Speculative decoding** | **MVP** — scheduler can run draft-then-verify passes (`RBITNET_SPECULATIVE`); not EAGLE-class draft models |
+| Feature | Status (Jun 2026) | Notes |
+|---------|-------------------|-------|
+| **Live token streaming** | **Shipped (MVP)** | SSE token deltas via [`stream.rs`](../crates/bitnet-core/src/stream.rs) and `live_stream_chat_completion` in `bitnet-server` (not post-generation chunking). |
+| **Prefix KV (tensorial)** | **MVP (dense)** | `RBITNET_PREFIX_KV` — dense KV snapshots + partial prefill; **not** with `RBITNET_LLAMA_PAGED_KV` yet. Radix block index in [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs). |
+| **Paged KV pool** | **API + Engine hook** | `PagedKvPool`, `RBITNET_KV_POOL=1` on [`Engine`](../crates/bitnet-core/src/inference.rs); shared physical pages across sequences. |
+| **Continuous batching** | **Hook → waves** | `RBITNET_CONTINUOUS_BATCHING` — interleaved decode waves when sessions enabled; fused multi-seq matmul still pending. |
+| **Chunked prefill** | **Partial** | `RBITNET_PREFILL_CHUNK_TOKENS` slices the prompt loop (one forward step per token). |
+| **Full-response prefix cache** | **Optional** | `RBITNET_PREFIX_CACHE` — duplicate **completions**, distinct from prefix KV. |
+| **CUDA graphs** | **Metrics + capture hook** | `RBITNET_CUDA_GRAPH` — [`cuda_graph.rs`](../crates/bitnet-core/src/llama/cuda_graph.rs); device capture on stable decode shapes (CUDA). |
+| **KV sidecar** | **HTTP MVP** | `RBITNET_KV_SIDECAR_URL` — PUT/GET JSON block tables ([`kv_sidecar.rs`](../crates/bitnet-core/src/kv_sidecar.rs), [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md)). |
+| **Speculative decoding** | **MVP** | `RBITNET_SPECULATIVE`, `RBITNET_DRAFT_MODEL` (secondary GGUF when configured). |
 
-These belong to a **scheduler + executor** redesign layered above the current `Engine` / blocking HTTP model.
+Production-grade throughput still needs fused forwards and GPU-resident KV — see [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) *Done / Next*.
 
 **Frontier-aligned backlog (multi-token prefill, block KV / PagedAttention, continuous batching, prefix-KV + L7 routing):** tracked conceptually against industry stacks (vLLM, TensorRT-LLM, gateway routing patterns); see discussion in [USAGE.md](USAGE.md), [PROFILING.md](PROFILING.md), and [LIMITATIONS.md](LIMITATIONS.md).
 

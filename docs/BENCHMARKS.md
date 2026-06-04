@@ -128,6 +128,7 @@ Copy the schema from the Sprint rows below; replace **`<GIT_SHA>`** per release.
 
 | Release tag / SHA | Host | Backend | Model family | Prompt tok (approx.) | max_tokens | p50 ms | p95 ms | tok/s | Peak RSS | Notes |
 |-------------------|------|---------|--------------|----------------------|------------|--------|--------|-------|----------|-------|
+| `v0.1.0` / `serving-hooks-2026-06` | dev / Win32 | `cpu` | `stub` | 32 | 16 | *(fill)* | *(fill)* | *(fill)* | low | `RBITNET_STUB=1`; live SSE; see [profiling/2026-06-04-serving-hooks-baseline.md](profiling/2026-06-04-serving-hooks-baseline.md) |
 | *(example)* `v0.1.0` / `<GIT_SHA>` | Ryzen 7 7840HS / 32 GB | `cpu` | `bitnet` | 300 | 128 | 112 | 167 | 74 | *(optional)* | toy path: `RBITNET_TOY=1` |
 
 ### Historical / internal rows
