@@ -53,6 +53,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_PREFIX_KV_MAX_ENTRIES` | `32` | LRU size for execution-time prefix KV snapshots. |
 | `RBITNET_CUDA_GRAPH` | off | Enable CUDA graph decode metrics path (`llama/cuda_graph.rs`). |
 | `RBITNET_MTP_K` | `1` | Multi-token burst width when `>1` (Atlas-style MTP scheduler hook). |
+| `RBITNET_KV_POOL` | off | Enable process-wide `PagedKvPool` with shared physical pages (`kv_pool.rs`). |
 | `RBITNET_KV_POOL_MAX_SEQS` | `8` | Max concurrent sequences in `PagedKvPool`. |
 | `RBITNET_KV_SIDECAR_URL` | (none) | Optional external KV sidecar base URL; see [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md). |
 | `RBITNET_KV_SIDECAR_TIMEOUT_SECS` | `30` | Sidecar HTTP timeout. |

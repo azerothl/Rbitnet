@@ -1,6 +1,7 @@
 //! KV layouts for Llama: dense (legacy) and paged (Inference stack v2 phase A).
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::error::{BitNetError, Result};
 
@@ -95,6 +96,80 @@ pub struct KvPoolStats {
     pub reused_phys_pages: usize,
 }
 
+/// Physical page slabs shared across sequences in a [`PagedKvPool`].
+#[derive(Debug)]
+pub struct SharedPhysKvStore {
+    n_layer: usize,
+    stride: usize,
+    page_tokens: usize,
+    max_phys_pages: usize,
+    quant_format: KvQuantFormat,
+    phys_k: Vec<Vec<Vec<f32>>>,
+    phys_v: Vec<Vec<Vec<f32>>>,
+    phys_k_q: Vec<Vec<Vec<u8>>>,
+    phys_v_q: Vec<Vec<Vec<u8>>>,
+    free_ids: Vec<Vec<usize>>,
+    stats: KvPoolStats,
+}
+
+impl SharedPhysKvStore {
+    pub fn new(cfg: &LlamaConfig, page_tokens: usize, max_phys_pages: usize) -> Result<Self> {
+        if page_tokens == 0 || max_phys_pages == 0 {
+            return Err(BitNetError::Inference("shared paged KV: bad page config".into()));
+        }
+        let stride = cfg.n_kv * cfg.head_dim;
+        let n_layer = cfg.n_layer;
+        let quant_format = KvQuantFormat::from_env();
+        Ok(Self {
+            n_layer,
+            stride,
+            page_tokens,
+            max_phys_pages,
+            quant_format,
+            phys_k: (0..n_layer).map(|_| Vec::new()).collect(),
+            phys_v: (0..n_layer).map(|_| Vec::new()).collect(),
+            phys_k_q: (0..n_layer).map(|_| Vec::new()).collect(),
+            phys_v_q: (0..n_layer).map(|_| Vec::new()).collect(),
+            free_ids: (0..n_layer).map(|_| Vec::new()).collect(),
+            stats: KvPoolStats::default(),
+        })
+    }
+
+    pub fn alloc_phys(&mut self, layer: usize) -> Result<usize> {
+        if let Some(id) = self.free_ids[layer].pop() {
+            self.phys_k[layer][id].fill(0.0);
+            self.phys_v[layer][id].fill(0.0);
+            if let Some(slab) = self.phys_k_q[layer].get_mut(id) {
+                slab.fill(0);
+            }
+            if let Some(slab) = self.phys_v_q[layer].get_mut(id) {
+                slab.fill(0);
+            }
+            self.stats.reused_phys_pages += 1;
+            return Ok(id);
+        }
+        if self.phys_k[layer].len() >= self.max_phys_pages {
+            return Err(BitNetError::Inference(format!(
+                "shared paged KV: exhausted physical pages for layer {layer} (max={})",
+                self.max_phys_pages
+            )));
+        }
+        let len = self.stride * self.page_tokens;
+        let id = self.phys_k[layer].len();
+        self.phys_k[layer].push(vec![0.0f32; len]);
+        self.phys_v[layer].push(vec![0.0f32; len]);
+        let q_len = self.quant_format.row_bytes(self.stride) * self.page_tokens;
+        self.phys_k_q[layer].push(vec![0u8; q_len]);
+        self.phys_v_q[layer].push(vec![0u8; q_len]);
+        self.stats.new_phys_pages += 1;
+        Ok(id)
+    }
+
+    pub fn pool_stats(&self) -> KvPoolStats {
+        self.stats.clone()
+    }
+}
+
 /// Single-sequence paged KV: logical token positions map to fixed-size physical pages **per layer**.
 #[derive(Debug)]
 pub struct PagedSeqKv {
@@ -113,10 +188,29 @@ pub struct PagedSeqKv {
     free_ids: Vec<Vec<usize>>,
     /// Per layer: logical_block_index -> physical page index (`usize::MAX` = unassigned).
     block_phys: Vec<Vec<usize>>,
+    shared: Option<Arc<Mutex<SharedPhysKvStore>>>,
 }
 
 impl PagedSeqKv {
     pub fn new(cfg: &LlamaConfig, page_tokens: usize, max_pages: usize) -> Result<Self> {
+        Self::new_inner(cfg, page_tokens, max_pages, None)
+    }
+
+    pub fn new_with_shared(
+        cfg: &LlamaConfig,
+        page_tokens: usize,
+        max_logical_pages: usize,
+        shared: Arc<Mutex<SharedPhysKvStore>>,
+    ) -> Result<Self> {
+        Self::new_inner(cfg, page_tokens, max_logical_pages, Some(shared))
+    }
+
+    fn new_inner(
+        cfg: &LlamaConfig,
+        page_tokens: usize,
+        max_pages: usize,
+        shared: Option<Arc<Mutex<SharedPhysKvStore>>>,
+    ) -> Result<Self> {
         if page_tokens == 0 {
             return Err(BitNetError::Inference(
                 "paged KV: page_tokens must be >= 1".into(),
@@ -143,10 +237,16 @@ impl PagedSeqKv {
             free_ids: (0..n_layer).map(|_| Vec::new()).collect(),
             block_phys: (0..n_layer).map(|_| Vec::new()).collect(),
             stats: KvPoolStats::default(),
+            shared,
         })
     }
 
     fn alloc_phys(&mut self, layer: usize) -> Result<usize> {
+        if let Some(shared) = &self.shared {
+            return shared.lock().map_err(|_| {
+                BitNetError::Inference("shared phys KV lock poisoned".into())
+            })?.alloc_phys(layer);
+        }
         if let Some(id) = self.free_ids[layer].pop() {
             self.phys_k[layer][id].fill(0.0);
             self.phys_v[layer][id].fill(0.0);
@@ -197,26 +297,45 @@ impl PagedSeqKv {
         let lb = pos / self.page_tokens;
         let pid = self.ensure_logical_block(layer, lb)?;
         let off_in_page = (pos % self.page_tokens) * self.stride;
+        let stride = self.stride;
         match self.quant_format {
             KvQuantFormat::F32 => {
-                let slab_k = &mut self.phys_k[layer][pid];
-                let slab_v = &mut self.phys_v[layer][pid];
-                slab_k[off_in_page..off_in_page + self.stride].copy_from_slice(k);
-                slab_v[off_in_page..off_in_page + self.stride].copy_from_slice(v);
+                if let Some(shared) = &self.shared {
+                    let mut g = shared.lock().expect("shared phys KV lock");
+                    g.phys_k[layer][pid][off_in_page..off_in_page + stride].copy_from_slice(k);
+                    g.phys_v[layer][pid][off_in_page..off_in_page + stride].copy_from_slice(v);
+                } else {
+                    self.phys_k[layer][pid][off_in_page..off_in_page + stride].copy_from_slice(k);
+                    self.phys_v[layer][pid][off_in_page..off_in_page + stride].copy_from_slice(v);
+                }
             }
             fmt => {
-                let row_bytes = fmt.row_bytes(self.stride);
+                let row_bytes = fmt.row_bytes(stride);
                 let q_off = (pos % self.page_tokens) * row_bytes;
-                encode_quant_row(
-                    fmt,
-                    k,
-                    &mut self.phys_k_q[layer][pid][q_off..q_off + row_bytes],
-                );
-                encode_quant_row(
-                    fmt,
-                    v,
-                    &mut self.phys_v_q[layer][pid][q_off..q_off + row_bytes],
-                );
+                if let Some(shared) = &self.shared {
+                    let mut g = shared.lock().expect("shared phys KV lock");
+                    encode_quant_row(
+                        fmt,
+                        k,
+                        &mut g.phys_k_q[layer][pid][q_off..q_off + row_bytes],
+                    );
+                    encode_quant_row(
+                        fmt,
+                        v,
+                        &mut g.phys_v_q[layer][pid][q_off..q_off + row_bytes],
+                    );
+                } else {
+                    encode_quant_row(
+                        fmt,
+                        k,
+                        &mut self.phys_k_q[layer][pid][q_off..q_off + row_bytes],
+                    );
+                    encode_quant_row(
+                        fmt,
+                        v,
+                        &mut self.phys_v_q[layer][pid][q_off..q_off + row_bytes],
+                    );
+                }
             }
         }
         Ok(())
@@ -229,6 +348,9 @@ impl PagedSeqKv {
         kv_head: usize,
         head_dim: usize,
     ) -> &[f32] {
+        if self.shared.is_some() {
+            panic!("k_head_slice unavailable with shared phys pages; use fill_k_head_values");
+        }
         let lb = pos / self.page_tokens;
         let pid = self.block_phys[layer][lb];
         if self.quant_format != KvQuantFormat::F32 {
@@ -245,6 +367,9 @@ impl PagedSeqKv {
         kv_head: usize,
         head_dim: usize,
     ) -> &[f32] {
+        if self.shared.is_some() {
+            panic!("v_head_slice unavailable with shared phys pages; use fill_v_head_values");
+        }
         let lb = pos / self.page_tokens;
         let pid = self.block_phys[layer][lb];
         if self.quant_format != KvQuantFormat::F32 {
@@ -264,7 +389,18 @@ impl PagedSeqKv {
     ) {
         match self.quant_format {
             KvQuantFormat::F32 => {
-                out.copy_from_slice(self.k_head_slice(layer, pos, kv_head, head_dim))
+                let lb = pos / self.page_tokens;
+                let pid = self.block_phys[layer][lb];
+                let off_in_page =
+                    (pos % self.page_tokens) * self.stride + kv_head * head_dim;
+                if let Some(shared) = &self.shared {
+                    let g = shared.lock().expect("shared phys KV lock");
+                    out.copy_from_slice(
+                        &g.phys_k[layer][pid][off_in_page..off_in_page + head_dim],
+                    );
+                } else {
+                    out.copy_from_slice(self.k_head_slice(layer, pos, kv_head, head_dim));
+                }
             }
             fmt => self.decode_quant_head(layer, pos, kv_head, head_dim, true, fmt, out),
         }
@@ -280,7 +416,18 @@ impl PagedSeqKv {
     ) {
         match self.quant_format {
             KvQuantFormat::F32 => {
-                out.copy_from_slice(self.v_head_slice(layer, pos, kv_head, head_dim))
+                let lb = pos / self.page_tokens;
+                let pid = self.block_phys[layer][lb];
+                let off_in_page =
+                    (pos % self.page_tokens) * self.stride + kv_head * head_dim;
+                if let Some(shared) = &self.shared {
+                    let g = shared.lock().expect("shared phys KV lock");
+                    out.copy_from_slice(
+                        &g.phys_v[layer][pid][off_in_page..off_in_page + head_dim],
+                    );
+                } else {
+                    out.copy_from_slice(self.v_head_slice(layer, pos, kv_head, head_dim));
+                }
             }
             fmt => self.decode_quant_head(layer, pos, kv_head, head_dim, false, fmt, out),
         }
@@ -330,6 +477,18 @@ impl PagedSeqKv {
 
     pub fn max_pages(&self) -> usize {
         self.max_pages
+    }
+
+    pub fn block_table_snapshot(&self) -> Vec<Vec<usize>> {
+        self.block_phys.clone()
+    }
+
+    pub fn restore_block_table(&mut self, tables: &[Vec<usize>], _token_count: usize) -> bool {
+        if tables.len() != self.n_layer {
+            return false;
+        }
+        self.block_phys.clone_from_slice(tables);
+        true
     }
 
     pub fn physical_counts(&self) -> Vec<usize> {
@@ -563,6 +722,13 @@ impl KvStorage {
         }
     }
 
+    pub fn as_paged(&self) -> Option<&PagedSeqKv> {
+        match self {
+            Self::Paged(p) => Some(p),
+            Self::Dense(_) => None,
+        }
+    }
+
     pub fn as_paged_mut(&mut self) -> Option<&mut PagedSeqKv> {
         match self {
             Self::Paged(p) => Some(p),
@@ -577,6 +743,7 @@ pub struct PagedKvPool {
     cfg: LlamaConfig,
     page_tokens: usize,
     max_pages_per_seq: usize,
+    shared_phys: Arc<Mutex<SharedPhysKvStore>>,
     sequences: HashMap<u64, PagedSeqKv>,
     next_seq_id: u64,
 }
@@ -590,10 +757,16 @@ impl PagedKvPool {
             .filter(|v| *v > 0)
             .unwrap_or(8);
         let pages_each = p.max_pages / max_per.max(1);
+        let shared_phys = Arc::new(Mutex::new(SharedPhysKvStore::new(
+            cfg,
+            p.page_size_tokens,
+            p.max_pages,
+        )?));
         Ok(Self {
             cfg: cfg.clone(),
             page_tokens: p.page_size_tokens,
             max_pages_per_seq: pages_each.max(1),
+            shared_phys,
             sequences: HashMap::new(),
             next_seq_id: 1,
         })
@@ -602,7 +775,12 @@ impl PagedKvPool {
     pub fn open_sequence(&mut self) -> Result<u64> {
         let id = self.next_seq_id;
         self.next_seq_id = self.next_seq_id.saturating_add(1);
-        let kv = PagedSeqKv::new(&self.cfg, self.page_tokens, self.max_pages_per_seq)?;
+        let kv = PagedSeqKv::new_with_shared(
+            &self.cfg,
+            self.page_tokens,
+            self.max_pages_per_seq,
+            Arc::clone(&self.shared_phys),
+        )?;
         self.sequences.insert(id, kv);
         Ok(id)
     }
@@ -620,10 +798,15 @@ impl PagedKvPool {
     }
 
     pub fn aggregate_pool_stats(&self) -> KvPoolStats {
-        let mut stats = KvPoolStats::default();
+        let shared = self
+            .shared_phys
+            .lock()
+            .map(|g| g.pool_stats())
+            .unwrap_or_default();
+        let mut stats = shared;
         for seq in self.sequences.values() {
             let s = seq.pool_stats();
-            stats.new_phys_pages += s.new_phys_pages;
+            stats.new_phys_pages = stats.new_phys_pages.max(s.new_phys_pages);
             stats.reused_phys_pages += s.reused_phys_pages;
         }
         stats
