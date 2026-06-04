@@ -1,5 +1,6 @@
 //! Lightweight scheduler primitives for continuous batching and speculative decode.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::error::Result;
@@ -274,26 +275,110 @@ impl ContinuousBatchScheduler {
         executor: &dyn ModelExecutor,
         batch: &InferenceBatch,
     ) -> Result<Vec<(u64, InferenceOutput)>> {
-        crate::perf::record_scheduler_batch(batch.requests.len());
-        let queue = PrefillDecodeQueue::from_batch(batch);
         if self.enabled && batch.requests.len() > 1 {
-            tracing::debug!(
-                batch_len = batch.requests.len(),
-                prefill = ?queue.prefill_seq_ids,
-                decode = ?queue.decode_seq_ids,
-                "continuous batching: decode wave scheduling (fused forward pending)"
-            );
-            crate::perf::record_scheduler_decode_wave(batch.requests.len());
+            return self.run_batch_waves(executor, batch);
         }
+        self.run_batch_sequential(executor, batch)
+    }
+
+    fn run_batch_sequential(
+        &self,
+        executor: &dyn ModelExecutor,
+        batch: &InferenceBatch,
+    ) -> Result<Vec<(u64, InferenceOutput)>> {
+        crate::perf::record_scheduler_batch(batch.requests.len());
         let mut out = Vec::with_capacity(batch.requests.len());
         for req in &batch.requests {
             let mut req_local = req.request.clone();
             if self.prefill_chunk_tokens > 0 && req_local.prompt.len() > self.prefill_chunk_tokens {
-                // Hook for future chunked prefill planning; no prompt rewrite today.
                 req_local.prompt.reserve(0);
             }
             let result = self.run(executor, &req_local)?;
             out.push((req.id, result));
+        }
+        Ok(out)
+    }
+
+    /// Interleaved decode wave: run each request for one token at a time when batching is enabled.
+    pub fn run_batch_waves(
+        &self,
+        executor: &dyn ModelExecutor,
+        batch: &InferenceBatch,
+    ) -> Result<Vec<(u64, InferenceOutput)>> {
+        crate::perf::record_scheduler_batch(batch.requests.len());
+        let queue = PrefillDecodeQueue::from_batch(batch);
+        tracing::debug!(
+            batch_len = batch.requests.len(),
+            prefill = ?queue.prefill_seq_ids,
+            decode = ?queue.decode_seq_ids,
+            "continuous batching: interleaved decode waves"
+        );
+        crate::perf::record_scheduler_decode_wave(batch.requests.len());
+
+        if crate::inference_session::sessions_enabled() {
+            let store = crate::inference_session::global_sessions();
+            if let Ok(mut g) = store.lock() {
+                for _req in &batch.requests {
+                    let _ = g.open(0);
+                }
+            }
+        }
+
+        let mut pending: Vec<_> = batch
+            .requests
+            .iter()
+            .map(|r| {
+                (
+                    r.id,
+                    InferenceRequest {
+                        prompt: r.request.prompt.clone(),
+                        max_tokens: 1,
+                        sampling: r.request.sampling,
+                    },
+                )
+            })
+            .collect();
+
+        let mut acc: HashMap<u64, (String, PhaseTimings)> = HashMap::new();
+        while !pending.is_empty() {
+            let mut next = Vec::new();
+            for (id, mut req) in pending {
+                let (chunk, phases) = executor.generate_with_timings(
+                    &req.prompt,
+                    req.max_tokens,
+                    req.sampling,
+                )?;
+                let entry = acc.entry(id).or_insert_with(|| (String::new(), PhaseTimings::default()));
+                entry.0.push_str(&chunk);
+                entry.1.encode_ms = entry.1.encode_ms.saturating_add(phases.encode_ms);
+                entry.1.prefill_ms = entry.1.prefill_ms.saturating_add(phases.prefill_ms);
+                entry.1.decode_ms = entry.1.decode_ms.saturating_add(phases.decode_ms);
+                entry.1.prompt_tokens = entry.1.prompt_tokens.max(phases.prompt_tokens);
+                entry.1.completion_tokens = entry
+                    .1
+                    .completion_tokens
+                    .saturating_add(phases.completion_tokens);
+                let orig = batch.requests.iter().find(|r| r.id == id).unwrap();
+                if entry.1.completion_tokens < orig.request.max_tokens {
+                    req.prompt = format!("{}{}", orig.request.prompt, entry.0);
+                    req.max_tokens = 1;
+                    next.push((id, req));
+                }
+            }
+            pending = next;
+        }
+
+        let mut out = Vec::with_capacity(batch.requests.len());
+        for req in &batch.requests {
+            if let Some((text, phases)) = acc.remove(&req.id) {
+                out.push((
+                    req.id,
+                    InferenceOutput {
+                        text,
+                        stats: InferenceStats::from_phases(phases, false),
+                    },
+                ));
+            }
         }
         Ok(out)
     }
@@ -373,9 +458,24 @@ impl DraftPath {
         match self {
             Self::TargetModel => None,
             Self::ExternalGguf(path) => {
+                match crate::gguf::GgufArchive::mmap_path(path) {
+                    Ok(gguf) => {
+                        let g = std::sync::Arc::new(gguf);
+                        if let Ok(ex) = crate::loaders::dispatch_gguf_executor(
+                            crate::backend::BackendKind::Cpu,
+                            g,
+                            path,
+                        ) {
+                            return Some(
+                                ex.generate_with_timings(prompt, max_tokens, _sampling),
+                            );
+                        }
+                    }
+                    Err(e) => tracing::warn!(draft_model = %path.display(), error = %e, "draft GGUF mmap failed"),
+                }
                 tracing::warn!(
                     draft_model = %path.display(),
-                    "RBITNET_DRAFT_MODEL configured; GGUF draft executor is planned, falling back to n-gram draft"
+                    "RBITNET_DRAFT_MODEL falling back to n-gram draft"
                 );
                 Some(Ok(ngram_draft(prompt, max_tokens)))
             }

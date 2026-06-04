@@ -2,6 +2,7 @@
 //!
 //! See `docs/PLAN_PRODUCTION.md` for limits, metrics, and health endpoints.
 
+mod anthropic;
 mod config;
 mod metrics;
 mod model_registry;
@@ -174,6 +175,7 @@ fn router_with_state(state: AppState, max_body_bytes: usize) -> Router {
         .route("/", get(root_health))
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
+        .route("/v1/messages", post(anthropic::messages))
         .route("/v1/completions", post(completions))
         .route("/v1/admin/unload", post(admin_unload))
         .route("/v1/admin/reload", post(admin_reload));
