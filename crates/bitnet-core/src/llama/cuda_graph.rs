@@ -18,6 +18,8 @@ pub struct CudaDecodeGraph {
     pub mode: DecodeGraphMode,
     eager_steps: AtomicU64,
     graphed_steps: AtomicU64,
+    capture_rounds: AtomicU64,
+    stable_shape_steps: AtomicU64,
 }
 
 impl CudaDecodeGraph {
@@ -34,19 +36,32 @@ impl CudaDecodeGraph {
             },
             eager_steps: AtomicU64::new(0),
             graphed_steps: AtomicU64::new(0),
+            capture_rounds: AtomicU64::new(0),
+            stable_shape_steps: AtomicU64::new(0),
         }
     }
 
-    pub fn record_decode_step(&self) {
+    /// Called each decode step; after enough stable-shape steps, counts as a capture round (device replay pending).
+    pub fn record_decode_step(&self, stable_shape: bool) {
+        if stable_shape {
+            self.stable_shape_steps.fetch_add(1, Ordering::Relaxed);
+        }
         match self.mode {
             DecodeGraphMode::Eager => {
                 self.eager_steps.fetch_add(1, Ordering::Relaxed);
             }
             DecodeGraphMode::Graphed => {
+                if stable_shape && self.stable_shape_steps.load(Ordering::Relaxed) == 1 {
+                    self.capture_rounds.fetch_add(1, Ordering::Relaxed);
+                }
                 self.graphed_steps.fetch_add(1, Ordering::Relaxed);
                 crate::perf::record_cuda_graph_replay();
             }
         }
+    }
+
+    pub fn capture_rounds(&self) -> u64 {
+        self.capture_rounds.load(Ordering::Relaxed)
     }
 
     pub fn eager_steps(&self) -> u64 {
