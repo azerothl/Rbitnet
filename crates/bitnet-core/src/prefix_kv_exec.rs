@@ -116,6 +116,28 @@ pub fn prefix_scope_for_runtime(
         .scope()
 }
 
+/// Paged KV block table snapshot (per-layer logical → physical mapping).
+#[derive(Debug, Clone)]
+pub struct PagedKvSnapshot {
+    pub block_phys: Vec<Vec<usize>>,
+    pub token_count: usize,
+}
+
+pub fn snapshot_paged_kv(kv: &KvStorage, token_count: usize) -> Option<PagedKvSnapshot> {
+    let p = kv.as_paged()?;
+    Some(PagedKvSnapshot {
+        block_phys: p.block_table_snapshot(),
+        token_count,
+    })
+}
+
+pub fn restore_paged_kv(kv: &mut KvStorage, snap: &PagedKvSnapshot) -> bool {
+    match kv {
+        KvStorage::Paged(p) => p.restore_block_table(&snap.block_phys, snap.token_count),
+        KvStorage::Dense(_) => false,
+    }
+}
+
 pub fn snapshot_key(
     scope: &PrefixKvScope,
     token_ids: &[u32],

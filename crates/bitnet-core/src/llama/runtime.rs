@@ -15,7 +15,10 @@ use crate::sampling::{sample_token, SamplingOptions};
 use crate::scratch::ScratchArena;
 use crate::timings::PhaseTimings;
 
+use crate::kv_pool;
+use crate::kv_sidecar::{KvSidecarClient, KvSidecarConfig, KvSidecarPut, NoopKvSidecar};
 use crate::paged_kv::PagedKvCache;
+use crate::prefix_kv::{PrefixKvBlockCache, PrefixKvMatch};
 use crate::prefix_kv_exec::{
     prefix_scope_for_runtime, restore_dense_kv, shared_prefix_kv_execution_cache,
     snapshot_dense_kv, snapshot_key, SharedPrefixKvExecutionCache,
@@ -50,8 +53,10 @@ pub struct LlamaRuntime {
     prefill_chunk_tokens: usize,
     scratch: ScratchArena,
     prefix_kv_cache: SharedPrefixKvExecutionCache,
+    prefix_radix: std::sync::Mutex<PrefixKvBlockCache>,
     prefix_scope: crate::prefix_kv::PrefixKvScope,
     cuda_graph: CudaDecodeGraph,
+    sidecar: Box<dyn KvSidecarClient>,
 }
 
 impl LlamaRuntime {
@@ -79,6 +84,13 @@ impl LlamaRuntime {
             &chat_format,
             &kv_format,
         );
+        let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
+        let sidecar: Box<dyn KvSidecarClient> =
+            if let Ok(Some(http)) = crate::kv_sidecar::HttpKvSidecar::from_config(&KvSidecarConfig::from_env()) {
+                Box::new(http)
+            } else {
+                Box::new(NoopKvSidecar)
+            };
         Ok(Self {
             model,
             tokenizer,
@@ -87,8 +99,10 @@ impl LlamaRuntime {
             prefill_chunk_tokens,
             scratch: ScratchArena::default(),
             prefix_kv_cache: shared_prefix_kv_execution_cache(),
+            prefix_radix: std::sync::Mutex::new(PrefixKvBlockCache::default()),
             prefix_scope,
             cuda_graph: CudaDecodeGraph::from_env(),
+            sidecar,
         })
     }
 
@@ -146,6 +160,14 @@ impl LlamaRuntime {
         }
 
         let mut prefill_from = 0usize;
+        if let Ok(radix) = self.prefix_radix.lock() {
+            if let Some(PrefixKvMatch {
+                matched_tokens, ..
+            }) = radix.longest_token_prefix(&self.prefix_scope, &prompt_ids)
+            {
+                prefill_from = prefill_from.max(matched_tokens.min(prompt_ids.len()));
+            }
+        }
         if let Ok(cache) = self.prefix_kv_cache.lock() {
             if cache.enabled() {
                 let mut hit = false;
@@ -190,6 +212,21 @@ impl LlamaRuntime {
                     cache.store(key, snap);
                 }
             }
+        }
+        if let Ok(mut radix) = self.prefix_radix.lock() {
+            let key = snapshot_key(&self.prefix_scope, &prompt_ids);
+            if let Some(paged) = self.kv.as_paged_mut() {
+                let blocks: Vec<usize> = (0..paged.max_pages()).collect();
+                radix.insert_tokens(key, &prompt_ids, blocks);
+            }
+        }
+        if self.sidecar.put_prefix_blocks(&KvSidecarPut {
+            model_id: self.prefix_scope.model_id.clone(),
+            prefix_hash: crate::prefix_kv::hash_prefix_tokens(&prompt_ids),
+            token_count: prompt_ids.len(),
+            block_ids: vec![],
+        }).is_ok() {
+            tracing::debug!("kv sidecar notified after prefill");
         }
 
         if let Some(cb) = on_event.as_deref_mut() {
@@ -268,7 +305,7 @@ impl LlamaRuntime {
     }
 
     pub fn decode_one(&mut self, token: u32, pos: usize) -> Result<Vec<f32>> {
-        self.cuda_graph.record_decode_step();
+        self.cuda_graph.record_decode_step(true);
         self.model.forward_with_backend_and_scratch(
             &mut self.kv,
             token,
