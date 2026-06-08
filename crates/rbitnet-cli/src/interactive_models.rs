@@ -21,6 +21,8 @@ pub struct ModelBrowserRow {
     pub repo_id: String,
     pub description: String,
     pub confidence: Option<String>,
+    /// Best-effort Rbitnet readiness (`models search` only).
+    pub readiness: Option<String>,
     /// Texte multi-lignes pour le panneau détail (fichiers, version min, etc.).
     pub detail_body: String,
     /// `Some` = fichiers explicites (catalogue) ; `None` = résolution auto comme `models download` sans `--file`.
@@ -35,6 +37,18 @@ impl ModelBrowserRow {
         if let Some(v) = &m.min_rbitnet_version {
             detail.push_str(&format!("min_rbitnet_version: {v}\n"));
         }
+        if let Some(tier) = &m.tier {
+            detail.push_str(&format!("tier: {tier}\n"));
+        }
+        if !m.use_case.is_empty() {
+            detail.push_str(&format!("use_case: {}\n", m.use_case.join(", ")));
+        }
+        if let Some(ram_gb) = m.min_ram_gb {
+            detail.push_str(&format!("min_ram_gb: {ram_gb}\n"));
+        }
+        if let Some(verified) = m.verified {
+            detail.push_str(&format!("verified: {verified}\n"));
+        }
         detail.push_str(&format!("\nFichiers ({}):\n", m.files.len()));
         for f in &m.files {
             detail.push_str(f);
@@ -45,6 +59,7 @@ impl ModelBrowserRow {
             repo_id: m.repo.clone(),
             description: m.description.clone(),
             confidence: None,
+            readiness: None,
             detail_body: detail,
             explicit_files: Some(m.files.clone()),
         }
@@ -58,9 +73,13 @@ impl ModelBrowserRow {
             "Recherche HF: dépôts contenant des fichiers .gguf. Attention: GGUF ne veut PAS dire modèle BitNet 1-bit ni compatibilité Rbitnet.\n\n",
         );
         detail.push_str(&format!(
-            "Confiance heuristique BitNet: {} (score {})\n\n",
+            "Confiance heuristique BitNet: {} (score {})\n",
             h.confidence.label(),
             h.confidence_score
+        ));
+        detail.push_str(&format!(
+            "Lisibilité Rbitnet (heuristique siblings): {}\n\n",
+            h.readiness.label()
         ));
         for f in &h.gguf_files {
             detail.push_str(f);
@@ -102,6 +121,7 @@ impl ModelBrowserRow {
             repo_id: h.id.clone(),
             description: format!("{n} fichier(s) (gguf/tokenizer)"),
             confidence: Some(format!("{}:{}", h.confidence.label(), h.confidence_score)),
+            readiness: Some(h.readiness.label().to_string()),
             detail_body: detail,
             explicit_files: Some(explicit_files),
         }
@@ -129,6 +149,7 @@ struct BrowserApp {
     status: String,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
     title: String,
     /// Hauteur utile du panneau détail (lignes), mise à jour à chaque frame.
     detail_viewport_lines: usize,
@@ -141,6 +162,7 @@ impl BrowserApp {
         rows: Vec<ModelBrowserRow>,
         token: Option<String>,
         download_dir: PathBuf,
+        place_mode: download::HubPlaceMode,
         title: String,
         search_filter_mode: Option<SearchFilterMode>,
         search_ctx: Option<SearchContext>,
@@ -155,6 +177,7 @@ impl BrowserApp {
             ),
             token,
             download_dir,
+            place_mode,
             title,
             detail_viewport_lines: 8,
             search_filter_mode,
@@ -229,6 +252,7 @@ impl BrowserApp {
             &files,
             &self.download_dir,
             self.token.as_deref(),
+            self.place_mode,
         )?;
         self.status = format!(
             "OK — {} fichier(s) écrit(s) sous {}",
@@ -247,7 +271,10 @@ impl BrowserApp {
             SearchFilterMode::AllGguf => SearchFilterMode::StrictBitnet,
             SearchFilterMode::StrictBitnet => SearchFilterMode::AllGguf,
         });
-        let strict = matches!(self.search_filter_mode, Some(SearchFilterMode::StrictBitnet));
+        let strict = matches!(
+            self.search_filter_mode,
+            Some(SearchFilterMode::StrictBitnet)
+        );
         let Some(ctx) = &self.search_ctx else {
             self.status = "Contexte de recherche indisponible.".into();
             return;
@@ -266,7 +293,8 @@ impl BrowserApp {
             }
         };
         self.rows = hits.iter().map(ModelBrowserRow::from_search_hit).collect();
-        self.table_state.select(if self.rows.is_empty() { None } else { Some(0) });
+        self.table_state
+            .select(if self.rows.is_empty() { None } else { Some(0) });
         self.detail_scroll = 0;
         let label = match self.search_filter_mode {
             Some(SearchFilterMode::StrictBitnet) => "strict-bitnet",
@@ -297,16 +325,13 @@ impl BrowserApp {
         let title = Paragraph::new(Line::from(vec![
             self.title.as_str().bold(),
             "  ".into(),
-            help_hint.dim().into(),
+            help_hint.dim(),
         ]))
         .style(Style::default().fg(Color::Cyan));
         frame.render_widget(title, title_area);
 
-        let hchunks = Layout::horizontal([
-            Constraint::Percentage(48),
-            Constraint::Percentage(52),
-        ])
-        .split(main_area);
+        let hchunks = Layout::horizontal([Constraint::Percentage(48), Constraint::Percentage(52)])
+            .split(main_area);
         let table_area = hchunks[0];
         let detail_area = hchunks[1];
 
@@ -314,6 +339,7 @@ impl BrowserApp {
             Cell::from("id").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("repo").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("conf").style(Style::default().add_modifier(Modifier::BOLD)),
+            Cell::from("rbitnet").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("#f").style(Style::default().add_modifier(Modifier::BOLD)),
             Cell::from("résumé").style(Style::default().add_modifier(Modifier::BOLD)),
         ])
@@ -335,13 +361,11 @@ impl BrowserApp {
                     });
                 Row::new(vec![
                     Cell::from(truncate(&r.id, 18)),
-                    Cell::from(truncate(&r.repo_id, 28)),
-                    Cell::from(truncate(
-                        r.confidence.as_deref().unwrap_or("-"),
-                        16,
-                    )),
+                    Cell::from(truncate(&r.repo_id, 24)),
+                    Cell::from(truncate(r.confidence.as_deref().unwrap_or("-"), 14)),
+                    Cell::from(truncate(r.readiness.as_deref().unwrap_or("-"), 18)),
                     Cell::from(format!("{n_files}")),
-                    Cell::from(truncate(&r.description, 36)),
+                    Cell::from(truncate(&r.description, 28)),
                 ])
             })
             .collect();
@@ -350,10 +374,11 @@ impl BrowserApp {
             rows,
             [
                 Constraint::Max(20),
-                Constraint::Min(18),
-                Constraint::Length(16),
+                Constraint::Min(14),
+                Constraint::Length(14),
+                Constraint::Length(18),
                 Constraint::Length(4),
-                Constraint::Min(12),
+                Constraint::Min(10),
             ],
         )
         .header(header)
@@ -401,9 +426,7 @@ impl BrowserApp {
                 .draw(|f| self.draw(f))
                 .map_err(|e| format!("affichage: {e}"))?;
 
-            if !event::poll(Duration::from_millis(200))
-                .map_err(|e| format!("poll: {e}"))?
-            {
+            if !event::poll(Duration::from_millis(200)).map_err(|e| format!("poll: {e}"))? {
                 continue;
             }
             let Event::Key(key) = event::read().map_err(|e| format!("event: {e}"))? else {
@@ -451,14 +474,19 @@ pub fn run_catalog_interactive(
     url: &str,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
 ) -> Result<(), String> {
     let cat = catalog::fetch_catalog(url)?;
     if cat.models.is_empty() {
         return Err("le catalogue ne contient aucun modèle.".into());
     }
-    let rows: Vec<ModelBrowserRow> = cat.models.iter().map(ModelBrowserRow::from_catalog).collect();
+    let rows: Vec<ModelBrowserRow> = cat
+        .models
+        .iter()
+        .map(ModelBrowserRow::from_catalog)
+        .collect();
     let title = format!("Catalogue ({url})");
-    run_browser(rows, token, download_dir, title, None, None)
+    run_browser(rows, token, download_dir, place_mode, title, None, None)
 }
 
 /// Ouvre le TUI pour les résultats de recherche HF.
@@ -469,6 +497,7 @@ pub fn run_search_interactive(
     strict_bitnet: bool,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
 ) -> Result<(), String> {
     let hits = hf_search::search_gguf_models(
         query,
@@ -483,7 +512,11 @@ pub fn run_search_interactive(
         );
     }
     let rows: Vec<ModelBrowserRow> = hits.iter().map(ModelBrowserRow::from_search_hit).collect();
-    let mode = if strict_bitnet { "strict-bitnet" } else { "all-gguf" };
+    let mode = if strict_bitnet {
+        "strict-bitnet"
+    } else {
+        "all-gguf"
+    };
     let title = format!("Recherche HF (.gguf, non garanti 1-bit, {mode}) « {query} »");
     let initial_mode = if strict_bitnet {
         Some(SearchFilterMode::StrictBitnet)
@@ -495,19 +528,36 @@ pub fn run_search_interactive(
         search_limit,
         max_inspect,
     });
-    run_browser(rows, token, download_dir, title, initial_mode, search_ctx)
+    run_browser(
+        rows,
+        token,
+        download_dir,
+        place_mode,
+        title,
+        initial_mode,
+        search_ctx,
+    )
 }
 
 fn run_browser(
     rows: Vec<ModelBrowserRow>,
     token: Option<String>,
     download_dir: PathBuf,
+    place_mode: download::HubPlaceMode,
     title: String,
     search_filter_mode: Option<SearchFilterMode>,
     search_ctx: Option<SearchContext>,
 ) -> Result<(), String> {
     let mut terminal = ratatui::init();
-    let app = BrowserApp::new(rows, token, download_dir, title, search_filter_mode, search_ctx);
+    let app = BrowserApp::new(
+        rows,
+        token,
+        download_dir,
+        place_mode,
+        title,
+        search_filter_mode,
+        search_ctx,
+    );
     let r = app.run(&mut terminal);
     ratatui::restore();
     r
