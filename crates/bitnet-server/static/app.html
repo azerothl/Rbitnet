@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rbitnet Local UI</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    main {
+      width: min(920px, calc(100vw - 32px));
+      margin: 32px 0;
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    header, section {
+      padding: 20px;
+      border-bottom: 1px solid #273449;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+    p {
+      color: #94a3b8;
+      margin: 6px 0 0;
+    }
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+    input, select, textarea, button {
+      box-sizing: border-box;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #475569;
+      background: #020617;
+      color: #f8fafc;
+      padding: 11px 12px;
+      font: inherit;
+    }
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+    button {
+      width: auto;
+      min-width: 120px;
+      border: 0;
+      background: #2563eb;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 34px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+    .check input {
+      width: auto;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #475569;
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+    .ok .dot { background: #22c55e; }
+    .bad .dot { background: #ef4444; }
+    #answer {
+      white-space: pre-wrap;
+      min-height: 120px;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 14px;
+      line-height: 1.5;
+    }
+    .footer {
+      border-bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: #94a3b8;
+      font-size: 0.92rem;
+    }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Rbitnet Local UI</h1>
+        <p>Offline single-page client for the OpenAI-compatible local server.</p>
+      </div>
+      <div id="health" class="status"><span class="dot"></span><span>checking</span></div>
+    </header>
+
+    <section>
+      <div class="row">
+        <div>
+          <label for="model">Model</label>
+          <select id="model"></select>
+        </div>
+        <button id="refresh" type="button">Refresh</button>
+      </div>
+      <label for="manual-model">Or type a model id</label>
+      <input id="manual-model" placeholder="rbitnet-stub, rbitnet-llama, or registry id">
+      <label for="api-key">API key</label>
+      <input id="api-key" type="password" placeholder="Only needed when RBITNET_API_KEY is set">
+      <p>Local dev note: leave this empty when the server was started without <code>RBITNET_API_KEY</code>. If a key is configured, the UI sends <code>Authorization: Bearer</code> from this field.</p>
+    </section>
+
+    <section>
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" placeholder="Ask Rbitnet something...">Hello from the local Rbitnet UI.</textarea>
+      <div class="grid" style="margin-top: 12px;">
+        <div>
+          <label for="max-tokens">Max tokens</label>
+          <input id="max-tokens" type="number" min="1" max="2048" value="128">
+        </div>
+        <div>
+          <label for="temperature">Temperature</label>
+          <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.7">
+        </div>
+        <label class="check" for="stream">
+          <input id="stream" type="checkbox">
+          Stream response
+        </label>
+      </div>
+      <div class="row" style="margin-top: 12px;">
+        <div></div>
+        <button id="send" type="button">Send</button>
+      </div>
+    </section>
+
+    <section>
+      <label>Response</label>
+      <div id="answer">No response yet.</div>
+    </section>
+
+    <section class="footer">
+      <span>Same-origin API: <code>/health</code>, <code>/v1/models</code>, <code>/v1/chat/completions</code></span>
+      <span>Tip: start with <code>RBITNET_STUB=1 rbitnet serve --open-ui</code> for a no-model smoke test.</span>
+    </section>
+  </main>
+
+  <script>
+    const health = document.getElementById("health");
+    const modelSelect = document.getElementById("model");
+    const manualModel = document.getElementById("manual-model");
+    const answer = document.getElementById("answer");
+    const promptBox = document.getElementById("prompt");
+    const maxTokens = document.getElementById("max-tokens");
+    const temperature = document.getElementById("temperature");
+    const streamToggle = document.getElementById("stream");
+    const apiKey = document.getElementById("api-key");
+    const send = document.getElementById("send");
+    const refresh = document.getElementById("refresh");
+
+    function setHealth(ok, text) {
+      health.className = "status " + (ok ? "ok" : "bad");
+      health.querySelector("span:last-child").textContent = text;
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch("/health", { cache: "no-store" });
+        setHealth(res.ok, res.ok ? "healthy" : "health failed");
+      } catch (error) {
+        setHealth(false, "offline");
+      }
+    }
+
+    function authHeaders() {
+      const headers = { "content-type": "application/json" };
+      const key = apiKey.value.trim();
+      if (key) headers.authorization = `Bearer ${key}`;
+      return headers;
+    }
+
+    async function loadModels() {
+      modelSelect.innerHTML = "";
+      try {
+        const res = await fetch("/v1/models", { cache: "no-store", headers: authHeaders() });
+        if (!res.ok) throw new Error(await res.text());
+        const body = await res.json();
+        const models = Array.isArray(body.data) ? body.data : [];
+        for (const m of models) {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = `${m.id}${m.ready ? "" : " (not ready)"}`;
+          modelSelect.appendChild(opt);
+        }
+        if (models[0]) manualModel.value = models[0].id;
+        answer.textContent = models.length ? "Models loaded. Send a prompt to begin." : "No models returned by /v1/models.";
+      } catch (error) {
+        answer.textContent = "Could not load /v1/models. If RBITNET_API_KEY is set, fill the API key field and refresh.";
+      }
+    }
+
+    async function readStream(res) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      answer.textContent = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (!data || data === "[DONE]") continue;
+          const chunk = JSON.parse(data);
+          answer.textContent += chunk.choices?.[0]?.delta?.content || "";
+        }
+      }
+    }
+
+    async function chat() {
+      const model = manualModel.value.trim() || modelSelect.value;
+      if (!model) {
+        answer.textContent = "Choose or enter a model id first.";
+        return;
+      }
+      send.disabled = true;
+      answer.textContent = "Thinking...";
+      try {
+        const res = await fetch("/v1/chat/completions", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: promptBox.value }],
+            max_tokens: Number(maxTokens.value || 128),
+            temperature: Number(temperature.value || 0.7),
+            stream: streamToggle.checked
+          })
+        });
+        if (streamToggle.checked && res.ok && res.body) {
+          await readStream(res);
+          return;
+        }
+        const text = await res.text();
+        if (!res.ok) throw new Error(text);
+        const body = JSON.parse(text);
+        answer.textContent = body.choices?.[0]?.message?.content || JSON.stringify(body, null, 2);
+      } catch (error) {
+        answer.textContent = String(error.message || error);
+      } finally {
+        send.disabled = false;
+      }
+    }
+
+    refresh.addEventListener("click", () => { checkHealth(); loadModels(); });
+    apiKey.addEventListener("change", loadModels);
+    send.addEventListener("click", chat);
+    modelSelect.addEventListener("change", () => { manualModel.value = modelSelect.value; });
+    checkHealth();
+    loadModels();
+  </script>
+</body>
+</html>
