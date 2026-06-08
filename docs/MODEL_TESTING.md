@@ -18,6 +18,8 @@ Use any GGUF produced by **any** toolchain, as long as it is compatible with Rbi
 
 Then skip straight to **[Validate with Rbitnet](#validate-with-rbitnet)** below. No Python, no BitNet.
 
+**Roadmap GGUF (`glm4moe`, `gptoss`, `deepseek2`):** only GGUF files whose tensors match [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) load; others fail at startup ([ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)).
+
 ---
 
 ## Path 1b — List / search / download from Hugging Face (Rust CLI only)
@@ -127,6 +129,10 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 You should see GGUF version, architecture, tensor count, first tensors, and `llama.*` hyperparameters when present.
 
+For `qwen35moe`, **loader dispatch** succeeds when `RBITNET_BACKEND=cuda` and bundles the native Qwen3 MoE executor; on CPU backend you get an immediate error asking for CUDA. Missing tokenizer or incomplete GGUF manifests still fail at load time with a clear message (`TokenizerMissing` / missing tensor), not obscure `llama.*` key errors. See **[USAGE.md — GGUF general.architecture dispatch](USAGE.md#gguf-generalarchitecture-dispatch)** for `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY` and hooks in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/).
+
+**VRAM / CUDA:** Hybrid Qwen3 MoE checkpoints are large even when quantized. Treat the CUDA path as needing a discrete NVIDIA GPU with a recent driver; start with modest `max_tokens` and bump `RBITNET_INFERENCE_TIMEOUT_SECS` if completions time out (`USAGE.md`).
+
 **2. Point the engine at the file and run the HTTP server:**
 
 ```bash
@@ -164,6 +170,15 @@ cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture
 ```
 
 If `RBITNET_TEST_GGUF` is unset, the test **passes without doing I/O** (skipped logic).
+
+## Roadmap architectures — GLM (Z.ai), gpt-oss, DeepSeek MoE
+
+GGUF families **`glm4moe`**, **`gptoss`**, and **`deepseek2`** use a **CUDA-only** executor shell: tokenizer resolution works; **`generate` returns an explicit “not implemented yet”** until the transformer graph is ported from llama.cpp.
+
+- Matrix and slug notes: [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)
+- DeepSeek dense vs MoE: [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md)
+
+**Smoke checklist:** `RBITNET_BACKEND=cuda`, valid `tokenizer.json` beside the GGUF, then call chat — expect **503/500 with roadmap message**, not a tokenizer crash. Prefer **Flash / Lite** GGUF for iteration when the architecture matches the full model.
 
 ## Model card summary (`bitnet_b1_58-large`)
 

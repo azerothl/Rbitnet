@@ -1,0 +1,15 @@
+{
+  "name": "qwen3-4b-local",
+  "version": 1,
+  "description": "Example local recipe — point gguf at your downloaded weights.",
+  "model": {
+    "gguf": "C:/path/to/Qwen3-4B-Q4_K_M.gguf",
+    "tokenizer": "C:/path/to/tokenizer.json",
+    "architecture": "qwen3"
+  },
+  "env": {
+    "RBITNET_BACKEND": "cpu",
+    "RBITNET_MAX_CONCURRENT": "2",
+    "RBITNET_PREFIX_KV": "1"
+  }
+}

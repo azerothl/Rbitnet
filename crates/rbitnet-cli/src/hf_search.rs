@@ -149,15 +149,22 @@ pub(crate) struct Sibling {
 }
 
 /// All `rfilename` paths from the Hub model API for one repo.
-pub fn fetch_model_sibling_paths(model_id: &str, token: Option<&str>) -> Result<Vec<String>, String> {
+pub fn fetch_model_sibling_paths(
+    model_id: &str,
+    token: Option<&str>,
+) -> Result<Vec<String>, String> {
     let url = hf_model_detail_url(model_id);
     let agent = crate::hub_http::agent()?;
     let mut req = agent.get(&url);
     if let Some(t) = token {
         req = req.set("Authorization", &format!("Bearer {t}"));
     }
-    let resp = req.call().map_err(|e| format!("HF model info {model_id}: {e}"))?;
-    let v: Value = resp.into_json().map_err(|e| format!("HF model JSON: {e}"))?;
+    let resp = req
+        .call()
+        .map_err(|e| format!("HF model info {model_id}: {e}"))?;
+    let v: Value = resp
+        .into_json()
+        .map_err(|e| format!("HF model JSON: {e}"))?;
 
     if let Ok(info) = serde_json::from_value::<ModelInfo>(v.clone()) {
         return Ok(info.siblings.into_iter().map(|s| s.rfilename).collect());
@@ -242,15 +249,13 @@ pub fn discover_gguf_repos(
     // Search for e.g. `llama` returns many Safetensors-only repos first; we must skip them
     // until we find enough `.gguf` trees or exhaust the probe budget.
     let mut out = Vec::new();
-    let mut inspected = 0usize;
-    for hit in hits {
+    for (inspected, hit) in hits.into_iter().enumerate() {
         if out.len() >= max_return {
             break;
         }
         if inspected >= max_inspect {
             break;
         }
-        inspected += 1;
         let paths = match fetch_model_sibling_paths(&hit.id, token) {
             Ok(p) => p,
             Err(_) => continue,
@@ -288,15 +293,7 @@ pub fn search_gguf_models(
     token: Option<&str>,
 ) -> Result<Vec<GgufSearchHit>, String> {
     let other_filter = if strict_bitnet { Some("bitnet") } else { None };
-    discover_gguf_repos(
-        query,
-        search_limit,
-        max_inspect,
-        20,
-        other_filter,
-        token,
-    )
-    .map(|repos| {
+    discover_gguf_repos(query, search_limit, max_inspect, 20, other_filter, token).map(|repos| {
         repos
             .into_iter()
             .map(|r| {
@@ -383,7 +380,10 @@ mod tests {
             u.contains("TheBloke/TinyLlama"),
             "unexpected url (must not use %2F for repo slash): {u}"
         );
-        assert!(!u.contains("%2F"), "HF returns 400 if / is encoded as %2F: {u}");
+        assert!(
+            !u.contains("%2F"),
+            "HF returns 400 if / is encoded as %2F: {u}"
+        );
     }
 
     #[test]

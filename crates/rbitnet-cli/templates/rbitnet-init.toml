@@ -1,0 +1,12 @@
+# Rbitnet — first local config (created by `rbitnet serve --init`).
+# Environment variables override these keys when both are set (see bitnet-server).
+
+# Path to one .gguf file (not a directory). Example:
+# model = "C:\\models\\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+
+# tokenizer = "C:\\models\\tokenizer.json"
+
+bind = "127.0.0.1:8080"
+
+# Optional: raw | llama3 | chatml
+# chat_format = "raw"
