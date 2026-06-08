@@ -1,0 +1,7 @@
+# Install in a venv before running recipes/sft_lora.py (GPU: install torch from pytorch.org first).
+accelerate>=0.28.0
+datasets>=2.18.0
+peft>=0.11.0
+torch>=2.1.0
+transformers>=4.46.0
+trl>=0.9.0

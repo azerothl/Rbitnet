@@ -12,7 +12,7 @@ A version counts as **prod ready** when **all** of the following hold:
 2. **Limits and guardrails**: prompts, `max_tokens`, concurrency, timeouts — explicit rejections and consistent HTTP codes.
 3. **Minimal security** for network exposure: configurable auth or deployment guide behind a proxy; no obvious abuse surface on inputs.
 4. **Observability**: structured logs, metrics (requests, errors, duration), health endpoint suited to deployment.
-5. **Quality**: green CI (build, tests), integration tests on a reference GGUF; versioning policy (semver) and release notes.
+5. **Quality**: green CI (build, tests), **optional Llama golden** on a reference GGUF when `RBITNET_GOLDEN_JSON` + paths are provided (see `docs/GOLDEN_TESTS.md`); versioning policy (semver) and release notes.
 6. **Documentation**: install, configuration, operations, troubleshooting, known limitations — current for that release.
 
 ---
@@ -72,7 +72,7 @@ Paths are **local** (not checked in): update the table in `docs/BENCHMARKS.md` w
 | (Optional) Document **RAM ceiling** per model and hardware notes      | Doc section                                            |
 
 
-*Note: GPU support or calling an external backend can be a **later phase** if the product stance is “Rust CPU only.”*
+*Note: GPU support is a native `bitnet-core` roadmap item. External inference backends are dev-only experiments and must not be required for production operation.*
 
 ---
 

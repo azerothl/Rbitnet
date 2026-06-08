@@ -40,7 +40,7 @@ pub struct GgufTensorInfo {
     pub offset: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GgufArchive {
     mmap: Arc<Mmap>,
     pub version: u32,
@@ -147,7 +147,9 @@ impl GgufArchive {
             )));
         }
 
-        off = align_usize(off, alignment as usize);
+        // Tensor info entries follow metadata immediately (same as llama.cpp `gguf.cpp`: no
+        // padding before the first tensor name). Padding to `general.alignment` applies only
+        // after all tensor infos, before the tensor data blob.
 
         let mut tensors = Vec::new();
         for _ in 0..tensor_count {
@@ -167,7 +169,9 @@ impl GgufArchive {
             }
             off += n_dims * 8;
             if off + 12 > buf.len() {
-                return Err(BitNetError::InvalidGguf("truncated tensor type/offset".into()));
+                return Err(BitNetError::InvalidGguf(
+                    "truncated tensor type/offset".into(),
+                ));
             }
             let ggml_type = read_u32_le(buf, off);
             off += 4;
@@ -206,9 +210,7 @@ impl GgufArchive {
 
     /// Summarize for logs / `GET /v1/models` diagnostics.
     pub fn summary_line(&self) -> String {
-        let arch = self
-            .architecture()
-            .unwrap_or("unknown");
+        let arch = self.architecture().unwrap_or("unknown");
         format!(
             "GGUF v{} arch={} tensors={} tensor_data@{}",
             self.version,
@@ -218,12 +220,78 @@ impl GgufArchive {
         )
     }
 
-    /// `general.architecture` metadata (e.g. `llama`, `bitnet`).
-    pub fn architecture(&self) -> Option<&str> {
-        self.metadata.get("general.architecture").and_then(|v| match v {
+    /// Best-effort integer metadata lookup for common GGUF `*.context_length` fields.
+    pub fn metadata_u64(&self, key: &str) -> Option<u64> {
+        self.metadata.get(key).and_then(|v| match v {
+            GgufValue::U8(x) => Some(*x as u64),
+            GgufValue::U16(x) => Some(*x as u64),
+            GgufValue::U32(x) => Some(*x as u64),
+            GgufValue::U64(x) => Some(*x),
+            GgufValue::I8(x) if *x >= 0 => Some(*x as u64),
+            GgufValue::I16(x) if *x >= 0 => Some(*x as u64),
+            GgufValue::I32(x) if *x >= 0 => Some(*x as u64),
+            GgufValue::I64(x) if *x >= 0 => Some(*x as u64),
+            _ => None,
+        })
+    }
+
+    /// String metadata lookup for diagnostics.
+    pub fn metadata_str(&self, key: &str) -> Option<&str> {
+        self.metadata.get(key).and_then(|v| match v {
             GgufValue::String(s) => Some(s.as_str()),
             _ => None,
         })
+    }
+
+    /// Common context-length metadata across Llama-lineage GGUF files.
+    pub fn context_length(&self) -> Option<u64> {
+        let arch = self
+            .normalized_architecture()
+            .unwrap_or_else(|| "llama".into());
+        [
+            format!("{arch}.context_length"),
+            "llama.context_length".to_string(),
+            "general.context_length".to_string(),
+        ]
+        .iter()
+        .find_map(|key| self.metadata_u64(key))
+    }
+
+    /// Compact quantization summary from tensor GGML type ids.
+    pub fn quantization_summary(&self) -> Option<String> {
+        if self.tensors.is_empty() {
+            return None;
+        }
+        let mut counts = std::collections::BTreeMap::<u32, usize>::new();
+        for t in &self.tensors {
+            *counts.entry(t.ggml_type).or_default() += 1;
+        }
+        let mut parts = counts
+            .into_iter()
+            .map(|(ty, count)| format!("type{ty}:{count}"))
+            .collect::<Vec<_>>();
+        parts.sort();
+        Some(parts.join(","))
+    }
+
+    /// `general.architecture` metadata (e.g. `llama`, `bitnet`).
+    pub fn architecture(&self) -> Option<&str> {
+        self.metadata
+            .get("general.architecture")
+            .and_then(|v| match v {
+                GgufValue::String(s) => Some(s.as_str()),
+                _ => None,
+            })
+    }
+
+    /// Lowercased trimmed `general.architecture`, if present.
+    ///
+    /// When metadata is absent (legacy GGUF), callers typically fall back to treating the file
+    /// as Llama-shaped for inference dispatch (see [`crate::loaders::resolve_architecture_key`]).
+    pub fn normalized_architecture(&self) -> Option<String> {
+        self.architecture()
+            .map(|s| s.trim().to_ascii_lowercase())
+            .filter(|s| !s.is_empty())
     }
 
     /// Stable id for OpenAI-style `model` fields (e.g. `rbitnet-llama`).
@@ -272,9 +340,9 @@ fn read_gguf_string(buf: &[u8], offset: usize) -> Result<(String, usize)> {
     }
     let len = read_u64_le(buf, offset) as usize;
     let start = offset + 8;
-    let end = start.checked_add(len).ok_or_else(|| {
-        BitNetError::InvalidGguf("string length overflow".into())
-    })?;
+    let end = start
+        .checked_add(len)
+        .ok_or_else(|| BitNetError::InvalidGguf("string length overflow".into()))?;
     if end > buf.len() {
         return Err(BitNetError::InvalidGguf("string data OOB".into()));
     }

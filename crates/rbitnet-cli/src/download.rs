@@ -11,6 +11,71 @@ use serde_json::Value;
 
 use crate::hf_search;
 
+/// How to place Hub cache files into the user destination directory.
+///
+/// By default we try a **hard link** (same volume as the HF cache: no extra disk usage); if that
+/// fails (different volume, filesystem, permissions), we fall back to **`fs::copy`**.
+/// [`HubPlaceMode::Symlink`] creates a symbolic link to the cached file (may require developer mode on Windows).
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum HubPlaceMode {
+    #[default]
+    HardLinkOrCopy,
+    Symlink,
+}
+
+fn remove_file_for_replace(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    if !path.is_file() {
+        return Err(format!("refuse to replace non-file at {}", path.display()));
+    }
+    fs::remove_file(path).map_err(|e| format!("remove {}: {e}", path.display()))
+}
+
+fn symlink_to_file(target: &Path, link: &Path) -> Result<(), String> {
+    let map_err = |e: io::Error| {
+        format!(
+            "symlink {} -> {}: {e} (on Windows, enable Developer Mode or run as admin for symlinks)",
+            target.display(),
+            link.display()
+        )
+    };
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).map_err(map_err)
+    }
+    #[cfg(all(windows, not(unix)))]
+    {
+        std::os::windows::fs::symlink_file(target, link).map_err(map_err)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (target, link);
+        Err("symlink is only supported on Unix and Windows".into())
+    }
+}
+
+/// Place a file that already lives in the Hugging Face cache at `dest` without duplicating data
+/// when possible.
+pub fn place_file_from_cache(cached: &Path, dest: &Path, mode: HubPlaceMode) -> Result<(), String> {
+    remove_file_for_replace(dest)?;
+    match mode {
+        HubPlaceMode::HardLinkOrCopy => {
+            if fs::hard_link(cached, dest).is_ok() {
+                return Ok(());
+            }
+            fs::copy(cached, dest)
+                .map_err(|e| format!("copy {} -> {}: {e}", cached.display(), dest.display()))?;
+            Ok(())
+        }
+        HubPlaceMode::Symlink => {
+            let target = fs::canonicalize(cached).unwrap_or_else(|_| cached.to_path_buf());
+            symlink_to_file(&target, dest)
+        }
+    }
+}
+
 /// Resolve filenames to download: explicit list, or all `.gguf` + `tokenizer.json` / `tokenizer.model` from the repo tree API.
 pub fn resolve_download_files(
     repo_id: &str,
@@ -42,11 +107,11 @@ fn list_auto_files(repo_id: &str, token: Option<&str>) -> Result<Vec<String>, St
         } else if let Some(arr) = v.get("siblings").and_then(|x| x.as_array()) {
             arr.iter()
                 .filter_map(|item| {
-                    item.get("rfilename").and_then(|x| x.as_str()).map(|s| {
-                        hf_search::Sibling {
+                    item.get("rfilename")
+                        .and_then(|x| x.as_str())
+                        .map(|s| hf_search::Sibling {
                             rfilename: s.to_string(),
-                        }
-                    })
+                        })
                 })
                 .collect()
         } else {
@@ -56,8 +121,7 @@ fn list_auto_files(repo_id: &str, token: Option<&str>) -> Result<Vec<String>, St
     let names = select_auto_files(&siblings);
     if names.is_empty() {
         return Err(
-            "no .gguf (and no tokenizer.json/tokenizer.model) found in repo; specify --file"
-                .into(),
+            "no .gguf (and no tokenizer.json/tokenizer.model) found in repo; specify --file".into(),
         );
     }
     Ok(names)
@@ -75,7 +139,11 @@ fn select_auto_files(siblings: &[hf_search::Sibling]) -> Vec<String> {
                 || lower.ends_with("/tokenizer.json")
                 || lower == "tokenizer.model"
                 || lower.ends_with("/tokenizer.model");
-            if take { Some(s.rfilename.clone()) } else { None }
+            if take {
+                Some(s.rfilename.clone())
+            } else {
+                None
+            }
         })
         .collect();
     names.sort();
@@ -93,15 +161,16 @@ fn dest_path_for(dest_dir: &Path, file: &str) -> Result<PathBuf, String> {
             std::path::Component::Normal(_) | std::path::Component::CurDir => {}
             _ => {
                 return Err(format!(
-                    "unsafe path component in '{file}': only relative paths without '..' are allowed"
-                ))
+                "unsafe path component in '{file}': only relative paths without '..' are allowed"
+            ))
             }
         }
     }
     Ok(dest_dir.join(rel))
 }
 
-/// Download each file into `dest_dir` (created if missing). Uses HF cache then copies.
+/// Download each file into `dest_dir` (created if missing). Uses HF cache then
+/// [`place_file_from_cache`] (hard link or copy by default).
 /// Remote subpaths (e.g. `subdir/tokenizer.json`) are preserved under `dest_dir`, with
 /// parent directories created as needed. Paths containing `..` or absolute components
 /// are rejected to prevent path traversal.
@@ -110,6 +179,7 @@ pub fn download_files(
     files: &[String],
     dest_dir: &Path,
     token: Option<&str>,
+    place_mode: HubPlaceMode,
 ) -> Result<Vec<PathBuf>, String> {
     fs::create_dir_all(dest_dir).map_err(|e| format!("create {}: {e}", dest_dir.display()))?;
 
@@ -124,8 +194,7 @@ pub fn download_files(
     for file in files {
         let dest = dest_path_for(dest_dir, file)?;
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("create {}: {e}", parent.display()))?;
+            fs::create_dir_all(parent).map_err(|e| format!("create {}: {e}", parent.display()))?;
         }
 
         let mut last_err = String::new();
@@ -135,9 +204,7 @@ pub fn download_files(
         for attempt in 1..=3 {
             match repo.get(file) {
                 Ok(cached) => {
-                    fs::copy(&cached, &dest).map_err(|e| {
-                        format!("copy {} -> {}: {e}", cached.display(), dest.display())
-                    })?;
+                    place_file_from_cache(&cached, &dest, place_mode)?;
                     copied = true;
                     break;
                 }
@@ -199,8 +266,11 @@ fn download_file_via_http(
     let mut temp_path = None;
     let mut f = None;
     for attempt in 0..1000 {
-        let candidate =
-            dest_dir.join(format!(".{dest_name}.part.{}.{}", std::process::id(), attempt));
+        let candidate = dest_dir.join(format!(
+            ".{dest_name}.part.{}.{}",
+            std::process::id(),
+            attempt
+        ));
         match fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -218,8 +288,8 @@ fn download_file_via_http(
         }
     }
 
-    let temp_path =
-        temp_path.ok_or_else(|| format!("create temp file for {}: exhausted retries", dest.display()))?;
+    let temp_path = temp_path
+        .ok_or_else(|| format!("create temp file for {}: exhausted retries", dest.display()))?;
     let mut f = f.expect("temporary file handle must exist when temp_path is set");
 
     if let Err(e) = io::copy(&mut reader, &mut f) {
@@ -347,5 +417,77 @@ mod tests {
         let p1 = dest_path_for(base, "a/tokenizer.json").unwrap();
         let p2 = dest_path_for(base, "b/tokenizer.json").unwrap();
         assert_ne!(p1, p2);
+    }
+
+    // --- place_file_from_cache ---
+
+    #[test]
+    fn place_hard_link_same_directory_shares_data() {
+        let base = std::env::temp_dir().join(format!(
+            "rbitnet_place_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(&base).unwrap();
+        let cached = base.join("cached.bin");
+        let dest = base.join("out.bin");
+        fs::write(&cached, b"payload").unwrap();
+        super::place_file_from_cache(&cached, &dest, HubPlaceMode::HardLinkOrCopy).unwrap();
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "payload");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            assert_eq!(
+                fs::metadata(&cached).unwrap().ino(),
+                fs::metadata(&dest).unwrap().ino()
+            );
+        }
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn place_replaces_existing_destination_file() {
+        let base = std::env::temp_dir().join(format!(
+            "rbitnet_place_replace_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(&base).unwrap();
+        let cached = base.join("cached.bin");
+        let dest = base.join("out.bin");
+        fs::write(&cached, b"new").unwrap();
+        fs::write(&dest, b"old").unwrap();
+        super::place_file_from_cache(&cached, &dest, HubPlaceMode::HardLinkOrCopy).unwrap();
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "new");
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn place_symlink_reads_same_content() {
+        let base = std::env::temp_dir().join(format!(
+            "rbitnet_place_sym_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(&base).unwrap();
+        let cached = base.join("cached.bin");
+        let dest = base.join("link.bin");
+        fs::write(&cached, b"sym").unwrap();
+        super::place_file_from_cache(&cached, &dest, HubPlaceMode::Symlink).unwrap();
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "sym");
+        let _ = fs::remove_dir_all(&base);
     }
 }
