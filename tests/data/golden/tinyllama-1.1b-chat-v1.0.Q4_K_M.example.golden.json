@@ -1,0 +1,5 @@
+{
+  "format": "rbitnet-golden-v1",
+  "prompt": "Hello",
+  "expected_greedy_first_token": 0
+}

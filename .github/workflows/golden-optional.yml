@@ -1,0 +1,38 @@
+# Manual optional Llama golden test (self-hosted or runner with GGUF + tokenizer + JSON on disk).
+name: Golden (optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      golden_json:
+        description: "Path to golden JSON on the runner (e.g. tests/data/golden/foo.golden.json)"
+        required: true
+        type: string
+      gguf_path:
+        description: "Absolute path to the .gguf file"
+        required: true
+        type: string
+      tokenizer_path:
+        description: "Absolute path to tokenizer.json or tokenizer.model"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RBITNET_GOLDEN_JSON: ${{ inputs.golden_json }}
+  RBITNET_TEST_GGUF: ${{ inputs.gguf_path }}
+  RBITNET_TOKENIZER: ${{ inputs.tokenizer_path }}
+
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: cargo test (optional golden)
+        run: cargo test -p bitnet-core optional_golden_greedy_first_token_matches -- --nocapture

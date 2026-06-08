@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use bitnet_core::GgufArchive;
+use bitnet_core::{Engine, GgufArchive};
 
 #[test]
 fn optional_gguf_from_env_smoke() {
@@ -24,4 +24,27 @@ fn optional_gguf_from_env_smoke() {
         "tensor data region should be non-empty"
     );
     let _hp = g.llama_hyper_params();
+}
+
+#[test]
+fn optional_engine_load_from_env_smoke() {
+    let Ok(path) = std::env::var("RBITNET_TEST_GGUF") else {
+        return;
+    };
+    let p = Path::new(&path);
+    assert!(
+        p.exists() && p.is_file(),
+        "RBITNET_TEST_GGUF path does not exist or is not a file: {}",
+        p.display()
+    );
+    let dir = match p.parent() {
+        Some(d) => d,
+        None => return,
+    };
+    let has_tok = dir.join("tokenizer.json").is_file() || dir.join("tokenizer.model").is_file();
+    if !has_tok {
+        return;
+    }
+    let engine = Engine::load_path(p).expect("Engine::load_path with tokenizer beside GGUF");
+    assert!(engine.has_gguf());
 }

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "bitnet-b158-latency",
+  "description": "Microsoft BitNet b1.58 — low-latency local serve for Akasha BitNetProvider",
+  "env": {
+    "RBITNET_ARCHITECTURE": "bitnet",
+    "RBITNET_BACKEND": "cpu",
+    "RBITNET_PREFIX_KV": "1",
+    "RBITNET_MAX_CONCURRENT": "2",
+    "RBITNET_BIND": "127.0.0.1:8080"
+  },
+  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t`."
+}

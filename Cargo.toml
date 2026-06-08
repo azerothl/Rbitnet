@@ -4,6 +4,8 @@ members = [
     "crates/bitnet-core",
     "crates/bitnet-server",
     "crates/rbitnet-cli",
+    "crates/rbitnet-proxy",
+    "crates/rbitnet-runner",
 ]
 
 [workspace.package]
@@ -26,4 +28,6 @@ memmap2 = "0.9"
 criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
 half = "2.4"
 tokenizers = "0.21"
+sentencepiece = "0.11"
 rand = "0.8"
+rayon = "1.10"

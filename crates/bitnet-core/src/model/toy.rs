@@ -22,11 +22,7 @@ impl ToyLlm {
             s = s.wrapping_mul(6364136223846793005).wrapping_add(1);
             *e = ((s >> 16) & 0xffff) as f32 / 65535.0 - 0.5;
         }
-        Self {
-            embed,
-            head,
-            dim,
-        }
+        Self { embed, head, dim }
     }
 
     fn embed_row(&self, token: u8) -> &[f32] {
