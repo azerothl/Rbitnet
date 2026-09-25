@@ -289,6 +289,7 @@ pub fn install_bundle(
         .and_then(|p| path_relative_to_dir(dir, p).ok());
 
     validate_installed_bundle(dir, &model_rel, tok_rel.as_ref())?;
+    verify_gguf_checksum_if_configured(dir, &model_rel, bundle_id)?;
 
     let manifest = RbitnetManifest {
         version: 1,
@@ -317,6 +318,46 @@ pub fn install_bundle(
         manifest_path.display()
     );
     Ok(())
+}
+
+fn verify_gguf_checksum_if_configured(
+    dir: &Path,
+    model_rel: &str,
+    bundle_id: &str,
+) -> Result<(), String> {
+    let gguf_path = dir.join(model_rel);
+    let expected = std::env::var("RBITNET_MODEL_SHA256")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            // Prefer local catalog when present (offline-friendly).
+            let local = Path::new("data/compatible_models.json");
+            if local.is_file() {
+                if let Ok(text) = fs::read_to_string(local) {
+                    if let Ok(cat) = serde_json::from_str::<catalog::Catalog>(&text) {
+                        return cat
+                            .models
+                            .into_iter()
+                            .find(|m| m.id == bundle_id)
+                            .and_then(|m| m.sha256);
+                    }
+                }
+            }
+            None
+        });
+    match expected {
+        Some(sha) => {
+            let dig = crate::integrity::verify_sha256(&gguf_path, &sha)?;
+            eprintln!("Verified SHA-256 for {}: {dig}", gguf_path.display());
+            Ok(())
+        }
+        None if crate::integrity::trusted_models_only() => Err(format!(
+            "RBITNET_TRUSTED_MODELS_ONLY=1 requires a known SHA-256 for bundle '{bundle_id}' \
+             (set catalog `sha256` or RBITNET_MODEL_SHA256)"
+        )),
+        None => Ok(()),
+    }
 }
 
 fn validate_installed_bundle(

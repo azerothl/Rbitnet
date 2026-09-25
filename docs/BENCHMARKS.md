@@ -88,7 +88,15 @@ PowerShell: `.\scripts\compare_llamacpp_rbitnet.ps1` (set `RBITNET_GGUF`, option
 
 | Date | CPU | llama.cpp SHA | Rbitnet SHA | GGUF | threads | llama-bench tok/s (reported) | Rbitnet mean_tok_s (HTTP) | ratio |
 |------|-----|---------------|-------------|------|---------|------------------------------|---------------------------|-------|
-| *(fill)* | | | | | | | | |
+| *(see [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) for dated append-only sections; stub/API overhead is not a model tok/s claim)* | | | | | | | | |
+
+Append helper:
+
+```bash
+RESULTS_MD=docs/BENCHMARKS_RESULTS.md ./scripts/compare_llamacpp_rbitnet.sh
+# Without llama.cpp or GGUF on the machine:
+SKIP_LLAMA=1 RESULTS_MD=docs/BENCHMARKS_RESULTS.md ./scripts/compare_llamacpp_rbitnet.sh
+```
 
 Add refreshed rows here when changing kernels (quant pool, BLAS, CUDA cache).
 

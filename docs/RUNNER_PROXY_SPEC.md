@@ -44,10 +44,11 @@ Done in-tree today:
 
 Still not implemented:
 
-- Idle TTL/drain for child workers.
-- Metrics aggregation from children.
+- Metrics aggregation from children beyond prefixing `worker_<id>_` lines on `GET /metrics`.
 - Request queueing or rate limiting beyond the existing body/auth checks.
 - Full vLLM-class PagedAttention and continuous batching in native Rust kernels.
+
+**Recommended multi-model path:** use `rbitnet-proxy` + `RBITNET_MODEL_REGISTRY` (not in-process registry alone) when serving more than one large GGUF. Set `RBITNET_IDLE_UNLOAD_SECS` on the proxy to recycle idle child runners and release VRAM/RAM.
 
 ## Running the proxy
 
@@ -83,6 +84,7 @@ Optional knobs:
 - `RBITNET_RUNNER_READY_TIMEOUT_SECS`: child `/ready` deadline, default `60`.
 - `RBITNET_PROXY_REQUEST_TIMEOUT_SECS`: upstream request timeout, default `600`.
 - `RBITNET_API_KEY`: enforced by the proxy and forwarded to workers.
+- `RBITNET_IDLE_UNLOAD_SECS`: when set (>0), recycle a child runner that has been idle at least this many seconds (health recycle still applies).
 
 ## External backend policy
 

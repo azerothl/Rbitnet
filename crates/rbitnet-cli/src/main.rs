@@ -6,6 +6,7 @@ mod chat_tui;
 mod download;
 mod hf_search;
 mod hub_http;
+mod integrity;
 mod interactive_models;
 mod recipes;
 mod train_cli;
@@ -62,13 +63,13 @@ enum Commands {
     Chat(ChatCmd),
     /// Apply a versioned JSON serve recipe (sets env, then prints `rbitnet serve`).
     Recipe(RecipeCmd),
-    /// Apply battery / latency / throughput env presets (mistral.rs-style tuning).
+    /// Apply serving env presets (battery / interactive / latency / throughput / bitnet-cpu).
     Tune(TuneCmd),
 }
 
 #[derive(Args)]
 struct TuneCmd {
-    /// Profile: battery, latency, or throughput.
+    /// Profile: battery, interactive, latency, throughput, or bitnet-cpu.
     profile: String,
     /// Print shell `export`/`set` lines instead of setting env in-process.
     #[arg(long)]
@@ -962,6 +963,23 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             token,
             symlink,
         } => {
+            if integrity::trusted_models_only() {
+                let cat = catalog::fetch_catalog(catalog::DEFAULT_MODELS_INDEX_URL)
+                    .or_else(|_| {
+                        let local = Path::new("data/compatible_models.json");
+                        let text = fs::read_to_string(local).map_err(|e| {
+                            format!("trusted mode: cannot load local catalog {}: {e}", local.display())
+                        })?;
+                        serde_json::from_str(&text).map_err(|e| format!("parse catalog: {e}"))
+                    })?;
+                let allowed = cat.models.iter().any(|m| m.repo == repo_id || m.id == repo_id);
+                if !allowed {
+                    return Err(format!(
+                        "RBITNET_TRUSTED_MODELS_ONLY=1 refuses Hub repo '{repo_id}' \
+                         (not in curated catalog). Use `rbitnet models install <catalog-id>` or disable trusted mode."
+                    ));
+                }
+            }
             let resolved = download::resolve_download_files(&repo_id, &files, token.as_deref())?;
             eprintln!(
                 "Downloading {} file(s) from {} -> {}",
@@ -976,6 +994,22 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                 token.as_deref(),
                 hub_place_mode(symlink),
             )?;
+            if let Ok(expected) = std::env::var("RBITNET_MODEL_SHA256") {
+                let expected = expected.trim();
+                if !expected.is_empty() {
+                    let gguf = paths
+                        .iter()
+                        .find(|p| {
+                            p.extension()
+                                .and_then(|e| e.to_str())
+                                .map(|e| e.eq_ignore_ascii_case("gguf"))
+                                .unwrap_or(false)
+                        })
+                        .ok_or("RBITNET_MODEL_SHA256 set but no .gguf downloaded")?;
+                    integrity::verify_sha256(gguf, expected)?;
+                    eprintln!("Verified SHA-256 for {}", gguf.display());
+                }
+            }
             for p in paths {
                 println!("{}", p.display());
             }
@@ -1065,6 +1099,7 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     min_ram_gb: None,
                     verified: Some(false),
                     golden_tier: Some("best_effort".into()),
+                    sha256: None,
                     min_ram: None,
                     tested: None,
                     min_rbitnet_version: None,
@@ -1154,7 +1189,7 @@ async fn main() {
                 Ok(())
             }
             None => Err(format!(
-                "unknown tune profile '{}'; use battery, latency, or throughput",
+                "unknown tune profile '{}'; use battery, interactive, latency, throughput, or bitnet-cpu",
                 cmd.profile
             )),
         },

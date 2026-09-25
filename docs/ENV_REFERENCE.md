@@ -19,7 +19,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MODEL_REGISTRY` | path | (none) | JSON registry for multi-model; see [USAGE.md](USAGE.md). |
 | `RBITNET_ACTIVE_MODEL_ID` | string | (none) | Registry key when JSON has no `default`. |
 | `RBITNET_ADMIN_TOKEN` | string | (none) | Enables `POST /v1/admin/unload` and `POST /v1/admin/reload` with matching header. |
-| `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, swap engine for stub to free mmap. |
+| `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, recycle child runners (proxy) or swap engine for stub (single-process server). |
 | `RBITNET_CHAT_BASE_URL` | URL | `http://127.0.0.1:8080/v1` | Default base URL for `rbitnet chat`; `/v1` is appended when omitted. |
 
 ## Runner proxy (`rbitnet-proxy`)
@@ -49,8 +49,11 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | `64` | Prefix response cache size. |
-| `RBITNET_PREFIX_KV` | off | Dense KV snapshot reuse for shared prompt prefixes (prefill skip). |
+| `RBITNET_PREFIX_KV` | off | Dense KV snapshot reuse for shared prompt prefixes (prefill skip). Prefer on for ≥2 concurrent interactive sessions (`rbitnet tune interactive`). |
 | `RBITNET_PREFIX_KV_MAX_ENTRIES` | `32` | LRU size for execution-time prefix KV snapshots. |
+| `RBITNET_SESSIONS` | off | Enable session store (also implied by `RBITNET_CONTINUOUS_BATCHING`). |
+| `RBITNET_MODEL_SHA256` | (none) | Expected SHA-256 hex of the GGUF; verified after install/download when set. |
+| `RBITNET_TRUSTED_MODELS_ONLY` | off | If `1`, refuse Hub downloads outside the curated catalog and require a known SHA-256 on curated install. |
 | `RBITNET_CUDA_GRAPH` | off | Enable CUDA graph decode metrics path (`llama/cuda_graph.rs`). |
 | `RBITNET_MTP_K` | `1` | Multi-token burst width when `>1` (Atlas-style MTP scheduler hook). |
 | `RBITNET_KV_POOL` | off | Enable process-wide `PagedKvPool` with shared physical pages (`kv_pool.rs`). |

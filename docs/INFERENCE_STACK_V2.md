@@ -11,8 +11,8 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | Phase | Done (hooks / MVP) | Next (production) |
 |-------|-------------------|-------------------|
 | **A — KV and memory** | `KvStorage` / `PagedSeqKv` (`RBITNET_LLAMA_PAGED_KV`); `PagedKvPool` + `RBITNET_KV_POOL` on `Engine`; shared physical page allocator | Fused paged attention; GPU-resident pages end-to-end |
-| **B — Scheduling** | `run_batch` / `run_batch_waves`; `PrefillDecodeQueue`; `RBITNET_CONTINUOUS_BATCHING` interleaved decode; chunked prefill env | Single forward wave for N sequences (batched matmul) |
-| **C — Cache semantics** | Dense prefix KV (`RBITNET_PREFIX_KV`); paged snapshots; radix `longest_token_prefix`; HTTP sidecar PUT/GET | Sidecar warm path in multi-replica deploys; L7 sticky hardening |
+| **B — Scheduling** | `run_batch` / `run_batch_waves`; `PrefillDecodeQueue`; `RBITNET_CONTINUOUS_BATCHING` interleaved decode; chunked prefill env; **measured** via `rbitnet_core_scheduler_decode_waves_total` + `rbitnet tune throughput` | Single forward wave for N sequences (batched matmul) |
+| **C — Cache semantics** | Dense prefix KV (`RBITNET_PREFIX_KV`); paged snapshots; radix `longest_token_prefix`; HTTP sidecar PUT/GET; **default-on for interactive** via `rbitnet tune interactive` / `bitnet-cpu` (still feature-flagged off at process start) | Sidecar warm path in multi-replica deploys; L7 sticky hardening |
 | **C — Streaming** | Live SSE (`StreamEvent`, `complete_streaming`) | GGUF load tests under sustained concurrency |
 | **D — GPU decode** | `CudaDecodeGraph` metrics + capture hook; `RBITNET_KV_BACKEND=gpu` planning bit; cuBLASLt M=1 policy env | Full graph replay on device; fused norm+quant decode kernels |
 

@@ -518,6 +518,70 @@ async fn health_ready_metrics_do_not_require_api_key() {
     }
 }
 
+/// Frozen Akasha scrape surface — keep in sync with docs/AKASHA_METRICS.md.
+#[tokio::test]
+async fn akasha_contract_metrics_series_present() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let config = Arc::new(ServerConfig::test_defaults());
+
+    let chat_body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "ping" }],
+        "max_tokens": 4,
+        "temperature": 0.0
+    });
+    let res = create_app_with_config(Arc::clone(&engine), Arc::clone(&config))
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(chat_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat");
+    assert!(res.status().is_success(), "chat should succeed in stub mode");
+
+    let metrics = create_app_with_config(Arc::clone(&engine), Arc::clone(&config))
+        .oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap())
+        .await
+        .expect("metrics");
+    assert!(metrics.status().is_success());
+    let body = metrics.into_body().collect().await.unwrap().to_bytes();
+    let text = std::str::from_utf8(&body).unwrap();
+
+    let required = [
+        "rbitnet_chat_requests_total",
+        "rbitnet_inference_calls_total",
+        "rbitnet_inference_ttft_ms_sum",
+        "rbitnet_inference_ttft_ms_avg",
+        "rbitnet_inference_decode_tokens_per_sec",
+        "rbitnet_completion_tokens_total",
+        "rbitnet_core_prefix_cache_hits_total",
+        "rbitnet_core_speculative_accepted_tokens_total",
+        "rbitnet_core_scheduler_decode_waves_total",
+    ];
+    for series in required {
+        assert!(
+            text.contains(series),
+            "Akasha contract missing series `{series}` in /metrics:\n{text}"
+        );
+    }
+
+    let models = create_app_with_config(engine, config)
+        .oneshot(Request::builder().uri("/v1/models").body(Body::empty()).unwrap())
+        .await
+        .expect("models");
+    assert!(models.status().is_success());
+}
+
 #[tokio::test]
 async fn static_ui_is_served_without_api_key() {
     let _lock = ENV_MUTEX.lock().unwrap();

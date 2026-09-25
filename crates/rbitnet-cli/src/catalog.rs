@@ -42,6 +42,9 @@ pub struct CatalogModel {
     /// Golden parity badge from the curated index: `verified_golden` (documented llama.cpp match) or `best_effort`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub golden_tier: Option<String>,
+    /// Optional expected SHA-256 (hex) of the primary GGUF file for provenance checks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
 }
 
 /// Pick one GGUF filename when a repo ships many quantizations (prefers common Q4_K_M-style names).
