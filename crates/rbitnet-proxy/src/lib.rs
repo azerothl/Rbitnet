@@ -325,7 +325,7 @@ async fn ready(State(state): State<ProxyState>) -> Response {
 
 async fn metrics(State(state): State<ProxyState>) -> impl IntoResponse {
     let mut body = String::from("rbitnet_proxy_up 1\n");
-    for (id, worker) in &state.workers {
+    for (id, worker) in state.workers.iter() {
         let runtime = worker.runtime.lock().await;
         if let Some(base) = runtime.base_url.as_ref() {
             let url = format!("{base}/metrics");
