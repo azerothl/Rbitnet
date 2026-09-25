@@ -18,9 +18,9 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Performance baselines (published numbers)                      | **Frozen procedure + rows** — see `[BENCHMARKS.md](BENCHMARKS.md)` |
 | **Perf vs llama.cpp (CPU)**                                    | **Measured gap** — compare with `llama-bench` vs `scripts/compare_llamacpp_rbitnet.*`; parity is **not** claimed until frozen rows show it (optional BLAS / future ggml bridge narrow the gap) |
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
-| Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Not in scope today** — see [Advanced inference stack gaps](#advanced-inference-stack-gaps-vs-industry-serving) |
-| KV memory (PagedAttention-style), aggressive cache scheduling | **Not implemented** — dense per-request KV; see same section |
-| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Not implemented** — single-stream completions per worker slot |
+| Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Deferred** — FA2/FA3 = GPU_NATIVE research only, **not** near-term default ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)) |
+| KV memory (PagedAttention-style), aggressive cache scheduling | **Hooks / MVP** — dense default; `PagedKvPool` + `RBITNET_KV_POOL`; production E2E still open — see [Research-backed priorities](#research-backed-priorities-2026-09) |
+| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Hooks / MVP** — env-flagged; fused multi-seq + stall-free schedule still open — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) |
 | Hugging Face–centric “automatic” tokenizer + model pairing      | **Partial** — `models install`, manifests; no embedded Transformers auto-config |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
 
@@ -156,7 +156,7 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 
 Production-grade throughput still needs fused forwards and GPU-resident KV — see [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) *Done / Next*.
 
-**Frontier-aligned backlog (multi-token prefill, block KV / PagedAttention, continuous batching, prefix-KV + L7 routing):** tracked conceptually against industry stacks (vLLM, TensorRT-LLM, gateway routing patterns); see discussion in [USAGE.md](USAGE.md), [PROFILING.md](PROFILING.md), and [LIMITATIONS.md](LIMITATIONS.md).
+**Frontier-aligned backlog (multi-token prefill, block KV / PagedAttention, continuous batching, prefix-KV + L7 routing):** tracked conceptually against industry stacks (vLLM, TensorRT-LLM, gateway routing patterns); see discussion in [USAGE.md](USAGE.md), [PROFILING.md](PROFILING.md), and [LIMITATIONS.md](LIMITATIONS.md). Prioritized experiments and skip list: [Research-backed priorities](#research-backed-priorities-2026-09).
 
 ### Tokenizer and Hugging Face ecosystem
 
@@ -168,14 +168,76 @@ Production-grade throughput still needs fused forwards and GPU-resident KV — s
 
 ---
 
+## Research-backed priorities (2026-09)
+
+Folded from product research (engine landscape + arXiv ideas for a **native-first GGUF/BitNet** server). Criteria: fit to existing `bitnet-core` hooks > local impact (tok/s, RSS, concurrency ≥4) > cost > mature open code. **Native-first CPU remains the default path**; FlashAttention-2 / FA3 stay **deferred GPU_NATIVE research**, not a near-term default.
+
+Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) (*Research backlog*). Product-facing quick wins (metrics UX, runner-proxy, provenance) also align with [FUTURE_DIFFERENTIATION.md](FUTURE_DIFFERENTIATION.md).
+
+### Quick wins
+
+| Item | Why / cite | Action |
+|------|------------|--------|
+| **Metrics surface** — TTFT, decode tok/s, `prefix_hit`, `draft_accept` on `/metrics` + `/ui` | Akasha scrape + akasha-os Models UX parity | Extend [AKASHA_METRICS.md](AKASHA_METRICS.md) series; status line in UI |
+| **Model provenance** — SHA256 in catalog/recipes; optional `RBITNET_TRUSTED_MODELS_ONLY` | Ecosystem security (GGUF trust) | Harden `rbitnet models install` / recipes |
+| **Structured output** stabilize | SGLang-style FSM already env-flagged | `RBITNET_STRUCTURED_OUTPUT` + JSON-schema tests |
+| **Speculative verify + metrics** | [2211.17192](https://arxiv.org/abs/2211.17192) | Solidify accept path; expose `draft_accept` |
+| **Prompt-lookup / n-gram draft** (no second GGUF) | PLD / [2304.04487](https://arxiv.org/abs/2304.04487); akasha-os already does PLD | Wire into existing speculative scheduler |
+| **BitNet recipe / null-loss criteria** | [2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285) | Document `bitnet-b158` pack + golden gate |
+| **Runner-proxy multi-model path** | Ollama-like ops; [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md) | Document as recommended multi-model default |
+| **Bench gate vs llama.cpp** | Credible Akasha SLO | One frozen line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) per release |
+| **Load-failure → retry** | akasha-os P16 pattern | State machine without process restart |
+
+### Medium
+
+| Item | Why / cite | Action |
+|------|------------|--------|
+| **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | Activate pool + paged attention end-to-end; measure RSS/fragmentation @ concurrency 1/4/8 |
+| **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | LRU eviction, `prefix_hit` ≥70% on repeated system+tools; sticky notes for proxy |
+| **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | Token budget / iteration on `RBITNET_CONTINUOUS_BATCHING` for ≥2–4 Akasha sessions |
+| **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |
+| **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | Prototype CPU path; measure decode latency + RSS (`RBITNET_KV_QUANT=q8`) |
+| **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | K per-channel / V per-token; golden/PPL before prod |
+| **BitNet ternary kernels (Rust SIMD)** | bitnet.cpp [2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144) | Reimplement I2_S/TL2 **patterns** in-tree (no FFI); microbench vs Microsoft/llama.cpp |
+| **Tune profiles** | Product UX | `interactive` / `batch` / `bitnet-cpu` via `rbitnet tune` |
+
+### Strategic
+
+| Item | Why / cite | Position |
+|------|------------|----------|
+| **GPU_NATIVE** — device KV, fused attention/GEMV | Industry FA / FlashInfer-class | After frozen CPU benches; see [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) |
+| **BitNet packed GPU kernels** | 2B4T report [2504.12285](https://arxiv.org/abs/2504.12285) | Research after CPU ternary parity |
+| **Lookahead decoding** | [2402.02057](https://arxiv.org/abs/2402.02057) | Research (tree attention / FLOPs); PLD first |
+| **Prefill/decode disaggregation** | DistServe [2401.09670](https://arxiv.org/abs/2401.09670) | After batching + paged KV; multi-GPU cluster — not desktop default |
+| **Tensor parallel / multi-GPU** | vLLM / TRT-LLM | After single-GPU correct |
+| **semver Engine crate** for embed | Alternative to HTTP for Akasha | Without breaking NATIVE_FIRST |
+| **Metal / optional MLX** | Apple path | Optional; stub today |
+
+### Explicitly deferred (do not chase near-term)
+
+| Topic | Cite | Reason |
+|-------|------|--------|
+| **FlashAttention-2 / FA3 as default path** | [2205.14135](https://arxiv.org/abs/2205.14135), [2307.08691](https://arxiv.org/abs/2307.08691) | GPU-first; keep as GPU_NATIVE research only — **native-first CPU stays default** |
+| **INT-FlashAttention / TurboAttention** | [2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585) | After GPU_NATIVE epic |
+| **DistServe disagg as product default** | [2401.09670](https://arxiv.org/abs/2401.09670) | Cluster KV transfer — out of local/desktop target |
+| **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Pure MoE GGUF still refused; too invasive |
+| **Medusa / EAGLE / EAGLE-2** | [2401.10774](https://arxiv.org/abs/2401.10774), [2401.15077](https://arxiv.org/abs/2401.15077), [2406.16858](https://arxiv.org/abs/2406.16858) | Draft heads / fine-tune — incompatible with download-and-serve GGUF |
+| **AWQ / GPTQ as primary format** | ecosystem | Conflicts with GGUF native-first; Akasha may route vLLM elsewhere |
+| **T-MAC as second LUT stack** | [2407.00088](https://arxiv.org/abs/2407.00088) | Cross-read only; do not port in parallel with bitnet.cpp patterns |
+| **FFI llama.cpp / second engine in TCB** | — | Violates [NATIVE_FIRST.md](NATIVE_FIRST.md) |
+| **Novel AutoTokenizer research** | — | Keep recipe sidecars + checksums |
+
+---
+
 ## Next todos (suggested order)
 
-1. **Measurements** — Refresh the **frozen baseline** row in `[BENCHMARKS.md](BENCHMARKS.md)` each release (SHA, p50/p95, optional RSS).
-2. **Profiling** — Add a dated file under `[profiling/](profiling/README.md)` when kernels or scheduler change materially.
-3. **Timeouts** — Optional: stronger isolation after HTTP 504 (trade-offs in [LIMITATIONS.md](LIMITATIONS.md)); default remains cooperative cancel + documented pool behaviour.
-4. **Tokenizer / HF** — Deeper Hub alignment remains under [Advanced inference stack gaps](#advanced-inference-stack-gaps-vs-industry-serving); extend tensor aliases as real exports appear.
-5. **Security** — For internet-facing edges: TLS + rate limits at the proxy ([DEPLOYMENT.md](DEPLOYMENT.md)); in-process rate limiting remains out of scope.
-6. **Inference epic** — See [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) for PagedAttention-class backlog.
+1. **Measurements** — Refresh the **frozen baseline** row in `[BENCHMARKS.md](BENCHMARKS.md)` each release (SHA, p50/p95, optional RSS); publish vs-llama.cpp line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md).
+2. **Quick wins (metrics + provenance + PLD)** — See [Research-backed priorities](#research-backed-priorities-2026-09); prefer these before large scheduler merges.
+3. **Profiling** — Add a dated file under `[profiling/](profiling/README.md)` when kernels or scheduler change materially.
+4. **Timeouts** — Optional: stronger isolation after HTTP 504 (trade-offs in [LIMITATIONS.md](LIMITATIONS.md)); default remains cooperative cancel + documented pool behaviour.
+5. **Tokenizer / HF** — Deeper Hub alignment remains under [Advanced inference stack gaps](#advanced-inference-stack-gaps-vs-industry-serving); extend tensor aliases as real exports appear.
+6. **Security** — For internet-facing edges: TLS + rate limits at the proxy ([DEPLOYMENT.md](DEPLOYMENT.md)); in-process rate limiting remains out of scope.
+7. **Inference epic (medium)** — Paged KV E2E, radix agent hit-rate, Sarathi-style chunked prefill — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md).
 
 ---
 
@@ -191,6 +253,8 @@ Production-grade throughput still needs fused forwards and GPU-resident KV — s
 | `[BENCHMARKS.md](BENCHMARKS.md)`           | Where to record performance numbers     |
 | `[PROFILING.md](PROFILING.md)`             | How to profile CPU hot paths            |
 | `[ENV_REFERENCE.md](ENV_REFERENCE.md)`   | Consolidated `RBITNET_*` index          |
-| `[INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md)` | Long-term PagedAttention-class backlog |
+| `[INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md)` | Serving epic + research backlog (arXiv-aligned) |
+| `[GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)` | Native CUDA path; FA2/FA3 deferred |
+| `[FUTURE_DIFFERENTIATION.md](FUTURE_DIFFERENTIATION.md)` | Product differentiation axes |
 | [`CHANGELOG.md`](../CHANGELOG.md)          | Keep a Changelog–style release notes    |
 | [`training/README.md`](../training/README.md) | Optional Python LoRA/SFT + `rbitnet train` |
