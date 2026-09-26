@@ -65,7 +65,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler, chunked prefill hooks, and speculative draft path; see [USAGE.md](USAGE.md). |
-| `RBITNET_DRAFT_PATH` | `target` | Speculative draft source when `RBITNET_SPECULATIVE=1`: `target`, `ngram`, or `toy`. |
+| `RBITNET_DRAFT_PATH` | `ngram` when speculative on else `target` | Speculative draft source: `ngram`/`pld` (prompt-lookup, no weights), `toy`, or `target`. |
 | `RBITNET_DRAFT_MODEL` | (none) | Path reserved for a small GGUF draft model. Current builds recognize the path and fall back to the lightweight n-gram draft until separate draft-model verification is wired. |
 | `RBITNET_STRUCTURED_OUTPUT` | `off` | Optional sampler mask: `json` / `tool` enables the ASCII/byte-token JSON FSM mask before sampling. |
 | `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | Llama-lineage matrices: **`dense`** (legacy: full `tensor_to_f32` at load, high RAM), **`mmap_quant`** (quantized weights stay in the GGUF mmap; row-wise GEMV), **`auto`** (mmap when every weight tensor uses a supported GGML type for mmap GEMV; otherwise dense). |

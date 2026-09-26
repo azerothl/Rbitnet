@@ -410,6 +410,11 @@ pub fn prometheus_text() -> String {
         snap.speculative_accepted_tokens
     );
     counter!(
+        "rbitnet_core_draft_accept",
+        "Draft tokens accepted (Akasha draft_accept alias of speculative_accepted_tokens)",
+        snap.speculative_accepted_tokens
+    );
+    counter!(
         "rbitnet_core_cuda_graph_replays_total",
         "Decode steps recorded under CUDA graph mode",
         snap.cuda_graph_replays
