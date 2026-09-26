@@ -1,4 +1,4 @@
-//! Execution-time prefix KV: reuse dense KV state for shared prompt token prefixes.
+//! Execution-time prefix KV: reuse dense / paged KV state for shared prompt prefixes.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -6,13 +6,7 @@ use std::sync::{Arc, Mutex};
 use crate::llama::kv_storage::KvStorage;
 use crate::prefix_kv::{PrefixKvKey, PrefixKvScope};
 
-/// Snapshot of dense per-layer KV rows after prefill (legacy layout only).
-#[derive(Debug, Clone)]
-pub struct DenseKvSnapshot {
-    pub k: Vec<Vec<f32>>,
-    pub v: Vec<Vec<f32>>,
-    pub token_count: usize,
-}
+pub use crate::prefix_kv::{DenseKvSnapshot, PagedKvSnapshot};
 
 /// LRU cache of dense KV snapshots keyed by scoped token prefix.
 #[derive(Debug, Default)]
@@ -116,13 +110,6 @@ pub fn prefix_scope_for_runtime(
         .scope()
 }
 
-/// Paged KV block table snapshot (per-layer logical → physical mapping).
-#[derive(Debug, Clone)]
-pub struct PagedKvSnapshot {
-    pub block_phys: Vec<Vec<usize>>,
-    pub token_count: usize,
-}
-
 pub fn snapshot_paged_kv(kv: &KvStorage, token_count: usize) -> Option<PagedKvSnapshot> {
     let p = kv.as_paged()?;
     Some(PagedKvSnapshot {
@@ -138,10 +125,7 @@ pub fn restore_paged_kv(kv: &mut KvStorage, snap: &PagedKvSnapshot) -> bool {
     }
 }
 
-pub fn snapshot_key(
-    scope: &PrefixKvScope,
-    token_ids: &[u32],
-) -> PrefixKvKey {
+pub fn snapshot_key(scope: &PrefixKvScope, token_ids: &[u32]) -> PrefixKvKey {
     PrefixKvKey::with_invalidation(
         &scope.model_id,
         &scope.tokenizer_id,

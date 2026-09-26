@@ -18,10 +18,12 @@ use crate::timings::PhaseTimings;
 use crate::kv_pool;
 use crate::kv_sidecar::{KvSidecarClient, KvSidecarConfig, KvSidecarPut, NoopKvSidecar};
 use crate::paged_kv::PagedKvCache;
-use crate::prefix_kv::{PrefixKvBlockCache, PrefixKvMatch};
+use crate::prefix_kv::{
+    DenseKvSnapshot, PagedKvSnapshot, PrefixKvBlockCache, PrefixKvMatch, PrefixKvSnap,
+};
 use crate::prefix_kv_exec::{
-    prefix_scope_for_runtime, restore_dense_kv, shared_prefix_kv_execution_cache,
-    snapshot_dense_kv, snapshot_key, SharedPrefixKvExecutionCache,
+    prefix_scope_for_runtime, restore_dense_kv, restore_paged_kv, shared_prefix_kv_execution_cache,
+    snapshot_dense_kv, snapshot_key, snapshot_paged_kv, SharedPrefixKvExecutionCache,
 };
 use crate::stream::StreamEvent;
 
@@ -55,6 +57,9 @@ pub struct LlamaRuntime {
     prefix_kv_cache: SharedPrefixKvExecutionCache,
     prefix_radix: std::sync::Mutex<PrefixKvBlockCache>,
     prefix_scope: crate::prefix_kv::PrefixKvScope,
+    /// Previous prompt token ids + snap for LCP agent-style reuse (SGLang-lite).
+    last_prefix_ids: Option<Vec<u32>>,
+    last_prefix_snap: Option<PrefixKvSnap>,
     cuda_graph: CudaDecodeGraph,
     sidecar: Box<dyn KvSidecarClient>,
 }
@@ -99,8 +104,10 @@ impl LlamaRuntime {
             prefill_chunk_tokens,
             scratch: ScratchArena::default(),
             prefix_kv_cache: shared_prefix_kv_execution_cache(),
-            prefix_radix: std::sync::Mutex::new(PrefixKvBlockCache::default()),
+            prefix_radix: std::sync::Mutex::new(PrefixKvBlockCache::from_env()),
             prefix_scope,
+            last_prefix_ids: None,
+            last_prefix_snap: None,
             cuda_graph: CudaDecodeGraph::from_env(),
             sidecar,
         })
@@ -161,23 +168,69 @@ impl LlamaRuntime {
         }
 
         let mut prefill_from = 0usize;
-        if let Ok(radix) = self.prefix_radix.lock() {
-            if let Some(PrefixKvMatch {
-                matched_tokens, ..
-            }) = radix.longest_token_prefix(&self.prefix_scope, &prompt_ids)
+        let prefix_enabled = matches!(
+            std::env::var("RBITNET_PREFIX_KV").as_deref(),
+            Ok("1") | Ok("true") | Ok("yes")
+        );
+        if prefix_enabled {
+            // 1) LCP against previous request (agent system/tools reuse).
+            if let (Some(prev_ids), Some(prev_snap)) =
+                (self.last_prefix_ids.as_ref(), self.last_prefix_snap.as_ref())
             {
-                prefill_from = prefill_from.max(matched_tokens.min(prompt_ids.len()));
+                let lcp = longest_common_prefix_tokens(prev_ids, &prompt_ids);
+                let min_lcp = std::env::var("RBITNET_PREFIX_KV_MIN_TOKENS")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(8usize);
+                if lcp >= min_lcp {
+                    if let Some(truncated) = truncate_prefix_snap(prev_snap, lcp, &self.model.cfg) {
+                        let restored = match &truncated {
+                            PrefixKvSnap::Dense(d) => restore_dense_kv(&mut self.kv, d),
+                            PrefixKvSnap::Paged(p) => restore_paged_kv(&mut self.kv, p),
+                        };
+                        if restored {
+                            prefill_from = lcp.min(prompt_ids.len());
+                            crate::perf::record_prefix_hit(lcp.saturating_mul(64));
+                        }
+                    }
+                }
+            }
+            // 2) Radix tree lookup when LCP path did not restore.
+            if prefill_from == 0 {
+                if let Ok(mut radix) = self.prefix_radix.lock() {
+                    if let Some(PrefixKvMatch {
+                        matched_tokens,
+                        bytes_saved,
+                        snap,
+                        ..
+                    }) = radix.longest_token_prefix(&self.prefix_scope, &prompt_ids)
+                    {
+                        let restored = match snap.as_ref() {
+                            Some(PrefixKvSnap::Dense(d)) => restore_dense_kv(&mut self.kv, d),
+                            Some(PrefixKvSnap::Paged(p)) => restore_paged_kv(&mut self.kv, p),
+                            None => false,
+                        };
+                        if restored && matched_tokens > 0 {
+                            prefill_from = matched_tokens.min(prompt_ids.len());
+                            crate::perf::record_prefix_hit(bytes_saved);
+                        } else {
+                            crate::perf::record_prefix_cache_miss();
+                        }
+                    } else {
+                        crate::perf::record_prefix_cache_miss();
+                    }
+                }
             }
         }
         if let Ok(cache) = self.prefix_kv_cache.lock() {
-            if cache.enabled() {
+            if cache.enabled() && prefill_from == 0 {
                 let mut hit = false;
                 for len in (1..=prompt_ids.len()).rev() {
                     let key = snapshot_key(&self.prefix_scope, &prompt_ids[..len]);
                     if let Some(snap) = cache.lookup(&key) {
                         if restore_dense_kv(&mut self.kv, snap) {
                             prefill_from = snap.token_count;
-                            crate::perf::record_prefix_cache_hit(
+                            crate::perf::record_prefix_hit(
                                 snap.token_count.saturating_mul(64),
                             );
                             hit = true;
@@ -214,12 +267,43 @@ impl LlamaRuntime {
                 }
             }
         }
-        if let Ok(mut radix) = self.prefix_radix.lock() {
-            let key = snapshot_key(&self.prefix_scope, &prompt_ids);
-            if let Some(paged) = self.kv.as_paged_mut() {
-                let blocks: Vec<usize> = (0..paged.max_pages()).collect();
-                radix.insert_tokens(key, &prompt_ids, blocks);
+        if prefix_enabled {
+            let full_snap = if let Some(p) = snapshot_paged_kv(&self.kv, prompt_ids.len()) {
+                Some(PrefixKvSnap::Paged(p))
+            } else {
+                snapshot_dense_kv(&self.kv, prompt_ids.len()).map(PrefixKvSnap::Dense)
+            };
+            if let Ok(mut radix) = self.prefix_radix.lock() {
+                let key = snapshot_key(&self.prefix_scope, &prompt_ids);
+                let blocks: Vec<usize> = (0..prompt_ids.len()).collect();
+                radix.insert_tokens_with_snap(key, &prompt_ids, blocks, full_snap.clone());
+                // Also index the LCP with the previous prompt so the next agent turn can hit.
+                if let Some(prev) = self.last_prefix_ids.as_ref() {
+                    let lcp = longest_common_prefix_tokens(prev, &prompt_ids);
+                    let min_lcp = std::env::var("RBITNET_PREFIX_KV_MIN_TOKENS")
+                        .ok()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(8usize);
+                    if lcp >= min_lcp && lcp < prompt_ids.len() {
+                        if let Some(ref full) = full_snap {
+                            if let Some(truncated) =
+                                truncate_prefix_snap(full, lcp, &self.model.cfg)
+                            {
+                                let key = snapshot_key(&self.prefix_scope, &prompt_ids[..lcp]);
+                                let blocks: Vec<usize> = (0..lcp).collect();
+                                radix.insert_tokens_with_snap(
+                                    key,
+                                    &prompt_ids[..lcp],
+                                    blocks,
+                                    Some(truncated),
+                                );
+                            }
+                        }
+                    }
+                }
             }
+            self.last_prefix_ids = Some(prompt_ids.clone());
+            self.last_prefix_snap = full_snap;
         }
         if self.sidecar.put_prefix_blocks(&KvSidecarPut {
             model_id: self.prefix_scope.model_id.clone(),
@@ -373,5 +457,59 @@ fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
         KvStorage::new_paged(cfg, p.page_size_tokens, p.max_pages)
     } else {
         Ok(KvStorage::new_dense(cfg))
+    }
+}
+
+fn longest_common_prefix_tokens(a: &[u32], b: &[u32]) -> usize {
+    a.iter()
+        .zip(b.iter())
+        .take_while(|(x, y)| x == y)
+        .count()
+}
+
+fn truncate_prefix_snap(
+    snap: &PrefixKvSnap,
+    token_count: usize,
+    cfg: &LlamaConfig,
+) -> Option<PrefixKvSnap> {
+    match snap {
+        PrefixKvSnap::Dense(d) => {
+            if token_count == 0 || token_count > d.token_count {
+                return None;
+            }
+            if token_count == d.token_count {
+                return Some(PrefixKvSnap::Dense(d.clone()));
+            }
+            let stride = cfg.n_kv.saturating_mul(cfg.head_dim);
+            let keep = token_count.saturating_mul(stride);
+            let mut k = Vec::with_capacity(d.k.len());
+            let mut v = Vec::with_capacity(d.v.len());
+            for row in &d.k {
+                if row.len() < keep {
+                    return None;
+                }
+                k.push(row[..keep].to_vec());
+            }
+            for row in &d.v {
+                if row.len() < keep {
+                    return None;
+                }
+                v.push(row[..keep].to_vec());
+            }
+            Some(PrefixKvSnap::Dense(DenseKvSnapshot {
+                k,
+                v,
+                token_count,
+            }))
+        }
+        PrefixKvSnap::Paged(p) => {
+            if token_count == 0 || token_count > p.token_count {
+                return None;
+            }
+            Some(PrefixKvSnap::Paged(PagedKvSnapshot {
+                block_phys: p.block_phys.clone(),
+                token_count,
+            }))
+        }
     }
 }
