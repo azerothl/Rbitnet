@@ -49,8 +49,10 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |
 | `RBITNET_PREFIX_CACHE_MAX_ENTRIES` | `64` | Prefix response cache size. |
-| `RBITNET_PREFIX_KV` | off | Dense KV snapshot reuse for shared prompt prefixes (prefill skip). Prefer on for ≥2 concurrent interactive sessions (`rbitnet tune interactive`). |
+| `RBITNET_PREFIX_KV` | off | Dense/paged KV snapshot reuse for shared prompt prefixes (prefill skip). Prefer on for ≥2 concurrent interactive sessions (`rbitnet tune interactive`). Enables radix + LCP agent reuse. |
 | `RBITNET_PREFIX_KV_MAX_ENTRIES` | `32` | LRU size for execution-time prefix KV snapshots. |
+| `RBITNET_PREFIX_KV_RADIX_MAX` | `256` | Max radix leaf entries (LRU eviction). |
+| `RBITNET_PREFIX_KV_MIN_TOKENS` | `8` | Minimum LCP tokens before previous-request prefix restore counts as a hit. |
 | `RBITNET_SESSIONS` | off | Enable session store (also implied by `RBITNET_CONTINUOUS_BATCHING`). |
 | `RBITNET_MODEL_SHA256` | (none) | Expected SHA-256 hex of the GGUF; verified after install/download when set. |
 | `RBITNET_TRUSTED_MODELS_ONLY` | off | If `1`, refuse Hub downloads outside the curated catalog and require a known SHA-256 on curated install. |

@@ -145,7 +145,7 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 | Feature | Status (Jun 2026) | Notes |
 |---------|-------------------|-------|
 | **Live token streaming** | **Shipped (MVP)** | SSE token deltas via [`stream.rs`](../crates/bitnet-core/src/stream.rs) and `live_stream_chat_completion` in `bitnet-server` (not post-generation chunking). |
-| **Prefix KV (tensorial)** | **MVP (dense)** | `RBITNET_PREFIX_KV` — dense KV snapshots + partial prefill; **not** with `RBITNET_LLAMA_PAGED_KV` yet. Radix block index in [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs). |
+| **Prefix KV (tensorial)** | **MVP + radix LRU** | `RBITNET_PREFIX_KV` — dense/paged snaps + LCP agent reuse + radix LRU; `/metrics` `rbitnet_core_prefix_hit`. |
 | **Paged KV pool** | **E2E opt-in** | `RBITNET_KV_POOL=1` backs Llama runtime KV with `SharedPhysKvStore`; multi-seq `PagedKvPool`; free-list reclaim; gauges `rbitnet_core_kv_pool_*`. Bench: [`scripts/bench_paged_kv.sh`](../scripts/bench_paged_kv.sh). |
 | **Continuous batching** | **Hook → waves** | `RBITNET_CONTINUOUS_BATCHING` — interleaved decode waves when sessions enabled; fused multi-seq matmul still pending. |
 | **Chunked prefill** | **Partial** | `RBITNET_PREFILL_CHUNK_TOKENS` slices the prompt loop (one forward step per token). |
@@ -193,7 +193,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | Item | Why / cite | Action |
 |------|------------|--------|
 | **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | **Shipped opt-in** — pool + paged attention path; measure RSS/fragmentation @ concurrency 1/4/8 via `scripts/bench_paged_kv.sh` |
-| **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | LRU eviction, `prefix_hit` ≥70% on repeated system+tools; sticky notes for proxy |
+| **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | **Shipped opt-in** — LRU radix + LCP reuse; `rbitnet_core_prefix_hit`; unit gate ≥70% after warm-up |
 | **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | Token budget / iteration on `RBITNET_CONTINUOUS_BATCHING` for ≥2–4 Akasha sessions |
 | **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |
 | **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | Prototype CPU path; measure decode latency + RSS (`RBITNET_KV_QUANT=q8`) |

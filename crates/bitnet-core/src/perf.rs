@@ -193,6 +193,12 @@ pub fn record_prefix_cache_hit(bytes_saved: usize) {
         .fetch_add(bytes_saved as u64, Ordering::Relaxed);
 }
 
+/// Alias used by the RadixAttention-style path; same counters as `record_prefix_cache_hit`,
+/// plus the dedicated `prefix_hit` series for Akasha scrape naming.
+pub fn record_prefix_hit(bytes_saved: usize) {
+    record_prefix_cache_hit(bytes_saved);
+}
+
 pub fn record_prefix_cache_miss() {
     perf().prefix_cache_misses.fetch_add(1, Ordering::Relaxed);
 }
@@ -371,6 +377,11 @@ pub fn prometheus_text() -> String {
     counter!(
         "rbitnet_core_prefix_cache_hits_total",
         "Prefix KV cache hits",
+        snap.prefix_cache_hits
+    );
+    counter!(
+        "rbitnet_core_prefix_hit",
+        "Radix/prefix KV hits (Akasha prefix_hit alias of prefix_cache_hits)",
         snap.prefix_cache_hits
     );
     counter!(

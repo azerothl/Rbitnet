@@ -15,7 +15,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 |-------|-------------------|-------------------|
 | **A — KV and memory** | `KvStorage` / `PagedSeqKv` (`RBITNET_LLAMA_PAGED_KV`); **`RBITNET_KV_POOL=1` E2E** shared phys + reclaim + pool gauges | GPU-resident pages; then fused multi-seq |
 | **B — Scheduling** | `run_batch` / `run_batch_waves`; `PrefillDecodeQueue`; `RBITNET_CONTINUOUS_BATCHING` interleaved decode; chunked prefill env; **measured** via `rbitnet_core_scheduler_decode_waves_total` + `rbitnet tune throughput` | Fused multi-seq matmul; **stall-free chunked prefill** ([2403.02310](https://arxiv.org/abs/2403.02310)) |
-| **C — Cache semantics** | Dense prefix KV (`RBITNET_PREFIX_KV`); paged snapshots; radix `longest_token_prefix`; HTTP sidecar PUT/GET; **default-on for interactive** via `rbitnet tune interactive` / `bitnet-cpu` (still feature-flagged off at process start) | **LRU radix + `prefix_hit` metrics** ([2312.07104](https://arxiv.org/abs/2312.07104)); L7 sticky |
+| **C — Cache semantics** | Dense/paged prefix KV (`RBITNET_PREFIX_KV`); radix LRU + LCP agent reuse; **`rbitnet_core_prefix_hit`** on `/metrics` | L7 sticky routing notes |
 | **C — Streaming** | Live SSE (`StreamEvent`, `complete_streaming`) | GGUF load tests under sustained concurrency |
 | **D — GPU decode** | `CudaDecodeGraph` metrics + capture hook; `RBITNET_KV_BACKEND=gpu` planning bit; cuBLASLt M=1 policy env | Full graph replay; fused norm+quant — **after** CPU benches; FA2/FA3 not default |
 | **E — Speculative / CPU attention / BitNet** | Speculative MVP (`RBITNET_SPECULATIVE`); KV quant env; ternary CPU path | PLD/n-gram ([2211.17192](https://arxiv.org/abs/2211.17192)); SlimAttention+KV Q8 ([2407.07304](https://arxiv.org/abs/2407.07304)); Rust SIMD vs bitnet.cpp ([2502.11880](https://arxiv.org/abs/2502.11880)) |
@@ -57,7 +57,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | # | Experiment | Gate |
 |---|------------|------|
 | 1 | **Paged KV E2E** on TinyLlama Q4 + BitNet 2B @ concurrency 1/4/8 vs contiguous | No golden regression; report RSS, fragmentation, decode tok/s — run `scripts/bench_paged_kv.sh` |
-| 2 | **Radix prefix agent** — 50 Akasha-like reqs (same system+tools) | `prefix_hit` ≥70% after warm-up; series on `/metrics` |
+| 2 | **Radix prefix agent** — 50 Akasha-like reqs (same system+tools) | `prefix_hit` ≥70% after warm-up — unit test `agent_style_prefix_hit_rate_after_warmup`; series `rbitnet_core_prefix_hit` |
 | 3 | **PLD / n-gram speculative** in existing scheduler | `draft_accept` + TTFT/decode on summary + multi-turn; zero new weights |
 | 4 | **KV Q8 then KIVI-style asymmetry** | Bench RSS + PPL/golden; Q8 default decision before 2-bit |
 | 5 | **BitNet matmul microbench** vs bitnet.cpp I2_S/TL2 (same GGUF) | One line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md); prioritize widest gap |

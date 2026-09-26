@@ -32,7 +32,8 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 
 | Rbitnet series | Meaning | Akasha analogue |
 |----------------|---------|-----------------|
-| `rbitnet_core_prefix_cache_hits_total` | Prefix KV / radix hits | Prompt reuse / `prefix_hit` |
+| `rbitnet_core_prefix_cache_hits_total` | Prefix KV / radix hits | Prompt reuse |
+| `rbitnet_core_prefix_hit` | Same counter as hits (Akasha **`prefix_hit`** alias) | **`prefix_hit`** |
 | `rbitnet_core_prefix_cache_misses_total` | Prefix KV misses | Cache miss rate |
 | `rbitnet_core_prefix_cache_bytes_saved_total` | Estimated KV bytes skipped | Cache efficiency |
 | `rbitnet_core_speculative_draft_tokens_total` | Draft tokens proposed | Spec draft |

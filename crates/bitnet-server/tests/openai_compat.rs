@@ -565,6 +565,7 @@ async fn akasha_contract_metrics_series_present() {
         "rbitnet_inference_decode_tokens_per_sec",
         "rbitnet_completion_tokens_total",
         "rbitnet_core_prefix_cache_hits_total",
+        "rbitnet_core_prefix_hit",
         "rbitnet_core_speculative_accepted_tokens_total",
         "rbitnet_core_scheduler_decode_waves_total",
     ];
