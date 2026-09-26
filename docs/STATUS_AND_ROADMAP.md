@@ -198,7 +198,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |
 | **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | Prototype CPU path; measure decode latency + RSS (`RBITNET_KV_QUANT=q8`) |
 | **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | K per-channel / V per-token; golden/PPL before prod |
-| **BitNet ternary kernels (Rust SIMD)** | bitnet.cpp [2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144) | Reimplement I2_S/TL2 **patterns** in-tree (no FFI); microbench vs Microsoft/llama.cpp |
+| **BitNet ternary kernels (Rust SIMD)** | bitnet.cpp [2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144) | **Shipped microbench** — I2_S pack + TL2-LUT in `kernels.rs`; `scripts/bench_bitnet_kernels.sh`; row in BENCHMARKS_RESULTS |
 | **Tune profiles** | Product UX | `interactive` / `batch` / `bitnet-cpu` via `rbitnet tune` |
 
 ### Strategic

@@ -97,3 +97,9 @@ Use this template when you benchmark a real GGUF outside the helper scripts:
 | Host | Backend | Model | p50 ms | p95 ms | mean ms | mean tok/s | Notes |
 |------|---------|-------|--------|--------|---------|------------|-------|
 | Unix local | stub/http | `rbitnet-stub` | 0.64 | 1.32 | 0.76 | 23530.82 | Small reproducible smoke bench |
+
+## BitNet ternary kernels — 2026-09-26 (NATIVE_FIRST)
+
+| Shape / paths | ns/call | bit_exact | widest gap | notes |
+|---------------|---------|-----------|------------|-------|
+| ternary 64x1024 | i8=34680ns i2s=31834ns tl2=33787ns auto=32469ns | bit_exact=true | widest_gap=i8_vs_i2s | Rust SIMD/LUT (no FFI) |
