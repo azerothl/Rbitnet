@@ -100,6 +100,8 @@ pub struct ProxyConfig {
     pub ready_timeout: Duration,
     pub request_timeout: Duration,
     pub backend: InferenceBackend,
+    /// When set, recycle idle child runners after this duration (Ollama-like VRAM release).
+    pub idle_unload: Option<Duration>,
 }
 
 impl ProxyConfig {
@@ -126,6 +128,20 @@ impl ProxyConfig {
         let request_timeout =
             Duration::from_secs(parse_u64_env("RBITNET_PROXY_REQUEST_TIMEOUT_SECS", 600)?);
         let backend = parse_inference_backend()?;
+        let idle_unload = match std::env::var("RBITNET_IDLE_UNLOAD_SECS") {
+            Ok(s) if !s.trim().is_empty() => {
+                let secs: u64 = s
+                    .trim()
+                    .parse()
+                    .map_err(|e| format!("RBITNET_IDLE_UNLOAD_SECS: {e}"))?;
+                if secs == 0 {
+                    None
+                } else {
+                    Some(Duration::from_secs(secs))
+                }
+            }
+            _ => None,
+        };
         Ok(Self {
             bind,
             registry_path,
@@ -135,6 +151,7 @@ impl ProxyConfig {
             ready_timeout: ready_timeout.max(Duration::from_secs(1)),
             request_timeout: request_timeout.max(Duration::from_secs(1)),
             backend,
+            idle_unload,
         })
     }
 }
@@ -145,6 +162,7 @@ struct WorkerRuntime {
     base_url: Option<String>,
     failures: u32,
     backoff_until: Option<Instant>,
+    last_used: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -472,26 +490,58 @@ impl ProxyState {
         }
 
         let current_base_url = runtime.base_url.clone();
+        let last_used = runtime.last_used;
         if let Some(child) = runtime.child.as_mut() {
             match child.try_wait() {
                 Ok(None) => {
-                    if let Some(base_url) = current_base_url {
+                    if let (Some(idle), Some(last)) = (self.config.idle_unload, last_used) {
+                        if last.elapsed() >= idle {
+                            info!(
+                                model,
+                                idle_secs = idle.as_secs(),
+                                "runner idle TTL expired; recycling child"
+                            );
+                            let _ = child.start_kill();
+                            runtime.child = None;
+                            runtime.base_url = None;
+                            runtime.last_used = None;
+                            // Fall through to spawn a fresh worker below.
+                        } else if let Some(base_url) = current_base_url.clone() {
+                            if self.health_check(&base_url).await {
+                                runtime.failures = 0;
+                                runtime.backoff_until = None;
+                                runtime.last_used = Some(Instant::now());
+                                return Ok(base_url);
+                            }
+                            warn!(model, "runner health check failed; recycling child");
+                            let _ = child.start_kill();
+                            runtime.child = None;
+                            runtime.base_url = None;
+                            record_failure(&mut runtime);
+                            return Err(Box::new(json_error(
+                                StatusCode::SERVICE_UNAVAILABLE,
+                                format!("model '{model}' runner failed health check"),
+                                "rbitnet_proxy_error",
+                            )));
+                        }
+                    } else if let Some(base_url) = current_base_url {
                         if self.health_check(&base_url).await {
                             runtime.failures = 0;
                             runtime.backoff_until = None;
+                            runtime.last_used = Some(Instant::now());
                             return Ok(base_url);
                         }
+                        warn!(model, "runner health check failed; recycling child");
+                        let _ = child.start_kill();
+                        runtime.child = None;
+                        runtime.base_url = None;
+                        record_failure(&mut runtime);
+                        return Err(Box::new(json_error(
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            format!("model '{model}' runner failed health check"),
+                            "rbitnet_proxy_error",
+                        )));
                     }
-                    warn!(model, "runner health check failed; recycling child");
-                    let _ = child.start_kill();
-                    runtime.child = None;
-                    runtime.base_url = None;
-                    record_failure(&mut runtime);
-                    return Err(Box::new(json_error(
-                        StatusCode::SERVICE_UNAVAILABLE,
-                        format!("model '{model}' runner failed health check"),
-                        "rbitnet_proxy_error",
-                    )));
                 }
                 Ok(Some(status)) => {
                     warn!(model, %status, "runner exited");
@@ -517,6 +567,16 @@ impl ProxyState {
             }
         }
 
+        // Child may have been cleared by idle TTL; re-check before spawn.
+        if runtime.child.is_some() {
+            // Still running but we fell through without a base_url — treat as recycle.
+            if let Some(child) = runtime.child.as_mut() {
+                let _ = child.start_kill();
+            }
+            runtime.child = None;
+            runtime.base_url = None;
+        }
+
         let (child, base_url) = match self.spawn_worker(&worker).await {
             Ok(v) => v,
             Err(e) => {
@@ -532,6 +592,7 @@ impl ProxyState {
         runtime.base_url = Some(base_url.clone());
         runtime.failures = 0;
         runtime.backoff_until = None;
+        runtime.last_used = Some(Instant::now());
         Ok(base_url)
     }
 
@@ -930,6 +991,7 @@ mod tests {
             ready_timeout: Duration::from_secs(1),
             request_timeout: Duration::from_secs(1),
             backend: InferenceBackend::LocalWorkers,
+            idle_unload: None,
         }
     }
 

@@ -162,6 +162,30 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_inference_ttft_ms_sum counter").unwrap();
         writeln!(s, "rbitnet_inference_ttft_ms_sum {ttft_sum}").unwrap();
+        let ttft_avg = if ic > 0 { ttft_sum / ic } else { 0 };
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_ttft_ms_avg Average time-to-first-token in milliseconds (ttft_sum / calls)"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_ttft_ms_avg gauge").unwrap();
+        writeln!(s, "rbitnet_inference_ttft_ms_avg {ttft_avg}").unwrap();
+        let decode_tok_s = if decode_sum > 0 {
+            (completion_tokens as f64) / (decode_sum as f64 / 1000.0)
+        } else {
+            0.0
+        };
+        writeln!(
+            s,
+            "# HELP rbitnet_inference_decode_tokens_per_sec Estimated decode throughput from cumulative completion_tokens and decode_ms"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_inference_decode_tokens_per_sec gauge").unwrap();
+        writeln!(
+            s,
+            "rbitnet_inference_decode_tokens_per_sec {decode_tok_s:.6}"
+        )
+        .unwrap();
         writeln!(
             s,
             "# HELP rbitnet_inference_encode_ms_sum Sum of tokenizer encode wall times in milliseconds"

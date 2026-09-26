@@ -6,8 +6,10 @@
     "RBITNET_ARCHITECTURE": "bitnet",
     "RBITNET_BACKEND": "cpu",
     "RBITNET_PREFIX_KV": "1",
+    "RBITNET_CONTINUOUS_BATCHING": "0",
     "RBITNET_MAX_CONCURRENT": "2",
+    "RBITNET_SESSIONS": "1",
     "RBITNET_BIND": "127.0.0.1:8080"
   },
-  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t`."
+  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t`. Optional: set RBITNET_MODEL_SHA256 to the catalog sha256 and enable RBITNET_TRUSTED_MODELS_ONLY=1."
 }

@@ -156,7 +156,6 @@ pub struct CudaRuntime {
 }
 
 /// Reusable device allocations for the generic `f32` GEMV helper (`matvec_cuda`).
-#[derive(Default)]
 struct PooledGemvBufs {
     d_w: *mut c_void,
     d_x: *mut c_void,
@@ -164,6 +163,19 @@ struct PooledGemvBufs {
     cap_w: usize,
     cap_x: usize,
     cap_y: usize,
+}
+
+impl Default for PooledGemvBufs {
+    fn default() -> Self {
+        Self {
+            d_w: std::ptr::null_mut(),
+            d_x: std::ptr::null_mut(),
+            d_y: std::ptr::null_mut(),
+            cap_w: 0,
+            cap_x: 0,
+            cap_y: 0,
+        }
+    }
 }
 
 // Device pointers are owned by this struct and only accessed while holding `pooled_gemv` lock

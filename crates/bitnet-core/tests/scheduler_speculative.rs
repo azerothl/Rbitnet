@@ -132,3 +132,44 @@ fn scheduler_batch_two_preserves_order() {
     assert_eq!(rows[0].0, 1);
     assert_eq!(rows[1].0, 2);
 }
+
+#[test]
+fn continuous_batching_waves_increment_decode_wave_counter() {
+    let before = bitnet_core::perf::snapshot().scheduler_decode_waves;
+    let scheduler = ContinuousBatchScheduler {
+        enabled: true,
+        speculative_enabled: false,
+        draft_ratio_num: 1,
+        draft_ratio_den: 4,
+        prefill_chunk_tokens: 128,
+        draft_path: DraftPath::TargetModel,
+        mtp_k: 1,
+    };
+    let batch = InferenceBatch {
+        requests: vec![
+            ScheduledRequest {
+                id: 10,
+                request: InferenceRequest {
+                    prompt: "x".into(),
+                    max_tokens: 2,
+                    sampling: SamplingOptions::from_temperature(0.0),
+                },
+            },
+            ScheduledRequest {
+                id: 11,
+                request: InferenceRequest {
+                    prompt: "y".into(),
+                    max_tokens: 2,
+                    sampling: SamplingOptions::from_temperature(0.0),
+                },
+            },
+        ],
+    };
+    let rows = scheduler.run_batch(&EchoExecutor, &batch).expect("waves");
+    assert_eq!(rows.len(), 2);
+    let after = bitnet_core::perf::snapshot().scheduler_decode_waves;
+    assert!(
+        after > before,
+        "run_batch_waves should record scheduler_decode_waves (before={before} after={after})"
+    );
+}

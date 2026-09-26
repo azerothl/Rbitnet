@@ -2,6 +2,8 @@
 
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
+**Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract.
+
 ## Do I need Python?
 
 **Not to run Rbitnet.** The server and `bitnet-core` are **self-sufficient in Rust**: mmap the GGUF, dequantize weights, run the transformer, sample tokens. No external inference engine is required.

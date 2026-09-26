@@ -147,6 +147,9 @@
       </div>
       <div id="health" class="status"><span class="dot"></span><span>checking</span></div>
     </header>
+    <section id="live-metrics" class="footer" style="border-bottom: 1px solid #273449;">
+      <span id="metrics-line">TTFT / decode tok/s / prefix hits: waiting for /metrics…</span>
+    </section>
 
     <section>
       <div class="row">
@@ -221,6 +224,39 @@
         setHealth(res.ok, res.ok ? "healthy" : "health failed");
       } catch (error) {
         setHealth(false, "offline");
+      }
+      await refreshMetrics();
+    }
+
+    function metricValue(text, name) {
+      const lines = text.split("\n");
+      for (const line of lines) {
+        if (line.startsWith(name + " ") || line.startsWith(name + "{")) {
+          const parts = line.trim().split(/\s+/);
+          return parts[parts.length - 1];
+        }
+      }
+      return null;
+    }
+
+    async function refreshMetrics() {
+      const line = document.getElementById("metrics-line");
+      if (!line) return;
+      try {
+        const res = await fetch("/metrics", { cache: "no-store" });
+        if (!res.ok) {
+          line.textContent = "metrics unavailable";
+          return;
+        }
+        const text = await res.text();
+        const ttft = metricValue(text, "rbitnet_inference_ttft_ms_avg");
+        const tokS = metricValue(text, "rbitnet_inference_decode_tokens_per_sec");
+        const hits = metricValue(text, "rbitnet_core_prefix_cache_hits_total");
+        const accept = metricValue(text, "rbitnet_core_speculative_accepted_tokens_total");
+        line.textContent =
+          `TTFT avg ${ttft ?? "—"} ms · decode ${tokS ?? "—"} tok/s · prefix_hit ${hits ?? "—"} · draft_accept ${accept ?? "—"}`;
+      } catch (error) {
+        line.textContent = "metrics offline";
       }
     }
 
