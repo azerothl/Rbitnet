@@ -11,6 +11,8 @@ mod runtime;
 
 pub use config::LlamaConfig;
 pub use cuda_graph::{CudaDecodeGraph, DecodeGraphMode};
-pub use kv_storage::{KvCache, KvPoolStats, KvStorage, PagedKvPool, PagedSeqKv};
+pub use kv_storage::{
+    KvCache, KvPoolStats, KvStorage, PagedKvPool, PagedSeqKv, SharedPhysKvStore,
+};
 pub use model::{llama_mmap_quant_supported, LlamaModel, LlamaWeightMode};
 pub use runtime::LlamaRuntime;

@@ -68,6 +68,7 @@ impl LlamaRuntime {
         let model_id = archive.suggested_openai_model_id();
         let model = LlamaModel::from_gguf_arc_for_backend(archive, backend_kind)?;
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
+        let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
         let kv = llama_kv_from_env(&model.cfg)?;
         let backend = make_backend(backend_kind);
         let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
@@ -84,7 +85,6 @@ impl LlamaRuntime {
             &chat_format,
             &kv_format,
         );
-        let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
         let sidecar: Box<dyn KvSidecarClient> =
             if let Ok(Some(http)) = crate::kv_sidecar::HttpKvSidecar::from_config(&KvSidecarConfig::from_env()) {
                 Box::new(http)
@@ -144,6 +144,7 @@ impl LlamaRuntime {
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
         self.kv.clear();
+        kv_pool::record_pool_metrics();
         let t_enc = Instant::now();
         let prompt_ids = self
             .tokenizer
@@ -274,6 +275,7 @@ impl LlamaRuntime {
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
+        kv_pool::record_pool_metrics();
 
         let text = self
             .tokenizer
@@ -358,6 +360,10 @@ fn seeded_rng(seed: Option<u64>) -> StdRng {
 }
 
 fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
+    // `RBITNET_KV_POOL=1` activates shared physical pages end-to-end (implies paged slabs).
+    if kv_pool::kv_pool_enabled() {
+        return kv_pool::new_runtime_kv(cfg);
+    }
     let use_paged = matches!(
         std::env::var("RBITNET_LLAMA_PAGED_KV").as_deref(),
         Ok("1") | Ok("true") | Ok("yes")

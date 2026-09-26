@@ -19,7 +19,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | **Perf vs llama.cpp (CPU)**                                    | **Measured gap** — compare with `llama-bench` vs `scripts/compare_llamacpp_rbitnet.*`; parity is **not** claimed until frozen rows show it (optional BLAS / future ggml bridge narrow the gap) |
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
 | Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Deferred** — FA2/FA3 = GPU_NATIVE research only, **not** near-term default ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)) |
-| KV memory (PagedAttention-style), aggressive cache scheduling | **Hooks / MVP** — dense default; `PagedKvPool` + `RBITNET_KV_POOL`; production E2E still open — see [Research-backed priorities](#research-backed-priorities-2026-09) |
+| KV memory (PagedAttention-style), aggressive cache scheduling | **E2E opt-in** — dense default; `RBITNET_LLAMA_PAGED_KV=1` + `RBITNET_KV_POOL=1` shared phys pages on Llama runtime; reclaim + `/metrics` gauges; see [Research-backed priorities](#research-backed-priorities-2026-09) |
 | Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Hooks / MVP** — env-flagged; fused multi-seq + stall-free schedule still open — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) |
 | Hugging Face–centric “automatic” tokenizer + model pairing      | **Partial** — `models install`, manifests; no embedded Transformers auto-config |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
@@ -146,7 +146,7 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 |---------|-------------------|-------|
 | **Live token streaming** | **Shipped (MVP)** | SSE token deltas via [`stream.rs`](../crates/bitnet-core/src/stream.rs) and `live_stream_chat_completion` in `bitnet-server` (not post-generation chunking). |
 | **Prefix KV (tensorial)** | **MVP (dense)** | `RBITNET_PREFIX_KV` — dense KV snapshots + partial prefill; **not** with `RBITNET_LLAMA_PAGED_KV` yet. Radix block index in [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs). |
-| **Paged KV pool** | **API + Engine hook** | `PagedKvPool`, `RBITNET_KV_POOL=1` on [`Engine`](../crates/bitnet-core/src/inference.rs); shared physical pages across sequences. |
+| **Paged KV pool** | **E2E opt-in** | `RBITNET_KV_POOL=1` backs Llama runtime KV with `SharedPhysKvStore`; multi-seq `PagedKvPool`; free-list reclaim; gauges `rbitnet_core_kv_pool_*`. Bench: [`scripts/bench_paged_kv.sh`](../scripts/bench_paged_kv.sh). |
 | **Continuous batching** | **Hook → waves** | `RBITNET_CONTINUOUS_BATCHING` — interleaved decode waves when sessions enabled; fused multi-seq matmul still pending. |
 | **Chunked prefill** | **Partial** | `RBITNET_PREFILL_CHUNK_TOKENS` slices the prompt loop (one forward step per token). |
 | **Full-response prefix cache** | **Optional** | `RBITNET_PREFIX_CACHE` — duplicate **completions**, distinct from prefix KV. |
@@ -192,7 +192,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 
 | Item | Why / cite | Action |
 |------|------------|--------|
-| **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | Activate pool + paged attention end-to-end; measure RSS/fragmentation @ concurrency 1/4/8 |
+| **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | **Shipped opt-in** — pool + paged attention path; measure RSS/fragmentation @ concurrency 1/4/8 via `scripts/bench_paged_kv.sh` |
 | **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | LRU eviction, `prefix_hit` ≥70% on repeated system+tools; sticky notes for proxy |
 | **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | Token budget / iteration on `RBITNET_CONTINUOUS_BATCHING` for ≥2–4 Akasha sessions |
 | **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |

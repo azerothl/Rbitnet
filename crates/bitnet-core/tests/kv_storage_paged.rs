@@ -120,3 +120,127 @@ fn paged_kv_pool_opens_multiple_sequences() {
         .expect("write b");
     assert!(pool.aggregate_pool_stats().new_phys_pages >= 1);
 }
+
+#[test]
+fn shared_pool_clear_returns_pages_and_reuses() {
+    let cfg = tiny_cfg();
+    let mut pool = PagedKvPool::from_env(&cfg).expect("pool");
+    let stride = cfg.n_kv * cfg.head_dim;
+    let k: Vec<f32> = (0..stride).map(|i| (i as f32) * 0.1).collect();
+    let v = k.clone();
+
+    let a = pool.open_sequence().expect("a");
+    {
+        let seq = pool.sequence_mut(a).expect("seq");
+        for pos in 0..10usize {
+            seq.write_kv_layer(0, pos, &k, &v).expect("write");
+        }
+    }
+    let allocated_after_a = pool.allocated_phys_pages();
+    assert!(allocated_after_a >= 1);
+    pool.close_sequence(a);
+    assert!(pool.free_phys_pages() >= 1);
+    assert!(pool.fragmentation_ratio() > 0.0);
+
+    let b = pool.open_sequence().expect("b");
+    {
+        let seq = pool.sequence_mut(b).expect("seq");
+        for pos in 0..10usize {
+            seq.write_kv_layer(0, pos, &k, &v).expect("write reuse");
+        }
+    }
+    let stats = pool.aggregate_pool_stats();
+    assert!(
+        stats.reused_phys_pages >= 1,
+        "expected shared free-list reuse after close: {:?}",
+        stats
+    );
+    // New allocations should not grow past the first wave when lengths match.
+    assert_eq!(pool.allocated_phys_pages(), allocated_after_a);
+}
+
+#[test]
+fn shared_pool_concurrency_uses_fewer_pages_than_dense_estimate() {
+    let cfg = tiny_cfg();
+    let mut pool = PagedKvPool::from_env(&cfg).expect("pool");
+    let stride = cfg.n_kv * cfg.head_dim;
+    let k: Vec<f32> = (0..stride).map(|i| i as f32).collect();
+    let v = k.clone();
+    let tokens_per_seq = 20usize;
+    let concurrency = 4usize;
+
+    let mut ids = Vec::new();
+    for _ in 0..concurrency {
+        let id = pool.open_sequence().expect("open");
+        let seq = pool.sequence_mut(id).expect("seq");
+        for pos in 0..tokens_per_seq {
+            seq.write_kv_layer(0, pos, &k, &v).expect("write");
+            seq.write_kv_layer(1, pos, &k, &v).expect("write L1");
+        }
+        ids.push(id);
+    }
+
+    let page_tokens = pool.page_tokens().max(1);
+    let pages_per_seq_layer = (tokens_per_seq + page_tokens - 1) / page_tokens;
+    let paged_pages = pool.allocated_phys_pages();
+    // Dense would reserve max_seq * n_layer logical rows; paged only pages for live tokens.
+    let dense_equiv_pages = concurrency * cfg.n_layer * ((cfg.max_seq + page_tokens - 1) / page_tokens);
+    assert!(
+        paged_pages <= concurrency * cfg.n_layer * pages_per_seq_layer,
+        "paged={paged_pages} expected_cap={}",
+        concurrency * cfg.n_layer * pages_per_seq_layer
+    );
+    assert!(
+        paged_pages < dense_equiv_pages,
+        "paged pages {paged_pages} should beat dense-equivalent {dense_equiv_pages}"
+    );
+
+    for id in ids {
+        pool.close_sequence(id);
+    }
+    assert_eq!(pool.active_sequences(), 0);
+    assert!(pool.free_phys_pages() >= paged_pages);
+}
+
+#[test]
+fn shared_kv_storage_attention_scores_match_dense() {
+    let cfg = tiny_cfg();
+    let pool = PagedKvPool::from_env(&cfg).expect("pool");
+    let shared = pool.shared_phys();
+    let mut dense = KvStorage::new_dense(&cfg);
+    let mut paged = KvStorage::new_paged_shared(
+        &cfg,
+        pool.page_tokens(),
+        pool.max_pages_per_seq(),
+        shared,
+    )
+    .expect("paged shared");
+
+    let stride = cfg.n_kv * cfg.head_dim;
+    let k: Vec<f32> = (0..stride).map(|i| (i as f32) * 0.01).collect();
+    let v: Vec<f32> = (0..stride).map(|i| (i as f32) * 0.02).collect();
+    let pos = 7usize;
+    dense.write_layer_kv(0, pos, &k, &v, stride).unwrap();
+    paged.write_layer_kv(0, pos, &k, &v, stride).unwrap();
+
+    // Fill earlier positions so attention over 0..=pos is defined.
+    for p in 0..pos {
+        let kk: Vec<f32> = (0..stride).map(|i| (i + p) as f32 * 0.001).collect();
+        let vv = kk.clone();
+        dense.write_layer_kv(0, p, &kk, &vv, stride).unwrap();
+        paged.write_layer_kv(0, p, &kk, &vv, stride).unwrap();
+    }
+
+    let q: Vec<f32> = (0..cfg.head_dim).map(|i| i as f32 * 0.05).collect();
+    let mut out_d = vec![0.0f32; pos + 1];
+    let mut out_p = vec![0.0f32; pos + 1];
+    let scale = 1.0 / (cfg.head_dim as f32).sqrt();
+    dense.attention_scores_cpu(0, pos, 0, cfg.head_dim, stride, &q, scale, &mut out_d);
+    paged.attention_scores_cpu(0, pos, 0, cfg.head_dim, stride, &q, scale, &mut out_p);
+    for (i, (a, b)) in out_d.iter().zip(out_p.iter()).enumerate() {
+        assert!(
+            (a - b).abs() < 1e-5,
+            "score mismatch at {i}: dense={a} paged={b}"
+        );
+    }
+}

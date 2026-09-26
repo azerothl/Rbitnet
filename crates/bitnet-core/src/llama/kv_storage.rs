@@ -165,8 +165,36 @@ impl SharedPhysKvStore {
         Ok(id)
     }
 
+    pub fn free_phys(&mut self, layer: usize, id: usize) {
+        if layer >= self.n_layer || id >= self.phys_k[layer].len() {
+            return;
+        }
+        if !self.free_ids[layer].contains(&id) {
+            self.free_ids[layer].push(id);
+        }
+    }
+
     pub fn pool_stats(&self) -> KvPoolStats {
         self.stats.clone()
+    }
+
+    /// Sum of allocated physical pages across layers (live slabs, including free-listed).
+    pub fn allocated_pages(&self) -> usize {
+        self.phys_k.iter().map(|l| l.len()).sum()
+    }
+
+    /// Sum of free-list entries across layers.
+    pub fn free_pages(&self) -> usize {
+        self.free_ids.iter().map(|l| l.len()).sum()
+    }
+
+    /// Fraction of allocated pages currently on the free list (0.0–1.0). Higher = more reclaimable.
+    pub fn fragmentation_ratio(&self) -> f64 {
+        let alloc = self.allocated_pages();
+        if alloc == 0 {
+            return 0.0;
+        }
+        self.free_pages() as f64 / alloc as f64
     }
 }
 
@@ -447,18 +475,40 @@ impl PagedSeqKv {
         let pid = self.block_phys[layer][lb];
         let row_bytes = fmt.row_bytes(self.stride);
         let row_off = (pos % self.page_tokens) * row_bytes;
-        let slab = if is_k {
-            &self.phys_k_q[layer][pid]
-        } else {
-            &self.phys_v_q[layer][pid]
-        };
         let mut row = vec![0.0f32; self.stride];
-        decode_quant_row(fmt, &slab[row_off..row_off + row_bytes], &mut row);
+        if let Some(shared) = &self.shared {
+            let g = shared.lock().expect("shared phys KV lock");
+            let slab = if is_k {
+                &g.phys_k_q[layer][pid]
+            } else {
+                &g.phys_v_q[layer][pid]
+            };
+            decode_quant_row(fmt, &slab[row_off..row_off + row_bytes], &mut row);
+        } else {
+            let slab = if is_k {
+                &self.phys_k_q[layer][pid]
+            } else {
+                &self.phys_v_q[layer][pid]
+            };
+            decode_quant_row(fmt, &slab[row_off..row_off + row_bytes], &mut row);
+        }
         let start = kv_head * head_dim;
         out.copy_from_slice(&row[start..start + head_dim]);
     }
 
     pub fn clear(&mut self) {
+        if let Some(shared) = &self.shared {
+            let mut g = shared.lock().expect("shared phys KV lock");
+            for layer in 0..self.n_layer {
+                for &pid in self.block_phys[layer].iter() {
+                    if pid != usize::MAX {
+                        g.free_phys(layer, pid);
+                    }
+                }
+                self.block_phys[layer].clear();
+            }
+            return;
+        }
         for layer in 0..self.n_layer {
             for &pid in self.block_phys[layer].iter() {
                 if pid != usize::MAX && pid < self.phys_k[layer].len() {
@@ -492,11 +542,25 @@ impl PagedSeqKv {
     }
 
     pub fn physical_counts(&self) -> Vec<usize> {
+        if let Some(shared) = &self.shared {
+            let g = shared.lock().expect("shared phys KV lock");
+            return (0..self.n_layer).map(|l| g.phys_k[l].len()).collect();
+        }
         (0..self.n_layer).map(|l| self.phys_k[l].len()).collect()
     }
 
     pub fn pool_stats(&self) -> KvPoolStats {
+        if let Some(shared) = &self.shared {
+            return shared
+                .lock()
+                .map(|g| g.pool_stats())
+                .unwrap_or_default();
+        }
         self.stats.clone()
+    }
+
+    pub fn uses_shared_phys(&self) -> bool {
+        self.shared.is_some()
     }
 
     pub fn quant_format(&self) -> KvQuantFormat {
@@ -517,6 +581,20 @@ impl KvStorage {
 
     pub fn new_paged(cfg: &LlamaConfig, page_tokens: usize, max_pages: usize) -> Result<Self> {
         Ok(Self::Paged(PagedSeqKv::new(cfg, page_tokens, max_pages)?))
+    }
+
+    pub fn new_paged_shared(
+        cfg: &LlamaConfig,
+        page_tokens: usize,
+        max_pages: usize,
+        shared: Arc<Mutex<SharedPhysKvStore>>,
+    ) -> Result<Self> {
+        Ok(Self::Paged(PagedSeqKv::new_with_shared(
+            cfg,
+            page_tokens,
+            max_pages,
+            shared,
+        )?))
     }
 
     pub fn clear(&mut self) {
@@ -706,15 +784,22 @@ impl KvStorage {
             },
             Self::Paged(p) => {
                 let pool = p.pool_stats();
+                let physical_pages: usize = p.physical_counts().iter().sum();
                 KvBackendStats {
                     backend: match self.backend_kind() {
                         KvBackendKind::PagedGpuPlanned => "paged_gpu_planned",
-                        _ => "paged_cpu",
+                        _ => {
+                            if p.uses_shared_phys() {
+                                "paged_cpu_pool"
+                            } else {
+                                "paged_cpu"
+                            }
+                        }
                     },
                     page_tokens: Some(p.page_tokens()),
                     max_pages: Some(p.max_pages()),
                     quant_format: p.quant_format().as_str(),
-                    physical_pages: p.physical_counts().iter().sum(),
+                    physical_pages,
                     new_phys_pages: pool.new_phys_pages,
                     reused_phys_pages: pool.reused_phys_pages,
                 }
@@ -786,7 +871,42 @@ impl PagedKvPool {
     }
 
     pub fn close_sequence(&mut self, seq_id: u64) {
-        self.sequences.remove(&seq_id);
+        if let Some(mut seq) = self.sequences.remove(&seq_id) {
+            seq.clear();
+        }
+    }
+
+    pub fn shared_phys(&self) -> Arc<Mutex<SharedPhysKvStore>> {
+        Arc::clone(&self.shared_phys)
+    }
+
+    pub fn page_tokens(&self) -> usize {
+        self.page_tokens
+    }
+
+    pub fn max_pages_per_seq(&self) -> usize {
+        self.max_pages_per_seq
+    }
+
+    pub fn fragmentation_ratio(&self) -> f64 {
+        self.shared_phys
+            .lock()
+            .map(|g| g.fragmentation_ratio())
+            .unwrap_or(0.0)
+    }
+
+    pub fn allocated_phys_pages(&self) -> usize {
+        self.shared_phys
+            .lock()
+            .map(|g| g.allocated_pages())
+            .unwrap_or(0)
+    }
+
+    pub fn free_phys_pages(&self) -> usize {
+        self.shared_phys
+            .lock()
+            .map(|g| g.free_pages())
+            .unwrap_or(0)
     }
 
     pub fn sequence_mut(&mut self, seq_id: u64) -> Option<&mut PagedSeqKv> {

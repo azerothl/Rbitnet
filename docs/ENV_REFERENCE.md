@@ -56,8 +56,8 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_TRUSTED_MODELS_ONLY` | off | If `1`, refuse Hub downloads outside the curated catalog and require a known SHA-256 on curated install. |
 | `RBITNET_CUDA_GRAPH` | off | Enable CUDA graph decode metrics path (`llama/cuda_graph.rs`). |
 | `RBITNET_MTP_K` | `1` | Multi-token burst width when `>1` (Atlas-style MTP scheduler hook). |
-| `RBITNET_KV_POOL` | off | Enable process-wide `PagedKvPool` with shared physical pages (`kv_pool.rs`). |
-| `RBITNET_KV_POOL_MAX_SEQS` | `8` | Max concurrent sequences in `PagedKvPool`. |
+| `RBITNET_KV_POOL` | off | Enable process-wide shared physical KV pages end-to-end (`kv_pool.rs`). Implies paged slabs for Llama runtime; reclaim on `clear()` / sequence close. Prefer with `RBITNET_LLAMA_PAGED_KV=1`. Bench: `scripts/bench_paged_kv.sh`. |
+| `RBITNET_KV_POOL_MAX_SEQS` | `8` | Max concurrent sequences / per-seq logical page budget divisor in `PagedKvPool`. |
 | `RBITNET_KV_SIDECAR_URL` | (none) | Optional external KV sidecar base URL; see [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md). |
 | `RBITNET_KV_SIDECAR_TIMEOUT_SECS` | `30` | Sidecar HTTP timeout. |
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |

@@ -42,6 +42,10 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 | `rbitnet_core_scheduler_batch_items_total` | Items in batch waves | Batch depth |
 | `rbitnet_core_scheduler_decode_waves_total` | Continuous-batching decode waves | Multi-seq decode |
 | `rbitnet_core_kv_physical_pages` | Current physical KV pages | Memory pressure |
+| `rbitnet_core_kv_pool_active_seqs` | Active sequences in `RBITNET_KV_POOL` | Pool occupancy |
+| `rbitnet_core_kv_pool_allocated_pages` | Shared-pool physical pages (incl. free-listed) | KV RSS proxy |
+| `rbitnet_core_kv_pool_free_pages` | Pages on the shared free list | Reclaim headroom |
+| `rbitnet_core_kv_pool_fragmentation_permille` | Free/allocated ×1000 | Fragmentation |
 | `rbitnet_core_kv_quant_format_code` | 0=f32, 1=q8, 2=q4 | KV quant mode |
 | `rbitnet_core_model_load_ms_total` / `_loads_total` | Load timing | Startup / reload |
 | `rbitnet_core_cuda_graph_replays_total` | Graphed decode steps | N/A (Rbitnet-specific) |

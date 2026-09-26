@@ -20,6 +20,10 @@ pub struct PerfSnapshot {
     pub kv_new_physical_pages: u64,
     pub kv_reused_physical_pages: u64,
     pub kv_quant_format_code: u64,
+    pub kv_pool_active_seqs: u64,
+    pub kv_pool_allocated_pages: u64,
+    pub kv_pool_free_pages: u64,
+    pub kv_pool_fragmentation_permille: u64,
     pub model_load_ms: u64,
     pub model_loads: u64,
     pub scheduler_batches: u64,
@@ -50,6 +54,10 @@ struct PerfCounters {
     kv_new_physical_pages: AtomicU64,
     kv_reused_physical_pages: AtomicU64,
     kv_quant_format_code: AtomicU64,
+    kv_pool_active_seqs: AtomicU64,
+    kv_pool_allocated_pages: AtomicU64,
+    kv_pool_free_pages: AtomicU64,
+    kv_pool_fragmentation_permille: AtomicU64,
     model_load_ms: AtomicU64,
     model_loads: AtomicU64,
     scheduler_batches: AtomicU64,
@@ -148,6 +156,23 @@ pub fn record_kv_backend(
         .store(quant_format_code, Ordering::Relaxed);
 }
 
+pub fn record_kv_pool(
+    active_seqs: usize,
+    allocated_pages: usize,
+    free_pages: usize,
+    fragmentation_permille: u64,
+) {
+    let p = perf();
+    p.kv_pool_active_seqs
+        .store(active_seqs as u64, Ordering::Relaxed);
+    p.kv_pool_allocated_pages
+        .store(allocated_pages as u64, Ordering::Relaxed);
+    p.kv_pool_free_pages
+        .store(free_pages as u64, Ordering::Relaxed);
+    p.kv_pool_fragmentation_permille
+        .store(fragmentation_permille, Ordering::Relaxed);
+}
+
 pub fn record_model_load(elapsed_ms: u64) {
     let p = perf();
     p.model_load_ms.fetch_add(elapsed_ms, Ordering::Relaxed);
@@ -209,6 +234,10 @@ pub fn snapshot() -> PerfSnapshot {
         kv_new_physical_pages: p.kv_new_physical_pages.load(Ordering::Relaxed),
         kv_reused_physical_pages: p.kv_reused_physical_pages.load(Ordering::Relaxed),
         kv_quant_format_code: p.kv_quant_format_code.load(Ordering::Relaxed),
+        kv_pool_active_seqs: p.kv_pool_active_seqs.load(Ordering::Relaxed),
+        kv_pool_allocated_pages: p.kv_pool_allocated_pages.load(Ordering::Relaxed),
+        kv_pool_free_pages: p.kv_pool_free_pages.load(Ordering::Relaxed),
+        kv_pool_fragmentation_permille: p.kv_pool_fragmentation_permille.load(Ordering::Relaxed),
         model_load_ms: p.model_load_ms.load(Ordering::Relaxed),
         model_loads: p.model_loads.load(Ordering::Relaxed),
         scheduler_batches: p.scheduler_batches.load(Ordering::Relaxed),
@@ -298,6 +327,26 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_kv_quant_format_code",
         "Active KV quant format code: 0=f32/off, 1=q8, 2=q4",
         snap.kv_quant_format_code
+    );
+    counter!(
+        "rbitnet_core_kv_pool_active_seqs",
+        "Active sequences tracked by the process-wide paged KV pool (RBITNET_KV_POOL)",
+        snap.kv_pool_active_seqs
+    );
+    counter!(
+        "rbitnet_core_kv_pool_allocated_pages",
+        "Physical KV pages allocated in the shared pool (including free-listed)",
+        snap.kv_pool_allocated_pages
+    );
+    counter!(
+        "rbitnet_core_kv_pool_free_pages",
+        "Physical KV pages currently on the shared free list",
+        snap.kv_pool_free_pages
+    );
+    counter!(
+        "rbitnet_core_kv_pool_fragmentation_permille",
+        "Shared KV free/allocated ratio in permille (0-1000)",
+        snap.kv_pool_fragmentation_permille
     );
     counter!(
         "rbitnet_core_model_load_ms_total",
