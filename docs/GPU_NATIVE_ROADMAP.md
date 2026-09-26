@@ -18,13 +18,15 @@ Objectif: accelerer Rbitnet dans `bitnet-core` sans imposer Python, vLLM, Ollama
 ## Phases suivantes
 
 1. ~~Ajouter un type de buffer device explicite dans `bitnet-core` pour reutiliser `cudaMalloc` entre appels et eviter les allocations par GEMV.~~ *(premier palier: pool interne `CudaRuntime` pour le GEMV `f32` generique — etendre aux autres chemins si besoin.)*
-2. Porter les kernels BitNet ternaires chauds vers CUDA natif, avec tests de parite contre `matvec_ternary_i8`.
+2. Porter les kernels BitNet ternaires chauds vers CUDA natif, avec tests de parite contre `matvec_ternary_i8` — *apres* parite CPU vs patterns bitnet.cpp ([2502.11880](https://arxiv.org/abs/2502.11880)).
 3. Garder les poids quantifies en memoire mappee ou device selon le format GGUF, au lieu de densifier en `f32` quand ce n'est pas necessaire.
-4. Introduire un KV cache GPU natif par pages pour Llama-lineage, puis seulement ensuite evaluer un ordonnanceur de batching continu.
+4. Introduire un KV cache GPU natif par pages pour Llama-lineage, puis seulement ensuite evaluer un ordonnanceur de batching continu (aligné [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) Phase A→D).
 5. Ajouter des benchmarks reproductibles CPU/CUDA dans `docs/BENCHMARKS_RESULTS.md` avec modele, backend, GPU, driver et variables `RBITNET_*`.
+6. **(Research, non-default)** Evaluer attention fusee type FlashAttention-2 / FA3 ([2205.14135](https://arxiv.org/abs/2205.14135), [2307.08691](https://arxiv.org/abs/2307.08691)) et variantes INT ([2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585)) **uniquement** une fois le KV device + residency stables. Ce n'est **pas** le chemin par defaut: le produit reste **native-first CPU**; le chemin CPU tiled (SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304)) a la priorite serving locale.
 
 ## Contraintes
 
 - Aucune nouvelle dependance runtime obligatoire sur Python ou un binaire externe.
 - Les bibliotheques CUDA restent chargees dynamiquement et optionnelles: un systeme sans CUDA doit continuer a utiliser le backend CPU.
 - Toute delegation vers un serveur externe reste experimentale, compilee uniquement via `experimental-external-backends`, et ne doit jamais devenir le chemin par defaut.
+- **FlashAttention-2 / FA3 ne sont pas le chemin serving par defaut** — recherche GPU_NATIVE seulement; prioriser CPU + GGUF/BitNet (voir [STATUS_AND_ROADMAP.md — Research-backed priorities](STATUS_AND_ROADMAP.md#research-backed-priorities-2026-09)).

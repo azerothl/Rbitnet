@@ -153,3 +153,5 @@ Paths are **local** (not checked in): update the table in `docs/BENCHMARKS.md` w
 ## Revision
 
 This plan should be **revised** after each major release or if product scope changes (e.g. GPU support, multi-model). Keep [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) in sync when deliverables move between *done* and *missing*.
+
+**Serving / research epic** (PagedAttention, radix prefix, Sarathi chunked prefill, BitNet kernels, deferred FA2/FA3, etc.) is tracked outside this prod-exit checklist — see [STATUS_AND_ROADMAP.md — Research-backed priorities](STATUS_AND_ROADMAP.md#research-backed-priorities-2026-09) and [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md). Do not block “prod ready” on deferred GPU_NATIVE items.
