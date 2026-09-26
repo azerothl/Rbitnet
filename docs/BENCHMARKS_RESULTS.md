@@ -4,6 +4,7 @@ This file is the append-only target for the small local benchmark matrix scripts
 
 ```bash
 scripts/bench_matrix.sh
+scripts/bench_paged_kv.sh   # dense vs paged vs RBITNET_KV_POOL @ concurrency 1/4/8
 ```
 
 ```powershell
@@ -21,6 +22,20 @@ NO_START_SERVER=1 MODEL=rbitnet-llama RUNS=12 scripts/bench_matrix.sh
 ```
 
 Record hardware, model basename, quantization, backend, and peak RSS when publishing a release-quality row. Keep stub results clearly labeled as API overhead smoke tests, not model throughput proof.
+
+## Paged KV E2E — 2026-09-26 (unit gate)
+
+**Methodology:** `cargo test -p bitnet-core --test kv_storage_paged` (no GGUF in this agent image). Live RSS/tok/s matrix requires TinyLlama Q4 + `scripts/bench_paged_kv.sh` with `RBITNET_MODEL` / `RBITNET_TOKENIZER`.
+
+| Check | Result |
+|-------|--------|
+| Dense↔paged offset roundtrip | pass |
+| Local free-list reuse after `clear` | pass |
+| Shared pool multi-seq open/close reclaim | pass |
+| Shared pool concurrency page count &lt; dense-equivalent | pass |
+| Shared `attention_scores_cpu` vs dense | pass |
+
+Enable production path: `RBITNET_LLAMA_PAGED_KV=1` and/or `RBITNET_KV_POOL=1` (see [USAGE.md](USAGE.md)).
 
 ## Manual Result Template
 

@@ -74,6 +74,7 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
             ("RBITNET_PREFIX_KV", "1"),
             ("RBITNET_CONTINUOUS_BATCHING", "1"),
             ("RBITNET_KV_POOL", "1"),
+            ("RBITNET_LLAMA_PAGED_KV", "1"),
             ("RBITNET_CUDA_GRAPH", "0"),
             ("RBITNET_PREFILL_CHUNK_TOKENS", "1024"),
             ("RBITNET_BACKEND", "cpu"),
