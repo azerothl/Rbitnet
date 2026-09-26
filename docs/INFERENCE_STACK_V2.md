@@ -58,7 +58,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 |---|------------|------|
 | 1 | **Paged KV E2E** on TinyLlama Q4 + BitNet 2B @ concurrency 1/4/8 vs contiguous | No golden regression; report RSS, fragmentation, decode tok/s — run `scripts/bench_paged_kv.sh` |
 | 2 | **Radix prefix agent** — 50 Akasha-like reqs (same system+tools) | `prefix_hit` ≥70% after warm-up — unit test `agent_style_prefix_hit_rate_after_warmup`; series `rbitnet_core_prefix_hit` |
-| 3 | **PLD / n-gram speculative** in existing scheduler | `draft_accept` + TTFT/decode on summary + multi-turn; zero new weights |
+| 3 | **PLD / n-gram speculative** in existing scheduler | `draft_accept` + TTFT/decode — `prompt_lookup_draft` + verify/accept; series `rbitnet_core_draft_accept` |
 | 4 | **KV Q8 then KIVI-style asymmetry** | Bench RSS + PPL/golden; Q8 default decision before 2-bit |
 | 5 | **BitNet matmul microbench** vs bitnet.cpp I2_S/TL2 (same GGUF) | One line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md); prioritize widest gap |
 

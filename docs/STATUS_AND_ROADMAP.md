@@ -152,7 +152,7 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 | **Full-response prefix cache** | **Optional** | `RBITNET_PREFIX_CACHE` — duplicate **completions**, distinct from prefix KV. |
 | **CUDA graphs** | **Metrics + capture hook** | `RBITNET_CUDA_GRAPH` — [`cuda_graph.rs`](../crates/bitnet-core/src/llama/cuda_graph.rs); device capture on stable decode shapes (CUDA). |
 | **KV sidecar** | **HTTP MVP** | `RBITNET_KV_SIDECAR_URL` — PUT/GET JSON block tables ([`kv_sidecar.rs`](../crates/bitnet-core/src/kv_sidecar.rs), [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md)). |
-| **Speculative decoding** | **MVP** | `RBITNET_SPECULATIVE`, `RBITNET_DRAFT_MODEL` (secondary GGUF when configured). |
+| **Speculative decoding** | **MVP + PLD** | `RBITNET_SPECULATIVE` + default `RBITNET_DRAFT_PATH=ngram` (prompt-lookup); verify/accept; `rbitnet_core_draft_accept`. |
 
 Production-grade throughput still needs fused forwards and GPU-resident KV — see [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) *Done / Next*.
 

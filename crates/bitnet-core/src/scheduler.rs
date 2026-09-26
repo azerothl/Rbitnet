@@ -393,30 +393,56 @@ impl ContinuousBatchScheduler {
         if draft_tokens == 0 {
             draft_tokens = 1;
         }
-        let verify_tokens = req.max_tokens.saturating_sub(draft_tokens);
+        draft_tokens = draft_tokens.min(req.max_tokens).max(1);
+
         let (draft, draft_phases) = self
             .draft_path
             .generate(&req.prompt, draft_tokens, req.sampling)
             .unwrap_or_else(|| {
                 executor.generate_with_timings(&req.prompt, draft_tokens, req.sampling)
             })?;
-        if verify_tokens == 0 {
-            crate::perf::record_speculative(draft_tokens, 0, draft_phases.completion_tokens);
-            let stats = InferenceStats::from_phases(draft_phases, true);
-            return Ok(InferenceOutput { text: draft, stats });
-        }
-        let verify_prompt = format!("{}\n{}", req.prompt, draft);
-        let (verify, verify_phases) =
-            executor.generate_with_timings(&verify_prompt, verify_tokens, req.sampling)?;
-        let text = format!("{draft}{verify}");
+
+        // Verify: generate the same budget from the target and accept the common prefix
+        // (lossless frame [2211.17192]; PLD/n-gram drafts need no extra weights).
+        let greedy = SamplingOptions {
+            temperature: 0.0,
+            ..req.sampling
+        };
+        let (verify_text, verify_phases) =
+            executor.generate_with_timings(&req.prompt, draft_tokens, greedy)?;
+        let (accepted, accepted_n) = accept_draft_prefix(&draft, &verify_text);
+        let accepted_tokens = accepted_n.min(draft_phases.completion_tokens);
+
+        let remaining = req.max_tokens.saturating_sub(accepted_tokens);
+        // Continue from accepted prefix when draft was partial.
+        let (tail, tail_phases) = if remaining > 0 {
+            let continue_prompt = format!("{}{}", req.prompt, accepted);
+            let (t, p) =
+                executor.generate_with_timings(&continue_prompt, remaining, req.sampling)?;
+            (t, p)
+        } else {
+            (String::new(), PhaseTimings::default())
+        };
+
+        let text = format!("{accepted}{tail}");
+        let mut verify_acc = verify_phases.clone();
+        verify_acc.completion_tokens = verify_acc
+            .completion_tokens
+            .saturating_add(tail_phases.completion_tokens);
+        verify_acc.encode_ms = verify_acc.encode_ms.saturating_add(tail_phases.encode_ms);
+        verify_acc.prefill_ms = verify_acc
+            .prefill_ms
+            .saturating_add(tail_phases.prefill_ms);
+        verify_acc.decode_ms = verify_acc.decode_ms.saturating_add(tail_phases.decode_ms);
+
         crate::perf::record_speculative(
-            draft_tokens,
-            verify_phases.completion_tokens,
             draft_phases.completion_tokens,
+            verify_phases.completion_tokens,
+            accepted_tokens,
         );
         Ok(InferenceOutput {
             text,
-            stats: InferenceStats::from_speculative_phases(draft_phases, verify_phases),
+            stats: InferenceStats::from_speculative_phases(draft_phases, verify_acc),
         })
     }
 }
@@ -438,12 +464,22 @@ impl DraftPath {
             }
         }
         match std::env::var("RBITNET_DRAFT_PATH")
-            .unwrap_or_else(|_| "target".into())
+            .unwrap_or_else(|_| {
+                // When speculative is on, prefer weight-free PLD/n-gram by default.
+                if matches!(
+                    std::env::var("RBITNET_SPECULATIVE").as_deref(),
+                    Ok("1") | Ok("true") | Ok("yes")
+                ) {
+                    "ngram".into()
+                } else {
+                    "target".into()
+                }
+            })
             .trim()
             .to_ascii_lowercase()
             .as_str()
         {
-            "ngram" => Self::Ngram,
+            "ngram" | "pld" | "prompt-lookup" => Self::Ngram,
             "toy" => Self::Toy,
             _ => Self::TargetModel,
         }
@@ -486,25 +522,80 @@ impl DraftPath {
 }
 
 fn ngram_draft(prompt: &str, max_tokens: u32) -> (String, PhaseTimings) {
-    let seed = prompt
-        .split_whitespace()
-        .rev()
-        .find(|s| !s.trim().is_empty())
-        .unwrap_or("ok");
-    let mut out = String::new();
-    for i in 0..max_tokens {
-        if i > 0 {
-            out.push(' ');
-        }
-        out.push_str(seed);
-    }
+    let draft = prompt_lookup_draft(prompt, max_tokens as usize);
+    let completion_tokens = draft.split_whitespace().count().max(1) as u32;
     (
-        out,
+        draft,
         PhaseTimings {
-            completion_tokens: max_tokens,
+            // PLD is CPU string work — attribute to encode for TTFT accounting.
+            encode_ms: 0,
+            prefill_ms: 0,
+            decode_ms: 0,
+            completion_tokens: completion_tokens.min(max_tokens.max(1)),
             ..Default::default()
         },
     )
+}
+
+/// Prompt Lookup Decoding (Saxena): copy the continuation after the longest n-gram
+/// match of the prompt suffix against earlier prompt windows. No draft model weights.
+pub fn prompt_lookup_draft(prompt: &str, max_tokens: usize) -> String {
+    let words: Vec<&str> = prompt.split_whitespace().collect();
+    if words.is_empty() || max_tokens == 0 {
+        return String::new();
+    }
+    let max_n = words.len().min(5).max(1);
+    for n in (1..=max_n).rev() {
+        if words.len() < n {
+            continue;
+        }
+        let needle = &words[words.len() - n..];
+        // Search earlier windows (exclude the suffix itself).
+        let search_end = words.len().saturating_sub(n);
+        if search_end == 0 {
+            continue;
+        }
+        let mut best_i: Option<usize> = None;
+        for i in (0..search_end).rev() {
+            if i + n > words.len() {
+                continue;
+            }
+            if &words[i..i + n] == needle {
+                best_i = Some(i);
+                break;
+            }
+        }
+        if let Some(i) = best_i {
+            let start = i + n;
+            if start < words.len() {
+                let take = max_tokens.min(words.len() - start);
+                if take > 0 {
+                    return words[start..start + take].join(" ");
+                }
+            }
+        }
+    }
+    // Fallback: repeat last word (still weight-free).
+    let seed = words.last().copied().unwrap_or("ok");
+    std::iter::repeat(seed)
+        .take(max_tokens.max(1))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Accept the longest whitespace-token prefix shared by draft and target verify text.
+fn accept_draft_prefix(draft: &str, verify: &str) -> (String, u32) {
+    let d: Vec<&str> = draft.split_whitespace().collect();
+    let v: Vec<&str> = verify.split_whitespace().collect();
+    let mut n = 0usize;
+    while n < d.len() && n < v.len() && d[n] == v[n] {
+        n += 1;
+    }
+    if n == 0 {
+        // No agreement — fall back to verify text (target is source of truth).
+        return (verify.to_string(), v.len() as u32);
+    }
+    (d[..n].join(" "), n as u32)
 }
 
 fn toy_draft(max_tokens: u32) -> (String, PhaseTimings) {
@@ -515,4 +606,31 @@ fn toy_draft(max_tokens: u32) -> (String, PhaseTimings) {
             ..Default::default()
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{accept_draft_prefix, prompt_lookup_draft};
+
+    #[test]
+    fn pld_copies_continuation_after_suffix_ngram() {
+        let prompt = "the cat sat on the mat the cat sat";
+        let draft = prompt_lookup_draft(prompt, 3);
+        // Suffix "the cat sat" matches earlier; continuation "on the mat".
+        assert_eq!(draft, "on the mat");
+    }
+
+    #[test]
+    fn draft_accept_counts_common_prefix() {
+        let (text, n) = accept_draft_prefix("hello world foo", "hello world bar");
+        assert_eq!(text, "hello world");
+        assert_eq!(n, 2);
+    }
+
+    #[test]
+    fn draft_accept_falls_back_to_verify_on_mismatch() {
+        let (text, n) = accept_draft_prefix("aaa bbb", "xxx yyy");
+        assert_eq!(text, "xxx yyy");
+        assert_eq!(n, 2);
+    }
 }

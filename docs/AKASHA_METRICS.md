@@ -38,7 +38,8 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 | `rbitnet_core_prefix_cache_bytes_saved_total` | Estimated KV bytes skipped | Cache efficiency |
 | `rbitnet_core_speculative_draft_tokens_total` | Draft tokens proposed | Spec draft |
 | `rbitnet_core_speculative_verified_tokens_total` | Tokens verified after draft | Spec verify |
-| `rbitnet_core_speculative_accepted_tokens_total` | Draft tokens accepted | **`draft_accept`** |
+| `rbitnet_core_speculative_accepted_tokens_total` | Draft tokens accepted | Spec accept |
+| `rbitnet_core_draft_accept` | Same as accepted tokens (Akasha **`draft_accept`**) | **`draft_accept`** |
 | `rbitnet_core_scheduler_batches_total` | Scheduler batch waves | Concurrent packing |
 | `rbitnet_core_scheduler_batch_items_total` | Items in batch waves | Batch depth |
 | `rbitnet_core_scheduler_decode_waves_total` | Continuous-batching decode waves | Multi-seq decode |
