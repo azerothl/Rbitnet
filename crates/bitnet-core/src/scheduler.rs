@@ -9,7 +9,10 @@ use crate::sampling::SamplingOptions;
 use crate::stream::StreamEvent;
 use crate::timings::PhaseTimings;
 
-/// Placeholder queue for phase B.2 (prefill vs decode interleaving across sequences).
+/// Prefill vs decode queues for stall-free / Sarathi-style scheduling ([2403.02310](https://arxiv.org/abs/2403.02310)).
+///
+/// New batch members start in **prefill**; after their prompt token budget is admitted in chunks
+/// they move to **decode**. Decode is always drained before new prefill chunks within an iteration.
 #[derive(Debug, Default, Clone)]
 pub struct PrefillDecodeQueue {
     pub prefill_seq_ids: Vec<u64>,
@@ -20,8 +23,24 @@ impl PrefillDecodeQueue {
     pub fn from_batch(batch: &InferenceBatch) -> Self {
         Self {
             prefill_seq_ids: batch.requests.iter().map(|r| r.id).collect(),
-            decode_seq_ids: batch.requests.iter().map(|r| r.id).collect(),
+            decode_seq_ids: Vec::new(),
         }
+    }
+
+    pub fn promote_to_decode(&mut self, id: u64) {
+        self.prefill_seq_ids.retain(|x| *x != id);
+        if !self.decode_seq_ids.contains(&id) {
+            self.decode_seq_ids.push(id);
+        }
+    }
+
+    pub fn mark_done(&mut self, id: u64) {
+        self.prefill_seq_ids.retain(|x| *x != id);
+        self.decode_seq_ids.retain(|x| *x != id);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.prefill_seq_ids.is_empty() && self.decode_seq_ids.is_empty()
     }
 }
 
@@ -134,7 +153,7 @@ pub struct InferenceBatch {
     pub requests: Vec<ScheduledRequest>,
 }
 
-/// MVP scheduler: keeps API stable while preparing for real batching.
+/// MVP scheduler: continuous batching + Sarathi-style chunked prefill (CPU; no fused GPU).
 #[derive(Debug, Clone)]
 pub struct ContinuousBatchScheduler {
     pub enabled: bool,
@@ -142,6 +161,8 @@ pub struct ContinuousBatchScheduler {
     pub draft_ratio_num: u32,
     pub draft_ratio_den: u32,
     pub prefill_chunk_tokens: usize,
+    /// Max tokens (prefill chunk units + decode tokens) admitted per stall-free iteration.
+    pub iteration_token_budget: usize,
     pub draft_path: DraftPath,
     /// Multi-token prediction width (Atlas-style MTP). `1` disables MTP bursts.
     pub mtp_k: u32,
@@ -172,6 +193,11 @@ impl ContinuousBatchScheduler {
             .and_then(|s| s.parse::<usize>().ok())
             .filter(|v| *v > 0)
             .unwrap_or(128);
+        let iteration_token_budget = std::env::var("RBITNET_ITERATION_TOKEN_BUDGET")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or_else(|| prefill_chunk_tokens.saturating_mul(2).max(64));
         let draft_path = DraftPath::from_env();
         let mtp_k = std::env::var("RBITNET_MTP_K")
             .ok()
@@ -184,6 +210,7 @@ impl ContinuousBatchScheduler {
             draft_ratio_num,
             draft_ratio_den,
             prefill_chunk_tokens,
+            iteration_token_budget,
             draft_path,
             mtp_k,
         }
@@ -299,57 +326,88 @@ impl ContinuousBatchScheduler {
         Ok(out)
     }
 
-    /// Interleaved decode wave: run each request for one token at a time when batching is enabled.
+    /// Stall-free continuous batching (Sarathi-Serve style, [2403.02310](https://arxiv.org/abs/2403.02310)).
+    ///
+    /// Each iteration admits up to `iteration_token_budget` tokens:
+    /// 1. **Decode first** (1 token / ready seq) — avoids inter-token stalls from long prefills
+    /// 2. **Prefill chunks** fill the remaining budget (`prefill_chunk_tokens` each)
+    ///
+    /// Prefill admission is logical (token-budget accounting) until a seq is promoted to decode;
+    /// the first decode step runs the executor (real prefill+token). GPU fused multi-seq stays off.
     pub fn run_batch_waves(
         &self,
         executor: &dyn ModelExecutor,
         batch: &InferenceBatch,
     ) -> Result<Vec<(u64, InferenceOutput)>> {
         crate::perf::record_scheduler_batch(batch.requests.len());
-        let queue = PrefillDecodeQueue::from_batch(batch);
+        let mut queue = PrefillDecodeQueue::from_batch(batch);
+        let chunk = self.prefill_chunk_tokens.max(1);
+        let budget_cap = self.iteration_token_budget.max(1);
+
         tracing::debug!(
             batch_len = batch.requests.len(),
             prefill = ?queue.prefill_seq_ids,
             decode = ?queue.decode_seq_ids,
-            "continuous batching: interleaved decode waves"
+            iteration_token_budget = budget_cap,
+            prefill_chunk_tokens = chunk,
+            "continuous batching: stall-free chunked prefill + decode waves"
         );
-        crate::perf::record_scheduler_decode_wave(batch.requests.len());
 
         if crate::inference_session::sessions_enabled() {
             let store = crate::inference_session::global_sessions();
             if let Ok(mut g) = store.lock() {
-                for _req in &batch.requests {
-                    let _ = g.open(0);
+                for req in &batch.requests {
+                    let pt = executor
+                        .count_prompt_tokens(&req.request.prompt)
+                        .unwrap_or(0);
+                    let _ = g.open(pt);
                 }
             }
         }
 
-        let mut pending: Vec<_> = batch
-            .requests
-            .iter()
-            .map(|r| {
-                (
-                    r.id,
-                    InferenceRequest {
-                        prompt: r.request.prompt.clone(),
-                        max_tokens: 1,
-                        sampling: r.request.sampling,
-                    },
-                )
-            })
-            .collect();
+        let mut prefill_remaining: HashMap<u64, usize> = HashMap::new();
+        for req in &batch.requests {
+            let tokens = executor
+                .count_prompt_tokens(&req.request.prompt)
+                .unwrap_or_else(|_| estimate_prompt_tokens(&req.request.prompt));
+            prefill_remaining.insert(req.id, tokens.max(1) as usize);
+        }
 
         let mut acc: HashMap<u64, (String, PhaseTimings)> = HashMap::new();
-        while !pending.is_empty() {
-            let mut next = Vec::new();
-            for (id, mut req) in pending {
-                let (chunk, phases) = executor.generate_with_timings(
-                    &req.prompt,
-                    req.max_tokens,
-                    req.sampling,
-                )?;
-                let entry = acc.entry(id).or_insert_with(|| (String::new(), PhaseTimings::default()));
-                entry.0.push_str(&chunk);
+        let mut decode_rr = 0usize;
+        let mut prefill_rr = 0usize;
+
+        while !queue.is_empty() {
+            let mut budget = budget_cap;
+            crate::perf::record_scheduler_stall_free_iter(budget_cap);
+            let mut decode_steps = 0usize;
+            let mut prefill_chunks = 0usize;
+
+            // --- Phase 1: decode-first (stall-free) ---
+            let decode_passes = queue.decode_seq_ids.len();
+            for _ in 0..decode_passes {
+                if budget == 0 || queue.decode_seq_ids.is_empty() {
+                    break;
+                }
+                let idx = decode_rr % queue.decode_seq_ids.len();
+                decode_rr = decode_rr.wrapping_add(1);
+                let id = queue.decode_seq_ids[idx];
+                let orig = batch
+                    .requests
+                    .iter()
+                    .find(|r| r.id == id)
+                    .expect("decode id in batch");
+                let entry = acc
+                    .entry(id)
+                    .or_insert_with(|| (String::new(), PhaseTimings::default()));
+                if entry.1.completion_tokens >= orig.request.max_tokens {
+                    queue.mark_done(id);
+                    continue;
+                }
+                let prompt = format!("{}{}", orig.request.prompt, entry.0);
+                let (chunk_text, phases) =
+                    executor.generate_with_timings(&prompt, 1, orig.request.sampling)?;
+                entry.0.push_str(&chunk_text);
                 entry.1.encode_ms = entry.1.encode_ms.saturating_add(phases.encode_ms);
                 entry.1.prefill_ms = entry.1.prefill_ms.saturating_add(phases.prefill_ms);
                 entry.1.decode_ms = entry.1.decode_ms.saturating_add(phases.decode_ms);
@@ -358,14 +416,58 @@ impl ContinuousBatchScheduler {
                     .1
                     .completion_tokens
                     .saturating_add(phases.completion_tokens);
-                let orig = batch.requests.iter().find(|r| r.id == id).unwrap();
-                if entry.1.completion_tokens < orig.request.max_tokens {
-                    req.prompt = format!("{}{}", orig.request.prompt, entry.0);
-                    req.max_tokens = 1;
-                    next.push((id, req));
+                budget = budget.saturating_sub(1);
+                decode_steps = decode_steps.saturating_add(1);
+                if entry.1.completion_tokens >= orig.request.max_tokens {
+                    queue.mark_done(id);
                 }
             }
-            pending = next;
+
+            // --- Phase 2: admit prefill chunks into remaining budget ---
+            let prefill_passes = queue.prefill_seq_ids.len();
+            for _ in 0..prefill_passes {
+                if budget == 0 || queue.prefill_seq_ids.is_empty() {
+                    break;
+                }
+                let idx = prefill_rr % queue.prefill_seq_ids.len();
+                prefill_rr = prefill_rr.wrapping_add(1);
+                let id = queue.prefill_seq_ids[idx];
+                let rem = prefill_remaining.get(&id).copied().unwrap_or(0);
+                if rem == 0 {
+                    queue.promote_to_decode(id);
+                    continue;
+                }
+                let take = rem.min(chunk).min(budget);
+                if take == 0 {
+                    break;
+                }
+                let left = rem.saturating_sub(take);
+                prefill_remaining.insert(id, left);
+                budget = budget.saturating_sub(take);
+                prefill_chunks = prefill_chunks.saturating_add(1);
+                if left == 0 {
+                    queue.promote_to_decode(id);
+                }
+            }
+
+            if decode_steps > 0 {
+                crate::perf::record_scheduler_decode_wave(decode_steps);
+            }
+            if prefill_chunks > 0 {
+                crate::perf::record_scheduler_prefill_chunk(prefill_chunks);
+            }
+
+            // Safety: avoid spinning if a misconfigured budget admits nothing.
+            if decode_steps == 0 && prefill_chunks == 0 {
+                if let Some(&id) = queue.prefill_seq_ids.first() {
+                    queue.promote_to_decode(id);
+                    prefill_remaining.insert(id, 0);
+                } else if let Some(&id) = queue.decode_seq_ids.first() {
+                    queue.mark_done(id);
+                } else {
+                    break;
+                }
+            }
         }
 
         let mut out = Vec::with_capacity(batch.requests.len());
@@ -376,6 +478,15 @@ impl ContinuousBatchScheduler {
                     InferenceOutput {
                         text,
                         stats: InferenceStats::from_phases(phases, false),
+                    },
+                ));
+            } else {
+                // Prefill admitted but zero decode tokens requested.
+                out.push((
+                    req.id,
+                    InferenceOutput {
+                        text: String::new(),
+                        stats: InferenceStats::from_phases(PhaseTimings::default(), false),
                     },
                 ));
             }
@@ -606,6 +717,12 @@ fn toy_draft(max_tokens: u32) -> (String, PhaseTimings) {
             ..Default::default()
         },
     )
+}
+
+/// Fallback prompt length when the executor cannot count tokens (whitespace heuristic).
+fn estimate_prompt_tokens(prompt: &str) -> u32 {
+    let n = prompt.split_whitespace().count();
+    n.max(1) as u32
 }
 
 #[cfg(test)]

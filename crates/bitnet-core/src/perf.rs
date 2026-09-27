@@ -36,6 +36,9 @@ pub struct PerfSnapshot {
     pub speculative_accepted_tokens: u64,
     pub cuda_graph_replays: u64,
     pub scheduler_decode_waves: u64,
+    pub scheduler_prefill_chunks: u64,
+    pub scheduler_stall_free_iters: u64,
+    pub scheduler_iteration_budget: u64,
 }
 
 #[derive(Debug, Default)]
@@ -70,6 +73,9 @@ struct PerfCounters {
     speculative_accepted_tokens: AtomicU64,
     cuda_graph_replays: AtomicU64,
     scheduler_decode_waves: AtomicU64,
+    scheduler_prefill_chunks: AtomicU64,
+    scheduler_stall_free_iters: AtomicU64,
+    scheduler_iteration_budget: AtomicU64,
     quant_by_type: Mutex<Vec<(u32, QuantTypeStats)>>,
 }
 
@@ -213,6 +219,21 @@ pub fn record_scheduler_decode_wave(steps: usize) {
         .fetch_add(steps as u64, Ordering::Relaxed);
 }
 
+pub fn record_scheduler_prefill_chunk(chunks: usize) {
+    perf()
+        .scheduler_prefill_chunks
+        .fetch_add(chunks as u64, Ordering::Relaxed);
+}
+
+/// One stall-free iteration of the Sarathi-style schedule (decode-first, then prefill chunks).
+pub fn record_scheduler_stall_free_iter(budget: usize) {
+    let p = perf();
+    p.scheduler_stall_free_iters
+        .fetch_add(1, Ordering::Relaxed);
+    p.scheduler_iteration_budget
+        .store(budget as u64, Ordering::Relaxed);
+}
+
 pub fn record_speculative(draft_tokens: u32, verified_tokens: u32, accepted_tokens: u32) {
     let p = perf();
     p.speculative_draft_tokens
@@ -256,6 +277,9 @@ pub fn snapshot() -> PerfSnapshot {
         speculative_accepted_tokens: p.speculative_accepted_tokens.load(Ordering::Relaxed),
         cuda_graph_replays: p.cuda_graph_replays.load(Ordering::Relaxed),
         scheduler_decode_waves: p.scheduler_decode_waves.load(Ordering::Relaxed),
+        scheduler_prefill_chunks: p.scheduler_prefill_chunks.load(Ordering::Relaxed),
+        scheduler_stall_free_iters: p.scheduler_stall_free_iters.load(Ordering::Relaxed),
+        scheduler_iteration_budget: p.scheduler_iteration_budget.load(Ordering::Relaxed),
     }
 }
 
@@ -423,6 +447,21 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_scheduler_decode_waves_total",
         "Decode wave steps planned by continuous batching scheduler",
         snap.scheduler_decode_waves
+    );
+    counter!(
+        "rbitnet_core_scheduler_prefill_chunks_total",
+        "Prefill chunks admitted under Sarathi-style token budget",
+        snap.scheduler_prefill_chunks
+    );
+    counter!(
+        "rbitnet_core_scheduler_stall_free_iters_total",
+        "Stall-free schedule iterations (decode-first then prefill chunks)",
+        snap.scheduler_stall_free_iters
+    );
+    counter!(
+        "rbitnet_core_scheduler_iteration_budget_tokens",
+        "Configured / last iteration token budget for continuous batching",
+        snap.scheduler_iteration_budget
     );
 
     let by_type = match perf().quant_by_type.lock() {

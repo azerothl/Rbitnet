@@ -14,7 +14,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | Phase | Done (hooks / MVP) | Next (production) |
 |-------|-------------------|-------------------|
 | **A — KV and memory** | `KvStorage` / `PagedSeqKv` (`RBITNET_LLAMA_PAGED_KV`); **`RBITNET_KV_POOL=1` E2E** shared phys + reclaim + pool gauges; **`RBITNET_KV_QUANT=q8`** compact CPU pages (no F32 twin) + resident_bytes gate | GPU-resident pages; then fused multi-seq; KIVI 2-bit after Q8 measured |
-| **B — Scheduling** | `run_batch` / `run_batch_waves`; `PrefillDecodeQueue`; `RBITNET_CONTINUOUS_BATCHING` interleaved decode; chunked prefill env; **measured** via `rbitnet_core_scheduler_decode_waves_total` + `rbitnet tune throughput` | Fused multi-seq matmul; **stall-free chunked prefill** ([2403.02310](https://arxiv.org/abs/2403.02310)) |
+| **B — Scheduling** | `run_batch` / **stall-free** `run_batch_waves` (Sarathi [2403.02310](https://arxiv.org/abs/2403.02310)); `PrefillDecodeQueue` prefill→decode; `RBITNET_CONTINUOUS_BATCHING` + `RBITNET_ITERATION_TOKEN_BUDGET` + chunked prefill; metrics `stall_free_iters` / `prefill_chunks` / `decode_waves` | Fused multi-seq matmul (GPU off default) |
 | **C — Cache semantics** | Dense/paged prefix KV (`RBITNET_PREFIX_KV`); radix LRU + LCP agent reuse; **`rbitnet_core_prefix_hit`** on `/metrics` | L7 sticky routing notes |
 | **C — Streaming** | Live SSE (`StreamEvent`, `complete_streaming`) | GGUF load tests under sustained concurrency |
 | **D — GPU decode** | `CudaDecodeGraph` metrics + capture hook; `RBITNET_KV_BACKEND=gpu` planning bit; cuBLASLt M=1 policy env | Full graph replay; fused norm+quant — **after** CPU benches; FA2/FA3 not default |
@@ -29,8 +29,8 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 ## Phase B — Scheduling
 
 1. **Continuous batching** (optional mode): pack compatible requests into forward waves.
-2. **Chunked prefill** coordinated with decode (beyond fixed `RBITNET_PREFILL_CHUNK_TOKENS` slice loops) — Sarathi-Serve stall-free schedule [2403.02310](https://arxiv.org/abs/2403.02310); conceptual base Orca (OSDI’22).
-3. Token **budget per iteration** so one large prefill cannot freeze other sessions’ decode (priority once ≥2–4 concurrent Akasha sessions).
+2. **Chunked prefill** coordinated with decode — **Sarathi-Serve stall-free schedule shipped** [2403.02310](https://arxiv.org/abs/2403.02310) on `RBITNET_CONTINUOUS_BATCHING` (Orca iteration-level base).
+3. Token **budget per iteration** (`RBITNET_ITERATION_TOKEN_BUDGET`) so one large prefill cannot freeze other sessions’ decode (≥2 batch requests).
 
 ## Phase C — Cache semantics
 
@@ -93,8 +93,9 @@ Do **not** schedule as near-term default work (full rationale in [STATUS_AND_ROA
 | A.2 | `PagedSeqKv::pool_stats()` — allocation vs reuse counters after `clear()`. |
 | A.2b | `SharedPhysKvStore` + **`PagedKvPool`** — multi-sequence pool; **`RBITNET_KV_POOL=1`** wires Llama runtime KV to shared phys (E2E); free-list reclaim on `clear`/close; metrics `rbitnet_core_kv_pool_*`; bench [`scripts/bench_paged_kv.sh`](../scripts/bench_paged_kv.sh). |
 | A.3 | **KV Q8** — `RBITNET_KV_QUANT=q8` packs K/V rows (scale + INT8); **no F32 twin pages**; decode-on-read in `fill_*_head_values` / attention; metric `rbitnet_core_kv_quant_format_code`; tests in `kv_storage_paged`; bench [`scripts/bench_kv_q8.sh`](../scripts/bench_kv_q8.sh); `rbitnet tune throughput` / `bitnet-cpu` set `q8`. |
-| B.1 | [`scheduler.rs`](../crates/bitnet-core/src/scheduler.rs) — `run_batch` / `run_batch_waves` when `RBITNET_CONTINUOUS_BATCHING`. |
-| B.2 | `PrefillDecodeQueue` + [`inference_session.rs`](../crates/bitnet-core/src/inference_session.rs). |
+| B.1 | [`scheduler.rs`](../crates/bitnet-core/src/scheduler.rs) — `run_batch` / **stall-free** `run_batch_waves` when `RBITNET_CONTINUOUS_BATCHING`. |
+| B.2 | `PrefillDecodeQueue` (prefill→decode promote) + [`inference_session.rs`](../crates/bitnet-core/src/inference_session.rs). |
+| B.3 | **Sarathi** — `RBITNET_ITERATION_TOKEN_BUDGET` + `RBITNET_PREFILL_CHUNK_TOKENS`; decode-first then prefill chunks; metrics `rbitnet_core_scheduler_stall_free_iters_total`, `…_prefill_chunks_total`, `…_iteration_budget_tokens`; `rbitnet tune throughput`; tests in `scheduler_speculative`. |
 | C.1 | [`prefix_kv.rs`](../crates/bitnet-core/src/prefix_kv.rs) + [`prefix_kv_exec.rs`](../crates/bitnet-core/src/prefix_kv_exec.rs) — dense + paged snapshots (`RBITNET_PREFIX_KV`). |
 | C.1b | Token streaming SSE — [`stream.rs`](../crates/bitnet-core/src/stream.rs), live path in `bitnet-server`. |
 | C.2 | [`kv_sidecar.rs`](../crates/bitnet-core/src/kv_sidecar.rs) — HTTP PUT/GET; [KV_SIDECAR_SPEC.md](KV_SIDECAR_SPEC.md). |

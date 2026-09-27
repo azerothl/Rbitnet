@@ -6,6 +6,7 @@ This file is the append-only target for the small local benchmark matrix scripts
 scripts/bench_matrix.sh
 scripts/bench_paged_kv.sh   # dense vs paged vs RBITNET_KV_POOL @ concurrency 1/4/8
 scripts/bench_kv_q8.sh      # paged F32 vs Q8 resident_bytes (+ optional live RSS)
+scripts/bench_sarathi.sh    # stall-free continuous batching unit gate (+ optional live)
 ```
 
 ```powershell
@@ -50,6 +51,19 @@ Enable production path: `RBITNET_LLAMA_PAGED_KV=1` and/or `RBITNET_KV_POOL=1` (s
 | Encode/decode row unit (`q8_roundtrip_preserves_row_shape`) | pass |
 
 **Tradeoffs:** Q8 saves ~4× KV page RSS vs F32; not bit-exact — keep `RBITNET_KV_QUANT=off` for golden bit-exact; enable `q8` for concurrency / memory. Metric: `rbitnet_core_kv_quant_format_code=1`. Enable: `RBITNET_LLAMA_PAGED_KV=1 RBITNET_KV_QUANT=q8` or `rbitnet tune throughput`.
+
+## Sarathi stall-free schedule — 2026-09-27 (unit gate)
+
+**Methodology:** `cargo test -p bitnet-core --test scheduler_speculative` / `scripts/bench_sarathi.sh` (no GGUF in this agent image).
+
+| Check | Result |
+|-------|--------|
+| PrefillDecodeQueue starts prefill-only | pass |
+| Stall-free iters + prefill chunks under budget | pass |
+| Decode waves still incremented | pass |
+| Batch order preserved for ≥2 requests | pass |
+
+Enable: `RBITNET_CONTINUOUS_BATCHING=1 RBITNET_ITERATION_TOKEN_BUDGET=512` (or `rbitnet tune throughput`). GPU fused multi-seq remains off.
 
 ## Manual Result Template
 
