@@ -69,12 +69,14 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
             ("RBITNET_BACKEND", "cuda"),
         ],
         // Continuous batching waves (interleaved decode) for multi-request; not fused GPU.
+        // KV Q8 saves paged RSS (~4× vs F32 pages); keep off for max numerical safety.
         TuneProfile::Throughput => &[
             ("RBITNET_MAX_CONCURRENT", "8"),
             ("RBITNET_PREFIX_KV", "1"),
             ("RBITNET_CONTINUOUS_BATCHING", "1"),
             ("RBITNET_KV_POOL", "1"),
             ("RBITNET_LLAMA_PAGED_KV", "1"),
+            ("RBITNET_KV_QUANT", "q8"),
             ("RBITNET_CUDA_GRAPH", "0"),
             ("RBITNET_PREFILL_CHUNK_TOKENS", "1024"),
             ("RBITNET_BACKEND", "cpu"),
@@ -85,6 +87,8 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
             ("RBITNET_BACKEND", "cpu"),
             ("RBITNET_PREFIX_KV", "1"),
             ("RBITNET_CONTINUOUS_BATCHING", "0"),
+            ("RBITNET_LLAMA_PAGED_KV", "1"),
+            ("RBITNET_KV_QUANT", "q8"),
             ("RBITNET_MAX_CONCURRENT", "2"),
             ("RBITNET_CUDA_GRAPH", "0"),
             ("RBITNET_BIND", "127.0.0.1:8080"),

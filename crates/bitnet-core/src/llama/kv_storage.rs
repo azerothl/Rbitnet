@@ -61,6 +61,17 @@ impl KvQuantFormat {
             Self::Q4 => 4 + (len + 1) / 2,
         }
     }
+
+    /// Bytes for one token position (K or V row) at the given stride.
+    pub fn bytes_per_token_row(self, stride: usize) -> usize {
+        self.row_bytes(stride)
+    }
+
+    /// Approximate RSS for `n_pages` physical pages of K+V at this format.
+    pub fn resident_bytes_for_pages(self, n_pages: usize, page_tokens: usize, stride: usize) -> usize {
+        let per_page = self.row_bytes(stride).saturating_mul(page_tokens).saturating_mul(2);
+        per_page.saturating_mul(n_pages)
+    }
 }
 
 /// Dense per-layer KV buffer (legacy layout).
@@ -114,12 +125,20 @@ pub struct SharedPhysKvStore {
 
 impl SharedPhysKvStore {
     pub fn new(cfg: &LlamaConfig, page_tokens: usize, max_phys_pages: usize) -> Result<Self> {
+        Self::new_with_quant(cfg, page_tokens, max_phys_pages, KvQuantFormat::from_env())
+    }
+
+    pub fn new_with_quant(
+        cfg: &LlamaConfig,
+        page_tokens: usize,
+        max_phys_pages: usize,
+        quant_format: KvQuantFormat,
+    ) -> Result<Self> {
         if page_tokens == 0 || max_phys_pages == 0 {
             return Err(BitNetError::Inference("shared paged KV: bad page config".into()));
         }
         let stride = cfg.n_kv * cfg.head_dim;
         let n_layer = cfg.n_layer;
-        let quant_format = KvQuantFormat::from_env();
         Ok(Self {
             n_layer,
             stride,
@@ -137,14 +156,13 @@ impl SharedPhysKvStore {
 
     pub fn alloc_phys(&mut self, layer: usize) -> Result<usize> {
         if let Some(id) = self.free_ids[layer].pop() {
-            self.phys_k[layer][id].fill(0.0);
-            self.phys_v[layer][id].fill(0.0);
-            if let Some(slab) = self.phys_k_q[layer].get_mut(id) {
-                slab.fill(0);
-            }
-            if let Some(slab) = self.phys_v_q[layer].get_mut(id) {
-                slab.fill(0);
-            }
+            zero_phys_page(
+                id,
+                &mut self.phys_k[layer],
+                &mut self.phys_v[layer],
+                &mut self.phys_k_q[layer],
+                &mut self.phys_v_q[layer],
+            );
             self.stats.reused_phys_pages += 1;
             return Ok(id);
         }
@@ -154,13 +172,16 @@ impl SharedPhysKvStore {
                 self.max_phys_pages
             )));
         }
-        let len = self.stride * self.page_tokens;
         let id = self.phys_k[layer].len();
-        self.phys_k[layer].push(vec![0.0f32; len]);
-        self.phys_v[layer].push(vec![0.0f32; len]);
-        let q_len = self.quant_format.row_bytes(self.stride) * self.page_tokens;
-        self.phys_k_q[layer].push(vec![0u8; q_len]);
-        self.phys_v_q[layer].push(vec![0u8; q_len]);
+        push_phys_page(
+            self.quant_format,
+            self.stride,
+            self.page_tokens,
+            &mut self.phys_k[layer],
+            &mut self.phys_v[layer],
+            &mut self.phys_k_q[layer],
+            &mut self.phys_v_q[layer],
+        );
         self.stats.new_phys_pages += 1;
         Ok(id)
     }
@@ -176,6 +197,21 @@ impl SharedPhysKvStore {
 
     pub fn pool_stats(&self) -> KvPoolStats {
         self.stats.clone()
+    }
+
+    /// Resident bytes for allocated K+V pages (compact when quantized).
+    pub fn resident_bytes(&self) -> usize {
+        resident_bytes_for_slabs(
+            self.quant_format,
+            &self.phys_k,
+            &self.phys_v,
+            &self.phys_k_q,
+            &self.phys_v_q,
+        )
+    }
+
+    pub fn quant_format(&self) -> KvQuantFormat {
+        self.quant_format
     }
 
     /// Sum of allocated physical pages across layers (live slabs, including free-listed).
@@ -221,7 +257,17 @@ pub struct PagedSeqKv {
 
 impl PagedSeqKv {
     pub fn new(cfg: &LlamaConfig, page_tokens: usize, max_pages: usize) -> Result<Self> {
-        Self::new_inner(cfg, page_tokens, max_pages, None)
+        Self::new_inner(cfg, page_tokens, max_pages, None, KvQuantFormat::from_env())
+    }
+
+    /// Construct with an explicit KV quant format (tests / tune profiles).
+    pub fn new_with_quant(
+        cfg: &LlamaConfig,
+        page_tokens: usize,
+        max_pages: usize,
+        quant_format: KvQuantFormat,
+    ) -> Result<Self> {
+        Self::new_inner(cfg, page_tokens, max_pages, None, quant_format)
     }
 
     pub fn new_with_shared(
@@ -230,7 +276,11 @@ impl PagedSeqKv {
         max_logical_pages: usize,
         shared: Arc<Mutex<SharedPhysKvStore>>,
     ) -> Result<Self> {
-        Self::new_inner(cfg, page_tokens, max_logical_pages, Some(shared))
+        let quant = shared
+            .lock()
+            .map(|g| g.quant_format())
+            .unwrap_or_else(|_| KvQuantFormat::from_env());
+        Self::new_inner(cfg, page_tokens, max_logical_pages, Some(shared), quant)
     }
 
     fn new_inner(
@@ -238,6 +288,7 @@ impl PagedSeqKv {
         page_tokens: usize,
         max_pages: usize,
         shared: Option<Arc<Mutex<SharedPhysKvStore>>>,
+        quant_format: KvQuantFormat,
     ) -> Result<Self> {
         if page_tokens == 0 {
             return Err(BitNetError::Inference(
@@ -251,7 +302,6 @@ impl PagedSeqKv {
         }
         let stride = cfg.n_kv * cfg.head_dim;
         let n_layer = cfg.n_layer;
-        let quant_format = KvQuantFormat::from_env();
         Ok(Self {
             n_layer,
             stride,
@@ -276,14 +326,13 @@ impl PagedSeqKv {
             })?.alloc_phys(layer);
         }
         if let Some(id) = self.free_ids[layer].pop() {
-            self.phys_k[layer][id].fill(0.0);
-            self.phys_v[layer][id].fill(0.0);
-            if let Some(slab) = self.phys_k_q[layer].get_mut(id) {
-                slab.fill(0);
-            }
-            if let Some(slab) = self.phys_v_q[layer].get_mut(id) {
-                slab.fill(0);
-            }
+            zero_phys_page(
+                id,
+                &mut self.phys_k[layer],
+                &mut self.phys_v[layer],
+                &mut self.phys_k_q[layer],
+                &mut self.phys_v_q[layer],
+            );
             self.stats.reused_phys_pages += 1;
             return Ok(id);
         }
@@ -293,13 +342,16 @@ impl PagedSeqKv {
                 self.max_pages
             )));
         }
-        let len = self.stride * self.page_tokens;
         let id = self.phys_k[layer].len();
-        self.phys_k[layer].push(vec![0.0f32; len]);
-        self.phys_v[layer].push(vec![0.0f32; len]);
-        let q_len = self.quant_format.row_bytes(self.stride) * self.page_tokens;
-        self.phys_k_q[layer].push(vec![0u8; q_len]);
-        self.phys_v_q[layer].push(vec![0u8; q_len]);
+        push_phys_page(
+            self.quant_format,
+            self.stride,
+            self.page_tokens,
+            &mut self.phys_k[layer],
+            &mut self.phys_v[layer],
+            &mut self.phys_k_q[layer],
+            &mut self.phys_v_q[layer],
+        );
         self.stats.new_phys_pages += 1;
         Ok(id)
     }
@@ -517,6 +569,8 @@ impl PagedSeqKv {
             }
             self.phys_k[layer].iter_mut().for_each(|s| s.fill(0.0));
             self.phys_v[layer].iter_mut().for_each(|s| s.fill(0.0));
+            self.phys_k_q[layer].iter_mut().for_each(|s| s.fill(0));
+            self.phys_v_q[layer].iter_mut().for_each(|s| s.fill(0));
             self.block_phys[layer].clear();
         }
     }
@@ -565,6 +619,23 @@ impl PagedSeqKv {
 
     pub fn quant_format(&self) -> KvQuantFormat {
         self.quant_format
+    }
+
+    /// Resident bytes for this sequence's (or shared) physical K+V pages.
+    pub fn resident_bytes(&self) -> usize {
+        if let Some(shared) = &self.shared {
+            return shared
+                .lock()
+                .map(|g| g.resident_bytes())
+                .unwrap_or(0);
+        }
+        resident_bytes_for_slabs(
+            self.quant_format,
+            &self.phys_k,
+            &self.phys_v,
+            &self.phys_k_q,
+            &self.phys_v_q,
+        )
     }
 }
 
@@ -931,6 +1002,93 @@ impl PagedKvPool {
         }
         stats
     }
+}
+
+fn push_phys_page(
+    fmt: KvQuantFormat,
+    stride: usize,
+    page_tokens: usize,
+    phys_k: &mut Vec<Vec<f32>>,
+    phys_v: &mut Vec<Vec<f32>>,
+    phys_k_q: &mut Vec<Vec<u8>>,
+    phys_v_q: &mut Vec<Vec<u8>>,
+) {
+    match fmt {
+        KvQuantFormat::F32 => {
+            let len = stride.saturating_mul(page_tokens);
+            phys_k.push(vec![0.0f32; len]);
+            phys_v.push(vec![0.0f32; len]);
+            // Keep Q index parallel with empty slabs (unused for F32).
+            phys_k_q.push(Vec::new());
+            phys_v_q.push(Vec::new());
+        }
+        KvQuantFormat::Q8 | KvQuantFormat::Q4 => {
+            // Compact path: no F32 residency; empty f32 slots preserve page ids.
+            phys_k.push(Vec::new());
+            phys_v.push(Vec::new());
+            let q_len = fmt.row_bytes(stride).saturating_mul(page_tokens);
+            phys_k_q.push(vec![0u8; q_len]);
+            phys_v_q.push(vec![0u8; q_len]);
+        }
+    }
+}
+
+fn zero_phys_page(
+    id: usize,
+    phys_k: &mut [Vec<f32>],
+    phys_v: &mut [Vec<f32>],
+    phys_k_q: &mut [Vec<u8>],
+    phys_v_q: &mut [Vec<u8>],
+) {
+    if let Some(slab) = phys_k.get_mut(id) {
+        slab.fill(0.0);
+    }
+    if let Some(slab) = phys_v.get_mut(id) {
+        slab.fill(0.0);
+    }
+    if let Some(slab) = phys_k_q.get_mut(id) {
+        slab.fill(0);
+    }
+    if let Some(slab) = phys_v_q.get_mut(id) {
+        slab.fill(0);
+    }
+}
+
+fn resident_bytes_for_slabs(
+    fmt: KvQuantFormat,
+    phys_k: &[Vec<Vec<f32>>],
+    phys_v: &[Vec<Vec<f32>>],
+    phys_k_q: &[Vec<Vec<u8>>],
+    phys_v_q: &[Vec<Vec<u8>>],
+) -> usize {
+    let mut bytes = 0usize;
+    match fmt {
+        KvQuantFormat::F32 => {
+            for layer in phys_k {
+                for slab in layer {
+                    bytes = bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
+                }
+            }
+            for layer in phys_v {
+                for slab in layer {
+                    bytes = bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
+                }
+            }
+        }
+        KvQuantFormat::Q8 | KvQuantFormat::Q4 => {
+            for layer in phys_k_q {
+                for slab in layer {
+                    bytes = bytes.saturating_add(slab.len());
+                }
+            }
+            for layer in phys_v_q {
+                for slab in layer {
+                    bytes = bytes.saturating_add(slab.len());
+                }
+            }
+        }
+    }
+    bytes
 }
 
 fn encode_quant_row(fmt: KvQuantFormat, src: &[f32], dst: &mut [u8]) {
