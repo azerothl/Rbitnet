@@ -5,6 +5,7 @@ This file is the append-only target for the small local benchmark matrix scripts
 ```bash
 scripts/bench_matrix.sh
 scripts/bench_paged_kv.sh   # dense vs paged vs RBITNET_KV_POOL @ concurrency 1/4/8
+scripts/bench_kv_q8.sh      # paged F32 vs Q8 resident_bytes (+ optional live RSS)
 ```
 
 ```powershell
@@ -36,6 +37,19 @@ Record hardware, model basename, quantization, backend, and peak RSS when publis
 | Shared `attention_scores_cpu` vs dense | pass |
 
 Enable production path: `RBITNET_LLAMA_PAGED_KV=1` and/or `RBITNET_KV_POOL=1` (see [USAGE.md](USAGE.md)).
+
+## KV Q8 compact pages — 2026-09-27 (unit gate)
+
+**Methodology:** `cargo test -p bitnet-core --test kv_storage_paged q8_` / `scripts/bench_kv_q8.sh` (no GGUF in this agent image). Live RSS/tok/s F32 vs Q8 requires TinyLlama Q4 + `RBITNET_MODEL` / `RBITNET_TOKENIZER`.
+
+| Check | Result |
+|-------|--------|
+| Q8 paged roundtrip ≤ scale/127 | pass |
+| Q8 `resident_bytes` &lt; ½ of F32 at same pages | pass |
+| Q8 vs F32 attention relative drift &lt; 5% (toy) | pass |
+| Encode/decode row unit (`q8_roundtrip_preserves_row_shape`) | pass |
+
+**Tradeoffs:** Q8 saves ~4× KV page RSS vs F32; not bit-exact — keep `RBITNET_KV_QUANT=off` for golden bit-exact; enable `q8` for concurrency / memory. Metric: `rbitnet_core_kv_quant_format_code=1`. Enable: `RBITNET_LLAMA_PAGED_KV=1 RBITNET_KV_QUANT=q8` or `rbitnet tune throughput`.
 
 ## Manual Result Template
 

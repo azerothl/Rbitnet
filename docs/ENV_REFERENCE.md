@@ -81,7 +81,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_HYBRID_LOG` | off | Reserved flag for verbose hybrid diagnostics; current builds always log the selected offload plan at runtime creation. |
 | `RBITNET_LLAMA_PAGED_KV` | off | **`1`** enables paged KV storage for **Llama** GGUF (see [USAGE.md](USAGE.md)). |
 | `RBITNET_KV_BACKEND` | `cpu` | KV backend hint. `gpu`/`cuda` marks paged KV as GPU-planned and keeps CPU fallback until native KV device storage is available. |
-| `RBITNET_KV_QUANT` | `off` | Paged Llama KV format: `off`/`f32`, `q8`, or `q4`. Quantized pages decode K/V heads on demand during attention. |
+| `RBITNET_KV_QUANT` | `off` | Paged Llama KV format: `off`/`f32`, `q8`, or `q4`. Q8/Q4 use compact pages only (no F32 twin); decode-on-read for attention. Requires `RBITNET_LLAMA_PAGED_KV=1` (or pool). See [USAGE.md](USAGE.md) + `scripts/bench_kv_q8.sh`. |
 | `RBITNET_PAGED_KV`, `RBITNET_PAGED_KV_*` | varies | Qwen35 attention scaffolding; Llama paged mode reads `PAGE_TOKENS` / `MAX_PAGES` via [`PagedKvCache`](../crates/bitnet-core/src/paged_kv.rs). |
 
 ## Tests only

@@ -77,6 +77,8 @@ Or use `scripts/run-golden-test.sh` / `scripts/run-golden-test.ps1`.
 
 - Optional **`RBITNET_BLAS=1`** (OpenBLAS) and **`RBITNET_LLAMA_MATMUL=ggml`** (experimental hook) should keep the same greedy first token on CPU for a given GGUF; if a golden run fails after enabling them, treat it as a regression in the fast path or document a deliberate numerical change.
 
+- **`RBITNET_KV_QUANT=q8`:** not bit-exact vs F32 KV. Run goldens with `RBITNET_KV_QUANT=off` (default). Q8 quality gate is the unit suite in `kv_storage_paged` (INT8 round-trip + &lt;5% relative attention drift on toy tensors) plus optional live smoke via `scripts/bench_kv_q8.sh` — do **not** fail the greedy first-token golden on Q8 alone.
+
 - **Greedy token id** is exact: no float tolerance.
 - For **logit vectors** (optional future extension), start with `max(abs diff)) < 5e-2` on CPU
   after prefill for the last prompt position, then tighten once kernels are stable.

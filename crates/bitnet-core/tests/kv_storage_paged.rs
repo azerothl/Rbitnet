@@ -1,6 +1,9 @@
 //! Dense vs paged KV layout equivalence (Inference stack v2 phase A.1).
+//! Also covers KV Q8 compact pages (`RBITNET_KV_QUANT=q8`).
 
-use bitnet_core::llama::kv_storage::{KvCache, KvStorage, PagedKvPool, PagedSeqKv};
+use bitnet_core::llama::kv_storage::{
+    KvCache, KvQuantFormat, KvStorage, PagedKvPool, PagedSeqKv,
+};
 use bitnet_core::llama::LlamaConfig;
 
 fn tiny_cfg() -> LlamaConfig {
@@ -243,4 +246,134 @@ fn shared_kv_storage_attention_scores_match_dense() {
             "score mismatch at {i}: dense={a} paged={b}"
         );
     }
+}
+
+/// Q8 gate: decode error stays within abs-max scale / 127 (symmetric INT8).
+#[test]
+fn q8_paged_roundtrip_within_int8_error() {
+    let cfg = tiny_cfg();
+    let stride = cfg.n_kv * cfg.head_dim;
+    let mut paged =
+        PagedSeqKv::new_with_quant(&cfg, 4, 64, KvQuantFormat::Q8).expect("q8 paged");
+    assert_eq!(paged.quant_format(), KvQuantFormat::Q8);
+
+    let k: Vec<f32> = (0..stride)
+        .map(|i| ((i as f32) * 0.07 - 1.1).sin())
+        .collect();
+    let v: Vec<f32> = (0..stride)
+        .map(|i| ((i as f32) * 0.05 - 0.3).cos())
+        .collect();
+
+    for pos in 0..15usize {
+        paged.write_kv_layer(0, pos, &k, &v).expect("q8 write");
+    }
+
+    let max_abs_k = k.iter().fold(0.0f32, |a, &x| a.max(x.abs()));
+    let max_abs_v = v.iter().fold(0.0f32, |a, &x| a.max(x.abs()));
+    let tol_k = (max_abs_k / 127.0) + 1e-5;
+    let tol_v = (max_abs_v / 127.0) + 1e-5;
+
+    let mut out = vec![0.0f32; cfg.head_dim];
+    for pos in 0..15 {
+        for kv_h in 0..cfg.n_kv {
+            let start = kv_h * cfg.head_dim;
+            paged.fill_k_head_values(0, pos, kv_h, cfg.head_dim, &mut out);
+            for (i, &got) in out.iter().enumerate() {
+                let want = k[start + i];
+                assert!(
+                    (got - want).abs() <= tol_k,
+                    "k pos={pos} head={kv_h} i={i}: got={got} want={want} tol={tol_k}"
+                );
+            }
+            paged.fill_v_head_values(0, pos, kv_h, cfg.head_dim, &mut out);
+            for (i, &got) in out.iter().enumerate() {
+                let want = v[start + i];
+                assert!(
+                    (got - want).abs() <= tol_v,
+                    "v pos={pos} head={kv_h} i={i}: got={got} want={want} tol={tol_v}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn q8_paged_resident_bytes_beat_f32() {
+    let cfg = tiny_cfg();
+    let stride = cfg.n_kv * cfg.head_dim;
+    let tokens = 32usize;
+    let page_tokens = 4usize;
+
+    let mut f32_kv =
+        PagedSeqKv::new_with_quant(&cfg, page_tokens, 64, KvQuantFormat::F32).expect("f32");
+    let mut q8_kv =
+        PagedSeqKv::new_with_quant(&cfg, page_tokens, 64, KvQuantFormat::Q8).expect("q8");
+
+    let k: Vec<f32> = (0..stride).map(|i| i as f32 * 0.01).collect();
+    let v = k.clone();
+    for pos in 0..tokens {
+        f32_kv.write_kv_layer(0, pos, &k, &v).expect("f32 write");
+        f32_kv.write_kv_layer(1, pos, &k, &v).expect("f32 L1");
+        q8_kv.write_kv_layer(0, pos, &k, &v).expect("q8 write");
+        q8_kv.write_kv_layer(1, pos, &k, &v).expect("q8 L1");
+    }
+
+    let f32_bytes = f32_kv.resident_bytes();
+    let q8_bytes = q8_kv.resident_bytes();
+    assert!(f32_bytes > 0, "f32 resident should be > 0");
+    assert!(q8_bytes > 0, "q8 resident should be > 0");
+    // Q8 row = 4 + stride bytes vs 4*stride for F32 → ~4× smaller for large stride.
+    assert!(
+        q8_bytes * 2 < f32_bytes,
+        "q8={q8_bytes} should be < half of f32={f32_bytes}"
+    );
+
+    let expected_q8 = KvQuantFormat::Q8.resident_bytes_for_pages(
+        q8_kv.physical_counts().iter().sum(),
+        page_tokens,
+        stride,
+    );
+    assert_eq!(q8_bytes, expected_q8);
+}
+
+#[test]
+fn q8_attention_scores_close_to_f32() {
+    let cfg = tiny_cfg();
+    let stride = cfg.n_kv * cfg.head_dim;
+    let mut f32_store = KvStorage::Paged(
+        PagedSeqKv::new_with_quant(&cfg, 4, 64, KvQuantFormat::F32).expect("f32"),
+    );
+    let mut q8_store = KvStorage::Paged(
+        PagedSeqKv::new_with_quant(&cfg, 4, 64, KvQuantFormat::Q8).expect("q8"),
+    );
+
+    let pos = 11usize;
+    for p in 0..=pos {
+        let k: Vec<f32> = (0..stride)
+            .map(|i| ((i + p) as f32 * 0.03).sin())
+            .collect();
+        let v: Vec<f32> = (0..stride)
+            .map(|i| ((i + p) as f32 * 0.02).cos())
+            .collect();
+        f32_store.write_layer_kv(0, p, &k, &v, stride).unwrap();
+        q8_store.write_layer_kv(0, p, &k, &v, stride).unwrap();
+    }
+
+    let q: Vec<f32> = (0..cfg.head_dim).map(|i| i as f32 * 0.04).collect();
+    let mut out_f = vec![0.0f32; pos + 1];
+    let mut out_q = vec![0.0f32; pos + 1];
+    let scale = 1.0 / (cfg.head_dim as f32).sqrt();
+    f32_store.attention_scores_cpu(0, pos, 0, cfg.head_dim, stride, &q, scale, &mut out_f);
+    q8_store.attention_scores_cpu(0, pos, 0, cfg.head_dim, stride, &q, scale, &mut out_q);
+
+    let mut max_rel = 0.0f32;
+    for (a, b) in out_f.iter().zip(out_q.iter()) {
+        let denom = a.abs().max(1e-3);
+        max_rel = max_rel.max((a - b).abs() / denom);
+    }
+    // Gate: relative score drift under ~5% for this tiny synthetic case (INT8 KV).
+    assert!(
+        max_rel < 0.05,
+        "Q8 attention relative drift {max_rel} exceeds 5% gate"
+    );
 }
