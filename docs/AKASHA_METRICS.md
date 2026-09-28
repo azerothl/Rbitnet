@@ -49,6 +49,9 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 | `rbitnet_core_kv_pool_free_pages` | Pages on the shared free list | Reclaim headroom |
 | `rbitnet_core_kv_pool_fragmentation_permille` | Free/allocated ×1000 | Fragmentation |
 | `rbitnet_core_kv_quant_format_code` | 0=f32, 1=q8, 2=q4 | KV quant mode (`RBITNET_KV_QUANT`; Q8/Q4 compact pages) |
+| `rbitnet_core_scheduler_stall_free_iters_total` | Stall-free schedule iterations | Sarathi continuous batching |
+| `rbitnet_core_scheduler_prefill_chunks_total` | Prefill chunks admitted | Chunked prefill under token budget |
+| `rbitnet_core_scheduler_iteration_budget_tokens` | Last / configured iteration budget | `RBITNET_ITERATION_TOKEN_BUDGET` |
 | `rbitnet_core_model_load_ms_total` / `_loads_total` | Load timing | Startup / reload |
 | `rbitnet_core_cuda_graph_replays_total` | Graphed decode steps | N/A (Rbitnet-specific) |
 

@@ -68,7 +68,7 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
             ("RBITNET_PREFILL_CHUNK_TOKENS", "512"),
             ("RBITNET_BACKEND", "cuda"),
         ],
-        // Continuous batching waves (interleaved decode) for multi-request; not fused GPU.
+        // Continuous batching + Sarathi stall-free schedule; not fused GPU.
         // KV Q8 saves paged RSS (~4× vs F32 pages); keep off for max numerical safety.
         TuneProfile::Throughput => &[
             ("RBITNET_MAX_CONCURRENT", "8"),
@@ -78,7 +78,8 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
             ("RBITNET_LLAMA_PAGED_KV", "1"),
             ("RBITNET_KV_QUANT", "q8"),
             ("RBITNET_CUDA_GRAPH", "0"),
-            ("RBITNET_PREFILL_CHUNK_TOKENS", "1024"),
+            ("RBITNET_PREFILL_CHUNK_TOKENS", "256"),
+            ("RBITNET_ITERATION_TOKEN_BUDGET", "512"),
             ("RBITNET_BACKEND", "cpu"),
             ("RBITNET_SESSIONS", "1"),
         ],

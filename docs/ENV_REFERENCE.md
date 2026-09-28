@@ -64,7 +64,10 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_KV_SIDECAR_TIMEOUT_SECS` | `30` | Sidecar HTTP timeout. |
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
-| `RBITNET_CONTINUOUS_BATCHING`, `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*`, `RBITNET_PREFILL_CHUNK_TOKENS` | varies | Scheduler, chunked prefill hooks, and speculative draft path; see [USAGE.md](USAGE.md). |
+| `RBITNET_CONTINUOUS_BATCHING` | off | Enable Sarathi-style stall-free batching (`run_batch_waves`); decode-first + chunked prefill. |
+| `RBITNET_ITERATION_TOKEN_BUDGET` | `2×chunk` | Token budget per stall-free iteration (see [USAGE.md](USAGE.md)). |
+| `RBITNET_PREFILL_CHUNK_TOKENS` | `128` | Prefill chunk size for runtime loops and scheduler admission. |
+| `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*` | varies | Speculative draft path; see [USAGE.md](USAGE.md). |
 | `RBITNET_DRAFT_PATH` | `ngram` when speculative on else `target` | Speculative draft source: `ngram`/`pld` (prompt-lookup, no weights), `toy`, or `target`. |
 | `RBITNET_DRAFT_MODEL` | (none) | Path reserved for a small GGUF draft model. Current builds recognize the path and fall back to the lightweight n-gram draft until separate draft-model verification is wired. |
 | `RBITNET_STRUCTURED_OUTPUT` | `off` | Optional sampler mask: `json` / `tool` enables the ASCII/byte-token JSON FSM mask before sampling. |
