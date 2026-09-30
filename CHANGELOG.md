@@ -17,4 +17,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Documentation: benchmarks baseline procedure, DEPLOYMENT rate-limit sketch, LIMITATIONS timeout semantics, STATUS/USAGE cross-links.
+- Documentation: stub/MVP audit ([docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md)); LIMITATIONS/STATUS/INFERENCE_STACK_V2 synced for prefix-KV, Sarathi, PLD, tokenizer.model (issue #24); benchmarks baseline procedure, DEPLOYMENT rate-limit sketch, STATUS/USAGE cross-links.
