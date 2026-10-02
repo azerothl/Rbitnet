@@ -74,6 +74,19 @@ Opt-in proto flag (decode wiring later): `RBITNET_SLIM_ATTENTION=1`.
 
 Enable: `RBITNET_CONTINUOUS_BATCHING=1 RBITNET_ITERATION_TOKEN_BUDGET=512` (or `rbitnet tune throughput`). GPU fused multi-seq remains off.
 
+## Fused multi-seq CPU (#46) — 2026-10-02 (stall + kernel)
+
+**Decision:** e2e concurrency ≥4 tok/s gain is **stalled** — executors still sequential. See [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md).
+
+| Check | Result |
+|-------|--------|
+| `dense_matvec_multi_seq` ≡ sequential reference (unit) | pass |
+| Scheduler calls `generate_decode_batch` when flag on | pass |
+| E2E tok/s @ concurrency 4/8 vs sequential | **stalled / non mesuré** (no Llama batched forward) |
+| Kernel microbench fused vs sequential @ batch 4/8 | `./scripts/bench_fused_multi_seq.sh` / `cargo bench -p bitnet-core --bench kernels -- fused_multi_seq` |
+
+Enable hook only: `RBITNET_CONTINUOUS_BATCHING=1 RBITNET_FUSED_MULTI_SEQ=1` (experimental; not a throughput claim).
+
 ## Manual Result Template
 
 Use this template when you benchmark a real GGUF outside the helper scripts:

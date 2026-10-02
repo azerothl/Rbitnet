@@ -20,7 +20,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
 | Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Deferred** — FA2/FA3 = GPU_NATIVE research only, **not** near-term default ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)) |
 | KV memory (PagedAttention-style), aggressive cache scheduling | **E2E opt-in** — dense default; `RBITNET_LLAMA_PAGED_KV=1` + `RBITNET_KV_POOL=1` shared phys pages on Llama runtime; reclaim + `/metrics` gauges; see [Research-backed priorities](#research-backed-priorities-2026-09) |
-| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Opt-in shipped MVP** — stall-free Sarathi (#21), prefix KV + radix (#17), PLD (#18); **fused multi-seq still open** — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md) |
+| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Opt-in shipped MVP** — stall-free Sarathi (#21), prefix KV + radix (#17), PLD (#18); **fused multi-seq e2e stalled** — [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md), [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md) |
 | Hugging Face–centric “automatic” tokenizer + model pairing      | **Partial** — `models install`, manifests; no embedded Transformers auto-config |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
 
@@ -147,7 +147,7 @@ Rbitnet today targets **correct GGUF execution**, a **small HTTP surface**, and 
 | **Live token streaming** | **Shipped (MVP)** | SSE token deltas via [`stream.rs`](../crates/bitnet-core/src/stream.rs) and `live_stream_chat_completion` in `bitnet-server` (not post-generation chunking). |
 | **Prefix KV (tensorial)** | **MVP + radix LRU** | `RBITNET_PREFIX_KV` — dense/paged snaps + LCP agent reuse + radix LRU; `/metrics` `rbitnet_core_prefix_hit`. |
 | **Paged KV pool** | **E2E opt-in** | `RBITNET_KV_POOL=1` backs Llama runtime KV with `SharedPhysKvStore`; multi-seq `PagedKvPool`; free-list reclaim; gauges `rbitnet_core_kv_pool_*`. Bench: [`scripts/bench_paged_kv.sh`](../scripts/bench_paged_kv.sh). |
-| **Continuous batching** | **Stall-free MVP** | `RBITNET_CONTINUOUS_BATCHING` — Sarathi decode-first + chunked prefill under `RBITNET_ITERATION_TOKEN_BUDGET`; fused multi-seq GPU still off. |
+| **Continuous batching** | **Stall-free MVP** | `RBITNET_CONTINUOUS_BATCHING` — Sarathi decode-first + chunked prefill under `RBITNET_ITERATION_TOKEN_BUDGET`; fused multi-seq e2e stalled ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)); GPU fused still off. |
 | **Chunked prefill** | **Scheduler + runtime** | Runtime `RBITNET_PREFILL_CHUNK_TOKENS` loops + scheduler admission chunks (Sarathi [2403.02310](https://arxiv.org/abs/2403.02310)). |
 | **Full-response prefix cache** | **Optional** | `RBITNET_PREFIX_CACHE` — duplicate **completions**, distinct from prefix KV. |
 | **CUDA graphs** | **Metrics + capture hook** | `RBITNET_CUDA_GRAPH` — [`cuda_graph.rs`](../crates/bitnet-core/src/llama/cuda_graph.rs); device capture on stable decode shapes (CUDA). |
@@ -194,7 +194,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 |------|------------|--------|
 | **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | **Shipped opt-in** — pool + paged attention path; measure RSS/fragmentation @ concurrency 1/4/8 via `scripts/bench_paged_kv.sh` |
 | **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | **Shipped opt-in** — LRU radix + LCP reuse; `rbitnet_core_prefix_hit`; unit gate ≥70% after warm-up |
-| **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | **Shipped MVP** — `RBITNET_ITERATION_TOKEN_BUDGET` + stall-free waves; fused multi-seq still open |
+| **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | **Shipped MVP** — `RBITNET_ITERATION_TOKEN_BUDGET` + stall-free waves; fused multi-seq e2e stalled ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)) |
 | **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |
 | **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | **KV Q8 shipped**; **SlimAttention 1D tile proto** (`llama::slim_attention`, `RBITNET_SLIM_ATTENTION`) + tiled-vs-baseline drift gate (#39). Decode wiring still open. |
 | **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | **No-go this spike** — stay on Q8 default; go/no-go + PPL/RSS gates in [KIVI_DECISION.md](KIVI_DECISION.md) (#39) |

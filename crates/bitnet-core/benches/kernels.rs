@@ -1,6 +1,7 @@
 //! Micro-benchmarks for hot ternary kernels (I2_S / TL2-style, NATIVE_FIRST).
 
 use bitnet_core::backend::{ComputeBackend, CudaBackend};
+use bitnet_core::fused_batch::{dense_matvec_multi_seq, dense_matvec_sequential_reference};
 use bitnet_core::kernels::{
     matvec_ternary_auto, matvec_ternary_i2s, matvec_ternary_i8, matvec_ternary_tl2_lut,
     pack_ternary_i2s,
@@ -67,6 +68,46 @@ fn bench_matvec_medium(c: &mut Criterion) {
     });
 }
 
+fn bench_fused_multi_seq(c: &mut Criterion) {
+    // Weight-stationary vs N independent matvecs — building block for #46 (not e2e).
+    let n = 512usize;
+    let k = 2048usize;
+    let w: Vec<f32> = (0..n * k).map(|i| ((i % 17) as f32) * 0.01).collect();
+    for batch in [4usize, 8usize] {
+        let x: Vec<f32> = (0..batch * k)
+            .map(|i| ((i % 13) as f32) * 0.02)
+            .collect();
+        let mut y = vec![0.0f32; batch * n];
+        c.bench_function(&format!("fused_multi_seq dense {n}x{k} batch={batch}"), |b| {
+            b.iter(|| {
+                dense_matvec_multi_seq(
+                    black_box(&w),
+                    black_box(&x),
+                    black_box(&mut y),
+                    black_box(n),
+                    black_box(k),
+                    black_box(batch),
+                )
+            })
+        });
+        c.bench_function(
+            &format!("fused_multi_seq sequential_ref {n}x{k} batch={batch}"),
+            |b| {
+                b.iter(|| {
+                    dense_matvec_sequential_reference(
+                        black_box(&w),
+                        black_box(&x),
+                        black_box(&mut y),
+                        black_box(n),
+                        black_box(k),
+                        black_box(batch),
+                    )
+                })
+            },
+        );
+    }
+}
+
 fn bench_cuda_backend_matvec(c: &mut Criterion) {
     if std::env::var("RBITNET_BENCH_CUDA").as_deref() != Ok("1") {
         return;
@@ -90,5 +131,10 @@ fn bench_cuda_backend_matvec(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_matvec_medium, bench_cuda_backend_matvec);
+criterion_group!(
+    benches,
+    bench_matvec_medium,
+    bench_fused_multi_seq,
+    bench_cuda_backend_matvec
+);
 criterion_main!(benches);
