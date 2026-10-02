@@ -61,7 +61,7 @@ RESULTS_MD=docs/BENCHMARKS_RESULTS.md ./scripts/compare_llamacpp_rbitnet.sh
 | `llama-3.2-1b-instruct-q4-k-m` | `unsloth/Llama-3.2-1B-Instruct-GGUF` / `Llama-3.2-1B-Instruct-Q4_K_M.gguf` | API metadata checked; **generation not recorded** | TBD (≥4 GB class) | TBD | `rbitnet up unsloth/Llama-3.2-1B-Instruct-GGUF --file Llama-3.2-1B-Instruct-Q4_K_M.gguf` |
 | `llama-3.2-3b-instruct-q4-k-m` | `unsloth/Llama-3.2-3B-Instruct-GGUF` / `Llama-3.2-3B-Instruct-Q4_K_M.gguf` | API metadata checked; **generation not recorded** | TBD (≥8 GB class) | TBD | `rbitnet up unsloth/Llama-3.2-3B-Instruct-GGUF --file Llama-3.2-3B-Instruct-Q4_K_M.gguf` |
 | `hermes-2-pro-llama-3-8b-q4-k-m` | `NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF` / `Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf` | API metadata checked; **generation not recorded** | TBD (≥16 GB class) | TBD | `rbitnet up ... --chat-format chatml` |
-| `bitnet-b158-2b4t` | curated BitNet b1.58 2B4T bundle | Install path documented; **tok/s row not yet published** | TBD | TBD | [BITNET_NATIVE.md](BITNET_NATIVE.md) |
+| `bitnet-b158-2b4t` | curated BitNet b1.58 2B4T bundle (`microsoft/bitnet-b1.58-2B-4T-gguf`) | **Install + native loader documented**; **no published e2e tok/s / RSS row yet**. Kernel microbench exists (I2_S/TL2/AVX2 + TQ stack scratch) — see [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md). Remaining gap vs bitnet.cpp is mostly **layout/wiring** (GGUF TQ1/TQ2 mmap GEMV ≠ research I2_S helpers), not more scalar LUT chasing. | TBD (expect multi-GB RSS class) | **unpublished** | [BITNET_NATIVE.md](BITNET_NATIVE.md) + `rbitnet models install microsoft-bitnet-b1.58-2b-4t` |
 
 Full dated numbers: [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) (*TinyLlama Q4_K_M CPU — 2026-09-30*).
 

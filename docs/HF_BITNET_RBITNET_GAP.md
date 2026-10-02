@@ -45,3 +45,5 @@ Bundles cannot fix gated third-party tokenizers without a valid **`HF_TOKEN`** a
 - [USAGE.md](USAGE.md) — environment variables and CLI commands.
 - [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md) — export and tokenizer expectations.
 - [BITNET_SPEC.md](BITNET_SPEC.md) — GGUF metadata and tensor naming.
+- [BITNET_NATIVE.md](BITNET_NATIVE.md) — native TQ1/TQ2 path vs research I2_S/TL2 microbench (`kernels.rs`).
+- [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) — BitNet kernel progression + #45 gap analysis.

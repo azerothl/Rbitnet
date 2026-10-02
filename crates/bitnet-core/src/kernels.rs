@@ -3,6 +3,12 @@
 //! Layouts inspired by bitnet.cpp I2_S (2-bit packed ternary) and TL2 (tiled LUT/MAD)
 //! ([2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144)).
 //! Run `cargo bench -p bitnet-core --bench kernels` or `scripts/bench_bitnet_kernels.sh`.
+//!
+//! **Scope note:** these helpers are the research / microbench surface for packed ternary.
+//! Production Microsoft b1.58 GGUF inference uses mmap **TQ1_0 / TQ2_0** row dots in
+//! [`crate::ggml::quant_dot`] — not this I2_S byte layout. Closing the e2e gap vs bitnet.cpp
+//! is primarily a *layout/wiring* problem (fuse TQ GEMV + optional repack), not more scalar
+//! I2_S micro-opts alone.
 
 /// Reference row-wise matrix-vector multiply: `y = W @ x + y` (accumulate).
 /// `w` stores `n * k` weights in row-major order, each weight in `{-1, 0, 1}`.
@@ -14,7 +20,7 @@ pub fn matvec_accum_ternary_i8(w: &[i8], x: &[f32], y: &mut [f32], n: usize, k: 
         let mut acc = 0.0f32;
         let row = i * k;
         for j in 0..k {
-            acc += w[row + j] as f32 * x[j];
+            acc = (w[row + j] as f32).mul_add(x[j], acc);
         }
         y[i] += acc;
     }
@@ -53,14 +59,12 @@ pub fn pack_ternary_i2s(w: &[i8]) -> Vec<u8> {
     out
 }
 
-#[inline]
-fn i2s_decode(code: u8) -> f32 {
-    match code & 0b11 {
-        0 => 0.0,
-        1 => 1.0,
-        2 => -1.0,
-        _ => 0.0,
-    }
+/// Branchless I2_S code → ternary magnitude in `{0, ±1}` (invalid `0b11` → 0).
+#[inline(always)]
+fn i2s_signed(code: u8) -> f32 {
+    // 0→0, 1→+1, 2→−1, 3→0 without a match jump.
+    const TABLE: [f32; 4] = [0.0, 1.0, -1.0, 0.0];
+    TABLE[(code & 0b11) as usize]
 }
 
 /// Scalar matvec over I2_S packed weights (bit-exact vs [`matvec_ternary_i8`] for valid ternary).
@@ -75,10 +79,10 @@ pub fn matvec_ternary_i2s(packed: &[u8], x: &[f32], y: &mut [f32], n: usize, k: 
         let base = i * row_bytes;
         for (jb, &byte) in packed[base..base + row_bytes].iter().enumerate() {
             let j0 = jb * 4;
-            acc += i2s_decode(byte) * x[j0];
-            acc += i2s_decode(byte >> 2) * x[j0 + 1];
-            acc += i2s_decode(byte >> 4) * x[j0 + 2];
-            acc += i2s_decode(byte >> 6) * x[j0 + 3];
+            acc = i2s_signed(byte).mul_add(x[j0], acc);
+            acc = i2s_signed(byte >> 2).mul_add(x[j0 + 1], acc);
+            acc = i2s_signed(byte >> 4).mul_add(x[j0 + 2], acc);
+            acc = i2s_signed(byte >> 6).mul_add(x[j0 + 3], acc);
         }
         y[i] = acc;
     }
@@ -96,11 +100,16 @@ pub fn matvec_ternary_tl2_lut(packed: &[u8], x: &[f32], y: &mut [f32], n: usize,
         let base = i * row_bytes;
         for (jb, &byte) in packed[base..base + row_bytes].iter().enumerate() {
             let j0 = jb * 4;
-            let lut = [0.0f32, x[j0], -x[j0], 0.0];
-            let lut1 = [0.0f32, x[j0 + 1], -x[j0 + 1], 0.0];
-            let lut2 = [0.0f32, x[j0 + 2], -x[j0 + 2], 0.0];
-            let lut3 = [0.0f32, x[j0 + 3], -x[j0 + 3], 0.0];
-            acc += lut[(byte & 0b11) as usize];
+            // One activation table per lane (bitnet.cpp TL2-style local LUT).
+            let x0 = x[j0];
+            let x1 = x[j0 + 1];
+            let x2 = x[j0 + 2];
+            let x3 = x[j0 + 3];
+            let lut0 = [0.0f32, x0, -x0, 0.0];
+            let lut1 = [0.0f32, x1, -x1, 0.0];
+            let lut2 = [0.0f32, x2, -x2, 0.0];
+            let lut3 = [0.0f32, x3, -x3, 0.0];
+            acc += lut0[(byte & 0b11) as usize];
             acc += lut1[((byte >> 2) & 0b11) as usize];
             acc += lut2[((byte >> 4) & 0b11) as usize];
             acc += lut3[((byte >> 6) & 0b11) as usize];
@@ -109,13 +118,68 @@ pub fn matvec_ternary_tl2_lut(packed: &[u8], x: &[f32], y: &mut [f32], n: usize,
     }
 }
 
-/// Best available CPU path: prefer TL2 LUT (cache-friendly); AVX2 stub routes to I2_S for now.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn matvec_ternary_i2s_avx2(
+    packed: &[u8],
+    x: &[f32],
+    y: &mut [f32],
+    n: usize,
+    k: usize,
+) {
+    use std::arch::x86_64::{_mm256_fmadd_ps, _mm256_loadu_ps, _mm256_setzero_ps, _mm256_storeu_ps};
+
+    let row_bytes = k / 4;
+    for i in 0..n {
+        let mut acc_vec = _mm256_setzero_ps();
+        let mut acc_tail = 0.0f32;
+        let base = i * row_bytes;
+        let row = &packed[base..base + row_bytes];
+        let mut j = 0usize;
+        // 8 packed bytes → 32 weights → four AVX2 FMA lanes of 8.
+        while j + 8 <= row_bytes {
+            let mut decoded = [0.0f32; 32];
+            for t in 0..8 {
+                let byte = row[j + t];
+                let o = t * 4;
+                decoded[o] = i2s_signed(byte);
+                decoded[o + 1] = i2s_signed(byte >> 2);
+                decoded[o + 2] = i2s_signed(byte >> 4);
+                decoded[o + 3] = i2s_signed(byte >> 6);
+            }
+            let j0 = j * 4;
+            for lane in 0..4 {
+                let w = _mm256_loadu_ps(decoded.as_ptr().add(lane * 8));
+                let xv = _mm256_loadu_ps(x.as_ptr().add(j0 + lane * 8));
+                acc_vec = _mm256_fmadd_ps(w, xv, acc_vec);
+            }
+            j += 8;
+        }
+        while j < row_bytes {
+            let byte = row[j];
+            let j0 = j * 4;
+            acc_tail = i2s_signed(byte).mul_add(x[j0], acc_tail);
+            acc_tail = i2s_signed(byte >> 2).mul_add(x[j0 + 1], acc_tail);
+            acc_tail = i2s_signed(byte >> 4).mul_add(x[j0 + 2], acc_tail);
+            acc_tail = i2s_signed(byte >> 6).mul_add(x[j0 + 3], acc_tail);
+            j += 1;
+        }
+        let mut lanes = [0.0f32; 8];
+        _mm256_storeu_ps(lanes.as_mut_ptr(), acc_vec);
+        // Lane reduction order differs from scalar; auto path is approx-equal, not bit-identical.
+        y[i] = lanes.iter().copied().sum::<f32>() + acc_tail;
+    }
+}
+
+/// Best available CPU path: AVX2+FMA I2_S when present, else TL2 LUT.
 pub fn matvec_ternary_auto(packed: &[u8], x: &[f32], y: &mut [f32], n: usize, k: usize) {
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") {
-            // AVX2 widening is staged; keep bit-exact I2_S until parity benches expand.
-            matvec_ternary_i2s(packed, x, y, n, k);
+        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+            // SAFETY: feature gated by runtime detection above.
+            unsafe {
+                matvec_ternary_i2s_avx2(packed, x, y, n, k);
+            }
             return;
         }
     }
@@ -169,10 +233,18 @@ pub fn microbench_ternary_ns(n: usize, k: usize, iters: usize) -> TernaryMicrobe
     let mut y_ref = vec![0.0f32; n];
     let mut y_i2s = vec![0.0f32; n];
     let mut y_tl2 = vec![0.0f32; n];
+    let mut y_auto = vec![0.0f32; n];
     matvec_ternary_i8(&w, &x, &mut y_ref, n, k);
     matvec_ternary_i2s(&packed, &x, &mut y_i2s, n, k);
     matvec_ternary_tl2_lut(&packed, &x, &mut y_tl2, n, k);
-    let bit_exact = y_ref == y_i2s && y_ref == y_tl2;
+    matvec_ternary_auto(&packed, &x, &mut y_auto, n, k);
+    // Scalar I2_S / TL2 stay bit-exact; AVX2 auto may differ by FMA lane reduction order.
+    let bit_exact = y_ref == y_i2s
+        && y_ref == y_tl2
+        && y_ref
+            .iter()
+            .zip(y_auto.iter())
+            .all(|(a, b)| (a - b).abs() <= 1e-4 * (1.0 + a.abs().max(b.abs())));
 
     TernaryMicrobench {
         n,
@@ -217,7 +289,7 @@ pub struct TernaryMicrobench {
 impl TernaryMicrobench {
     pub fn markdown_row(&self) -> String {
         format!(
-            "| ternary {n}x{k} | i8={i8}ns i2s={i2s}ns tl2={tl2}ns auto={auto}ns | bit_exact={be} | widest_gap={gap} | Rust SIMD/LUT (no FFI) |",
+            "| ternary {n}x{k} | i8={i8}ns i2s={i2s}ns tl2={tl2}ns auto={auto}ns | bit_exact={be} | widest_gap={gap} | Rust AVX2/FMA auto when available (no FFI) |",
             n = self.n,
             k = self.k,
             i8 = self.i8_ns,
@@ -279,7 +351,12 @@ mod tests {
         matvec_ternary_auto(&packed, &x, &mut y3, n, k);
         assert_eq!(y0, y1);
         assert_eq!(y0, y2);
-        assert_eq!(y0, y3);
+        for (a, b) in y0.iter().zip(y3.iter()) {
+            assert!(
+                (a - b).abs() <= 1e-4 * (1.0 + a.abs().max(b.abs())),
+                "auto approx mismatch {a} vs {b}"
+            );
+        }
     }
 
     #[test]
