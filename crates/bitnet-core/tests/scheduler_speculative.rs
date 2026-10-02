@@ -236,6 +236,10 @@ fn sarathi_stall_free_records_prefill_chunks_and_budget_iters() {
             },
         ],
     };
+    assert_eq!(
+        scheduler.iteration_token_budget, 4,
+        "test scheduler must use a 4-token iteration budget"
+    );
     let rows = scheduler
         .run_batch(&CountingEcho, &batch)
         .expect("sarathi batch");
@@ -253,7 +257,12 @@ fn sarathi_stall_free_records_prefill_chunks_and_budget_iters() {
         "expected stall-free iters (before={before_iters} after={})",
         snap.scheduler_stall_free_iters
     );
-    assert_eq!(snap.scheduler_iteration_budget, 4);
+    // Global gauge is last-write-wins across parallel tests in this binary; do not
+    // require exact equality with this test's budget (races with budget=256 cases).
+    assert!(
+        snap.scheduler_iteration_budget > 0,
+        "stall-free path should record a positive iteration budget gauge"
+    );
     assert!(snap.scheduler_decode_waves > 0);
 }
 
