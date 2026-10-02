@@ -59,7 +59,7 @@ Enable production path: `RBITNET_LLAMA_PAGED_KV=1` and/or `RBITNET_KV_POOL=1` (s
 | SlimAttention 1D tile vs baseline drift &lt; 1e-4 (toy, no GGUF) | pass — `llama::slim_attention` unit tests |
 | KIVI 2-bit vs stay on Q8 | **No-go** this spike — criteria in [KIVI_DECISION.md](KIVI_DECISION.md) (PPL/RSS); Q8 remains default compact KV |
 
-Opt-in proto flag (decode wiring later): `RBITNET_SLIM_ATTENTION=1`.
+Opt-in decode path: `RBITNET_SLIM_ATTENTION=1` (optional `RBITNET_SLIM_ATTENTION_TILE`); Llama CPU/hybrid attention uses 1D tiled online-softmax.
 
 ## Sarathi stall-free schedule — 2026-09-27 (unit gate)
 

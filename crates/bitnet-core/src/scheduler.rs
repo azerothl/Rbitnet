@@ -301,8 +301,10 @@ impl ContinuousBatchScheduler {
 
     /// Batch entry point used by server/runtime orchestration.
     ///
-    /// Current MVP executes requests sequentially while preserving a stable API for
-    /// future continuous batching and per-wave scheduling.
+    /// When `RBITNET_CONTINUOUS_BATCHING` is on and the batch has >1 request, runs
+    /// stall-free Sarathi waves ([`Self::run_batch_waves`]). Otherwise runs requests
+    /// sequentially. Opt-in `RBITNET_FUSED_MULTI_SEQ` uses `generate_decode_batch`
+    /// (e2e concurrency gain still stalled — see `docs/FUSED_MULTI_SEQ.md`).
     pub fn run_batch(
         &self,
         executor: &dyn ModelExecutor,

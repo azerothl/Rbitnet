@@ -1,11 +1,14 @@
-//! SlimAttention-style **1D tiled** CPU attention prototype (#39).
+//! SlimAttention-style **1D tiled** CPU attention (#39, wired in #24).
 //!
 //! FlashAttention 2D tiling is a poor CPU fit; SlimAttention ([2407.07304](https://arxiv.org/abs/2407.07304))
-//! tiles along the sequence axis for cache locality. This module is a **standalone numeric spike**:
-//! compare tiled online-softmax attention vs a contiguous baseline on toy tensors.
+//! tiles along the sequence axis for cache locality. Numeric helpers compare tiled online-softmax
+//! attention vs a contiguous baseline on toy tensors (drift gate in unit tests).
 //!
-//! Opt-in for future decode wiring: `RBITNET_SLIM_ATTENTION=1` (see [`slim_attention_enabled`]).
-//! Default path remains the contiguous baseline in [`super::model`].
+//! **Decode wiring:** when `RBITNET_SLIM_ATTENTION=1`, Llama CPU/hybrid decode in
+//! `model.rs` materializes the sliding-window KV slice and calls [`attention_tiled`].
+//! Default path remains contiguous scores→softmax→V (optionally BLAS scores via `RBITNET_BLAS`).
+//!
+//! Optional tile width: `RBITNET_SLIM_ATTENTION_TILE` (default [`DEFAULT_TILE_TOKENS`]).
 
 /// Default tile length along the KV sequence axis (tokens).
 pub const DEFAULT_TILE_TOKENS: usize = 16;
@@ -16,6 +19,15 @@ pub fn slim_attention_enabled() -> bool {
         std::env::var("RBITNET_SLIM_ATTENTION").as_deref(),
         Ok("1") | Ok("true") | Ok("yes") | Ok("on")
     )
+}
+
+/// Tile length from `RBITNET_SLIM_ATTENTION_TILE`, or [`DEFAULT_TILE_TOKENS`].
+pub fn tile_tokens_from_env() -> usize {
+    std::env::var("RBITNET_SLIM_ATTENTION_TILE")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(DEFAULT_TILE_TOKENS)
 }
 
 /// Contiguous baseline: scores = scale * Q·Kᵀ, softmax, then weighted V sum.
@@ -230,5 +242,44 @@ mod tests {
     fn slim_attention_flag_defaults_off() {
         // Unset in unit tests unless the environment injects it; only assert type shape.
         let _ = slim_attention_enabled();
+    }
+
+    #[test]
+    fn tile_tokens_from_env_defaults() {
+        // Do not assert against a polluted env; just ensure positive default when unset-like.
+        let t = tile_tokens_from_env();
+        assert!(t > 0);
+    }
+
+    #[test]
+    fn sliding_window_subsequence_matches_masked_baseline() {
+        // Mirrors decode wiring: attend only to positions [sw_start, seq).
+        let seq = 40usize;
+        let sw_start = 12usize;
+        let head_dim = 24usize;
+        let (q, k_full, v_full) = toy_kv(seq, head_dim);
+        let scale = 1.0 / (head_dim as f32).sqrt();
+        let sub = seq - sw_start;
+        let k = &k_full[sw_start * head_dim..];
+        let v = &v_full[sw_start * head_dim..];
+
+        let mut base = vec![0.0f32; head_dim];
+        let mut tiled = vec![0.0f32; head_dim];
+        attention_baseline(&q, k, v, sub, head_dim, scale, &mut base);
+        attention_tiled(
+            &q,
+            k,
+            v,
+            sub,
+            head_dim,
+            scale,
+            DEFAULT_TILE_TOKENS,
+            &mut tiled,
+        );
+        let drift = max_rel_drift(&base, &tiled);
+        assert!(
+            drift < 1e-4,
+            "sliding-window subsequence drift {drift} exceeds 1e-4"
+        );
     }
 }
