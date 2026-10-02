@@ -1,0 +1,7 @@
+{
+  "format": "rbitnet-golden-v1",
+  "architecture": "mixtral",
+  "prompt": "Hello",
+  "expected_greedy_first_token": 1,
+  "notes": "Synthetic 1-layer F32 Mixtral MoE fixture (4 experts, top-2) built in mixtral_moe_golden_ci.rs / ci_fixture. Update expected id if fixture weights change."
+}

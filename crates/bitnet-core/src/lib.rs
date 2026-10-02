@@ -39,6 +39,7 @@ pub mod experimental_flashinfer;
 pub mod llama;
 pub mod loaders;
 pub mod memory_budget;
+pub mod mixtral;
 pub mod model;
 pub mod model_manager;
 pub mod paged_kv;

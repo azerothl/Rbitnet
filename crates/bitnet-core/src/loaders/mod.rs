@@ -7,6 +7,7 @@
 mod arch_key;
 mod bitnet;
 mod llama;
+mod mixtral;
 pub(crate) mod prompt_tokenizer;
 mod qwen3;
 mod qwen35;

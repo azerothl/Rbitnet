@@ -12,6 +12,7 @@ regressions are caught in CI or in a manual pre-release step.
 |------|-----------|------|-------------------|
 | Primary Llama smoke | `tinyllama-1.1b-chat-q4-k-m` | `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` | `TinyLlama/TinyLlama-1.1B-Chat-v1.0` (`tokenizer.json`) |
 | Qwen3 CI synthetic | (in-test fixture) | built by `qwen3_dense_golden_ci` | WordLevel `tokenizer.json` in-test |
+| Mixtral MoE CI synthetic | (in-test fixture) | built by `mixtral::ci_fixture` / `mixtral_moe_golden_ci` | WordLevel `tokenizer.json` in-test |
 | Qwen3 Hub (optional) | small dense Q4_K_M | e.g. Qwen3-0.6B/1.7B/4B | matching HF `tokenizer.json` |
 
 Use the **same** GGUF file, tokenizer, and prompt string for both the reference export and Rbitnet.
@@ -64,7 +65,7 @@ Record the **integer token id** you obtain.
 ```
 
 Replace `12345` with the id from llama.cpp / Python. Optional `architecture` selects the
-runtime (`llama` default, or `qwen3`); `RBITNET_ARCHITECTURE` overrides when set.
+runtime (`llama` default, `qwen3`, or `mixtral`); `RBITNET_ARCHITECTURE` overrides when set.
 
 2. Run the optional integration test:
 
@@ -109,13 +110,20 @@ download).
 4. Default CI does **not** download Hub Qwen3 weights — keep Hub goldens optional like Llama.
    Workflow **Golden (optional)** accepts an optional `architecture` input.
 
-This is **not** a MoE/MLA golden: `qwen35moe`, `deepseek2` MoE, and MLA graphs remain refused or
-CUDA-experimental; see [LIMITATIONS.md](LIMITATIONS.md).
+### Mixtral MoE (#25)
+
+`cargo test -p bitnet-core --test mixtral_moe_golden_ci` builds a tiny Mixtral MoE GGUF
+(4 experts, top-2) and checks `tests/data/golden/mixtral-moe-synthetic.golden.json`.
+HTTP e2e: `cargo test -p bitnet-server --test mixtral_moe_v1` hits `/v1/chat/completions`.
+
+DeepSeek MLA / non-Mixtral MoE graphs remain refused or CUDA-experimental; see
+[LIMITATIONS.md](LIMITATIONS.md).
 
 ## Current state in Rbitnet
 
 - Kernel-level matvec tests run in default CI (`tests/golden_kernels.rs`).
 - **Qwen3 dense synthetic** greedy golden runs in default CI (`qwen3_dense_golden_ci`).
+- **Mixtral MoE synthetic** greedy golden + `/v1` e2e run in default CI.
 - Llama / Hub Qwen3 **end-to-end** goldens are **optional** (env vars above) so CI stays lightweight.
 - GitHub Actions: workflow **Golden (optional)** — `.github/workflows/golden-optional.yml` — manual
   `workflow_dispatch` to run the same test on a runner where you attach a cached GGUF + JSON.

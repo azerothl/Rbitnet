@@ -32,9 +32,10 @@ This page sets expectations for performance, formats, and architectures. For com
 |---------------|--------------|-------|
 | Llama / Mistral-shaped (`llama`, `mistral`, …) | **Supported** | Built-in Llama loader + runtime. |
 | Dense **Qwen3** (`qwen3`) | **Supported** (CPU-first) | Native dense path; **synthetic greedy golden in default CI** + optional Hub golden ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
+| **Mixtral MoE** (`mixtral`) | **Supported** (CPU-first spike) | Native top-k expert router; synthetic golden + `/v1` e2e in default CI ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
 | Experimental Qwen3.5 MoE (`qwen35moe`) | **Partial** | Requires `RBITNET_BACKEND=cuda` or `hybrid`; not a general MoE solution. |
 | Roadmap MoE tags (`glm4moe`, `gptoss`, `deepseek2`) | **Llama-shaped only** | Run only when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds; else **startup refuse** via [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs). |
-| Pure MoE expert routing / DeepSeek **MLA** | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE is out of spike scope (#25). |
+| DeepSeek **MLA** / non-Mixtral MoE graphs | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE/MLA remains follow-up work. |
 
 When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.
 
