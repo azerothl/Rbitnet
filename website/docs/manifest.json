@@ -15,6 +15,7 @@
       "items": [
         { "slug": "status-and-roadmap", "title": "Status & roadmap", "blurb": "What ships today, gaps, research-backed priorities." },
         { "slug": "native-first", "title": "Native-first", "blurb": "No external inference engine at runtime." },
+        { "slug": "training-and-compatibility", "title": "Training and export", "blurb": "Train upstream, export GGUF, serve with Rbitnet." },
         { "slug": "bitnet-native", "title": "BitNet native", "blurb": "Native BitNet GGUF path and recipes." },
         { "slug": "limitations", "title": "Limitations", "blurb": "Honest constraints on perf and formats." },
         { "slug": "changelog", "title": "Changelog", "blurb": "Release-facing changes." }

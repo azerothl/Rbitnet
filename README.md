@@ -6,6 +6,18 @@
 
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
+## Where Rbitnet fits
+
+Train with [Unsloth](https://unsloth.ai/docs), [TRL](https://huggingface.co/docs/trl/sft_trainer), or Hugging Face, export a supported GGUF, then serve it with Rbitnet. The native Rust engine loads Llama, BitNet, dense Qwen3 and Mixtral exports within the [documented architecture limits](docs/LIMITATIONS.md). Serving needs no Python, PyTorch or llama.cpp inference engine.
+
+| Stage | Owner |
+|-------|-------|
+| Fine-tuning and GGUF export | Unsloth / TRL / Hugging Face and upstream converters |
+| Local GGUF inference and OpenAI HTTP API | Rbitnet (`akasha-infer`), used by Akasha's `BitNetProvider` |
+| Assistant UI and tools; optional OS daemon | Akasha; akasha-os |
+
+Unsloth Studio has its own training and serving workflow. Rbitnet provides the GGUF runtime for Akasha; it does not offer a Studio, RAG or MCP platform. Follow the [recommended export path](docs/TRAINING_AND_COMPATIBILITY.md) and the [native-first policy](docs/NATIVE_FIRST.md). Export walkthrough work is tracked in [#79](https://github.com/azerothl/Rbitnet/issues/79).
+
 **Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract. Optional in-process embed: [docs/ENGINE_API.md](docs/ENGINE_API.md) (`bitnet-core` semver surface; HTTP remains the Akasha default).
 
 **akasha-infer = Rbitnet:** the local GGUF engine for Akasha (`BitNetProvider`). Akasha is the assistant; **akasha-os** is the optional caps/daemon layer; this repo is the Rust inference satellite — not a second product. Contract checklist + smoke: [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) · [scripts/smoke_openai.sh](scripts/smoke_openai.sh).

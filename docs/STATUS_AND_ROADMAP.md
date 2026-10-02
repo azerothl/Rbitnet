@@ -2,6 +2,8 @@
 
 This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks **what is implemented**, **what is partial or missing**, and **suggested next steps**. It should be updated when major features land or scope changes.
 
+Rbitnet serves supported GGUF exports with its native Rust engine. Train with Unsloth, TRL or Hugging Face, then export weights and the matching tokenizer; Python/Torch and upstream converters stay outside the serving process. Unsloth Studio has its own application workflow, while Rbitnet supplies [Akasha's `BitNetProvider`](AKASHA_INFER.md). See the [recommended path](TRAINING_AND_COMPATIBILITY.md), [native-first policy](NATIVE_FIRST.md) and export walkthrough [#79](https://github.com/azerothl/Rbitnet/issues/79).
+
 ---
 
 ## Summary
