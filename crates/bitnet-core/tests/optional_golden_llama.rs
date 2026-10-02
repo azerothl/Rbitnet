@@ -1,11 +1,16 @@
-//! Optional Llama golden: compares greedy first token id to a reference JSON file.
+//! Optional greedy-first-token golden for Llama **or** dense Qwen3.
 //!
 //! **Environment**
 //! - `RBITNET_GOLDEN_JSON` — path to a spec file (see `tests/data/golden/README.md`).
 //! - `RBITNET_TEST_GGUF` — path to the same GGUF used to produce the reference.
 //! - `RBITNET_TOKENIZER` — `tokenizer.json` or `tokenizer.model` used with that GGUF.
 //!
-//! If any variable is unset, the test is skipped (CI default).
+//! Optional JSON field `architecture` (`llama` default, or `qwen3`) selects the runtime.
+//! Override with `RBITNET_ARCHITECTURE` when set.
+//!
+//! If any required variable is unset, the test is skipped (CI default). Hub Qwen3
+//! goldens stay optional; default CI covers a synthetic Qwen3 golden in
+//! `qwen3_dense_golden_ci.rs` (Refs #25).
 
 use std::fs;
 use std::path::Path;
@@ -14,6 +19,7 @@ use std::sync::Arc;
 use bitnet_core::backend::BackendKind;
 use bitnet_core::gguf::GgufArchive;
 use bitnet_core::llama::LlamaRuntime;
+use bitnet_core::qwen3::Qwen3Runtime;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -21,8 +27,25 @@ struct GoldenSpecV1 {
     /// Must be `rbitnet-golden-v1` when set.
     #[serde(default)]
     format: Option<String>,
+    /// Runtime family: `llama` (default) or `qwen3`.
+    #[serde(default)]
+    architecture: Option<String>,
     prompt: String,
     expected_greedy_first_token: u32,
+}
+
+fn resolve_architecture(spec: &GoldenSpecV1) -> String {
+    if let Ok(env) = std::env::var("RBITNET_ARCHITECTURE") {
+        let t = env.trim();
+        if !t.is_empty() {
+            return t.to_ascii_lowercase();
+        }
+    }
+    spec.architecture
+        .as_deref()
+        .unwrap_or("llama")
+        .trim()
+        .to_ascii_lowercase()
 }
 
 #[test]
@@ -54,12 +77,23 @@ fn optional_golden_greedy_first_token_matches() {
     }
 
     let archive = Arc::new(GgufArchive::mmap_path(gguf).expect("mmap gguf"));
-    let mut rt =
-        LlamaRuntime::load(archive, tok, BackendKind::from_env()).expect("LlamaRuntime::load");
-
-    let got = rt
-        .greedy_next_token_id_after_prompt(&spec.prompt)
-        .expect("greedy next token");
+    let arch = resolve_architecture(&spec);
+    let got = match arch.as_str() {
+        "qwen3" => {
+            let mut rt = Qwen3Runtime::load(Arc::clone(&archive), tok).expect("Qwen3Runtime::load");
+            rt.greedy_next_token_id_after_prompt(&spec.prompt)
+                .expect("qwen3 greedy next token")
+        }
+        "llama" | "mistral" | "qwen2" => {
+            let mut rt =
+                LlamaRuntime::load(archive, tok, BackendKind::from_env()).expect("LlamaRuntime::load");
+            rt.greedy_next_token_id_after_prompt(&spec.prompt)
+                .expect("llama greedy next token")
+        }
+        other => panic!(
+            "unsupported golden architecture `{other}` (supported: llama, mistral, qwen2, qwen3)"
+        ),
+    };
     assert_eq!(
         got,
         spec.expected_greedy_first_token,

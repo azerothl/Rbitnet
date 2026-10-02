@@ -13,7 +13,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | CI (build, test, clippy, audit)                                | **Done**                                                      |
 | Release binaries (GitHub Actions on tag `v`*)                  | **Done** — see `[RELEASE.md](RELEASE.md)`                     |
 | Core inference (GGUF, Llama forward, tokenizer, stub/toy)      | **Done** — Llama **`auto`** mmap-quant GEMV when supported (`RBITNET_LLAMA_WEIGHT_MODE`); legacy **`dense`** full `f32` load; optional **sliding-window** + **Q/K RMSNorm** when tensors/metadata are present |
-| Llama **golden** parity (llama.cpp reference)                 | **Optional** — `docs/GOLDEN_TESTS.md`, `cargo test -p bitnet-core optional_golden_*`, workflow `.github/workflows/golden-optional.yml` |
+| Llama / Qwen3 **golden** parity                               | **Partial** — Qwen3 synthetic greedy in default CI; Hub Llama/Qwen3 optional via `docs/GOLDEN_TESTS.md` + `.github/workflows/golden-optional.yml` |
 | Optional train/export docs + Python recipe + `rbitnet train`     | **Done** — see [`training/README.md`](../training/README.md), [`TRAINING_AND_COMPATIBILITY.md`](TRAINING_AND_COMPATIBILITY.md) |
 | Performance baselines (published numbers)                      | **Frozen procedure + real TinyLlama CPU row** — see `[BENCHMARKS.md](BENCHMARKS.md)`, `[BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md)` (2026-09-30); llama.cpp side-by-side still optional when `llama-bench` present |
 | **Perf vs llama.cpp (CPU)**                                    | **Measured gap** — compare with `llama-bench` vs `scripts/compare_llamacpp_rbitnet.*`; parity is **not** claimed until frozen rows show it (optional BLAS / future ggml bridge narrow the gap) |
@@ -98,7 +98,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | ---------------------------------------------------------- | ----------------------------------------------------------------- |
 | GGML types documented                                      | `[BITNET_SPEC.md](BITNET_SPEC.md)` + `types.rs`                   |
 | Tensor name aliases                                        | **Done** — `tensor_first_of` (e.g. `lm_head`, `attn_out`)         |
-| Regression / golden tests                                  | Kernel goldens in CI; optional Llama greedy-token golden via `RBITNET_GOLDEN_JSON` + `docs/GOLDEN_TESTS.md`; optional GGUF smoke via `RBITNET_TEST_GGUF` |
+| Regression / golden tests                                  | Kernel goldens + Qwen3 synthetic greedy in default CI; optional Llama/Hub Qwen3 via `RBITNET_GOLDEN_JSON` + `docs/GOLDEN_TESTS.md`; optional GGUF smoke via `RBITNET_TEST_GGUF` |
 | Second exporter (e.g. llama.cpp vs BitNet) automated tests | **Partial** — optional `RBITNET_TEST_GGUF` mmap + optional engine load when tokenizer beside GGUF; **greedy first-token** optional test when golden JSON is provided |
 | Release process + semver                                   | `[RELEASE.md](RELEASE.md)`                                        |
 | Prebuilt binaries on tag                                   | **Done** — `.github/workflows/release.yml`                        |

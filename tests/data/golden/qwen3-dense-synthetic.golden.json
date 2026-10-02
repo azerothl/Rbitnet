@@ -1,0 +1,7 @@
+{
+  "format": "rbitnet-golden-v1",
+  "architecture": "qwen3",
+  "prompt": "Hello",
+  "expected_greedy_first_token": 1,
+  "notes": "Synthetic 1-layer F32 Qwen3 fixture built in qwen3_dense_golden_ci.rs (WordLevel tokenizer maps Hello→1). Update this id if fixture weights change."
+}

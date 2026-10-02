@@ -6,7 +6,7 @@ Reference for Z.ai **GLM**, OpenAI **gpt-oss**, and **DeepSeek** support. Source
 
 | Vendor / line | Typical `general.architecture` (GGUF) | Rbitnet status |
 |----------------|----------------------------------------|----------------|
-| Dense Qwen3 | `qwen3` | Native dense CPU path ([`qwen3`](../crates/bitnet-core/src/qwen3)); golden procedure in [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
+| Dense Qwen3 | `qwen3` | Native dense CPU path ([`qwen3`](../crates/bitnet-core/src/qwen3)); **default-CI synthetic golden** + optional Hub path in [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
 | Qwen3.5 MoE (experimental) | `qwen35moe` | CUDA/hybrid only; not a substitute for DeepSeek MoE/MLA (#25). |
 | GLM-4.5 / 4.7 / 5 (MoE exports) | `glm4moe` (verify per release on HF) | [`glm4_moe`](../crates/bitnet-core/src/glm4_moe): **Llama-compatible tensors only** → Llama runtime; else **clear refuse** ([`roadmap_unsupported`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs)). |
 | OpenAI gpt-oss | `gptoss` | [`gpt_oss`](../crates/bitnet-core/src/gpt_oss): same; **MXFP4** (GGML 39) in [`dequant`](../crates/bitnet-core/src/ggml/dequant.rs). |

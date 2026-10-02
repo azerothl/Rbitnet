@@ -394,6 +394,46 @@ impl Qwen3Runtime {
         let xn = rmsnorm(&x, &out_norm_w, cfg.norm_eps)?;
         matvec_out(archive, &self.out_head, &xn, cfg.n_embd, cfg.n_vocab)
     }
+
+    /// After a full prompt, return the **greedy** next token id (temperature 0, no penalties).
+    /// Used by golden / doctor checks; not a full chat template.
+    pub fn greedy_next_token_id_after_prompt(&mut self, prompt: &str) -> Result<u32> {
+        for row in &mut self.k_cache {
+            row.fill(0.0);
+        }
+        for row in &mut self.v_cache {
+            row.fill(0.0);
+        }
+        let prompt_ids = self.tokenizer.encode_ids(prompt, true)?;
+        if prompt_ids.is_empty() {
+            return Err(BitNetError::Inference(
+                "greedy_next_token: empty prompt encoding".into(),
+            ));
+        }
+        let mut logits = Vec::new();
+        let chunk_sz = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(128);
+        for (chunk_idx, chunk) in prompt_ids.chunks(chunk_sz).enumerate() {
+            logits = self.prefill_chunk(chunk, chunk_idx * chunk_sz)?;
+        }
+        let mut rng = seeded_rng(Some(0));
+        Ok(sample_token(
+            &logits,
+            &SamplingOptions {
+                temperature: 0.0,
+                top_p: None,
+                seed: Some(0),
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+                structured_json: false,
+            },
+            &[],
+            &mut rng,
+        ))
+    }
 }
 
 fn seeded_rng(seed: Option<u64>) -> StdRng {
