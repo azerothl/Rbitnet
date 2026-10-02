@@ -219,7 +219,7 @@ async fn add_request_id_if_missing(mut req: Request<Body>, next: Next) -> Respon
     next.run(req).await
 }
 
-fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Box<Response>> {
+pub(crate) fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), Box<Response>> {
     let key = match &state.config.api_key {
         None => return Ok(()),
         Some(k) => k,
