@@ -19,7 +19,7 @@ Unsloth Studio provides a separate training and serving application. Rbitnet's s
 | Use Torch for fine-tuning and llama.cpp tools for conversion | Keep those dependencies outside the normal inference process |
 | Use Studio or assistant applications for their UI and tools | Keep `bitnet-server` focused on the HTTP inference contract |
 
-See [NATIVE_FIRST.md](NATIVE_FIRST.md) for runtime boundaries and [#79](https://github.com/azerothl/Rbitnet/issues/79) for the reproducible export walkthrough.
+Follow [Unsloth / TRL to Rbitnet](UNSLOTH_TO_RBITNET.md) for export commands, a CPU serve recipe, checksum checks and a real `/v1` smoke. See [NATIVE_FIRST.md](NATIVE_FIRST.md) for runtime boundaries.
 
 ## Recommended fine-tuning path (before GGUF)
 
@@ -57,7 +57,7 @@ A model is compatible if, after export, it satisfies all of the following:
 2. **Architecture metadata:** `llama.*` keys Rbitnet reads for shapes (for example `llama.embedding_length`, `llama.block_count`, `llama.attention.head_count`, `llama.feed_forward_length`, `llama.rope.freq_base`, …). See [BITNET_SPEC.md](BITNET_SPEC.md).
 3. **Tensor naming:** Llama-style names such as `token_embd.weight`, `blk.{i}.attn_norm.weight`, `blk.{i}.attn_q.weight`, `blk.{i}.attn_k.weight`, `blk.{i}.attn_v.weight`, `blk.{i}.attn_output.weight`, `blk.{i}.ffn_norm.weight`, `blk.{i}.ffn_gate.weight`, `blk.{i}.ffn_up.weight`, `blk.{i}.ffn_down.weight`, `output_norm.weight`, `output.weight`. If your export uses different names, you must align them with llama.cpp conventions or extend the loader.
 4. **Tokenizer:** `tokenizer.json` (or compatible `tokenizer.model`) matching the vocabulary and special tokens of the trained model. Rbitnet does not ship tokenizers inside the GGUF; it loads them from disk (see [USAGE.md](USAGE.md)).
-5. **Quantization:** Weights must use GGML types that Rbitnet can **dequantize** to `f32` for the current implementation. Exotic IQ layouts may fail until implemented; re-quantize to a supported type if needed.
+5. **Quantization:** Weights must use GGML types that Rbitnet can dequantize. The [walkthrough's type table](UNSLOTH_TO_RBITNET.md) lists supported exports and explicit exclusions; the type-size parser recognizes more layouts than the decoder implements. Re-quantize unsupported types upstream.
 
 **Roadmap GGUF (`glm4moe`, `gptoss`, `deepseek2`):** only loads when tensors match the **Llama** loader; pure MoE/MLA exports error at load time. CUDA + tokenizer must succeed; see [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md) and [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md).
 

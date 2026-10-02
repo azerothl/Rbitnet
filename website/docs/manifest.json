@@ -7,6 +7,7 @@
       "items": [
         { "slug": "get-started", "title": "Get started", "blurb": "Install, download a model, serve in five minutes." },
         { "slug": "usage", "title": "Usage", "blurb": "Models, tokenizer, env vars, chat, curl examples." },
+        { "slug": "unsloth-to-rbitnet", "title": "Unsloth / TRL to Rbitnet", "blurb": "Export, check a GGUF, serve and record an HTTP smoke." },
         { "slug": "integrations", "title": "Integrations", "blurb": "OpenAI clients, LiteLLM, Akasha BitNetProvider." }
       ]
     },

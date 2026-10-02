@@ -33,3 +33,5 @@ Keep `recommended_beginner` small and boring. Prefer one or two CPU-friendly mod
 - `verified: true`: the exact repo/file combination has been run through Rbitnet with a tokenizer and produced a successful `/v1/chat/completions` response, with the evidence linked in `notes` or project docs.
 
 When in doubt, leave `verified` false and explain the known evidence in `notes`.
+
+The [Unsloth / TRL walkthrough](UNSLOTH_TO_RBITNET.md) includes a pinned Llama-3.2-1B Q4_K_M pack and a serve recipe. Its Windows HTTP smoke loaded the GGUF and returned text, but the generated answer failed manual review. That catalog entry remains unverified; a successful HTTP response alone does not justify promoting a model with known incorrect output.

@@ -6,7 +6,7 @@ Rbitnet ne doit pas dependre fonctionnellement d'un moteur d'inference externe p
 
 [Unsloth](https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf), [TRL](https://huggingface.co/docs/trl/sft_trainer) et Hugging Face peuvent produire les poids et le tokenizer a exporter en GGUF. Python, Torch et les convertisseurs llama.cpp restent dans cet environnement d'entrainement/export. Rbitnet charge ensuite les artefacts compatibles avec son moteur Rust, sans ces outils au runtime.
 
-Unsloth Studio possede son propre parcours d'entrainement et de serving. Le role de Rbitnet dans [Akasha / akasha-os / akasha-infer](AKASHA_INFER.md) reste l'inference GGUF via `BitNetProvider`; les outils RAG, MCP et Desktop appartiennent aux applications en amont. Voir le [parcours recommande](TRAINING_AND_COMPATIBILITY.md), suivi par [#79](https://github.com/azerothl/Rbitnet/issues/79).
+Unsloth Studio possede son propre parcours d'entrainement et de serving. Le role de Rbitnet dans [Akasha / akasha-os / akasha-infer](AKASHA_INFER.md) reste l'inference GGUF via `BitNetProvider`; les outils RAG, MCP et Desktop appartiennent aux applications en amont. Voir le [parcours executable Unsloth / TRL vers Rbitnet](UNSLOTH_TO_RBITNET.md) et les [regles de compatibilite](TRAINING_AND_COMPATIBILITY.md).
 
 ## Audit des backends externes
 

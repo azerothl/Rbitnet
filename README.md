@@ -16,7 +16,7 @@ Train with [Unsloth](https://unsloth.ai/docs), [TRL](https://huggingface.co/docs
 | Local GGUF inference and OpenAI HTTP API | Rbitnet (`akasha-infer`), used by Akasha's `BitNetProvider` |
 | Assistant UI and tools; optional OS daemon | Akasha; akasha-os |
 
-Unsloth Studio has its own training and serving workflow. Rbitnet provides the GGUF runtime for Akasha; it does not offer a Studio, RAG or MCP platform. Follow the [recommended export path](docs/TRAINING_AND_COMPATIBILITY.md) and the [native-first policy](docs/NATIVE_FIRST.md). Export walkthrough work is tracked in [#79](https://github.com/azerothl/Rbitnet/issues/79).
+Unsloth Studio has its own training and serving workflow. Rbitnet provides the GGUF runtime for Akasha; it does not offer a Studio, RAG or MCP platform. Follow the [Unsloth / TRL to Rbitnet walkthrough](docs/UNSLOTH_TO_RBITNET.md), [compatibility rules](docs/TRAINING_AND_COMPATIBILITY.md) and [native-first policy](docs/NATIVE_FIRST.md).
 
 **Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract. Optional in-process embed: [docs/ENGINE_API.md](docs/ENGINE_API.md) (`bitnet-core` semver surface; HTTP remains the Akasha default).
 

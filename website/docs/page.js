@@ -4,6 +4,7 @@ const SITE_DOCS = new Set([
   "status-and-roadmap",
   "native-first",
   "training-and-compatibility",
+  "unsloth-to-rbitnet",
   "integrations",
   "env-reference",
   "limitations",
