@@ -28,7 +28,34 @@ curl -fsS "$BASE/v1/chat/completions" \
   | head -c 600
 echo
 
+echo "=== POST /v1/chat/completions (SSE short) ==="
+sse_out="$(mktemp)"
+curl -fsS -N "$BASE/v1/chat/completions" \
+  -H 'content-type: application/json' \
+  -H 'accept: text/event-stream' \
+  -d '{"model":"rbitnet-stub","messages":[{"role":"user","content":"hi"}],"max_tokens":4,"temperature":0,"stream":true}' \
+  >"$sse_out"
+if ! grep -q 'data:' "$sse_out"; then
+  echo "smoke_openai: SSE response missing data: lines" >&2
+  head -c 400 "$sse_out" >&2 || true
+  rm -f "$sse_out"
+  exit 1
+fi
+if ! grep -q '\[DONE\]' "$sse_out"; then
+  echo "smoke_openai: SSE response missing [DONE]" >&2
+  head -c 400 "$sse_out" >&2 || true
+  rm -f "$sse_out"
+  exit 1
+fi
+head -c 400 "$sse_out"
+echo
+rm -f "$sse_out"
+
+echo "=== GET /ui ==="
+curl -fsS "$BASE/ui" | head -c 200
+echo
+
 echo "=== GET /metrics (Akasha series sample) ==="
-curl -fsS "$BASE/metrics" | grep -E 'rbitnet_(chat_requests_total|inference_ttft_ms_|completion_tokens_total|core_prefix_cache_hits_total)' | head -20
+curl -fsS "$BASE/metrics" | grep -E 'rbitnet_(chat_requests_total|inference_ttft_ms_|completion_tokens_total|core_prefix_cache_hits_total|core_prefix_hit|core_draft_accept)' | head -20
 echo
 echo "smoke_openai: OK"

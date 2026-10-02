@@ -8,7 +8,26 @@ Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP se
 
 **Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract.
 
+**akasha-infer = Rbitnet:** the local GGUF engine for Akasha (`BitNetProvider`). Akasha is the assistant; **akasha-os** is the optional caps/daemon layer; this repo is the Rust inference satellite — not a second product. Contract checklist + smoke: [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) · [scripts/smoke_openai.sh](scripts/smoke_openai.sh).
+
 **Brand & site:** [docs/BRAND.md](docs/BRAND.md) · presentation site in [`website/`](website/) (GitHub Pages; English default, docs on-site under `website/docs/`).
+
+### Serve profiles (`rbitnet tune`)
+
+| Profile | Intent | Key flags |
+|---------|--------|-----------|
+| `interactive` | Low-latency chat (≥2 sessions) | `PREFIX_KV=1`, CB off, CPU |
+| `throughput` (`batch`) | Concurrent packing | CB on, `KV_POOL=1`, `KV_QUANT=q8` |
+| `bitnet-cpu` | Akasha BitNetProvider CPU | `ARCHITECTURE=bitnet`, prefix KV, no CUDA graph |
+| `battery` | Minimal power | concurrency 1, heavy paths off |
+| `latency` | Low latency + CUDA | prefix KV, `CUDA_GRAPH=1` |
+
+```bash
+rbitnet tune interactive          # set env in this process
+rbitnet tune throughput --export  # print export lines for the shell
+```
+
+Details: [docs/USAGE.md](docs/USAGE.md#serve-profiles-rbitnet-tune). BitNet recipe notes point at `bitnet-cpu`.
 
 ## Do I need Python?
 

@@ -19,6 +19,33 @@ Akasha already documents a **BitNet / Rbitnet** provider block in [`spec/llm_rou
 
 **Tested profiles:** treat bundles from **`rbitnet models install --list`** / **`data/compatible_models.json`** as the supported matrix; Hub `search` hits remain best-effort until promoted to the curated list.
 
+## Serve profiles (`rbitnet tune`)
+
+Opaque env clusters (`PREFIX_KV`, `CONTINUOUS_BATCHING`, `KV_QUANT`, …) are packaged as named profiles. Apply in the current process, or print shell exports:
+
+```bash
+rbitnet tune interactive
+rbitnet tune throughput --export
+rbitnet tune bitnet-cpu --export
+```
+
+| Profile | Aliases | Purpose | Notable env |
+|---------|---------|---------|-------------|
+| `interactive` | `chat` | Low-latency interactive; prefix reuse on | `RBITNET_PREFIX_KV=1`, `RBITNET_CONTINUOUS_BATCHING=0`, `RBITNET_MAX_CONCURRENT=2` |
+| `throughput` | `batch`, `server` | Higher concurrency / Sarathi CB | `CONTINUOUS_BATCHING=1`, `KV_POOL=1`, `KV_QUANT=q8` |
+| `bitnet-cpu` | `bitnet` | Microsoft BitNet / Akasha BitNetProvider CPU | `ARCHITECTURE=bitnet`, `BACKEND=cpu`, prefix KV, CUDA graph off |
+| `battery` | `power`, `eco` | Minimal concurrent load | concurrency 1, prefix/CB/pool off |
+| `latency` | `fast` | Low latency with CUDA graph | `BACKEND=cuda`, `CUDA_GRAPH=1` |
+
+Recipes such as `recipes/bitnet-b158.recipe.json` duplicate the `bitnet-cpu` / interactive-ish env set for one-shot `rbitnet recipe …`; prefer `rbitnet tune bitnet-cpu` when you only need the flags.
+
+OpenAI / Akasha smoke (stub, no GGUF):
+
+```bash
+RBITNET_STUB=1 cargo run -p bitnet-server &
+./scripts/smoke_openai.sh
+```
+
 ## Do you need Python?
 
 **No — not for running Rbitnet.** Inference is implemented in **Rust** (`bitnet-core`): GGUF is memory-mapped, weights are dequantized in-process, and text is generated via the [`Engine`](../crates/bitnet-core/src/inference.rs) or the HTTP server.

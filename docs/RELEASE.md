@@ -19,8 +19,10 @@ Requirements: `Cargo.lock` must be committed so `--locked` succeeds.
 1. Update [CHANGELOG.md](../CHANGELOG.md) and GitHub release notes: user-visible fixes, new env vars, breaking HTTP changes.
 2. Bump `version` in `Cargo.toml` (semver).
 3. Commit and tag: `git tag v0.x.y && git push origin v0.x.y` (or create the tag from the GitHub UI). This triggers the release workflow and attaches the binaries.
-4. CI (see `.github/workflows/ci.yml`) should be green on the release branch before tagging.
-5. **Benchmarks checklist (issue #23):** before calling a release “measured”, append at least one **real GGUF** row (not stub) to [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) for the frozen TinyLlama Q4_K_M reference (or document why skipped). Prefer also running `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. Update [MODEL_MATRIX.md](MODEL_MATRIX.md) RSS/tok/s cells to match. Stub-only rows must stay labeled as API overhead.
+4. CI (see `.github/workflows/ci.yml`) should be green on the release branch before tagging — including the **`smoke-openai`** job (Akasha OpenAI contract via stub).
+5. **Akasha contract checklist** (see [AKASHA_INFER.md](AKASHA_INFER.md)): SSE chat, `/v1/models`, frozen [AKASHA_METRICS.md](AKASHA_METRICS.md) series, recipe `bitnet-b158`, and `scripts/smoke_openai.sh` documented for operators.
+6. **Benchmarks checklist (issue #23):** before calling a release “measured”, append at least one **real GGUF** row (not stub) to [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) for the frozen TinyLlama Q4_K_M reference (or document why skipped). Prefer also running `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. Update [MODEL_MATRIX.md](MODEL_MATRIX.md) RSS/tok/s cells to match. Stub-only rows must stay labeled as API overhead.
+7. Release archives are the unified **server+CLI** artefacts (`rbitnet` + `rbitnet-server` in one zip/tarball). Homebrew / WinGet formulas under `packaging/` remain **experimental** until real release SHA-256 values replace the placeholders (see [RELEASE_PACKAGING.md](RELEASE_PACKAGING.md)).
 
 ## Semver guidance
 

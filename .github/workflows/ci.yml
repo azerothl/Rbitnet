@@ -40,3 +40,41 @@ jobs:
         uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Akasha contract smoke: stub OpenAI surface (health, models, chat JSON+SSE, metrics, /ui).
+  # Does not require a GGUF; pairs with openai_compat.rs unit/integration tests.
+  smoke-openai:
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build bitnet-server
+        run: cargo build -p bitnet-server
+
+      - name: Smoke OpenAI / Akasha contract (stub)
+        run: |
+          set -euo pipefail
+          RBITNET_STUB=1 RBITNET_BIND=127.0.0.1:18080 \
+            ./target/debug/rbitnet-server > /tmp/rbitnet-smoke.log 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:18080/health" >/dev/null; then
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "server exited early:" >&2
+              cat /tmp/rbitnet-smoke.log >&2 || true
+              exit 1
+            fi
+            sleep 0.5
+          done
+          RBITNET_BASE_URL=http://127.0.0.1:18080 ./scripts/smoke_openai.sh
