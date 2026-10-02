@@ -11,6 +11,7 @@ use crate::model::ModelExecutor;
 use super::arch_key::{resolve_architecture_key, resolve_architecture_key_for_load};
 use super::bitnet;
 use super::llama;
+use super::mixtral;
 use super::qwen3;
 use super::qwen35;
 
@@ -100,6 +101,16 @@ fn dispatch_gguf_executor_inner(
 
     if key == "qwen3" {
         return qwen3::build_qwen3_executor(
+            backend_kind,
+            gguf,
+            model_path,
+            isolated_from_env,
+            tokenizer_override,
+        );
+    }
+
+    if key == "mixtral" {
+        return mixtral::build_mixtral_executor(
             backend_kind,
             gguf,
             model_path,

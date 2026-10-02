@@ -10,7 +10,7 @@ mod attention;
 mod config;
 pub(crate) mod gdn;
 mod moe;
-mod qmatvec;
+pub(crate) mod qmatvec;
 mod recurrent;
 mod runtime;
 

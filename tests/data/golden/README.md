@@ -21,7 +21,7 @@ Qwen3 forwards against a reference (typically **llama.cpp** `llama-cli`), plus o
 }
 ```
 
-- **`architecture`** — optional; `llama` (default) or `qwen3`. Overridden by `RBITNET_ARCHITECTURE` when set.
+- **`architecture`** — optional; `llama` (default), `qwen3`, or `mixtral`. Overridden by `RBITNET_ARCHITECTURE` when set.
 - **`prompt`** — plain text passed to the tokenizer with the same special-token policy as Rbitnet’s default (`RBITNET_LLAMA_ENCODE_ADD_SPECIAL` unset ⇒ specials added for HF tokenizer).
 - **`expected_greedy_first_token`** — vocabulary id of the argmax after full prompt prefill (`temperature = 0`).
 

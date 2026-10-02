@@ -84,6 +84,13 @@ fn optional_golden_greedy_first_token_matches() {
             rt.greedy_next_token_id_after_prompt(&spec.prompt)
                 .expect("qwen3 greedy next token")
         }
+        "mixtral" => {
+            let mut rt =
+                bitnet_core::mixtral::MixtralRuntime::load(Arc::clone(&archive), tok)
+                    .expect("MixtralRuntime::load");
+            rt.greedy_next_token_id_after_prompt(&spec.prompt)
+                .expect("mixtral greedy next token")
+        }
         "llama" | "mistral" | "qwen2" => {
             let mut rt =
                 LlamaRuntime::load(archive, tok, BackendKind::from_env()).expect("LlamaRuntime::load");
@@ -91,7 +98,7 @@ fn optional_golden_greedy_first_token_matches() {
                 .expect("llama greedy next token")
         }
         other => panic!(
-            "unsupported golden architecture `{other}` (supported: llama, mistral, qwen2, qwen3)"
+            "unsupported golden architecture `{other}` (supported: llama, mistral, qwen2, qwen3, mixtral)"
         ),
     };
     assert_eq!(
