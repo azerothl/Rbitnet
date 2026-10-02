@@ -18,7 +18,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | **C — Cache semantics** | Dense/paged prefix KV (`RBITNET_PREFIX_KV`); radix LRU + LCP agent reuse; **`rbitnet_core_prefix_hit`** on `/metrics` | L7 sticky routing notes |
 | **C — Streaming** | Live SSE (`StreamEvent`, `complete_streaming`) | GGUF load tests under sustained concurrency |
 | **D — GPU decode** | `CudaDecodeGraph` metrics + capture hook; `RBITNET_KV_BACKEND=gpu` planning bit; cuBLASLt M=1 policy env | Full graph replay; fused norm+quant — **after** CPU benches; FA2/FA3 not default |
-| **E — Speculative / CPU attention / BitNet** | Speculative + **PLD/n-gram** (`RBITNET_DRAFT_PATH=ngram`); **KV Q8** compact pages; BitNet **I2_S/TL2** microbench; **SlimAttention 1D tile proto** (`RBITNET_SLIM_ATTENTION`, drift gate) | Wire tiled attention into decode; further training-free draft research; bitnet.cpp parity chase |
+| **E — Speculative / CPU attention / BitNet** | Speculative + **PLD/n-gram** (`RBITNET_DRAFT_PATH=ngram`); **KV Q8** compact pages; BitNet **I2_S/TL2** microbench; **SlimAttention 1D tile + decode opt-in** (`RBITNET_SLIM_ATTENTION`) | Further training-free draft research; bitnet.cpp parity chase |
 
 ## Phase A — KV and memory
 
@@ -48,7 +48,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 
 1. **Speculative MVP → production metrics:** verify/accept lossless frame [2211.17192](https://arxiv.org/abs/2211.17192); prefer **prompt-lookup / n-gram** drafts over a second GGUF on CPU.
 2. **Lookahead** [2402.02057](https://arxiv.org/abs/2402.02057): **wontfix for now** after PLD — decision and reopen criteria in [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
-3. **CPU attention:** SlimAttention-style 1D tiling + KV INT8 [2407.07304](https://arxiv.org/abs/2407.07304) — **proto shipped** (`llama::slim_attention`, tiled vs baseline drift gate; `RBITNET_SLIM_ATTENTION`); FA 2D-tiling remains a poor CPU fit / deferred.
+3. **CPU attention:** SlimAttention-style 1D tiling + KV INT8 [2407.07304](https://arxiv.org/abs/2407.07304) — **shipped** (`llama::slim_attention` drift gate; `RBITNET_SLIM_ATTENTION=1` wires tiled path into Llama CPU/hybrid decode); FA 2D-tiling remains a poor CPU fit / deferred.
 4. **BitNet ternary:** inventory Rbitnet kernels vs I2_S/TL2 ([2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144)); **reimplement** LUT/MAD patterns in Rust SIMD — no bitnet.cpp FFI ([NATIVE_FIRST.md](NATIVE_FIRST.md)).
 5. **BitNet b1.58 product contract:** recipes + null-loss criteria ([2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285)); packed GPU kernels = later research.
 
@@ -95,7 +95,7 @@ Do **not** schedule as near-term default work (full rationale in [STATUS_AND_ROA
 | A.2 | `PagedSeqKv::pool_stats()` — allocation vs reuse counters after `clear()`. |
 | A.2b | `SharedPhysKvStore` + **`PagedKvPool`** — multi-sequence pool; **`RBITNET_KV_POOL=1`** wires Llama runtime KV to shared phys (E2E); free-list reclaim on `clear`/close; metrics `rbitnet_core_kv_pool_*`; bench [`scripts/bench_paged_kv.sh`](../scripts/bench_paged_kv.sh). |
 | A.3 | **KV Q8** — `RBITNET_KV_QUANT=q8` packs K/V rows (scale + INT8); **no F32 twin pages**; decode-on-read in `fill_*_head_values` / attention; metric `rbitnet_core_kv_quant_format_code`; tests in `kv_storage_paged`; bench [`scripts/bench_kv_q8.sh`](../scripts/bench_kv_q8.sh); `rbitnet tune throughput` / `bitnet-cpu` set `q8`. |
-| A.3b / E | **SlimAttention proto + KIVI decision** — [`slim_attention.rs`](../crates/bitnet-core/src/llama/slim_attention.rs) 1D tile + drift gate (`RBITNET_SLIM_ATTENTION`); KIVI go/no-go [KIVI_DECISION.md](KIVI_DECISION.md) (#39). |
+| A.3b / E | **SlimAttention + KIVI decision** — [`slim_attention.rs`](../crates/bitnet-core/src/llama/slim_attention.rs) 1D tile + drift gate; decode opt-in `RBITNET_SLIM_ATTENTION`; KIVI go/no-go [KIVI_DECISION.md](KIVI_DECISION.md) (#39). |
 | B.1 | [`scheduler.rs`](../crates/bitnet-core/src/scheduler.rs) — `run_batch` / **stall-free** `run_batch_waves` when `RBITNET_CONTINUOUS_BATCHING`. |
 | B.2 | `PrefillDecodeQueue` (prefill→decode promote) + [`inference_session.rs`](../crates/bitnet-core/src/inference_session.rs). |
 | B.3 | **Sarathi** — `RBITNET_ITERATION_TOKEN_BUDGET` + `RBITNET_PREFILL_CHUNK_TOKENS`; decode-first then prefill chunks; metrics `rbitnet_core_scheduler_stall_free_iters_total`, `…_prefill_chunks_total`, `…_iteration_budget_tokens`; `rbitnet tune throughput`; tests in `scheduler_speculative`. |

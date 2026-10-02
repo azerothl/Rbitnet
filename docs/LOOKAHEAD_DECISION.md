@@ -30,7 +30,7 @@ That sits poorly on today’s stack:
 
 1. **Draft API is linear.** The scheduler draft path returns a single string continuation (`ngram` / optional secondary draft), then verifies a **prefix** accept. There is no tree of candidate branches, no branch-merge KV, and no attention mask for parallel Jacobi positions.
 2. **CPU-first cost model.** Lookahead increases FLOPs per step to raise parallelism; on desktop CPU (the native-first default) that often hurts wall-clock latency unless acceptance is high and kernels are fused. PLD’s cost is near-zero CPU when the n-gram hits, and zero when it misses beyond a cheap string lookup.
-3. **Batching interaction.** Stall-free Sarathi waves (#21) already schedule decode-first + chunked prefill. Tree drafts would need per-request branch budgets that fight `RBITNET_ITERATION_TOKEN_BUDGET` and multi-seq packing. Fused multi-seq forward is still open; Lookahead would deepen that gap.
+3. **Batching interaction.** Stall-free Sarathi waves (#21) already schedule decode-first + chunked prefill. Tree drafts would need per-request branch budgets that fight `RBITNET_ITERATION_TOKEN_BUDGET` and multi-seq packing. Fused multi-seq e2e concurrency is **stalled** ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)); Lookahead would deepen that gap.
 4. **KV / prefix reuse.** Prefix KV + radix (#17) assume a single token spine. Branching drafts need either speculative KV forks or recompute — neither exists in `PagedSeqKv` / prefix snapshots today.
 
 A limited “n-gram Jacobi” spike could theoretically reuse `prompt_lookup_draft` ideas, but it would still need a new verify path and metrics semantics; it is not a small env-flag on the PLD path.

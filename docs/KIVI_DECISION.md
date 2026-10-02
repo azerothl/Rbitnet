@@ -10,7 +10,7 @@ Spike decision for [#39](https://github.com/azerothl/Rbitnet/issues/39). Context
 | **Hold Q8 as default KV quant** | Keep `RBITNET_KV_QUANT=q8` as the measured compact path; Q4 remains experimental uniform pack. |
 | **Go for a follow-up only if gates pass** | Implement KIVI behind a flag after live RSS + PPL criteria below. |
 
-SlimAttention 1D tiling lands as a **CPU proto** (`llama::slim_attention`, `RBITNET_SLIM_ATTENTION`) with a tiled-vs-baseline drift gate — independent of KIVI.
+SlimAttention 1D tiling lands as a **CPU path** (`llama::slim_attention`, `RBITNET_SLIM_ATTENTION=1` decode opt-in) with a tiled-vs-baseline drift gate — independent of KIVI.
 
 ## Why not implement KIVI here
 

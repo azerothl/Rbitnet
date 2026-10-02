@@ -144,6 +144,10 @@ For **Llama** runs on `RBITNET_BACKEND=cpu` or `hybrid`, setting **`RBITNET_BLAS
 - **Linux:** `libopenblas0` / `libopenblas64-0` / distro package providing `libopenblas.so` on the dynamic linker path.
 - **macOS:** `brew install openblas` — you may need `DYLD_LIBRARY_PATH` pointing at `$(brew --prefix openblas)/lib` for the loader to see the dylib.
 
+### Optional SlimAttention (`RBITNET_SLIM_ATTENTION`)
+
+For **Llama** on `cpu` / `hybrid`, **`RBITNET_SLIM_ATTENTION=1`** (or `true` / `yes` / `on`) switches decode attention to SlimAttention-style **1D tiled** online-softmax (`llama::slim_attention`) instead of the contiguous scores→softmax→V path. Optional **`RBITNET_SLIM_ATTENTION_TILE`** sets the KV tile width in tokens (default `16`). Default remains the contiguous path (optionally with `RBITNET_BLAS` for scores). See [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md).
+
 ### Experimental ggml hook (`RBITNET_LLAMA_MATMUL=ggml`)
 
 Rebuild `bitnet-core` with **`--features experimental-ggml-kernels`** if you want the env var recognized in logs; **kernels remain Rust** until a separate native bridge is added. See `crates/bitnet-core/src/llama/ggml_bridge.rs` and [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md).

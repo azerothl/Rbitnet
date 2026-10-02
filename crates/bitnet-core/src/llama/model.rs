@@ -17,6 +17,7 @@ use super::blas_runtime;
 use super::config::LlamaConfig;
 use super::ggml_bridge;
 use super::kv_storage::{KvCache, KvStorage};
+use super::slim_attention;
 
 /// How Llama matrices are stored / executed (`RBITNET_LLAMA_WEIGHT_MODE`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -616,6 +617,10 @@ fn mask_sliding_window_scores(scores: &mut [f32], window_start: usize) {
 
 /// One query head on the CPU / hybrid attention path (scores → softmax → V combination).
 ///
+/// When `RBITNET_SLIM_ATTENTION` is on, materializes the sliding-window KV slice and runs
+/// SlimAttention 1D tiled online-softmax ([`slim_attention::attention_tiled`]) instead of the
+/// contiguous scores→softmax→V loop. Default remains the contiguous path.
+///
 /// # Safety contract for callers
 ///
 /// `kv` must only be **read** for layer `il` and positions `0..=pos` (no concurrent writers).
@@ -634,6 +639,48 @@ fn llama_cpu_attention_one_head(
 ) -> (usize, Vec<f32>) {
     let kv_h = qh / n_rep;
     let q_slice = &q_heads[qh * head_dim..(qh + 1) * head_dim];
+
+    if slim_attention::slim_attention_enabled() {
+        let seq_start = sw_start.min(pos + 1);
+        let seq = (pos + 1).saturating_sub(seq_start);
+        let mut comb = vec![0.0f32; head_dim];
+        if seq == 0 {
+            return (qh, comb);
+        }
+        let mut k_mat = vec![0.0f32; seq * head_dim];
+        let mut v_mat = vec![0.0f32; seq * head_dim];
+        for (local, p) in (seq_start..=pos).enumerate() {
+            let row = local * head_dim;
+            kv.fill_k_head_values(
+                il,
+                p,
+                kv_h,
+                head_dim,
+                stride,
+                &mut k_mat[row..row + head_dim],
+            );
+            kv.fill_v_head_values(
+                il,
+                p,
+                kv_h,
+                head_dim,
+                stride,
+                &mut v_mat[row..row + head_dim],
+            );
+        }
+        slim_attention::attention_tiled(
+            q_slice,
+            &k_mat,
+            &v_mat,
+            seq,
+            head_dim,
+            scale,
+            slim_attention::tile_tokens_from_env(),
+            &mut comb,
+        );
+        return (qh, comb);
+    }
+
     let mut scores = vec![0.0f32; pos + 1];
     if use_blas_scores {
         let mut k_mat = vec![0.0f32; (pos + 1) * head_dim];
