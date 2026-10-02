@@ -73,6 +73,54 @@ Use this template when you benchmark a real GGUF outside the helper scripts:
 |------|----|------|---------|----------------|-------|------------|------------|--------|--------|------------|----------|---------|-------|
 | TBD | TBD | `rustc -V` | `cpu` | `model.Q4_K_M.gguf` | `Q4_K_M` | TBD | 64 | TBD | TBD | TBD | TBD | `NO_START_SERVER=1 ...` | tokenizer/template source |
 
+## Reference models (frozen for #23)
+
+| Role | Model | File | Tokenizer |
+|------|-------|------|-----------|
+| Small CPU gate | TinyLlama 1.1B Chat | `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` / `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` | `TinyLlama/TinyLlama-1.1B-Chat-v1.0` `tokenizer.json` |
+| 1B dense | Llama 3.2 1B Instruct | `unsloth/Llama-3.2-1B-Instruct-GGUF` / `Llama-3.2-1B-Instruct-Q4_K_M.gguf` | matching HF tokenizer |
+| BitNet | b1.58 2B4T | curated `microsoft-bitnet-b1.58-2b-4t` bundle | see [BITNET_NATIVE.md](BITNET_NATIVE.md) |
+
+## TinyLlama Q4_K_M CPU — 2026-09-30T10:23:24Z (real GGUF)
+
+**Methodology:** release `rbitnet-server` (`cpu`), GGUF + tokenizer on disk, sequential HTTP `/v1/chat/completions` (warmup + 3 runs). End-to-end latency includes prefill+decode; **not** streaming TTFT. `llama-bench` not installed in this environment (`SKIP_LLAMA`). Generation text quality was degraded on this host (repetitive tokens) — row is a **throughput/RSS** measurement, not a quality claim.
+
+| Field | Value |
+|-------|-------|
+| Date (UTC) | 2026-09-30T10:23:24Z |
+| Host | Linux 6.12.94+ x86_64 |
+| CPU | Intel(R) Xeon(R) Processor (`nproc=4`) |
+| Rust | `rustc 1.89.0 (29483883e 2025-08-04)` |
+| Rbitnet SHA | `31629f1` (main tip when measured) |
+| Backend | `cpu` (`RBITNET_BACKEND=cpu`, `RBITNET_MAX_CONCURRENT=1`) |
+| GGUF | `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` (TheBloke) |
+| Tokenizer | TinyLlama `tokenizer.json` |
+| Prompt | `Say hello.` (~6 prompt tokens) |
+| max_tokens | 8 |
+| Warmup latency | 10.764 s |
+| p50 latency (3 runs) | 10.683 s |
+| mean latency | 10.697 s |
+| mean e2e tok/s | **0.75** (completion_tokens / wall) |
+| Peak RSS observed | **~723 MiB** (`VmRSS` ≈ 740156 KiB) |
+| llama-bench | skipped (binary absent) |
+
+**Reproduce:**
+
+```bash
+# terminal 1
+RBITNET_BACKEND=cpu RBITNET_MAX_CONCURRENT=1 \
+  RBITNET_MODEL=/path/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf \
+  RBITNET_TOKENIZER=/path/tokenizer.json \
+  rbitnet-server
+
+# terminal 2 — short sequential probe (or compare_llamacpp_rbitnet.sh once llama-bench exists)
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"Say hello."}],"max_tokens":8,"temperature":0.0}'
+```
+
+**Still open for follow-up benches:** Llama-3.2-1B + BitNet rows; fair `llama-bench` side-by-side; live prefix-KV / KV Q8 / Sarathi delta rows; GPU columns (see #22).
+
 ## llama.cpp comparison — 2026-09-25T20:07:31Z
 
 **Methodology:** `scripts/compare_llamacpp_rbitnet.sh` with `SKIP_LLAMA=1` against `RBITNET_STUB=1` HTTP (no GGUF weights in this cloud agent image; `llama-bench` not installed). Numbers below are **API / stub overhead only** — not a model tok/s claim vs llama.cpp.

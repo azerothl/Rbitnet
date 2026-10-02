@@ -96,9 +96,9 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
-  - [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) — curated-model RAM / tok/s placeholders and reproduction commands
+  - [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) — curated reference models (TinyLlama Q4 measured; others TBD) + reproduction commands
   - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
-  - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only local benchmark output
+  - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only results (**real TinyLlama CPU row** + stub smokes)
   - [docs/RELEASE_PACKAGING.md](docs/RELEASE_PACKAGING.md) — WinGet/Homebrew release checklist
   - [docs/FUTURE_DIFFERENTIATION.md](docs/FUTURE_DIFFERENTIATION.md) — French future differentiation backlog
   - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
@@ -260,7 +260,7 @@ Reload metrics are exposed as `rbitnet_model_reloads_total`, `rbitnet_model_relo
 
 ## Benchmarks
 
-Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for appended rows. The helper scripts start a stub server by default for API-overhead smoke checks; for real numbers, start a model yourself and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`.
+Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for appended rows (including the **2026-09-30 TinyLlama Q4_K_M CPU** throughput/RSS measurement). The helper scripts start a stub server by default for API-overhead smoke checks; for real numbers, start a model yourself and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`, or `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. Reference models: [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md).
 
 ## Inspect a GGUF
 
