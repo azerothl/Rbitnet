@@ -63,15 +63,21 @@ GPU backends remain MVP unless measured under #22; hybrid planning still runs so
 - **Tensor names** must follow llama.cpp-style conventions; odd exports may need renaming or loader extensions.
 - **BitNet native scope:** the supported native path assumes Microsoft/llama.cpp-style BitNet GGUF naming (`token_embd.weight`, `blk.N.attn_q.weight`, `blk.N.ffn_*`, `output.weight`) and Llama-like metadata (`llama.*` or BitNet aliases for shape fields). Non-Llama BitNet research layouts are not covered yet.
 
-### Roadmap families (`glm4moe`, `gptoss`, `deepseek2`)
+### Architecture support (spike #25 — MoE / MLA gaps)
 
-Rbitnet only runs these slugs when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds — i.e. the file’s tensors match the **Llama loader** (same as how Llama/Mistral GGUF work). In that case inference is real on the in-tree stack while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) reports the roadmap slug.
+| Family / slug | Status today | Notes |
+|---------------|--------------|-------|
+| Llama / Mistral-shaped (`llama`, `mistral`, …) | **Supported** | Built-in Llama loader + runtime. |
+| Dense **Qwen3** (`qwen3`) | **Supported** (CPU-first) | Native dense path; optional golden note in [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
+| Experimental Qwen3.5 MoE (`qwen35moe`) | **Partial** | Requires `RBITNET_BACKEND=cuda` or `hybrid`; not a general MoE solution. |
+| Roadmap MoE tags (`glm4moe`, `gptoss`, `deepseek2`) | **Llama-shaped only** | Run only when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds; else **startup refuse** via [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs). |
+| Pure MoE expert routing / DeepSeek **MLA** | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE is out of spike scope (#25). |
 
-If tensors are pure MoE / MLA layouts that the Llama loader cannot parse, **startup fails** with a clear error from [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs); there is **no** executor that loads then fails at `generate`.
+When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.
 
 **gpt-oss** MXFP4 weights: GGML type **39** dequantizes via [`tensor_to_f32`](../crates/bitnet-core/src/ggml/dequant.rs).
 
-Dense DeepSeek checkpoints that remain **Llama-shaped** are the supported path today — see [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md).
+Dense DeepSeek checkpoints that remain **Llama-shaped** are the supported path today — see [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md). Matrix detail: [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md).
 
 ## Tokenizer
 
