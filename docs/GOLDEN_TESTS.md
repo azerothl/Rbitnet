@@ -83,6 +83,21 @@ Or use `scripts/run-golden-test.sh` / `scripts/run-golden-test.ps1`.
 - For **logit vectors** (optional future extension), start with `max(abs diff)) < 5e-2` on CPU
   after prefill for the last prompt position, then tighten once kernels are stable.
 
+## Qwen3 dense golden note (#25)
+
+Dense **`general.architecture=qwen3`** is the first non-Llama family with an in-tree forward path.
+Until a checked-in `*.golden.json` exists for a small Qwen3 GGUF:
+
+1. Prefer a small dense Qwen3 quant (e.g. 0.6B / 1.7B / 4B Q4_K_M) + matching `tokenizer.json`.
+2. Export greedy first-token id with llama.cpp the same way as Llama (section above).
+3. Reuse format `rbitnet-golden-v1` and run `optional_golden_greedy_first_token_matches` with
+   `RBITNET_TEST_GGUF` / `RBITNET_TOKENIZER` / `RBITNET_GOLDEN_JSON` (and optionally
+   `RBITNET_ARCHITECTURE=qwen3` if the file is mis-tagged).
+4. Default CI does **not** download Qwen3 weights — keep the golden optional like Llama.
+
+This is **not** a MoE/MLA golden: `qwen35moe`, `deepseek2` MoE, and MLA graphs remain refused or
+CUDA-experimental; see [LIMITATIONS.md](LIMITATIONS.md).
+
 ## Current state in Rbitnet
 
 - Kernel-level matvec tests run in default CI (`tests/golden_kernels.rs`).
