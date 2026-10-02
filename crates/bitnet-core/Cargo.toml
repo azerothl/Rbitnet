@@ -30,6 +30,8 @@ experimental-flashinfer = []
 experimental-ggml-kernels = []
 # Documents optional OpenBLAS acceleration (`RBITNET_BLAS=1`); BLAS is loaded dynamically at runtime.
 blas-llama = []
+# Opt-in timing spans for the real Llama forward path; absent from normal builds.
+profile-llama = []
 
 [dev-dependencies]
 criterion = { workspace = true }
@@ -50,3 +52,8 @@ path = "examples/ternary_microbench.rs"
 [[example]]
 name = "tq_dot_microbench"
 path = "examples/tq_dot_microbench.rs"
+
+[[example]]
+name = "profile_llama"
+path = "examples/profile_llama.rs"
+required-features = ["profile-llama"]

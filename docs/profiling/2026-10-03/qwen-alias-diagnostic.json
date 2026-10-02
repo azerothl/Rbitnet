@@ -1,0 +1,14 @@
+[
+  {
+    "backend": "cpu",
+    "architecture_override": "qwen35moe",
+    "status": "failed",
+    "error": "Model load failed: not ready: LoadFailed \u2014 failed to init engine from env: Inference(\"GGUF `qwen35moe`: native CUDA path requires `RBITNET_BACKEND=cuda` or `hybrid` (CPU Llama-compatible loader is unsupported for this topology).\") \u2014 if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)"
+  },
+  {
+    "backend": "gpu",
+    "architecture_override": "qwen35moe",
+    "status": "failed",
+    "error": "HTTP 400: {\"error\":{\"message\":\"inference error: missing or invalid GGUF metadata `qwen35.expert_count` for moe experts\",\"type\":\"invalid_request_error\"}}"
+  }
+]

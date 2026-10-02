@@ -10,6 +10,8 @@ Local one-off model performance notes for the current Windows developer machine 
 
 ## Real-model comparison: Rbitnet, Ollama and llama.cpp
 
+The [performance diagnosis of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/profiling/2026-10-03/README.md) traces the failed architectures and measures Llama operator costs plus six CPU/CUDA ablations on the same GGUF.
+
 The [Windows CPU/GPU comparison of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/benchmarks/2026-10-03/README.md) uses four actual checkpoints: Llama 3.2 1B, Qwen3.5 2B, GPT-OSS 20B and GLM 4.7 Flash (MoE). Failed configurations are retained as failures, without substituted speeds. Raw token counts, generated answers, timings, weights SHA-256 and offload evidence accompany the report.
 
 `scripts/benchmark_engines.py` runs the engines **sequentially**, with one request at a time. Within a model, all engines use the same GGUF, model-specific formatted prompt and greedy sampling. llama.cpp prepares the prompt fixtures and token IDs; Ollama receives the corresponding raw string, and Rbitnet uses `{user}` as its chat template. Every measured response must report the expected prompt-token count before its speed is eligible for comparison. Matching counts are a check against templating/BOS mistakes; they do not prove complete tokenizer equivalence for unsupported Rbitnet architectures.

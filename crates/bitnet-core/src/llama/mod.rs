@@ -7,6 +7,8 @@ pub mod fusion;
 mod ggml_bridge;
 pub mod kv_storage;
 mod model;
+#[cfg(feature = "profile-llama")]
+pub mod profile;
 mod runtime;
 pub mod slim_attention;
 

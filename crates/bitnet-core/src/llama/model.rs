@@ -512,7 +512,12 @@ fn maybe_cuda_quant_or_dense(
             tensor,
         });
     }
-    if ggml_type_supports_cuda_quant(tensor.ggml_type) {
+    // Diagnostic ablation only: compare resident cuBLAS F32 with the native quant kernel.
+    #[cfg(feature = "profile-llama")]
+    let force_dense = matches!(std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref(), Ok("1"));
+    #[cfg(not(feature = "profile-llama"))]
+    let force_dense = false;
+    if !force_dense && ggml_type_supports_cuda_quant(tensor.ggml_type) {
         let payload = archive.tensor_payload(&tensor)?.to_vec();
         match CudaDeviceQuantMatrix::from_payload(
             rt,
@@ -1473,6 +1478,8 @@ impl LlamaModel {
         for (il, layer) in self.layers.iter().enumerate() {
             let mut h = scratch.take(n_embd);
             rmsnorm_into(&x, &layer.attn_norm, cfg.norm_eps, &mut h);
+            #[cfg(feature = "profile-llama")]
+            let qkv_span = super::profile::Span::new("qkv");
             let q = layer.wq.matvec_embd_out(&h, n_embd, n_embd)?;
             let k = layer
                 .wk
@@ -1480,6 +1487,8 @@ impl LlamaModel {
             let v = layer
                 .wv
                 .matvec_embd_out(&h, n_embd, cfg.n_kv * cfg.head_dim)?;
+            #[cfg(feature = "profile-llama")]
+            drop(qkv_span);
             scratch.recycle(h);
 
             let mut q_heads = q;
@@ -1527,6 +1536,8 @@ impl LlamaModel {
             let stride = cfg.n_kv * cfg.head_dim;
             kv.write_layer_kv(il, pos, &k_heads, &v, stride)?;
 
+            #[cfg(feature = "profile-llama")]
+            let attention_span = super::profile::Span::new("attention");
             let mut attn_out = scratch.take(n_embd);
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
             let sw_start = cfg.sliding_window_key_start(pos);
@@ -1596,25 +1607,43 @@ impl LlamaModel {
                 }
             }
 
+            #[cfg(feature = "profile-llama")]
+            drop(attention_span);
+            #[cfg(feature = "profile-llama")]
+            let attn_output_span = super::profile::Span::new("attn_output");
             let y = layer.wo.matvec_embd_out(&attn_out, n_embd, n_embd)?;
+            #[cfg(feature = "profile-llama")]
+            drop(attn_output_span);
             scratch.recycle(attn_out);
             add_residual_inplace(&mut x, &y);
 
             let mut h2 = scratch.take(n_embd);
             rmsnorm_into(&x, &layer.ffn_norm, cfg.norm_eps, &mut h2);
+            #[cfg(feature = "profile-llama")]
+            let gate_up_span = super::profile::Span::new("ffn_gate_up");
             let gate = layer.ffn_gate.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
             let up = layer.ffn_up.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
+            #[cfg(feature = "profile-llama")]
+            drop(gate_up_span);
             let mut tmp = scratch.take(cfg.n_ff);
             silu_mul_into(&gate, &up, &mut tmp);
             scratch.recycle(h2);
+            #[cfg(feature = "profile-llama")]
+            let down_span = super::profile::Span::new("ffn_down");
             let y2 = layer.ffn_down.matvec_ff(&tmp, cfg.n_ff, n_embd)?;
+            #[cfg(feature = "profile-llama")]
+            drop(down_span);
             scratch.recycle(tmp);
             add_residual_inplace(&mut x, &y2);
         }
 
         let mut xn = scratch.take(n_embd);
         rmsnorm_into(&x, &self.output_norm, cfg.norm_eps, &mut xn);
+        #[cfg(feature = "profile-llama")]
+        let output_span = super::profile::Span::new("output");
         let logits = self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab);
+        #[cfg(feature = "profile-llama")]
+        drop(output_span);
         scratch.recycle(xn);
         scratch.recycle(x);
         logits
