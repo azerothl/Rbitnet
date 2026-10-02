@@ -32,9 +32,9 @@ Last reviewed: **2026-10-02** against `main` (post #51–#71: fused multi-seq st
 | Backend | Status | Action |
 |---------|--------|--------|
 | `cpu` | **Production path** | Default native-first. |
-| `cuda` | **Partial (spike)** | Device-resident GEMV hook + acceptance gates A–D ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)); not full token path yet → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
+| `cuda` | **Partial (spike)** | Gates A–E: device-resident f32 + **quant** (`CudaDeviceQuantMatrix`) + Llama cuda/hybrid prefer quant residency ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)); hardware tok/s + `librbitnet_cuda_quant` device kernels still open → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
 | `rocm` / `vulkan` / `metal` | **Parity stubs** | Library probe may set `is_native_accelerated`; **matvec still CPU**. Not claimed as full GPU inference → #22. |
-| `hybrid` | **Partial** | Placement budgets + CPU fallback documented; not a full offload product yet (#22). |
+| `hybrid` | **Partial** | Prefers quant residency over densify when type supported; placement budgets + CPU fallback (#22 Gate E). |
 
 ## Serving / KV / speculative (native CPU stack)
 
@@ -55,9 +55,15 @@ Last reviewed: **2026-10-02** against `main` (post #51–#71: fused multi-seq st
 ## Remaining work (issue map)
 
 - [x] **[#46](https://github.com/azerothl/Rbitnet/issues/46)** — Fused multi-seq: spike + **stall decision** ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)); true Llama batched forward deferred; GPU via #22.
+<<<<<<< HEAD
 - [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — GPU backends (CUDA token path + ROCm / Vulkan / Metal beyond parity stubs) + hybrid residency on hardware.
 - [ ] **[#25](https://github.com/azerothl/Rbitnet/issues/25)** — Non-Llama / MoE / MLA loaders beyond Llama-shaped refuse path (+ dense Qwen3 golden CI).
 - [x] **[#39](https://github.com/azerothl/Rbitnet/issues/39)** — SlimAttention tiled CPU attention (+ KIVI no-go); decode opt-in wired.
+=======
+- [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — GPU backends: Gate E quant residency API landed (CI-safe); hardware CUDA vertical + ROCm/Metal still open.
+- [ ] **[#25](https://github.com/azerothl/Rbitnet/issues/25)** — Non-Llama / MoE / MLA loaders beyond Llama-shaped refuse path.
+- [x] **[#39](https://github.com/azerothl/Rbitnet/issues/39)** — SlimAttention tiled CPU attention (+ KIVI no-go) after KV Q8.
+>>>>>>> 1517995 (feat: CUDA device-resident quantized matvec Gate E (Refs #22))
 - [x] **[#44](https://github.com/azerothl/Rbitnet/issues/44)** — Lookahead Decoding **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
 - Keep stub/toy clearly labeled forever (do not remove — CI depends on them).
 
