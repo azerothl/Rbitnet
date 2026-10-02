@@ -3,7 +3,12 @@ name = "bitnet-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Pure-Rust BitNet inference core (GGUF, ternary kernels, engine) — work in progress"
+description = "Pure-Rust GGUF / BitNet inference core — Engine embed API (see docs/ENGINE_API.md)"
+readme = "../../docs/ENGINE_API.md"
+keywords = ["gguf", "inference", "bitnet", "llm", "akasha"]
+categories = ["science"]
+repository.workspace = true
+
 
 [dependencies]
 serde = { workspace = true }

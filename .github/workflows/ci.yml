@@ -41,6 +41,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Engine embed smoke (stub)
+        run: RBITNET_STUB=1 cargo run -p bitnet-core --example engine_smoke --locked
+
   # Akasha contract smoke: stub OpenAI surface (health, models, chat JSON+SSE, metrics, /ui).
   # Does not require a GGUF; pairs with openai_compat.rs unit/integration tests.
   smoke-openai:

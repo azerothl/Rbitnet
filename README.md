@@ -6,7 +6,7 @@
 
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
-**Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract.
+**Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract. Optional in-process embed: [docs/ENGINE_API.md](docs/ENGINE_API.md) (`bitnet-core` semver surface; HTTP remains the Akasha default).
 
 **akasha-infer = Rbitnet:** the local GGUF engine for Akasha (`BitNetProvider`). Akasha is the assistant; **akasha-os** is the optional caps/daemon layer; this repo is the Rust inference satellite — not a second product. Contract checklist + smoke: [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) · [scripts/smoke_openai.sh](scripts/smoke_openai.sh).
 
