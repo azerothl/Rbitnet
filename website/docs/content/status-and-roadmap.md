@@ -196,8 +196,8 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | **Shipped opt-in** — LRU radix + LCP reuse; `rbitnet_core_prefix_hit`; unit gate ≥70% after warm-up |
 | **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | **Shipped MVP** — `RBITNET_ITERATION_TOKEN_BUDGET` + stall-free waves; fused multi-seq still open |
 | **Continuous batching fused waves** | vLLM-class serving | Complete Phase B: single forward for N seq |
-| **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | **KV Q8 compact pages shipped** (`RBITNET_KV_QUANT=q8`, no F32 twin; `scripts/bench_kv_q8.sh`). SlimAttention 1D tiling still open. |
-| **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | K per-channel / V per-token; golden/PPL before prod |
+| **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | **KV Q8 shipped**; **SlimAttention 1D tile proto** (`llama::slim_attention`, `RBITNET_SLIM_ATTENTION`) + tiled-vs-baseline drift gate (#39). Decode wiring still open. |
+| **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | **No-go this spike** — stay on Q8 default; go/no-go + PPL/RSS gates in [KIVI_DECISION.md](KIVI_DECISION.md) (#39) |
 | **BitNet ternary kernels (Rust SIMD)** | bitnet.cpp [2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144) | **Shipped microbench** — I2_S pack + TL2-LUT in `kernels.rs`; `scripts/bench_bitnet_kernels.sh`; row in BENCHMARKS_RESULTS |
 | **Tune profiles** | Product UX | `interactive` / `batch` / `bitnet-cpu` via `rbitnet tune` |
 
