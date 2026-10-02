@@ -46,7 +46,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT` / tokenizer config discovery. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
-| `RBITNET_BACKEND` | `cpu` | e.g. `cpu`, `cuda`, `hybrid` — see [USAGE.md](USAGE.md). |
+| `RBITNET_BACKEND` | `auto` | Default **`auto`** (CUDA→ROCm→Metal→Vulkan→CPU). Explicit: `cpu`, `cuda`, `hybrid`, `rocm`, `vulkan`/`intel`, `metal`. See [USAGE.md](USAGE.md). |
 | `RBITNET_ARCHITECTURE` | (from GGUF) | Override `general.architecture`. |
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |

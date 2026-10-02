@@ -46,7 +46,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT` / tokenizer config discovery. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
-| `RBITNET_BACKEND` | `cpu` | `cpu`, `cuda`, `hybrid`, `rocm`, `vulkan` (aliases: `intel`, `oneapi`, `level-zero`), `metal`, or `auto` (detect CUDA→ROCm→Metal→Vulkan→CPU). See [USAGE.md](USAGE.md), [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). |
+| `RBITNET_BACKEND` | `auto` | Default **`auto`**: detect CUDA→ROCm→Metal→Vulkan→CPU. Explicit: `cpu`, `cuda`, `hybrid`, `rocm`, `vulkan` (aliases: `intel`, `oneapi`, `level-zero`), `metal`. See [USAGE.md](USAGE.md), [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). |
 | `RBITNET_CUDA_QUANT_LIB` | unset | Absolute path to `rbitnet_cuda_quant64.dll` / `librbitnet_cuda_quant.so` for Gate E device kernels (`native/cuda_quant`). |
 | `RBITNET_ARCHITECTURE` | (from GGUF) | Override `general.architecture`. |
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |

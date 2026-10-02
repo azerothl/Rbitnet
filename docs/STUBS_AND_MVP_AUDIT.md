@@ -31,12 +31,12 @@ Last reviewed: **2026-10-02** against `main` (post #72 SlimAttention decode + #7
 
 | Backend | Status | Action |
 |---------|--------|--------|
-| `cpu` | **Production path** | Default native-first. |
+| `auto` | **Default** | `RBITNET_BACKEND` unset/`auto` → `BackendKind::detect_best()` (CUDA→ROCm→Metal→Vulkan→CPU). |
+| `cpu` | **Production path** | Explicit pin for reproducible benches / golden; fallback when no accelerator probes. |
 | `cuda` | **Partial (Gate E HW)** | Device-resident f32 + **quant** via shipped `native/cuda_quant` (`*_matvec_device`); Llama cuda/hybrid prefer quant residency; FA/attention GPU still open → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
 | `rocm` | **Partial (f32 GEMV)** | hipBLAS SGEMV when HIP loads; else CPU. Quant device path not yet. |
 | `vulkan` / `metal` / `intel` | **Parity stubs** | Library probe may set `is_native_accelerated`; **matvec still CPU**. `intel` aliases to Vulkan. |
 | `hybrid` | **Partial** | Prefers quant residency over densify when type supported; placement budgets + CPU fallback (#22 Gate E). |
-| `auto` | **Shipped** | `BackendKind::detect_best()` — CUDA→ROCm→Metal→Vulkan→CPU. |
 
 ## Serving / KV / speculative (native CPU stack)
 

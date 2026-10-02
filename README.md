@@ -338,7 +338,7 @@ Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` or `tokenizer.model` if not beside the GGUF |
 | `RBITNET_STUB` | `1` = stub text (no inference) |
 | `RBITNET_TOY` | `1` = tiny in-process F32 toy LM (no GGUF) |
-| `RBITNET_BACKEND` | `cpu`, `cuda`, or `hybrid` |
+| `RBITNET_BACKEND` | default `auto` (CUDA→ROCm→Metal→Vulkan→CPU); or `cpu` / `cuda` / `hybrid` / … |
 | `RBITNET_QUANT_KERNEL` | `auto`, `scalar`, or `cuda` quantized matvec backend |
 | `RBITNET_HYBRID_POLICY` | `layers`, `hotcold`, or `auto` layer offload policy |
 | `RBITNET_LLAMA_PAGED_KV` / `RBITNET_KV_QUANT` | Enable paged KV and choose `off`, `q8`, or `q4` KV format |

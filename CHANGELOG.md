@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Default `RBITNET_BACKEND` is now **`auto`** (CUDA→ROCm→Metal→Vulkan→CPU) instead of `cpu`. Pin `RBITNET_BACKEND=cpu` for reproducible benches/goldens.
 - Documentation: stubs/MVP audit refreshed after #25 close — epic #24 remainder is **#22 only**; removed merge-conflict markers from [docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md).
 - Documentation: stubs/MVP audit refreshed post #51–#71 ([docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md)); #46/#39/#44 closed in the map.
 - Documentation: published **real TinyLlama Q4_K_M CPU** throughput/RSS row (issue #23); frozen reference models in MODEL_MATRIX; release bench checklist; stub/MVP audit ([docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md)); LIMITATIONS/STATUS/INFERENCE_STACK_V2 synced for prefix-KV, Sarathi, PLD, tokenizer.model (issue #24); DEPLOYMENT rate-limit sketch, STATUS/USAGE cross-links.

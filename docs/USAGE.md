@@ -60,7 +60,8 @@ Laptop example (~8 GiB host, TinyLlama-class):
 export RBITNET_MAX_LOAD_BYTES=$((3*1024*1024*1024))
 export RBITNET_BUDGET_MAX_SEQ=2048
 # optional soft VRAM planning for hybrid (GPU path still #22):
-export RBITNET_BACKEND=cpu
+# Default is auto (CUDA→ROCm→Metal→Vulkan→CPU). Pin for reproducibility:
+# export RBITNET_BACKEND=cpu
 # export RBITNET_BACKEND=hybrid RBITNET_HYBRID_MAX_VRAM_MB=512 RBITNET_HYBRID_POLICY=auto
 ```
 
