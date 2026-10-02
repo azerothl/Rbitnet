@@ -1,0 +1,23 @@
+{
+  "stage": "llama.cpp b11351 CPU loading preflight, before inference measurements",
+  "observations": [
+    {
+      "model": "qwen35-2b",
+      "ollama_blob_digest": "b709d81508a078a686961de6ca07a953b895d9b286c46e17f00fb267f4f2d297",
+      "architecture": "qwen35",
+      "llama_cpp_cpu_error": "key qwen35.rope.dimension_sections has wrong array length; expected 4, got 3"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "ollama_blob_digest": "e7b273f9636059a689e3ddcab3716e4f65abe0143ac978e46673ad0e52d09efb",
+      "architecture": "gptoss",
+      "llama_cpp_cpu_error": "unknown model architecture: 'gptoss'"
+    },
+    {
+      "model": "glm47-flash",
+      "ollama_blob_digest": "9eba2761cf0b88b8bc11a065a7b5b47f1b13ce820e8e492cb1010b450f9ec950",
+      "architecture": "glm4moelite",
+      "llama_cpp_cpu_error": "unknown model architecture: 'glm4moelite'"
+    }
+  ]
+}

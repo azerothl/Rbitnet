@@ -1,0 +1,4 @@
+requests>=2.31
+psutil>=5.9
+# Only required by render_engine_benchmark.py --plot:
+matplotlib>=3.8

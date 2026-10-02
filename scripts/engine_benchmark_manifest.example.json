@@ -1,0 +1,53 @@
+{
+  "cwd": ".",
+  "rbitnet": "target/release/rbitnet.exe",
+  "llama_cpu": "target/reference-llamacpp/b11351/llama-server.exe",
+  "llama_gpu": "target/reference-llamacpp/b11351-cuda/llama-server.exe",
+  "cuda_quant_library": "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
+  "ollama_url": "http://127.0.0.1:11434",
+  "port": 18094,
+  "threads": 16,
+  "context": 1024,
+  "startup_timeout": 180,
+  "environment": {
+    "cpu": "record the actual CPU",
+    "gpu": "record the actual GPU and available VRAM",
+    "rbitnet_commit": "record the tested build commit",
+    "ollama_version": "record ollama --version",
+    "llama_cpp_build": "record llama-server --version"
+  },
+  "models": [
+    {
+      "id": "llama32-1b",
+      "architecture": "llama",
+      "gguf": "models/exported-llama/model.gguf",
+      "tokenizer": "models/exported-llama/tokenizer.json",
+      "ollama": "rbitnet-bench-llama32-1b:q4_k_m",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "qwen35-2b",
+      "architecture": "qwen35",
+      "gguf": "REPLACE_WITH_THE_SHARED_QWEN_GGUF_PATH",
+      "tokenizer": "models/qwen35-2b/tokenizer.json",
+      "ollama": "rbitnet-bench-qwen35-2b:q8_0",
+      "quantization": "Q8_0"
+    },
+    {
+      "id": "gpt-oss-20b",
+      "architecture": "gpt-oss",
+      "gguf": "REPLACE_WITH_THE_SHARED_GPT_OSS_GGUF_PATH",
+      "tokenizer": "models/gpt-oss-20b/tokenizer.json",
+      "ollama": "rbitnet-bench-gpt-oss-20b:q4_k_m",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "glm47-flash",
+      "architecture": "deepseek2",
+      "gguf": "REPLACE_WITH_THE_SHARED_GLM_GGUF_PATH",
+      "tokenizer": "models/glm47-flash/tokenizer.json",
+      "ollama": "rbitnet-bench-glm47-flash:q4_k_m",
+      "quantization": "Q4_K_M"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+model,engine,backend,status,deployment,decode_tokens_per_second_median,decode_tokens_per_second_min,decode_tokens_per_second_max,wall_ms_median,wall_tokens_per_second_median,prefill_ms_median,first_content_ms_single_probe,quality_passes,peak_process_tree_rss_gib,gpu_global_peak_delta_mib,error
+llama32-1b,ollama,gpu,ok,GPU,488.1025015253203,458.70902079958717,489.7309540571149,128.5135999933118,249.00088396609672,40.581,65.1882999954978,3,0.8383674621582031,1111.0,
+llama32-1b,llama.cpp,cpu,ok,CPU,51.61906421088968,46.86900406295679,51.81817004132499,667.8944000013871,47.911765692201556,43.274,44.56180000852328,3,1.3560066223144531,0,
+llama32-1b,ollama,cpu,ok,CPU,52.24703049104045,49.35605768489242,52.9013060009919,700.8646000031149,45.65789169528291,49.78,91.43499999481719,3,0.9305648803710938,0,
+llama32-1b,rbitnet,cpu,ok,CPU,1.5931494573334661,1.5847075719308672,1.6144493214267697,41775.13640001416,0.7660058771223821,21618.0,22773.55240000179,3,1.3339653015136719,57.0,
+llama32-1b,llama.cpp,gpu,ok,GPU demandé,522.2272994320778,503.382098474123,530.5127737528805,88.8727999990806,360.06517179982,5.042,32.19349999562837,3,1.1991996765136719,1123.0,
+llama32-1b,rbitnet,gpu,ok,CUDA + opérations CPU,4.1934215699122,4.065040650406504,4.236166269526079,15650.049199990463,2.0447220063704017,8005.0,8194.793000002392,3,2.2762832641601562,975.0,
+qwen35-2b,llama.cpp,cpu,ok,CPU,18.389610329903864,16.99324677752282,18.415591560594777,2016.290300001856,15.870730519296028,258.187,274.7972000070149,2,2.234386444091797,17.0,
+qwen35-2b,ollama,cpu,ok,CPU,18.946054661735953,18.427500741418974,18.969078031673618,1942.4213000020245,16.474283925926187,222.839,284.4009999971604,2,2.1115951538085938,15.0,
+qwen35-2b,rbitnet,cpu,error,échec,,,,,,,,,,,"HTTP 400: {""error"":{""message"":""inference error: missing llama.embedding_length"",""type"":""invalid_request_error""}}"
+qwen35-2b,llama.cpp,gpu,ok,GPU demandé,227.4924643121197,223.21272870585446,227.6462093349174,186.229299986735,171.83117802772895,17.211,55.54210000263993,2,2.611572265625,2250.0,
+qwen35-2b,ollama,gpu,ok,GPU,210.07989601045148,209.4583537882507,214.91222178941288,231.60939999797847,138.16364966309357,52.225,73.99879999866243,2,1.0559158325195312,2252.0,
+qwen35-2b,rbitnet,gpu,error,échec,,,,,,,,,,,"HTTP 400: {""error"":{""message"":""inference error: missing llama.embedding_length"",""type"":""invalid_request_error""}}"
+gpt-oss-20b,llama.cpp,cpu,ok,CPU,15.18579103497335,15.098178263247119,16.083594482321868,3169.210000007297,10.097153549283993,1080.033,1241.4909999934025,3,20.279579162597656,23.0,
+gpt-oss-20b,ollama,cpu,ok,CPU,16.46240424153845,16.34994607072476,16.598345456176997,2893.35569999821,11.059822337094536,939.545,1038.7695000099484,3,11.060905456542969,14.0,
+gpt-oss-20b,rbitnet,cpu,error,échec,,,,,,,,,,,"HTTP 400: {""error"":{""message"":""inference error: missing llama.embedding_length"",""type"":""invalid_request_error""}}"
+gpt-oss-20b,llama.cpp,gpu,ok,GPU demandé,199.53359023283076,196.49502007933484,199.5796353929536,229.26409999490716,139.57702056584893,48.558,73.17999999213498,3,11.106098175048828,11164.0,
+gpt-oss-20b,ollama,gpu,ok,GPU,190.21012274496982,189.62850590515018,195.28866105211765,346.4733000000706,92.35920920888704,167.982,194.0920999913942,3,1.1757240295410156,11117.0,
+gpt-oss-20b,rbitnet,gpu,error,échec,,,,,,,,,,,"HTTP 400: {""error"":{""message"":""inference error: missing llama.embedding_length"",""type"":""invalid_request_error""}}"
+glm47-flash,llama.cpp,cpu,ok,CPU,13.83747881136057,13.607195144612591,14.030183308729361,2740.988000005018,11.674622435392427,423.701,441.588400004548,3,29.151615142822266,1.0,
+glm47-flash,ollama,cpu,ok,CPU,13.942504596669485,13.933901923618706,14.530461750829826,2716.128700005356,11.781474125263982,412.627,444.32059999962803,3,17.283348083496094,115.0,
+glm47-flash,rbitnet,cpu,error,échec,,,,,,,,,,,"Model load failed: not ready: LoadFailed — failed to init engine from env: Inference(""GGUF `deepseek2`: CUDA backend required (`RBITNET_BACKEND=cuda`). See docs/ARCHITECTURE_GGUF_MATRIX.md."") — if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path).
+retry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)"
+glm47-flash,llama.cpp,gpu,ok,GPU + CPU,69.91830483069937,69.81975593631566,71.35991936329113,563.7631999998121,56.76142039780296,100.725,106.13659999216907,3,16.71728515625,12739.0,
+glm47-flash,ollama,gpu,ok,GPU + CPU,57.8412907284026,56.80960792494031,60.14314078784346,785.8285000111209,40.72135332269973,211.413,229.8609999998007,3,4.689472198486328,14123.0,
+glm47-flash,rbitnet,gpu,error,échec,,,,,,,,,,,"Model load failed: not ready: LoadFailed — failed to init engine from env: Inference(""GGUF architecture `deepseek2` is refused: tensors are not Llama-shaped (need token_embd + blk.N.* in the built-in Llama layout). DeepSeek-style MLA attention and non-Mixtral MoE graphs are not implemented in Rbitnet yet (see docs/ARCHITECTURE_GGUF_MATRIX.md and docs/LIMITATIONS.md — issue #25). Supported today: Llama/Mistral-shaped GGUF, dense `qwen3` (CPU), Mixtral MoE (`mixtral`, CPU top-k experts), and experimental `qwen35moe` only with RBITNET_BACKEND=cuda|hybrid. If this file is mis-tagged but actually Llama-shaped, set RBITNET_ARCHITECTURE=llama; otherwise use a Llama-compatible dense export (not a full DeepSeek MoE GGUF)."") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).
+retry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)"

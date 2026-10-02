@@ -8,6 +8,40 @@ For **CPU profiling** workflow (perf, flamegraph, what to inspect in code), see 
 
 Local one-off model performance notes for the current Windows developer machine live in [LOCAL_PERFORMANCE_2026-05-12.md](LOCAL_PERFORMANCE_2026-05-12.md).
 
+## Real-model comparison: Rbitnet, Ollama and llama.cpp
+
+The [Windows CPU/GPU comparison of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/benchmarks/2026-10-03/README.md) uses four actual checkpoints: Llama 3.2 1B, Qwen3.5 2B, GPT-OSS 20B and GLM 4.7 Flash (MoE). Failed configurations are retained as failures, without substituted speeds. Raw token counts, generated answers, timings, weights SHA-256 and offload evidence accompany the report.
+
+`scripts/benchmark_engines.py` runs the engines **sequentially**, with one request at a time. Within a model, all engines use the same GGUF, model-specific formatted prompt and greedy sampling. llama.cpp prepares the prompt fixtures and token IDs; Ollama receives the corresponding raw string, and Rbitnet uses `{user}` as its chat template. Every measured response must report the expected prompt-token count before its speed is eligible for comparison. Matching counts are a check against templating/BOS mistakes; they do not prove complete tokenizer equivalence for unsupported Rbitnet architectures.
+
+The default workload is one excluded warm-up, three distinct story prompts capped at 32 generated tokens, one streaming latency probe, and three strict factual/short-memory answer checks. It reports actual runtime token counts, decoder phase throughput, full HTTP latency, process-tree working set and sampled global VRAM delta. The three questions detect basic answer failures; they are **not** a general language-model quality evaluation. Three short samples also do not justify p95 or long-context throughput claims.
+
+Ollama is unloaded and preloaded with an empty prompt before each measured request so automatic prefix reuse does not improve its prefill unfairly. Loading time is outside the measured request, and the returned residual `load_duration` is retained. llama.cpp uses `cache_prompt=false`; Rbitnet prefix caching is disabled. GPU runs use each engine's native offload policy, with llama.cpp `-ngl auto`; CPU spill is recorded. Rbitnet CUDA keeps some operations on CPU. KV storage and context allocation differ between implementations and must be described with results rather than treated as identical memory workloads.
+
+### Reproduce the comparison
+
+Install the benchmark dependencies and build Rbitnet's release binary. CUDA acceleration also needs the optional native kernel DLL:
+
+```powershell
+python -m pip install -r scripts/requirements-benchmark.txt
+cargo build --locked --release -p rbitnet-cli
+./scripts/build_cuda_quant.ps1
+Copy-Item scripts/engine_benchmark_manifest.example.json target/engine-benchmark-manifest.json
+```
+
+Edit the manifest's executable paths, environment/build identifiers and four model/tokenizer paths. Use absolute paths if `cwd` differs from the launch directory. Reference binaries are available from the [official llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases/tag/b11351); keep CPU and CUDA builds on the same revision. Ollama must already be serving and have no model loaded in `/api/ps`.
+
+For existing Ollama models, `ollama show MODEL --modelfile` exposes the `FROM` GGUF blob path. Check that llama.cpp can load it first: vendor GGUF architecture names or RoPE metadata can differ. The dated report pins compatible shared exports after encountering these differences. Import the same canonical export into Ollama with a dedicated alias using a Modelfile containing `FROM ABSOLUTE_PATH_TO_GGUF` and `ollama create ALIAS -f PATH_TO_MODELFILE`. The [Ollama Modelfile documentation](https://docs.ollama.com/modelfile) describes importing GGUF files. Rbitnet additionally needs the corresponding Hugging Face `tokenizer.json`; record its source revision and hash. Importing a model into Ollama does not add its topology to Rbitnet. For a separate Ollama daemon, configure `ollama_url` and `ollama_pid` in the manifest so memory is sampled from that instance.
+
+```powershell
+python scripts/benchmark_engines.py --manifest target/engine-benchmark-manifest.json --output target/engine-benchmark/results.json
+python scripts/render_engine_benchmark.py target/engine-benchmark/results.json --output-dir target/engine-benchmark/report --plot
+```
+
+Use `--models ID`, `--engines rbitnet ollama llama.cpp` and `--backends cpu gpu` to select configurations; `--resume` skips already recorded completed rows with the same repetitions/token limit. Errors are completed observations, so use a separate output file when retrying a failed configuration. Prompt fixtures, logs and full JSON remain beside the output. Inspect both answer quality and the actual offload evidence before interpreting a tokens/s column. The [Ollama API](https://docs.ollama.com/api/generate) exposes counts and nanosecond phase durations; the harness converts durations to milliseconds explicitly.
+
+`scripts/tests/test_benchmark_engines.py` checks token accounting, duration conversion, strict final-answer scoring and the protection against unloading a model the harness did not own. Run it with `python -m unittest discover -s scripts/tests -p test_benchmark_engines.py`.
+
 ## Frozen baseline procedure
 
 When you record an official row for a release candidate:
@@ -60,7 +94,7 @@ Rbitnet does **not** ship llama.cpp; this section defines a **fair** procedure t
 **Rules**
 
 1. **Same GGUF file** for both engines.
-2. **Same thread budget**: set llama.cpp `-t N` to match `RBITNET_THREADS` / physical cores you intend to use (avoid oversubscription vs Rbitnet’s internal pool).
+2. **Same thread budget**: set llama.cpp `-t N` and Ollama `num_thread` to the available logical CPU budget. Set `RAYON_NUM_THREADS` for Rbitnet's Rayon operations; its quantized matvec pool independently uses `available_parallelism`, so do not assume `RBITNET_THREADS` controls that pool.
 3. **Comparable workload**: prefill-heavy vs decode-heavy — use `llama-bench` with fixed `-p` / `-n`, and Rbitnet `bench_backend_compare.py` with a prompt of similar **character length** and the same `max_tokens`.
 4. Record **git SHA** of llama.cpp and Rbitnet, **rustc**, OS, CPU model.
 
