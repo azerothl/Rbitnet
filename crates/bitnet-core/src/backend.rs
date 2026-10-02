@@ -122,6 +122,11 @@ const CUBLAS_OP_T: i32 = 1;
 /// `matvec_cuda` / [`CudaRuntime::gemv_device_weight_f32`] reuse a small triple of device buffers
 /// (`d_w`, `d_x`, `d_y`) to avoid per-call `cudaMalloc` / `cudaFree` when shapes fit within the
 /// pooled capacities (they grow as needed and are released on [`Drop`]).
+///
+/// Residency note (#22): pooled `d_w` in `matvec_cuda` is scratch for host-uploaded weights each
+/// call. True device-resident weights go through [`CudaDeviceMatrix`] /
+/// [`Self::gemv_device_weight_f32`], which increments
+/// [`CudaRuntimeMetrics::device_resident_gemv_calls`].
 pub struct CudaRuntime {
     _lib: Library,
     _cublas_lib: Option<Library>,
@@ -153,6 +158,8 @@ pub struct CudaRuntime {
     upload_bytes: AtomicU64,
     download_bytes: AtomicU64,
     gemv_calls: AtomicU64,
+    /// Successful GEMVs where weight matrix was already on device (not re-uploaded).
+    device_resident_gemv_calls: AtomicU64,
 }
 
 /// Reusable device allocations for the generic `f32` GEMV helper (`matvec_cuda`).
@@ -219,6 +226,7 @@ impl CudaRuntime {
             upload_bytes: self.upload_bytes.load(Ordering::Relaxed),
             download_bytes: self.download_bytes.load(Ordering::Relaxed),
             gemv_calls: self.gemv_calls.load(Ordering::Relaxed),
+            device_resident_gemv_calls: self.device_resident_gemv_calls.load(Ordering::Relaxed),
         }
     }
 
@@ -236,6 +244,11 @@ impl CudaRuntime {
         })
     }
 
+    /// GEMV with weight matrix already resident on device (`d_w`).
+    ///
+    /// On success increments both `gemv_calls` (via cuBLAS) and
+    /// [`CudaRuntimeMetrics::device_resident_gemv_calls`] so operators can tell resident-weight
+    /// traffic apart from host-upload `matvec_cuda` (see `docs/GPU_NATIVE_ROADMAP.md`).
     pub fn gemv_device_weight_f32(
         &self,
         d_w: *mut c_void,
@@ -259,6 +272,8 @@ impl CudaRuntime {
             && self.copy_device_to_host(out.as_mut_ptr().cast::<c_void>(), d_y, y_bytes);
         let _ = unsafe { (self.cuda_device_synchronize)() };
         if ok {
+            self.device_resident_gemv_calls
+                .fetch_add(1, Ordering::Relaxed);
             Some(out)
         } else {
             None
@@ -373,6 +388,7 @@ impl CudaRuntime {
                 upload_bytes: AtomicU64::new(0),
                 download_bytes: AtomicU64::new(0),
                 gemv_calls: AtomicU64::new(0),
+                device_resident_gemv_calls: AtomicU64::new(0),
             });
         }
         None
@@ -607,7 +623,11 @@ impl Drop for CudaRuntime {
 pub struct CudaRuntimeMetrics {
     pub upload_bytes: u64,
     pub download_bytes: u64,
+    /// All successful cuBLAS SGEMV calls (host-upload and device-resident weight paths).
     pub gemv_calls: u64,
+    /// Successful GEMVs where **W** was already on device ([`CudaRuntime::gemv_device_weight_f32`]).
+    /// Spike metric for #22 residency checklist; CI does not require CUDA to exercise this.
+    pub device_resident_gemv_calls: u64,
 }
 
 #[derive(Debug)]
