@@ -109,3 +109,13 @@ fn backend_intel_alias_maps_to_vulkan() {
     assert_eq!(BackendKind::from_env(), BackendKind::Cpu);
     std::env::remove_var("RBITNET_BACKEND");
 }
+
+#[test]
+fn backend_default_is_auto_detect() {
+    // Safety: process-local env for this unit test only.
+    std::env::remove_var("RBITNET_BACKEND");
+    assert_eq!(BackendKind::from_env(), BackendKind::detect_best());
+    std::env::set_var("RBITNET_BACKEND", "auto");
+    assert_eq!(BackendKind::from_env(), BackendKind::detect_best());
+    std::env::remove_var("RBITNET_BACKEND");
+}

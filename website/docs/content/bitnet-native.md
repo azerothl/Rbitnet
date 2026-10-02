@@ -47,7 +47,7 @@ cargo run -p bitnet-core --example engine_smoke
 
 - `RBITNET_MODEL`: absolute path to one `.gguf` file.
 - `RBITNET_TOKENIZER`: tokenizer file from the paired model repo, usually `tokenizer.json`.
-- `RBITNET_BACKEND`: `cpu` is the supported baseline. Other backend labels currently share the portable runtime unless a family-specific CUDA path says otherwise.
+- `RBITNET_BACKEND`: defaults to **`auto`** (pick CUDA/ROCm/… when available, else CPU). Use `cpu` for a pinned baseline. Other labels share the portable runtime unless a family-specific CUDA path says otherwise.
 - `RBITNET_LLAMA_WEIGHT_MODE`: defaults to `auto`; BitNet uses the same mmap-quant machinery and should stay in `auto` unless debugging.
 - `RBITNET_PREFILL_CHUNK_TOKENS`: optional prefill chunk size for generation.
 

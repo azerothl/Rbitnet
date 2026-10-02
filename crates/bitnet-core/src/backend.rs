@@ -31,7 +31,8 @@ impl BackendKind {
     }
 
     pub fn from_env() -> Self {
-        let raw = std::env::var("RBITNET_BACKEND").unwrap_or_else(|_| "cpu".into());
+        // Default `auto`: pick the best available accelerator, else CPU.
+        let raw = std::env::var("RBITNET_BACKEND").unwrap_or_else(|_| "auto".into());
         match raw.trim().to_ascii_lowercase().as_str() {
             "cpu" => BackendKind::Cpu,
             "cuda" => BackendKind::Cuda,
@@ -39,8 +40,8 @@ impl BackendKind {
             "rocm" => BackendKind::Rocm,
             "vulkan" | "intel" | "level-zero" | "oneapi" => BackendKind::Vulkan,
             "metal" => BackendKind::Metal,
-            "auto" | "detect" | "gpu" => Self::detect_best(),
-            _ => BackendKind::Cpu,
+            "auto" | "detect" | "gpu" | "" => Self::detect_best(),
+            _ => Self::detect_best(),
         }
     }
 
