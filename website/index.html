@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rbitnet — inference GGUF Rust, native-first</title>
+  <meta name="description" content="Rbitnet (Rabbit + bit) : moteur d'inference GGUF en Rust pur, API OpenAI-compatible, chemin BitNet natif. Le backend d'inference pour Akasha." />
+  <meta property="og:title" content="Rbitnet" />
+  <meta property="og:description" content="Inference GGUF Rust native-first — Rabbit + bit." />
+  <meta property="og:image" content="assets/brand/rbitnet-hero-atmosphere.png" />
+  <meta name="theme-color" content="#0B1220" />
+  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preload" href="assets/brand/rbitnet-hero-atmosphere.png" as="image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Sora:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bit-grid" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand-chip" href="#top" aria-label="Rbitnet accueil">
+      <img src="assets/brand/rbitnet-mark.svg" width="36" height="36" alt="" />
+      <span>Rbitnet</span>
+    </a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="#pourquoi">Pourquoi</a>
+      <a href="#capacites">Capacités</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/azerothl/Rbitnet" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="brand-title">
+      <div class="hero-copy">
+        <p class="eyebrow mono">akasha-infer · rabbit + bit</p>
+        <h1 id="brand-title" class="brand-title">Rbitnet</h1>
+        <p class="lede">
+          Moteur GGUF en Rust pur — API OpenAI-compatible, BitNet natif, zéro moteur d’inférence externe.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-amber" href="#install">Installer</a>
+          <a class="btn btn-ghost" href="https://github.com/azerothl/Rbitnet#readme" rel="noopener">Documentation</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <img
+          class="hero-atmosphere"
+          src="assets/brand/rbitnet-hero-atmosphere.png"
+          alt=""
+          width="1600"
+          height="900"
+        />
+      </div>
+    </section>
+
+    <section id="pourquoi" class="section section-why">
+      <h2>Un terrier pour les bits</h2>
+      <p class="section-lede">
+        Rbitnet mmap le GGUF, déquantifie, exécute le transformer et sert des tokens —
+        self-sufficient en Rust, conçu comme backend satellite pour Akasha.
+      </p>
+    </section>
+
+    <section id="capacites" class="section section-caps">
+      <h2>Ce qui tourne aujourd’hui</h2>
+      <ul class="cap-list">
+        <li>
+          <span class="cap-k mono">bitnet-core</span>
+          <span>GGUF Llama / Qwen3 / BitNet b1.58, kernels quantifiés CPU, KV paged &amp; quantifié.</span>
+        </li>
+        <li>
+          <span class="cap-k mono">rbitnet-server</span>
+          <span>HTTP OpenAI <code>/v1</code>, SSE, health / ready / metrics, reload à chaud.</span>
+        </li>
+        <li>
+          <span class="cap-k mono">rbitnet CLI</span>
+          <span>Catalogue, download, quickstart, TUI chat, recipes BitNet.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section id="install" class="section section-install">
+      <h2>Démarrer</h2>
+      <p class="section-lede">Un checkout, un binaire. Python seulement si vous convertissez des checkpoints en GGUF.</p>
+      <pre class="install-block mono" tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
+rbitnet quickstart
+rbitnet-server</code></pre>
+      <p class="install-note">
+        Windows : <code>.\scripts\install.ps1</code> · Docs :
+        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/DEMARRAGE_5MIN.md">démarrage 5 min</a>
+      </p>
+    </section>
+
+    <section class="section section-stack">
+      <h2>Dans la stack Akasha</h2>
+      <p class="section-lede">
+        akasha-os garde llama.cpp dans le TCB Preview. Le daemon Akasha consomme Rbitnet
+        en HTTP sur le port 8080 — rôles séparés, contrat <code>/v1</code> + <code>/metrics</code> gelé.
+      </p>
+      <p class="stack-links mono">
+        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/AKASHA_INFER.md">AKASHA_INFER</a>
+        ·
+        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/NATIVE_FIRST.md">NATIVE_FIRST</a>
+        ·
+        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/BRAND.md">BRAND</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <img src="assets/brand/rbitnet-mark.svg" width="28" height="28" alt="" />
+    <p>
+      <strong>Rbitnet</strong> · MIT ·
+      <a href="https://github.com/azerothl/Rbitnet" rel="noopener">github.com/azerothl/Rbitnet</a>
+    </p>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
