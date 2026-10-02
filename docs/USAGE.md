@@ -462,6 +462,22 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 ## Programmatic use (Rust)
 
+Embed without HTTP via `bitnet-core` — frozen surface in [ENGINE_API.md](ENGINE_API.md):
+
+```bash
+RBITNET_STUB=1 cargo run -p bitnet-core --example engine_smoke --locked
+```
+
+```rust
+use bitnet_core::Engine;
+
+let engine = Engine::from_env()?;
+let out = engine.complete_detailed("hi", 8, 0.0)?;
+println!("{}", out.text);
+```
+
+HTTP remains the default Akasha `BitNetProvider` contract.
+
 Depend on `bitnet-core` and build an [`Engine`](../crates/bitnet-core/src/inference.rs) from the environment or from a path:
 
 ```rust
