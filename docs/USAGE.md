@@ -195,6 +195,15 @@ Rebuild `bitnet-core` with **`--features experimental-ggml-kernels`** if you wan
 
 ## Multi-process proxy
 
+**Recommended multi-model path:** use **`rbitnet-proxy`** + `RBITNET_MODEL_REGISTRY` (one native `rbitnet-runner` child per model id) rather than loading every GGUF in a single process. See [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md).
+
+Set **`RBITNET_IDLE_UNLOAD_SECS`** so idle children / single-process engines recycle:
+
+- **Proxy:** recycles idle child runners (health recycle still applies).
+- **Single `rbitnet-server`:** swaps the in-process engine for a stub after idle (frees mmap); metric `rbitnet_model_unloads_total`. Reload with `POST /v1/admin/reload` or the next registry selection.
+
+Smoke sequence: load → wait past idle → confirm unload metric / `/v1/models` `loaded:false` → reload OK.
+
 Use `rbitnet-proxy` when you want one parent OpenAI-compatible base URL with isolated child processes per model. Each child is a real `rbitnet-runner` server with its own `RBITNET_MODEL`, bind port, mmap, tokenizer, and crash boundary.
 
 Example registry:

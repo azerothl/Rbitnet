@@ -9,7 +9,7 @@ mod model_registry;
 mod run;
 
 pub use anthropic::{anthropic_messages_to_prompt, AnthropicMessage};
-pub use run::run_server;
+pub use run::{run_server, try_idle_unload};
 
 use std::convert::Infallible;
 use std::path::PathBuf;
