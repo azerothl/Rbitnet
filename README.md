@@ -51,7 +51,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 
 Tagged releases publish Windows zip assets named like `rbitnet-server-vX.Y.Z-windows-x86_64.zip` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). The zip contains both `rbitnet.exe` and `rbitnet-server.exe`.
 
-WinGet is prepared as a submission template at `[packaging/winget/Rbitnet.Rbitnet.yaml](packaging/winget/Rbitnet.Rbitnet.yaml)`. After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
+WinGet is prepared as a submission template at `[packaging/winget/Rbitnet.Rbitnet.yaml](packaging/winget/Rbitnet.Rbitnet.yaml)` (**experimental** until real release SHA-256 values replace placeholders). After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
 
 ```powershell
 winget install --manifest .\packaging\winget\Rbitnet.Rbitnet.yaml
@@ -71,7 +71,7 @@ Or install the CLI from the default branch with a curl script (requires Rust/Car
 curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
 ```
 
-Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz`. A documented Homebrew tap formula template lives at `[packaging/homebrew/rbitnet.rb](packaging/homebrew/rbitnet.rb)`; it is not a homebrew-core formula. After replacing the release URLs and `sha256` values:
+Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz` (unified **server+CLI** archive). A documented Homebrew tap formula template lives at `[packaging/homebrew/rbitnet.rb](packaging/homebrew/rbitnet.rb)` (**experimental** / not homebrew-core). After replacing the release URLs and `sha256` values:
 
 ```bash
 brew install --formula ./packaging/homebrew/rbitnet.rb
@@ -151,29 +151,25 @@ Concrete public GGUF repos verified through the Hugging Face model API as `gguf.
 - `unsloth/Llama-3.2-1B-Instruct-GGUF` with `Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
 - `NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF` with `Hermes-2-Pro-Llama-3-8B-Q4_K_M.gguf` (`RBITNET_CHAT_FORMAT=chatml` recommended).
 
-Native BitNet curated install:
+Native BitNet curated install (stable tag `bitnet:2b`):
 
 ```bash
-rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models
-export RBITNET_MODEL=/absolute/path/to/ggml-model-i2_s.gguf
-export RBITNET_TOKENIZER=/absolute/path/to/tokenizer.json
-cargo run -p bitnet-server --bin rbitnet-server --release
+rbitnet models install bitnet:2b --dir ./models
+# paths also written to models/rbitnet.manifest.json
+rbitnet recipe recipes/bitnet-b158.recipe.json
+# or: rbitnet tune bitnet-cpu && rbitnet serve
 ```
 
-Install the CLI, download a GGUF, set a tokenizer file, then serve:
+Install the CLI, pull a tagged starter model, then serve (≤3 commands):
 
 ```bash
 cargo install --path crates/rbitnet-cli
-rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
-  --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-# Or write rbitnet.toml so serve needs no model env vars:
-rbitnet up TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
-  --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-# If the GGUF repo did not include tokenizer.json/tokenizer.model:
-rbitnet models download TinyLlama/TinyLlama-1.1B-Chat-v1.0 --dir models/tinyllama-tokenizer --file tokenizer.json
-export RBITNET_TOKENIZER="$PWD/models/tinyllama-tokenizer/tokenizer.json"
+rbitnet models install tinyllama:q4 --dir ./models
+rbitnet up tinyllama:q4 --dir ./models
 rbitnet serve
 ```
+
+Stable tags are listed in `data/compatible_models.json` (`bitnet:2b`, `tinyllama:q4`, …). Hub repo ids still work with `quickstart` / `up`.
 
 For Windows quick install:
 

@@ -27,15 +27,20 @@ pub const BUNDLES: &[CuratedBundle] = &[CuratedBundle {
 }];
 
 pub fn list_bundles_text() -> String {
-    let mut s = String::from("Curated install bundles:\n\n");
+    let mut s = String::from("Curated install bundles / catalog tags:\n\n");
     for b in BUNDLES {
         s.push_str(&format!(
             "  {}\n    {}\n    gguf repo:      {}\n    tokenizer repo: {}\n\n",
             b.id, b.description, b.gguf_repo, b.tokenizer_repo
         ));
     }
+    if let Some(cat) = catalog::load_local_catalog() {
+        s.push_str("Stable tags (from data/compatible_models.json):\n");
+        s.push_str(&catalog::format_stable_tags(&cat));
+        s.push('\n');
+    }
     s.push_str(
-        "Install example:\n  rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models\n",
+        "Install examples:\n  rbitnet models install bitnet:2b --dir ./models\n  rbitnet models install tinyllama:q4 --dir ./models\n  rbitnet up tinyllama:q4 --dir ./models\n",
     );
     s
 }
@@ -229,16 +234,42 @@ pub fn resolve_model(repo_id: &str, token: Option<&str>) -> Result<ResolvedModel
 }
 
 /// Download a curated bundle into `dir` and write `rbitnet.manifest.json` with relative env paths.
+///
+/// `bundle_id` may be a hardcoded BitNet bundle id, a catalog id, or a stable tag (`bitnet:2b`).
 pub fn install_bundle(
     bundle_id: &str,
     dir: &Path,
     token: Option<&str>,
     place_mode: HubPlaceMode,
 ) -> Result<(), String> {
-    let bundle = BUNDLES.iter().find(|b| b.id == bundle_id).ok_or_else(|| {
-        format!("unknown bundle id {bundle_id:?}. Run: rbitnet models install --list")
-    })?;
+    let resolved_id = catalog::load_local_catalog()
+        .and_then(|c| catalog::resolve_catalog_ref(&c, bundle_id).map(|m| m.id.clone()))
+        .unwrap_or_else(|| bundle_id.to_string());
 
+    if let Some(bundle) = BUNDLES
+        .iter()
+        .find(|b| b.id == resolved_id || b.id == bundle_id)
+    {
+        return install_hardcoded_bundle(bundle, dir, token, place_mode);
+    }
+
+    let cat = catalog::load_local_catalog().ok_or_else(|| {
+        format!(
+            "unknown bundle id {bundle_id:?} and no local data/compatible_models.json. Run: rbitnet models install --list"
+        )
+    })?;
+    let entry = catalog::resolve_catalog_ref(&cat, bundle_id).ok_or_else(|| {
+        format!("unknown bundle / tag {bundle_id:?}. Run: rbitnet models install --list")
+    })?;
+    install_catalog_entry(entry, dir, token, place_mode)
+}
+
+fn install_hardcoded_bundle(
+    bundle: &CuratedBundle,
+    dir: &Path,
+    token: Option<&str>,
+    place_mode: HubPlaceMode,
+) -> Result<(), String> {
     fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
 
     let tok_siblings = hf_search::fetch_model_sibling_paths(bundle.tokenizer_repo, token)?;
@@ -289,7 +320,7 @@ pub fn install_bundle(
         .and_then(|p| path_relative_to_dir(dir, p).ok());
 
     validate_installed_bundle(dir, &model_rel, tok_rel.as_ref())?;
-    verify_gguf_checksum_if_configured(dir, &model_rel, bundle_id)?;
+    verify_gguf_checksum_if_configured(dir, &model_rel, bundle.id)?;
 
     let manifest = RbitnetManifest {
         version: 1,
@@ -320,6 +351,112 @@ pub fn install_bundle(
     Ok(())
 }
 
+fn install_catalog_entry(
+    entry: &catalog::CatalogModel,
+    dir: &Path,
+    token: Option<&str>,
+    place_mode: HubPlaceMode,
+) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
+
+    let primary = entry
+        .file
+        .clone()
+        .or_else(|| catalog::pick_primary_gguf(&entry.files))
+        .ok_or_else(|| format!("catalog entry '{}' has no GGUF file", entry.id))?;
+
+    let tokenizer_repo = entry
+        .tokenizer_repo
+        .as_deref()
+        .unwrap_or(entry.repo.as_str());
+    let tok_siblings = hf_search::fetch_model_sibling_paths(tokenizer_repo, token)?;
+    let tokenizer_files = resolve_tokenizer_downloads(tokenizer_repo, &tok_siblings, token)?;
+    if tokenizer_files.is_empty() {
+        return Err(format!(
+            "catalog entry '{}': no tokenizer.json / tokenizer.model in `{tokenizer_repo}` \
+             (Akasha reference recipes require tokenizer sidecars)",
+            entry.id
+        ));
+    }
+
+    let mut jobs: Vec<(String, String)> = vec![(entry.repo.clone(), primary)];
+    for t in &tokenizer_files {
+        jobs.push((tokenizer_repo.to_string(), t.clone()));
+    }
+
+    let mut written: Vec<PathBuf> = Vec::new();
+    for (repo, file) in &jobs {
+        let paths =
+            download::download_files(repo, std::slice::from_ref(file), dir, token, place_mode)?;
+        written.extend(paths);
+    }
+
+    let model_rel = path_relative_to_dir(
+        dir,
+        written
+            .iter()
+            .find(|p| p.to_string_lossy().to_ascii_lowercase().ends_with(".gguf"))
+            .ok_or("internal: no .gguf written")?,
+    )?;
+    let tok_rel = tokenizer_files
+        .iter()
+        .find_map(|tf| {
+            written.iter().find(|p| {
+                p.ends_with(tf.as_str())
+                    || p.file_name().and_then(|n| n.to_str())
+                        == Path::new(tf).file_name().and_then(|x| x.to_str())
+            })
+        })
+        .and_then(|p| path_relative_to_dir(dir, p).ok());
+
+    if tok_rel.is_none() {
+        return Err(format!(
+            "catalog entry '{}': tokenizer sidecars required but none were written under {}",
+            entry.id,
+            dir.display()
+        ));
+    }
+
+    validate_installed_bundle(dir, &model_rel, tok_rel.as_ref())?;
+    verify_gguf_checksum_if_configured(dir, &model_rel, &entry.id)?;
+
+    let recipe = if entry.id.contains("bitnet") {
+        Some("recipes/bitnet-b158.recipe.json".into())
+    } else if entry.id.contains("tinyllama") {
+        Some("recipes/tinyllama-q4.recipe.json".into())
+    } else {
+        None
+    };
+
+    let manifest = RbitnetManifest {
+        version: 1,
+        bundle_id: entry.id.clone(),
+        source_repo: entry.repo.clone(),
+        rbitnet_model: model_rel,
+        rbitnet_tokenizer: tok_rel,
+        rbitnet_tokenizer_config: tokenizer_files
+            .iter()
+            .find(|x| x.to_ascii_lowercase().ends_with("tokenizer_config.json"))
+            .cloned(),
+        chat_template: None,
+        recipe,
+        comment: "Relative paths from this manifest's directory. Export as env vars or pass absolute paths to rbitnet serve.",
+    };
+    let manifest_path = dir.join("rbitnet.manifest.json");
+    let json =
+        serde_json::to_string_pretty(&manifest).map_err(|e| format!("serialize manifest: {e}"))?;
+    fs::write(&manifest_path, json)
+        .map_err(|e| format!("write {}: {e}", manifest_path.display()))?;
+
+    eprintln!(
+        "Wrote {} file(s) under {} and {}",
+        written.len(),
+        dir.display(),
+        manifest_path.display()
+    );
+    Ok(())
+}
+
 fn verify_gguf_checksum_if_configured(
     dir: &Path,
     model_rel: &str,
@@ -332,29 +469,31 @@ fn verify_gguf_checksum_if_configured(
         .filter(|s| !s.is_empty())
         .or_else(|| {
             // Prefer local catalog when present (offline-friendly).
-            let local = Path::new("data/compatible_models.json");
-            if local.is_file() {
-                if let Ok(text) = fs::read_to_string(local) {
-                    if let Ok(cat) = serde_json::from_str::<catalog::Catalog>(&text) {
-                        return cat
-                            .models
-                            .into_iter()
-                            .find(|m| m.id == bundle_id)
-                            .and_then(|m| m.sha256);
-                    }
-                }
-            }
-            None
+            let cat = catalog::load_local_catalog()?;
+            catalog::resolve_catalog_ref(&cat, bundle_id)
+                .and_then(|m| m.sha256.clone())
+                .or_else(|| {
+                    cat.models
+                        .into_iter()
+                        .find(|m| m.id == bundle_id)
+                        .and_then(|m| m.sha256)
+                })
         });
     match expected {
-        Some(sha) => {
-            let dig = crate::integrity::verify_sha256(&gguf_path, &sha)?;
-            eprintln!("Verified SHA-256 for {}: {dig}", gguf_path.display());
-            Ok(())
-        }
+        Some(sha) => match crate::integrity::verify_sha256(&gguf_path, &sha) {
+            Ok(dig) => {
+                eprintln!("Verified SHA-256 for {}: {dig}", gguf_path.display());
+                Ok(())
+            }
+            Err(e) if e.contains("SHA-256 mismatch") => Err(format!(
+                "provenance checksum mismatch for bundle '{bundle_id}': {e}. \
+                 Re-download with `rbitnet models install {bundle_id}` or disable RBITNET_TRUSTED_MODELS_ONLY."
+            )),
+            Err(e) => Err(e),
+        },
         None if crate::integrity::trusted_models_only() => Err(format!(
-            "RBITNET_TRUSTED_MODELS_ONLY=1 requires a known SHA-256 for bundle '{bundle_id}' \
-             (set catalog `sha256` or RBITNET_MODEL_SHA256)"
+            "provenance hash missing: RBITNET_TRUSTED_MODELS_ONLY=1 requires a known SHA-256 for '{bundle_id}' \
+             (set catalog `sha256` or RBITNET_MODEL_SHA256). This is not a mismatch — no expected digest was configured."
         )),
         None => Ok(()),
     }

@@ -19,19 +19,19 @@ For the full runtime guide see [USAGE.md](USAGE.md). Env index: [ENV_REFERENCE.m
 
    Windows: `powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1`
 
-2. **Download** a starter model:
+2. **Download** a starter model (stable tag or catalog id):
 
    ```bash
-   rbitnet models install tinyllama-1.1b-chat-q4-k-m --dir ./models
+   rbitnet models install tinyllama:q4 --dir ./models
    ```
 
 3. **Write `rbitnet.toml`** with resolved paths:
 
    ```bash
-   rbitnet up tinyllama-1.1b-chat-q4-k-m --dir ./models
+   rbitnet up tinyllama:q4 --dir ./models
    ```
 
-   Or: `rbitnet quickstart … --write-config`.
+   Or: `rbitnet quickstart tinyllama:q4 --write-config`. Tags also include `bitnet:2b` (see `data/compatible_models.json`).
 
 4. **Serve**:
 
@@ -45,8 +45,10 @@ For the full runtime guide see [USAGE.md](USAGE.md). Env index: [ENV_REFERENCE.m
 
    ```bash
    RBITNET_STUB=1 rbitnet serve
+   ./scripts/smoke_openai.sh
    ```
 
+≤3 commands for a reference model: `install` → `up` → `serve` (or `up` alone then `serve`).
 ## Realistic expectations
 
 - Pure **CPU** inference is slow on large models; TinyLlama is fine for a first run.

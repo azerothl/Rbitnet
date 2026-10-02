@@ -188,7 +188,7 @@ impl From<ChatCmd> for chat_tui::ChatOptions {
 
 #[derive(Args)]
 struct QuickstartCmd {
-    /// Hugging Face model repo id, e.g. TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF.
+    /// Hub repo id, catalog id, or stable tag (`tinyllama:q4`, `bitnet:2b`).
     model_id: String,
     /// Files to fetch (repeatable). If omitted, downloads all `.gguf` plus tokenizer files when present.
     #[arg(long = "file", short = 'f', action = clap::ArgAction::Append)]
@@ -225,7 +225,7 @@ struct QuickstartCmd {
 
 #[derive(Args)]
 struct UpCmd {
-    /// Hugging Face model repo id, e.g. TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF.
+    /// Hub repo id, catalog id, or stable tag (`tinyllama:q4`, `bitnet:2b`).
     model_id: String,
     /// Files to fetch (repeatable). If omitted, downloads all `.gguf` plus tokenizer files when present.
     #[arg(long = "file", short = 'f', action = clap::ArgAction::Append)]
@@ -444,8 +444,40 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
         recipes::print_recipe_plan(&recipe, recipe_path);
         recipes::apply_recipe_env(&recipe);
     }
+
+    // Resolve catalog id / stable tag (`tinyllama:q4`) to Hub repo + preferred files.
+    let mut model_id = cmd.model_id.clone();
+    let mut files = cmd.files.clone();
+    let mut tokenizer_repo: Option<String> = None;
+    if let Some(cat) = catalog::load_local_catalog() {
+        if let Some(entry) = catalog::resolve_catalog_ref(&cat, &cmd.model_id) {
+            eprintln!(
+                "Resolved catalog ref '{}' → {} ({})",
+                cmd.model_id,
+                entry.repo,
+                entry.id
+            );
+            model_id = entry.repo.clone();
+            tokenizer_repo = entry.tokenizer_repo.clone();
+            if files.is_empty() {
+                if let Some(f) = entry
+                    .file
+                    .clone()
+                    .or_else(|| catalog::pick_primary_gguf(&entry.files))
+                {
+                    files.push(f);
+                }
+            }
+            if let Some(sha) = entry.sha256.as_ref() {
+                if std::env::var_os("RBITNET_MODEL_SHA256").is_none() {
+                    std::env::set_var("RBITNET_MODEL_SHA256", sha);
+                }
+            }
+        }
+    }
+
     let resolved =
-        download::resolve_download_files(&cmd.model_id, &cmd.files, cmd.token.as_deref())?;
+        download::resolve_download_files(&model_id, &files, cmd.token.as_deref())?;
     if resolved.is_empty() {
         return Err(format!(
             "no downloadable files resolved for {}",
@@ -453,7 +485,7 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
         ));
     }
 
-    let paths = if cmd.no_download {
+    let mut paths = if cmd.no_download {
         resolved
             .iter()
             .map(|f| path_for_downloaded_file(&cmd.dir, f))
@@ -462,17 +494,81 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
         eprintln!(
             "Downloading {} file(s) from {} -> {}",
             resolved.len(),
-            cmd.model_id,
+            model_id,
             cmd.dir.display()
         );
         download::download_files(
-            &cmd.model_id,
+            &model_id,
             &resolved,
             &cmd.dir,
             cmd.token.as_deref(),
             hub_place_mode(cmd.symlink),
         )?
     };
+
+    // Pull tokenizer sidecars from a separate Hub repo when the catalog says so.
+    if let Some(tok_repo) = tokenizer_repo.as_deref() {
+        if tok_repo != model_id.as_str() {
+            let tok_siblings = hf_search::fetch_model_sibling_paths(tok_repo, cmd.token.as_deref())?;
+            let mut tok_files: Vec<String> = Vec::new();
+            for p in &tok_siblings {
+                let l = p.to_ascii_lowercase();
+                if l.ends_with("tokenizer.json")
+                    || l.ends_with("tokenizer.model")
+                    || l.ends_with("tokenizer_config.json")
+                {
+                    tok_files.push(p.clone());
+                }
+            }
+            if !tok_files.is_empty() {
+                if cmd.no_download {
+                    for f in &tok_files {
+                        paths.push(path_for_downloaded_file(&cmd.dir, f)?);
+                    }
+                } else {
+                    eprintln!(
+                        "Downloading {} tokenizer sidecar(s) from {} -> {}",
+                        tok_files.len(),
+                        tok_repo,
+                        cmd.dir.display()
+                    );
+                    let more = download::download_files(
+                        tok_repo,
+                        &tok_files,
+                        &cmd.dir,
+                        cmd.token.as_deref(),
+                        hub_place_mode(cmd.symlink),
+                    )?;
+                    paths.extend(more);
+                }
+            }
+        }
+    }
+
+    // Optional provenance check when SHA was set from catalog / env.
+    if let Ok(expected) = std::env::var("RBITNET_MODEL_SHA256") {
+        let expected = expected.trim();
+        if !expected.is_empty() {
+            if let Some(gguf) = paths.iter().find(|p| {
+                p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("gguf"))
+                    .unwrap_or(false)
+            }) {
+                if gguf.is_file() {
+                    integrity::verify_sha256(gguf, expected).map_err(|e| {
+                        if e.contains("SHA-256 mismatch") {
+                            format!(
+                                "provenance checksum mismatch: {e}. Refusing to continue under trusted download."
+                            )
+                        } else {
+                            e
+                        }
+                    })?;
+                }
+            }
+        }
+    }
 
     let model_path = paths
         .iter()
@@ -622,12 +718,12 @@ enum ModelsCmd {
         #[arg(long)]
         symlink: bool,
     },
-    /// Install a curated BitNet-related bundle (paired GGUF + tokenizer repos) and write `rbitnet.manifest.json`.
+    /// Install a curated bundle / catalog id / stable tag (`bitnet:2b`, `tinyllama:q4`) and write `rbitnet.manifest.json`.
     Install {
-        /// Print known bundle ids and exit.
+        /// Print known bundle ids and stable tags, then exit.
         #[arg(long, conflicts_with = "bundle_id")]
         list: bool,
-        /// Bundle id (see `--list`), e.g. `microsoft-bitnet-b1.58-2b-4t`.
+        /// Bundle id, catalog id, or stable tag (see `--list`), e.g. `bitnet:2b`.
         #[arg(required_unless_present = "list")]
         bundle_id: Option<String>,
         #[arg(long, default_value = ".", env = "RBITNET_DOWNLOAD_DIR")]
@@ -1100,6 +1196,8 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     verified: Some(false),
                     golden_tier: Some("best_effort".into()),
                     sha256: None,
+                    tags: Vec::new(),
+                    tokenizer_repo: None,
                     min_ram: None,
                     tested: None,
                     min_rbitnet_version: None,

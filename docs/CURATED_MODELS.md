@@ -10,7 +10,9 @@ Each model entry keeps the existing download fields and may include:
 - `use_case`: short tags such as `chat` or `code`.
 - `min_ram_gb`: conservative minimum host RAM for the listed quantization plus runtime headroom.
 - `verified`: `true` only after project-owned evidence shows the exact entry works with Rbitnet, such as a committed smoke log, CI fixture, or documented maintainer test. Architecture metadata from the Hugging Face API alone is useful, but it is not enough for `verified: true`.
-- `sha256`: optional lowercase hex digest of the primary GGUF. When set, `rbitnet models install` / download with `RBITNET_MODEL_SHA256` (or trusted mode) verifies the file after placement.
+- `sha256`: optional lowercase hex digest of the primary GGUF. When set, `rbitnet models install` / download with `RBITNET_MODEL_SHA256` (or trusted mode) verifies the file after placement. Missing digest under `RBITNET_TRUSTED_MODELS_ONLY=1` is an explicit “hash missing” error; a wrong file is a “mismatch” error.
+- `tags`: stable short aliases (`bitnet:2b`, `tinyllama:q4`) resolved by `rbitnet up` / `models install`.
+- `tokenizer_repo`: Hub repo for tokenizer sidecars when they are not next to the GGUF.
 
 The legacy `min_ram` and `tested` fields remain accepted for older clients. New tooling should prefer `min_ram_gb` and `verified`.
 

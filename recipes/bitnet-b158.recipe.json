@@ -2,6 +2,12 @@
   "version": 1,
   "name": "bitnet-b158-latency",
   "description": "Microsoft BitNet b1.58 — low-latency local serve for Akasha BitNetProvider",
+  "model": {
+    "gguf": "./models/ggml-model-i2_s.gguf",
+    "tokenizer": "./models/tokenizer.json",
+    "architecture": "bitnet",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
   "env": {
     "RBITNET_ARCHITECTURE": "bitnet",
     "RBITNET_BACKEND": "cpu",
@@ -11,5 +17,5 @@
     "RBITNET_SESSIONS": "1",
     "RBITNET_BIND": "127.0.0.1:8080"
   },
-  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t` (or tag `bitnet:2b`). Equivalent flags: `rbitnet tune bitnet-cpu`. Optional: set RBITNET_MODEL_SHA256 to the catalog sha256 and enable RBITNET_TRUSTED_MODELS_ONLY=1."
+  "notes": "Install: `rbitnet models install microsoft-bitnet-b1.58-2b-4t` (or tag `bitnet:2b`) then set RBITNET_MODEL/RBITNET_TOKENIZER from rbitnet.manifest.json. Equivalent flags: `rbitnet tune bitnet-cpu`. Optional: set RBITNET_MODEL_SHA256 to the catalog sha256 and enable RBITNET_TRUSTED_MODELS_ONLY=1."
 }
