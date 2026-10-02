@@ -8,6 +8,7 @@ mod metrics;
 mod model_registry;
 mod run;
 
+pub use anthropic::{anthropic_messages_to_prompt, AnthropicMessage};
 pub use run::run_server;
 
 use std::convert::Infallible;
