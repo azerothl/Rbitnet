@@ -44,7 +44,7 @@ Last reviewed: **2026-09-30** against `main` (post #17–#21: radix, PLD, BitNet
 1. **Fused multi-seq forward** (CPU first, then GPU) — largest remaining serving gap.
 2. **GPU backends** — owned by #22.
 3. **Non-Llama / MoE / MLA loaders** — owned by #25.
-4. Optional: SlimAttention 1D tiling after KV Q8; MTP / Lookahead research.
+4. Optional: SlimAttention 1D tiling after KV Q8; MTP research. Lookahead Decoding is **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
 5. Keep stub/toy clearly labeled forever (do not remove — CI depends on them).
 
 ## Exit criteria mapping

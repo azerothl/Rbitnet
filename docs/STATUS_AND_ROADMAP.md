@@ -207,7 +207,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 |------|------------|----------|
 | **GPU_NATIVE** — device KV, fused attention/GEMV | Industry FA / FlashInfer-class | After frozen CPU benches; see [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) |
 | **BitNet packed GPU kernels** | 2B4T report [2504.12285](https://arxiv.org/abs/2504.12285) | Research after CPU ternary parity |
-| **Lookahead decoding** | [2402.02057](https://arxiv.org/abs/2402.02057) | Research (tree attention / FLOPs); PLD first |
+| **Lookahead decoding** | [2402.02057](https://arxiv.org/abs/2402.02057) | **Wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md); PLD covers the niche |
 | **Prefill/decode disaggregation** | DistServe [2401.09670](https://arxiv.org/abs/2401.09670) | After batching + paged KV; multi-GPU cluster — not desktop default |
 | **Tensor parallel / multi-GPU** | vLLM / TRT-LLM | After single-GPU correct |
 | **semver Engine crate** for embed | Alternative to HTTP for Akasha | Without breaking NATIVE_FIRST |
@@ -221,6 +221,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **INT-FlashAttention / TurboAttention** | [2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585) | After GPU_NATIVE epic |
 | **DistServe disagg as product default** | [2401.09670](https://arxiv.org/abs/2401.09670) | Cluster KV transfer — out of local/desktop target |
 | **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Pure MoE GGUF still refused; too invasive |
+| **Lookahead Decoding (Jacobi / tree attention)** | [2402.02057](https://arxiv.org/abs/2402.02057); [#44](https://github.com/azerothl/Rbitnet/issues/44) | **Wontfix for now** after PLD (#18) — see [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
 | **Medusa / EAGLE / EAGLE-2** | [2401.10774](https://arxiv.org/abs/2401.10774), [2401.15077](https://arxiv.org/abs/2401.15077), [2406.16858](https://arxiv.org/abs/2406.16858) | Draft heads / fine-tune — incompatible with download-and-serve GGUF |
 | **AWQ / GPTQ as primary format** | ecosystem | Conflicts with GGUF native-first; Akasha may route vLLM elsewhere |
 | **T-MAC as second LUT stack** | [2407.00088](https://arxiv.org/abs/2407.00088) | Cross-read only; do not port in parallel with bitnet.cpp patterns |
@@ -254,6 +255,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | `[PROFILING.md](PROFILING.md)`             | How to profile CPU hot paths            |
 | `[ENV_REFERENCE.md](ENV_REFERENCE.md)`   | Consolidated `RBITNET_*` index          |
 | `[INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md)` | Serving epic + research backlog (arXiv-aligned) |
+| `[LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md)` | Lookahead Decoding — wontfix for now (#44) |
 | `[GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)` | Native CUDA path; FA2/FA3 deferred |
 | `[FUTURE_DIFFERENTIATION.md](FUTURE_DIFFERENTIATION.md)` | Product differentiation axes |
 | [`CHANGELOG.md`](../CHANGELOG.md)          | Keep a Changelog–style release notes    |

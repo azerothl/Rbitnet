@@ -47,7 +47,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 ## Phase E — Speculative decode, CPU attention, BitNet kernels
 
 1. **Speculative MVP → production metrics:** verify/accept lossless frame [2211.17192](https://arxiv.org/abs/2211.17192); prefer **prompt-lookup / n-gram** drafts over a second GGUF on CPU.
-2. **Lookahead** [2402.02057](https://arxiv.org/abs/2402.02057): research only (tree attention); do not block PLD.
+2. **Lookahead** [2402.02057](https://arxiv.org/abs/2402.02057): **wontfix for now** after PLD — decision and reopen criteria in [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
 3. **CPU attention:** SlimAttention-style 1D tiling + KV INT8 [2407.07304](https://arxiv.org/abs/2407.07304) — realistic without CUDA; FA 2D-tiling is a poor CPU fit.
 4. **BitNet ternary:** inventory Rbitnet kernels vs I2_S/TL2 ([2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144)); **reimplement** LUT/MAD patterns in Rust SIMD — no bitnet.cpp FFI ([NATIVE_FIRST.md](NATIVE_FIRST.md)).
 5. **BitNet b1.58 product contract:** recipes + null-loss criteria ([2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285)); packed GPU kernels = later research.
@@ -71,6 +71,7 @@ Do **not** schedule as near-term default work (full rationale in [STATUS_AND_ROA
 | DistServe prefill/decode disagg as desktop default | [2401.09670](https://arxiv.org/abs/2401.09670) |
 | DeepSeek-V3 MoE / MLA native load | [2412.19437](https://arxiv.org/abs/2412.19437) |
 | FA2/FA3 / INT-Flash / TurboAttention as default | [2205.14135](https://arxiv.org/abs/2205.14135), [2307.08691](https://arxiv.org/abs/2307.08691), [2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585) |
+| Lookahead Decoding (Jacobi / tree attention) | [2402.02057](https://arxiv.org/abs/2402.02057); [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) (#44) |
 | Medusa / EAGLE / EAGLE-2 | [2401.10774](https://arxiv.org/abs/2401.10774), [2401.15077](https://arxiv.org/abs/2401.15077), [2406.16858](https://arxiv.org/abs/2406.16858) |
 | AWQ / GPTQ primary format | contradicts GGUF native-first |
 | Parallel T-MAC LUT stack | [2407.00088](https://arxiv.org/abs/2407.00088) — cross-read only |
@@ -78,6 +79,7 @@ Do **not** schedule as near-term default work (full rationale in [STATUS_AND_ROA
 ## Related specs
 
 - [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — status tables + research priority phases.
+- [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) — Lookahead Decoding wontfix for now (#44).
 - [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) — native CUDA; FA deferred.
 - [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md) — multi-process isolation (Ollama-style).
 - [PROFILING.md](PROFILING.md) — measure before large scheduler changes.
