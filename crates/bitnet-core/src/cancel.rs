@@ -13,3 +13,18 @@ pub fn request_inference_cancel() {
 pub fn inference_cancelled() -> bool {
     INFERENCE_CANCELLED.load(Ordering::SeqCst)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cancel_flag_roundtrip() {
+        clear_inference_cancel();
+        assert!(!inference_cancelled());
+        request_inference_cancel();
+        assert!(inference_cancelled());
+        clear_inference_cancel();
+        assert!(!inference_cancelled());
+    }
+}

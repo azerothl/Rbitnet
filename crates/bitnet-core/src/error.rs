@@ -39,6 +39,9 @@ impl BitNetError {
             Self::ModelNotLoaded => 503,
             Self::Inference(msg) => {
                 let m = msg.to_ascii_lowercase();
+                if m.contains("cancelled") || m.contains("canceled") {
+                    return 504;
+                }
                 if m.contains("tokenizer")
                     || m.contains("rbitnet_")
                     || m.contains("not found")

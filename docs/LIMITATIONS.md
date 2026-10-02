@@ -46,6 +46,6 @@ Dense DeepSeek checkpoints that remain **Llama-shaped** are the supported path t
 
 ## HTTP server
 
-- **Inference timeout:** Long generations are cut off with HTTP 504 after `RBITNET_INFERENCE_TIMEOUT_SECS`. The server **aborts** the tokio `spawn_blocking` join handle and requests cooperative cancellation in the engine; a **thread-pool worker may still run to completion** on some runs (Tokio cannot hard-kill an in-flight closure). Do not rely on 504 as a hard process-wide stop without capacity planning.
+- **Inference timeout / cancel:** Long generations are cut off with HTTP 504 after `RBITNET_INFERENCE_TIMEOUT_SECS`. The server aborts the tokio `spawn_blocking` join handle **and** sets a cooperative cancel flag checked at **token boundaries** on the Llama decode/prefill path (and Qwen paths). Mid-generation abort should stop further tokens under that bound; Tokio still cannot hard-kill an in-flight matmul, so capacity planning still matters for worst-case wall time of one step.
 - **Concurrency:** At most `RBITNET_MAX_CONCURRENT` generations at once; extra requests receive HTTP 503.
 - **Auth:** When `RBITNET_API_KEY` is set, protect upstream with TLS and a reverse proxy for anything beyond localhost.

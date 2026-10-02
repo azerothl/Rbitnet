@@ -8,7 +8,8 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 
 use crate::backend::{make_backend, BackendKind, ComputeBackend};
-use crate::error::Result;
+use crate::cancel::inference_cancelled;
+use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::{sample_token, SamplingOptions};
@@ -150,6 +151,9 @@ impl LlamaRuntime {
         sampling: SamplingOptions,
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
+        if inference_cancelled() {
+            return Err(BitNetError::Inference("inference cancelled".into()));
+        }
         self.kv.clear();
         kv_pool::record_pool_metrics();
         let t_enc = Instant::now();
@@ -250,6 +254,9 @@ impl LlamaRuntime {
         if prefill_from < prompt_ids.len() {
             let suffix = &prompt_ids[prefill_from..];
             for (chunk_idx, chunk) in suffix.chunks(chunk_sz).enumerate() {
+                if inference_cancelled() {
+                    return Err(BitNetError::Inference("inference cancelled".into()));
+                }
                 let chunk_base = prefill_from + chunk_idx * chunk_sz;
                 logits = self.prefill_chunk(chunk, chunk_base)?;
             }
@@ -336,6 +343,9 @@ impl LlamaRuntime {
         let mut prev_text = String::new();
 
         for _ in 0..max_tokens {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
             let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
             if Some(next_id) == eos_id {
                 break;
