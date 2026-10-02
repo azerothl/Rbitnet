@@ -52,6 +52,15 @@ Enable production path: `RBITNET_LLAMA_PAGED_KV=1` and/or `RBITNET_KV_POOL=1` (s
 
 **Tradeoffs:** Q8 saves ~4× KV page RSS vs F32; not bit-exact — keep `RBITNET_KV_QUANT=off` for golden bit-exact; enable `q8` for concurrency / memory. Metric: `rbitnet_core_kv_quant_format_code=1`. Enable: `RBITNET_LLAMA_PAGED_KV=1 RBITNET_KV_QUANT=q8` or `rbitnet tune throughput`.
 
+## SlimAttention + KIVI decision — 2026-10-02 (spike #39)
+
+| Check | Result |
+|-------|--------|
+| SlimAttention 1D tile vs baseline drift &lt; 1e-4 (toy, no GGUF) | pass — `llama::slim_attention` unit tests |
+| KIVI 2-bit vs stay on Q8 | **No-go** this spike — criteria in [KIVI_DECISION.md](KIVI_DECISION.md) (PPL/RSS); Q8 remains default compact KV |
+
+Opt-in proto flag (decode wiring later): `RBITNET_SLIM_ATTENTION=1`.
+
 ## Sarathi stall-free schedule — 2026-09-27 (unit gate)
 
 **Methodology:** `cargo test -p bitnet-core --test scheduler_speculative` / `scripts/bench_sarathi.sh` (no GGUF in this agent image).
