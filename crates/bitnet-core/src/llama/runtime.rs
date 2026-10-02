@@ -428,6 +428,7 @@ impl LlamaRuntime {
                 seed: Some(0),
                 frequency_penalty: 0.0,
                 presence_penalty: 0.0,
+                structured_json: false,
             },
             &[],
             &mut rng,

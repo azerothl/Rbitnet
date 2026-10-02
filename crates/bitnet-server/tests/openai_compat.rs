@@ -969,3 +969,68 @@ async fn chat_rejects_prompt_over_token_cap() {
         .expect("chat response");
     assert_eq!(res.status(), http::StatusCode::BAD_REQUEST);
 }
+
+#[test]
+fn structured_output_schema_golden() {
+    use bitnet_server::{validate_structured_output, JsonSchemaSpec, ResponseFormat};
+
+    let rf_obj = ResponseFormat {
+        format_type: "json_object".into(),
+        json_schema: None,
+    };
+    assert!(validate_structured_output(r#"{"a":1}"#, &rf_obj).is_ok());
+    assert!(validate_structured_output("not-json", &rf_obj).is_err());
+
+    let rf_schema = ResponseFormat {
+        format_type: "json_schema".into(),
+        json_schema: Some(JsonSchemaSpec {
+            name: Some("out".into()),
+            schema: Some(serde_json::json!({
+                "type": "object",
+                "required": ["name", "score"]
+            })),
+            strict: true,
+        }),
+    };
+    assert!(validate_structured_output(r#"{"name":"x","score":1}"#, &rf_schema).is_ok());
+    let err = validate_structured_output(r#"{"name":"x"}"#, &rf_schema).unwrap_err();
+    assert!(err.contains("required field 'score'"), "{err}");
+}
+
+#[tokio::test]
+async fn response_format_rejects_non_json_stub() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    let body = serde_json::json!({
+        "model": "rbitnet-stub",
+        "messages": [{"role":"user","content":"hi"}],
+        "max_tokens": 8,
+        "temperature": 0,
+        "response_format": { "type": "json_object" }
+    });
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("chat");
+    assert_eq!(res.status(), http::StatusCode::UNPROCESSABLE_ENTITY);
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(v["error"]["code"], "structured_output_validation_failed");
+}

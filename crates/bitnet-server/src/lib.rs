@@ -741,6 +741,101 @@ pub struct ChatCompletionRequest {
     pub presence_penalty: Option<f32>,
     #[serde(default)]
     pub seed: Option<u64>,
+    /// OpenAI-compatible structured output (`json_object` / `json_schema`).
+    #[serde(default)]
+    pub response_format: Option<ResponseFormat>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResponseFormat {
+    #[serde(rename = "type")]
+    pub format_type: String,
+    #[serde(default)]
+    pub json_schema: Option<JsonSchemaSpec>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct JsonSchemaSpec {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub schema: Option<serde_json::Value>,
+    /// When true (default), reject non-conforming completions with 422.
+    #[serde(default = "default_strict_true")]
+    pub strict: bool,
+}
+
+fn default_strict_true() -> bool {
+    true
+}
+
+/// Validate assistant text against a simple OpenAI-style JSON schema subset
+/// (`type: object` + `required` string field names). Full JSON Schema is out of scope.
+pub fn validate_structured_output(
+    text: &str,
+    response_format: &ResponseFormat,
+) -> Result<(), String> {
+    let kind = response_format.format_type.trim().to_ascii_lowercase();
+    match kind.as_str() {
+        "text" | "" => Ok(()),
+        "json_object" => {
+            let trimmed = text.trim();
+            serde_json::from_str::<serde_json::Value>(trimmed)
+                .map(|_| ())
+                .map_err(|e| format!("structured output is not valid JSON: {e}"))
+        }
+        "json_schema" => {
+            let strict = response_format
+                .json_schema
+                .as_ref()
+                .map(|s| s.strict)
+                .unwrap_or(true);
+            let trimmed = text.trim();
+            let value: serde_json::Value = serde_json::from_str(trimmed)
+                .map_err(|e| format!("structured output is not valid JSON: {e}"))?;
+            let Some(spec) = response_format.json_schema.as_ref() else {
+                return Ok(());
+            };
+            let Some(schema) = spec.schema.as_ref() else {
+                return Ok(());
+            };
+            if !strict {
+                return Ok(());
+            }
+            validate_against_simple_schema(&value, schema)
+        }
+        other => Err(format!(
+            "unsupported response_format.type '{other}' (supported: json_object, json_schema, text)"
+        )),
+    }
+}
+
+fn validate_against_simple_schema(
+    value: &serde_json::Value,
+    schema: &serde_json::Value,
+) -> Result<(), String> {
+    let ty = schema
+        .get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("object");
+    if ty == "object" {
+        let obj = value
+            .as_object()
+            .ok_or_else(|| "structured output must be a JSON object".to_string())?;
+        if let Some(required) = schema.get("required").and_then(|v| v.as_array()) {
+            for key in required {
+                let Some(name) = key.as_str() else {
+                    continue;
+                };
+                if !obj.contains_key(name) {
+                    return Err(format!(
+                        "structured output missing required field '{name}'"
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]
@@ -1066,6 +1161,7 @@ async fn completions(
         frequency_penalty: req.frequency_penalty,
         presence_penalty: req.presence_penalty,
         seed: req.seed,
+        response_format: None,
     };
     let response = chat_completions(State(state), headers, Json(chat)).await?;
     if req.stream == Some(true) {
@@ -1294,12 +1390,19 @@ async fn chat_completions(
     };
 
     let temperature = req.temperature.unwrap_or(0.7);
+    let structured_json = req.response_format.as_ref().is_some_and(|rf| {
+        matches!(
+            rf.format_type.trim().to_ascii_lowercase().as_str(),
+            "json_object" | "json_schema"
+        )
+    });
     let sampling = SamplingOptions {
         temperature,
         top_p: req.top_p,
         seed: req.seed,
         frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
         presence_penalty: req.presence_penalty.unwrap_or(0.0),
+        structured_json,
     };
     clear_inference_cancel();
     let engine = state.engine.read().await.clone();
@@ -1498,6 +1601,29 @@ async fn chat_completions(
     };
 
     let text = apply_stop_sequences(output.text, req.stop.as_ref());
+    if let Some(rf) = req.response_format.as_ref() {
+        if let Err(msg) = validate_structured_output(&text, rf) {
+            state
+                .metrics
+                .structured_output_validation_failures_total
+                .fetch_add(1, Ordering::Relaxed);
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({
+                    "error": {
+                        "message": msg,
+                        "type": "invalid_request_error",
+                        "code": "structured_output_validation_failed"
+                    }
+                })),
+            )
+                .into_response());
+        }
+    }
     Ok(json_completion(&request_model, &text, &output.stats).into_response())
 }
 
