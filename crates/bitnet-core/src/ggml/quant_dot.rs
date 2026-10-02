@@ -745,18 +745,42 @@ pub fn matvec_device_quant_optional(
     }
 }
 
-fn load_cuda_quant_library() -> Option<Library> {
-    for path in [
-        "rbitnet_cuda_quant64.dll",
-        "rbitnet_cuda_quant.dll",
-        "librbitnet_cuda_quant.so",
-        "librbitnet_cuda_quant.dylib",
-    ] {
-        if let Ok(lib) = unsafe { Library::new(path) } {
-            return Some(lib);
+fn load_cuda_quant_library() -> Option<&'static Library> {
+    static LIB: OnceLock<Option<Library>> = OnceLock::new();
+    LIB.get_or_init(|| {
+        let mut candidates: Vec<String> = Vec::new();
+        if let Ok(explicit) = std::env::var("RBITNET_CUDA_QUANT_LIB") {
+            let trimmed = explicit.trim();
+            if !trimmed.is_empty() {
+                candidates.push(trimmed.to_string());
+            }
         }
-    }
-    None
+        for path in [
+            "rbitnet_cuda_quant64.dll",
+            "rbitnet_cuda_quant.dll",
+            "librbitnet_cuda_quant.so",
+            "librbitnet_cuda_quant.dylib",
+            "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
+            "native/cuda_quant/build/rbitnet_cuda_quant.dll",
+            "native/cuda_quant/build/librbitnet_cuda_quant.so",
+            "native/cuda_quant/build/librbitnet_cuda_quant.dylib",
+        ] {
+            candidates.push(path.to_string());
+        }
+        for path in candidates {
+            if let Ok(lib) = unsafe { Library::new(path.as_str()) } {
+                tracing::info!(path = %path, "loaded librbitnet_cuda_quant");
+                return Some(lib);
+            }
+        }
+        None
+    })
+    .as_ref()
+}
+
+/// True when optional `librbitnet_cuda_quant` was found (device or host symbols may still vary).
+pub fn cuda_quant_library_available() -> bool {
+    load_cuda_quant_library().is_some()
 }
 
 /// `ffn_down`: shape `[n_ff, n_embd]` — `y[o] = dot(W[o,:], x)` for `o` in `0..n_embd`, `x.len()==n_ff`.

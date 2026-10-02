@@ -14,7 +14,7 @@ Last reviewed: **2026-10-02** against `main` (post #72 SlimAttention decode + #7
 | Continuous batching **fused** multi-seq | **Stalled / closed** | [#46](https://github.com/azerothl/Rbitnet/issues/46) — kernel + scheduler hook shipped; e2e concurrency gain stalled → [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md); GPU fused = #22 |
 | Speculative beyond scheduler MVP | **Partial / deferred** | PLD / n-gram shipped (#18); Lookahead **wontfix for now** → [#44](https://github.com/azerothl/Rbitnet/issues/44) / [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
 | Roadmap loaders / non-Llama / MoE | **Exit met (#25 closed)** | Qwen3 dense golden CI (#73) + Mixtral MoE `/v1` e2e + CI golden (#75); roadmap tags still Llama-shaped-or-refuse; DeepSeek MLA = follow-up |
-| GPU backends | **Open (hardware)** | [#22](https://github.com/azerothl/Rbitnet/issues/22) — Gate E quant residency API landed (#74); ROCm/Vulkan/Metal parity stubs; measured CUDA tok/s still open |
+| GPU backends | **Open (serving tok/s)** | [#22](https://github.com/azerothl/Rbitnet/issues/22) — Gate E lib + device kernels shipped/hardware-smoked; Vulkan/Metal stubs; full greedy token published rows still optional |
 | SlimAttention / KIVI | **Shipped proto + decode opt-in** | [#39](https://github.com/azerothl/Rbitnet/issues/39) closed — `RBITNET_SLIM_ATTENTION=1` wired into Llama CPU/hybrid decode; KIVI no-go |
 | `tokenizer.model` without manual conversion | **Shipped** | SentencePiece path in `prompt_tokenizer.rs`; prefer `tokenizer.json` |
 | Each conversion updates LIMITATIONS / STATUS | **Ongoing** | Required on each child issue close |
@@ -32,9 +32,11 @@ Last reviewed: **2026-10-02** against `main` (post #72 SlimAttention decode + #7
 | Backend | Status | Action |
 |---------|--------|--------|
 | `cpu` | **Production path** | Default native-first. |
-| `cuda` | **Partial (Gate E)** | Device-resident f32 + **quant** (`CudaDeviceQuantMatrix`) + Llama cuda/hybrid prefer quant residency ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)); hardware tok/s + `librbitnet_cuda_quant` device kernels still open → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
-| `rocm` / `vulkan` / `metal` | **Parity stubs** | Library probe may set `is_native_accelerated`; **matvec still CPU**. Not claimed as full GPU inference → #22. |
+| `cuda` | **Partial (Gate E HW)** | Device-resident f32 + **quant** via shipped `native/cuda_quant` (`*_matvec_device`); Llama cuda/hybrid prefer quant residency; FA/attention GPU still open → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
+| `rocm` | **Partial (f32 GEMV)** | hipBLAS SGEMV when HIP loads; else CPU. Quant device path not yet. |
+| `vulkan` / `metal` / `intel` | **Parity stubs** | Library probe may set `is_native_accelerated`; **matvec still CPU**. `intel` aliases to Vulkan. |
 | `hybrid` | **Partial** | Prefers quant residency over densify when type supported; placement budgets + CPU fallback (#22 Gate E). |
+| `auto` | **Shipped** | `BackendKind::detect_best()` — CUDA→ROCm→Metal→Vulkan→CPU. |
 
 ## Serving / KV / speculative (native CPU stack)
 
@@ -56,7 +58,7 @@ Last reviewed: **2026-10-02** against `main` (post #72 SlimAttention decode + #7
 ## Remaining work (issue map)
 
 - [x] **[#46](https://github.com/azerothl/Rbitnet/issues/46)** — Fused multi-seq: spike + **stall decision** ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)); true Llama batched forward deferred; GPU via #22.
-- [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — **Sole epic blocker:** Gate E quant residency API landed (CI-safe); hardware CUDA vertical (`librbitnet_cuda_quant` device symbols + published tok/s + greedy parity) + ROCm/Vulkan/Metal beyond parity stubs.
+- [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — CUDA quant lib + device kernels + auto/ROCm increments landed; remaining: published end-to-end tok/s on curated GGUF, Vulkan/Metal beyond stubs, GPU attention/KV.
 - [x] **[#25](https://github.com/azerothl/Rbitnet/issues/25)** — Closed after [#73](https://github.com/azerothl/Rbitnet/pull/73) + [#75](https://github.com/azerothl/Rbitnet/pull/75) (Qwen3 dense golden CI + Mixtral MoE `/v1` e2e).
 - [x] **[#39](https://github.com/azerothl/Rbitnet/issues/39)** — SlimAttention tiled CPU attention (+ KIVI no-go); decode opt-in wired.
 - [x] **[#44](https://github.com/azerothl/Rbitnet/issues/44)** — Lookahead Decoding **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).

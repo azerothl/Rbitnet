@@ -42,6 +42,38 @@ fn device_quant_matrix_cpu_fallback_matches_payload_golden() {
 }
 
 #[test]
+fn opt_in_device_resident_quant_kernel_when_lib_present() {
+    // Hardware opt-in: set RBITNET_CUDA_QUANT_SMOKE=1 after building native/cuda_quant.
+    if std::env::var("RBITNET_CUDA_QUANT_SMOKE").ok().as_deref() != Some("1") {
+        return;
+    }
+    let rt = bitnet_core::CudaRuntime::try_load().expect("CUDA runtime required for smoke");
+    assert!(
+        bitnet_core::ggml::cuda_quant_library_available(),
+        "set RBITNET_CUDA_QUANT_LIB or PATH to rbitnet_cuda_quant64.dll"
+    );
+    let (payload, x, out_rows, in_cols) = q4_0_two_row_fixture();
+    let expected = matvec_payload_quant(2, &payload, &x, in_cols, out_rows).expect("cpu");
+    let matrix =
+        CudaDeviceQuantMatrix::from_payload(Some(&rt), 2, payload, out_rows, in_cols)
+            .expect("device quant matrix");
+    assert!(matrix.is_device_resident());
+    let before = rt.metrics_snapshot().device_resident_quant_gemv_calls;
+    let got = matrix.matvec(&x).expect("device quant matvec");
+    let after = rt.metrics_snapshot().device_resident_quant_gemv_calls;
+    assert!(
+        after > before,
+        "device_resident_quant_gemv_calls did not rise ({before} -> {after})"
+    );
+    for (a, b) in got.iter().zip(expected.iter()) {
+        assert!(
+            (a - b).abs() <= 1e-3,
+            "GPU vs CPU mismatch got={a} expected={b}"
+        );
+    }
+}
+
+#[test]
 fn device_quant_matrix_matches_full_dequant_row_dots() {
     let (payload, x, out_rows, in_cols) = q4_0_two_row_fixture();
     let dims = vec![in_cols as u64, out_rows as u64];

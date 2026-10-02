@@ -37,10 +37,31 @@ impl BackendKind {
             "cuda" => BackendKind::Cuda,
             "hybrid" | "cpu-gpu" | "gpu-cpu" => BackendKind::Hybrid,
             "rocm" => BackendKind::Rocm,
-            "vulkan" => BackendKind::Vulkan,
+            "vulkan" | "intel" | "level-zero" | "oneapi" => BackendKind::Vulkan,
             "metal" => BackendKind::Metal,
+            "auto" | "detect" | "gpu" => Self::detect_best(),
             _ => BackendKind::Cpu,
         }
+    }
+
+    /// Prefer CUDA → ROCm → Metal → Vulkan when the runtime libs probe successfully; else CPU.
+    ///
+    /// Used by `RBITNET_BACKEND=auto`. Detection only probes libraries — it does not claim
+    /// full GPU inference for Vulkan/Metal (still parity stubs for matvec beyond CUDA/ROCm).
+    pub fn detect_best() -> Self {
+        if CudaRuntime::try_load().is_some() {
+            return BackendKind::Cuda;
+        }
+        if RocmBackend::runtime_available() {
+            return BackendKind::Rocm;
+        }
+        if MetalBackend::runtime_available() {
+            return BackendKind::Metal;
+        }
+        if VulkanBackend::runtime_available() {
+            return BackendKind::Vulkan;
+        }
+        BackendKind::Cpu
     }
 }
 
@@ -304,16 +325,41 @@ impl CudaRuntime {
     }
 
     fn load() -> Option<Self> {
-        let candidates = [
+        let mut candidates: Vec<String> = Vec::new();
+        if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
+            for rel in [
+                "bin/x64/cudart64_13.dll",
+                "bin/cudart64_13.dll",
+                "bin/x64/cudart64_12.dll",
+                "bin/cudart64_12.dll",
+                "bin/x64/cudart64_11.dll",
+                "bin/cudart64_11.dll",
+                "lib64/libcudart.so",
+                "lib64/libcudart.so.13",
+                "lib64/libcudart.so.12",
+            ] {
+                candidates.push(format!(
+                    "{}{}{}",
+                    cuda_path.trim_end_matches(['/', '\\']),
+                    std::path::MAIN_SEPARATOR,
+                    rel.replace('/', std::path::MAIN_SEPARATOR_STR)
+                ));
+            }
+        }
+        for path in [
+            "cudart64_13.dll",
             "cudart64_12.dll",
             "cudart64_11.dll",
             "libcudart.so",
+            "libcudart.so.13",
             "libcudart.so.12",
             "libcudart.so.11",
             "libcudart.dylib",
-        ];
-        for path in candidates {
-            let Ok(lib) = (unsafe { Library::new(path) }) else {
+        ] {
+            candidates.push(path.to_string());
+        }
+        for path in &candidates {
+            let Ok(lib) = (unsafe { Library::new(path.as_str()) }) else {
                 continue;
             };
             let cuda_malloc = unsafe {
@@ -347,14 +393,40 @@ impl CudaRuntime {
             let mut cublas_create_v2 = None;
             let mut cublas_destroy_v2 = None;
             let mut cublas_sgemv_v2 = None;
-            for cb_path in [
+            let mut cublas_candidates: Vec<String> = Vec::new();
+            if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
+                for rel in [
+                    "bin/x64/cublas64_13.dll",
+                    "bin/cublas64_13.dll",
+                    "bin/x64/cublas64_12.dll",
+                    "bin/cublas64_12.dll",
+                    "bin/x64/cublas64_11.dll",
+                    "bin/cublas64_11.dll",
+                    "lib64/libcublas.so",
+                    "lib64/libcublas.so.13",
+                    "lib64/libcublas.so.12",
+                ] {
+                    cublas_candidates.push(format!(
+                        "{}{}{}",
+                        cuda_path.trim_end_matches(['/', '\\']),
+                        std::path::MAIN_SEPARATOR,
+                        rel.replace('/', std::path::MAIN_SEPARATOR_STR)
+                    ));
+                }
+            }
+            for cb in [
+                "cublas64_13.dll",
                 "cublas64_12.dll",
                 "cublas64_11.dll",
                 "libcublas.so",
+                "libcublas.so.13",
                 "libcublas.so.12",
                 "libcublas.dylib",
             ] {
-                let Ok(cb_lib) = (unsafe { Library::new(cb_path) }) else {
+                cublas_candidates.push(cb.to_string());
+            }
+            for cb_path in &cublas_candidates {
+                let Ok(cb_lib) = (unsafe { Library::new(cb_path.as_str()) }) else {
                     continue;
                 };
                 unsafe {
@@ -925,31 +997,254 @@ impl ComputeBackend for HybridBackend {
     }
 }
 
-/// ROCm bootstrap backend: functional parity stub.
+/// ROCm backend: hipBLAS SGEMV when AMD HIP + hipBLAS load; otherwise CPU fallback.
 #[derive(Debug)]
 pub struct RocmBackend {
     cpu: CpuBackend,
     runtime_loaded: bool,
+    runtime: Option<Arc<RocmRuntime>>,
+}
+
+/// ROCm / hipBLAS runtime (dynamically loaded). Mirrors the CUDA f32 GEMV path.
+pub struct RocmRuntime {
+    _hip: Library,
+    _hipblas: Library,
+    hip_malloc: unsafe extern "C" fn(*mut *mut c_void, usize) -> i32,
+    hip_free: unsafe extern "C" fn(*mut c_void) -> i32,
+    hip_memcpy: unsafe extern "C" fn(*mut c_void, *const c_void, usize, i32) -> i32,
+    hip_sync: unsafe extern "C" fn() -> i32,
+    hipblas_create: unsafe extern "C" fn(*mut *mut c_void) -> i32,
+    hipblas_destroy: unsafe extern "C" fn(*mut c_void) -> i32,
+    hipblas_sgemv: unsafe extern "C" fn(
+        *mut c_void,
+        i32,
+        i32,
+        i32,
+        *const f32,
+        *const f32,
+        i32,
+        *const f32,
+        i32,
+        *const f32,
+        *mut f32,
+        i32,
+    ) -> i32,
+    handle: Mutex<Option<usize>>,
+}
+
+unsafe impl Send for RocmRuntime {}
+unsafe impl Sync for RocmRuntime {}
+
+impl std::fmt::Debug for RocmRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("RocmRuntime(loaded)")
+    }
+}
+
+impl RocmRuntime {
+    const HIP_SUCCESS: i32 = 0;
+    const HIPBLAS_SUCCESS: i32 = 0;
+    const HIP_MEMCPY_H2D: i32 = 1;
+    const HIP_MEMCPY_D2H: i32 = 2;
+    const HIPBLAS_OP_T: i32 = 1;
+
+    pub fn try_load() -> Option<Arc<Self>> {
+        Self::load().map(Arc::new)
+    }
+
+    fn load() -> Option<Self> {
+        let hip_candidates = ["amdhip64.dll", "libamdhip64.so", "libhip_hcc.so"];
+        let blas_candidates = ["hipblas.dll", "libhipblas.so"];
+        let mut hip_lib = None;
+        for path in hip_candidates {
+            if let Ok(lib) = unsafe { Library::new(path) } {
+                hip_lib = Some(lib);
+                break;
+            }
+        }
+        let hip = hip_lib?;
+        let hip_malloc = unsafe {
+            let s: libloading::Symbol<unsafe extern "C" fn(*mut *mut c_void, usize) -> i32> =
+                hip.get(b"hipMalloc").ok()?;
+            *s
+        };
+        let hip_free = unsafe {
+            let s: libloading::Symbol<unsafe extern "C" fn(*mut c_void) -> i32> =
+                hip.get(b"hipFree").ok()?;
+            *s
+        };
+        let hip_memcpy = unsafe {
+            let s: libloading::Symbol<
+                unsafe extern "C" fn(*mut c_void, *const c_void, usize, i32) -> i32,
+            > = hip.get(b"hipMemcpy").ok()?;
+            *s
+        };
+        let hip_sync = unsafe {
+            let s: libloading::Symbol<unsafe extern "C" fn() -> i32> =
+                hip.get(b"hipDeviceSynchronize").ok()?;
+            *s
+        };
+        let mut blas_lib = None;
+        for path in blas_candidates {
+            if let Ok(lib) = unsafe { Library::new(path) } {
+                blas_lib = Some(lib);
+                break;
+            }
+        }
+        let hipblas = blas_lib?;
+        let hipblas_create = unsafe {
+            let s: libloading::Symbol<unsafe extern "C" fn(*mut *mut c_void) -> i32> =
+                hipblas.get(b"hipblasCreate").ok()?;
+            *s
+        };
+        let hipblas_destroy = unsafe {
+            let s: libloading::Symbol<unsafe extern "C" fn(*mut c_void) -> i32> =
+                hipblas.get(b"hipblasDestroy").ok()?;
+            *s
+        };
+        let hipblas_sgemv = unsafe {
+            let s: libloading::Symbol<
+                unsafe extern "C" fn(
+                    *mut c_void,
+                    i32,
+                    i32,
+                    i32,
+                    *const f32,
+                    *const f32,
+                    i32,
+                    *const f32,
+                    i32,
+                    *const f32,
+                    *mut f32,
+                    i32,
+                ) -> i32,
+            > = hipblas.get(b"hipblasSgemv").ok()?;
+            *s
+        };
+        Some(Self {
+            _hip: hip,
+            _hipblas: hipblas,
+            hip_malloc,
+            hip_free,
+            hip_memcpy,
+            hip_sync,
+            hipblas_create,
+            hipblas_destroy,
+            hipblas_sgemv,
+            handle: Mutex::new(None),
+        })
+    }
+
+    fn handle(&self) -> Option<*mut c_void> {
+        let mut guard = self.handle.lock().ok()?;
+        if let Some(raw) = *guard {
+            return Some(raw as *mut c_void);
+        }
+        let mut h: *mut c_void = null_mut();
+        if unsafe { (self.hipblas_create)(&mut h) } != Self::HIPBLAS_SUCCESS {
+            return None;
+        }
+        *guard = Some(h as usize);
+        Some(h)
+    }
+
+    pub fn gemv_host_f32(
+        &self,
+        w: &[f32],
+        x: &[f32],
+        out_rows: usize,
+        in_cols: usize,
+    ) -> Option<Vec<f32>> {
+        if x.len() != in_cols || w.len() != out_rows.checked_mul(in_cols)? {
+            return None;
+        }
+        let handle = self.handle()?;
+        let w_bytes = w.len() * std::mem::size_of::<f32>();
+        let x_bytes = x.len() * std::mem::size_of::<f32>();
+        let y_bytes = out_rows * std::mem::size_of::<f32>();
+        let mut d_w: *mut c_void = null_mut();
+        let mut d_x: *mut c_void = null_mut();
+        let mut d_y: *mut c_void = null_mut();
+        let mut out = vec![0.0f32; out_rows];
+        let ok = unsafe {
+            (self.hip_malloc)(&mut d_w, w_bytes) == Self::HIP_SUCCESS
+                && (self.hip_malloc)(&mut d_x, x_bytes) == Self::HIP_SUCCESS
+                && (self.hip_malloc)(&mut d_y, y_bytes) == Self::HIP_SUCCESS
+                && (self.hip_memcpy)(d_w, w.as_ptr().cast(), w_bytes, Self::HIP_MEMCPY_H2D)
+                    == Self::HIP_SUCCESS
+                && (self.hip_memcpy)(d_x, x.as_ptr().cast(), x_bytes, Self::HIP_MEMCPY_H2D)
+                    == Self::HIP_SUCCESS
+        };
+        if !ok {
+            unsafe {
+                if !d_w.is_null() {
+                    let _ = (self.hip_free)(d_w);
+                }
+                if !d_x.is_null() {
+                    let _ = (self.hip_free)(d_x);
+                }
+                if !d_y.is_null() {
+                    let _ = (self.hip_free)(d_y);
+                }
+            }
+            return None;
+        }
+        let alpha = 1.0f32;
+        let beta = 0.0f32;
+        let status = unsafe {
+            (self.hipblas_sgemv)(
+                handle,
+                Self::HIPBLAS_OP_T,
+                in_cols as i32,
+                out_rows as i32,
+                &alpha,
+                d_w.cast::<f32>(),
+                in_cols as i32,
+                d_x.cast::<f32>(),
+                1,
+                &beta,
+                d_y.cast::<f32>(),
+                1,
+            )
+        };
+        let copy_ok = status == Self::HIPBLAS_SUCCESS
+            && unsafe {
+                (self.hip_memcpy)(out.as_mut_ptr().cast(), d_y, y_bytes, Self::HIP_MEMCPY_D2H)
+                    == Self::HIP_SUCCESS
+            };
+        let _ = unsafe { (self.hip_sync)() };
+        unsafe {
+            let _ = (self.hip_free)(d_w);
+            let _ = (self.hip_free)(d_x);
+            let _ = (self.hip_free)(d_y);
+        }
+        copy_ok.then_some(out)
+    }
+}
+
+impl Drop for RocmRuntime {
+    fn drop(&mut self) {
+        if let Ok(mut guard) = self.handle.lock() {
+            if let Some(raw) = guard.take() {
+                let _ = unsafe { (self.hipblas_destroy)(raw as *mut c_void) };
+            }
+        }
+    }
 }
 
 impl RocmBackend {
-    fn runtime_available() -> bool {
-        [
-            "amdhip64.dll",
-            "hipblas.dll",
-            "libamdhip64.so",
-            "libhipblas.so",
-        ]
-        .iter()
-        .any(|p| unsafe { Library::new(p).is_ok() })
+    pub(crate) fn runtime_available() -> bool {
+        RocmRuntime::try_load().is_some()
     }
 }
 
 impl Default for RocmBackend {
     fn default() -> Self {
+        let runtime = RocmRuntime::try_load();
         Self {
             cpu: CpuBackend,
-            runtime_loaded: Self::runtime_available(),
+            runtime_loaded: runtime.is_some(),
+            runtime,
         }
     }
 }
@@ -975,6 +1270,11 @@ impl ComputeBackend for RocmBackend {
     }
 
     fn matvec(&self, w: &[f32], x: &[f32], out_rows: usize, in_cols: usize) -> Result<Vec<f32>> {
+        if let Some(rt) = &self.runtime {
+            if let Some(out) = rt.gemv_host_f32(w, x, out_rows, in_cols) {
+                return Ok(out);
+            }
+        }
         self.cpu.matvec(w, x, out_rows, in_cols)
     }
 }
@@ -987,7 +1287,8 @@ pub struct VulkanBackend {
 }
 
 impl VulkanBackend {
-    fn runtime_available() -> bool {
+    /// Probe system Vulkan loader (Intel discrete/iGPU often via this path — #22).
+    pub(crate) fn runtime_available() -> bool {
         ["vulkan-1.dll", "libvulkan.so", "libvulkan.dylib"]
             .iter()
             .any(|p| unsafe { Library::new(p).is_ok() })
@@ -1036,7 +1337,7 @@ pub struct MetalBackend {
 }
 
 impl MetalBackend {
-    fn runtime_available() -> bool {
+    pub(crate) fn runtime_available() -> bool {
         ["Metal.framework/Metal", "libMetal.dylib"]
             .iter()
             .any(|p| unsafe { Library::new(p).is_ok() })

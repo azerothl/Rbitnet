@@ -248,3 +248,19 @@ TQ_ITERS=400 TQ_ROWS=64 cargo run -p bitnet-core --example tq_dot_microbench --r
 1. Publish a real **BitNet 2B4T e2e** tok/s + RSS row (MODEL_MATRIX still **unpublished**).
 2. SIMD / wider tiles on **TQ2_0** `dot_row` (the actual hot path), optionally sharing decode tables with I2_S research kernels.
 3. Optional offline repack TQ→I2_S only if e2e profiling shows decode dominance — still no FFI.
+
+## CUDA Gate E kernels — 2026-10-02 (RTX 4080 Laptop)
+
+**Hardware:** NVIDIA GeForce RTX 4080 Laptop GPU, Driver 610.88, CUDA Toolkit 13.3 (cudart64_13 / cublas64_13).
+**Library:** 
+ative/cuda_quant built via `scripts/build_cuda_quant.ps1`; `RBITNET_CUDA_QUANT_LIB` set; `RBITNET_BENCH_CUDA=1`.
+**Method:** `cargo bench -p bitnet-core --bench kernels -- --warm-up-time 1 --measurement-time 3`.
+**Correctness:** `RBITNET_CUDA_QUANT_SMOKE=1 cargo test -p bitnet-core --test cuda_quant_residency opt_in_device_resident_quant_kernel_when_lib_present` — `device_resident_quant_gemv_calls` rises; GPU Q4_0 matches CPU golden within 1e-3.
+
+| Bench | Shape | time (mean) |
+|-------|-------|-------------|
+| `cuda_backend_matvec_f32` (host-upload W) | 512×4096 | 506 µs |
+| `cuda_device_resident_f32` | 512×4096 | 41 µs |
+| `cuda_device_quant_q4_0` (device-resident W) | 512×4096 | 173 µs |
+
+Notes: host-upload f32 pays H2D of **W** each call; resident f32/quant keep **W** on device. Full greedy Llama tok/s vs CPU still recorded separately when `RBITNET_MODEL` is set (Gate D).
