@@ -10,6 +10,43 @@ This page sets expectations for performance, formats, and architectures. For com
 - **No distributed inference:** One process loads one GGUF for real generation (stub/toy modes are separate smoke paths).
 - **Not a vLLM / TRT-LLM–class server (yet):** fused GPU kernels (FlashAttention-style), **GPU-filling continuous batching**, **API-style prompt caching**, **prefill/decode disaggregation**, and **CUDA graphs** are **not** the default baseline. **Opt-in CPU serving hooks:** paged KV (`RBITNET_LLAMA_PAGED_KV` / `RBITNET_KV_POOL`), **KV Q8** (`RBITNET_KV_QUANT=q8`), and **Sarathi-style stall-free batching** (`RBITNET_CONTINUOUS_BATCHING` + `RBITNET_ITERATION_TOKEN_BUDGET` — decode-first, chunked prefill). **Fused multi-seq CPU spike (#46):** `dense_matvec_multi_seq` + `generate_decode_batch` behind `RBITNET_FUSED_MULTI_SEQ=1` (scheduler decode wave can call the batch API; default executors still sequential — **not** a measured throughput ship; GPU fused = #22). See [USAGE.md](USAGE.md), `scripts/bench_kv_q8.sh`, `scripts/bench_sarathi.sh`, [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md).
 
+## Memory / hybrid placement budgets (no FFI)
+
+Rbitnet does **not** port akasha-os `aos-placement` (no mid-token migrate, no OS crate). It reuses the **mental model**: declare RAM/VRAM budgets, refuse load clearly when over, then retry.
+
+### Load guardrails (RAM-style)
+
+| Env | Effect |
+|-----|--------|
+| `RBITNET_MAX_WEIGHT_BYTES` | Cap on GGUF tensor payload size |
+| `RBITNET_MAX_LOAD_BYTES` | Cap on weights + estimated F32 KV (via `RBITNET_BUDGET_MAX_SEQ` or GGUF context) |
+| `RBITNET_MAX_VRAM_MB` | Soft VRAM-style cap on the same estimated footprint |
+| `RBITNET_BUDGET_MAX_SEQ` | Tokens used for the KV estimate (default: GGUF context length) |
+
+**Fallback:** over-budget → **load refused** with an actionable error (no hang). Fix the path/caps and `POST /v1/admin/reload` (see also LoadFailed retry). Metrics: `rbitnet_core_memory_budget_refusals_total`, `rbitnet_core_memory_budget_estimated_load_bytes`.
+
+Example (refuse a ~1 GB GGUF on a tight host):
+
+```bash
+export RBITNET_MAX_LOAD_BYTES=$((512*1024*1024))
+export RBITNET_MODEL=/path/model.gguf
+# Engine::from_env / rbitnet-server fails fast with "exceeds RBITNET_MAX_LOAD_BYTES"
+```
+
+### Hybrid CPU/GPU planning (`RBITNET_BACKEND=hybrid`)
+
+Soft **upload** budget for which Llama layers go to device memory (not a hard CUDA OOM fence):
+
+| Env | Role |
+|-----|------|
+| `RBITNET_HYBRID_POLICY` | `layers` / `hotcold` / `auto` |
+| `RBITNET_HYBRID_LAYERS` | Explicit layer list / ranges |
+| `RBITNET_HYBRID_MAX_VRAM_MB` | Soft planning budget (default 512) |
+| `RBITNET_HYBRID_MIN_ROWS` | Skip tiny matrices |
+| `RBITNET_HYBRID_OUTPUT` | Optionally offload output head |
+
+GPU backends remain MVP unless measured under #22; hybrid planning still runs so logs show the selected plan. See [ENV_REFERENCE.md](ENV_REFERENCE.md) and [USAGE.md](USAGE.md).
+
 ## Prefix cache vs KV prompt caching
 
 - **`RBITNET_PREFIX_CACHE`** stores **full responses** for requests where `(prompt, max_tokens, temperature)` matches exactly. It does **not** skip prefill by reusing attention KV.

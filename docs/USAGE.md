@@ -46,6 +46,24 @@ RBITNET_STUB=1 cargo run -p bitnet-server &
 ./scripts/smoke_openai.sh
 ```
 
+## Hybrid placement budgets (RAM / VRAM)
+
+Mental model aligned with akasha-os placement **without** porting `aos-placement` or mid-token migrate:
+
+1. Set load caps before mmap: `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, and/or `RBITNET_MAX_VRAM_MB` (+ optional `RBITNET_BUDGET_MAX_SEQ`).
+2. Over budget → **clear refuse** at load (metric `rbitnet_core_memory_budget_refusals_total`); no hang.
+3. For experimental hybrid offload: `RBITNET_BACKEND=hybrid` + `RBITNET_HYBRID_POLICY` / `RBITNET_HYBRID_MAX_VRAM_MB` (soft layer plan — see [LIMITATIONS.md](LIMITATIONS.md#memory--hybrid-placement-budgets-no-ffi)).
+
+Laptop example (~8 GiB host, TinyLlama-class):
+
+```bash
+export RBITNET_MAX_LOAD_BYTES=$((3*1024*1024*1024))
+export RBITNET_BUDGET_MAX_SEQ=2048
+# optional soft VRAM planning for hybrid (GPU path still #22):
+export RBITNET_BACKEND=cpu
+# export RBITNET_BACKEND=hybrid RBITNET_HYBRID_MAX_VRAM_MB=512 RBITNET_HYBRID_POLICY=auto
+```
+
 ## Do you need Python?
 
 **No — not for running Rbitnet.** Inference is implemented in **Rust** (`bitnet-core`): GGUF is memory-mapped, weights are dequantized in-process, and text is generated via the [`Engine`](../crates/bitnet-core/src/inference.rs) or the HTTP server.
