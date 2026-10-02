@@ -7,8 +7,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+if [[ "${RBITNET_BUILD_CUDA_QUANT:-0}" == "1" ]]; then
+  echo "== Build librbitnet_cuda_quant =="
+  "$ROOT/scripts/build_cuda_quant.sh"
+  export LD_LIBRARY_PATH="$ROOT/native/cuda_quant/build:${LD_LIBRARY_PATH:-}"
+  export RBITNET_CUDA_QUANT_LIB="$ROOT/native/cuda_quant/build/librbitnet_cuda_quant.so"
+fi
+
 echo "== CPU golden (always) =="
 cargo test -p bitnet-core --test cuda_quant_residency --test backend_conformance
+
+if [[ -n "${RBITNET_CUDA_QUANT_LIB:-}" ]]; then
+  echo "== Opt-in device-resident quant kernel smoke =="
+  RBITNET_CUDA_QUANT_SMOKE=1 cargo test -p bitnet-core --test cuda_quant_residency \
+    opt_in_device_resident_quant_kernel_when_lib_present -- --nocapture
+else
+  echo "Skip device kernel smoke: set RBITNET_BUILD_CUDA_QUANT=1 or RBITNET_CUDA_QUANT_LIB"
+fi
 
 if [[ "${RBITNET_BENCH_CUDA:-0}" != "1" ]]; then
   echo "Set RBITNET_BENCH_CUDA=1 to run Criterion CUDA rows (requires CUDA runtime)."

@@ -83,3 +83,29 @@ fn backend_numeric_parity_cpu_vs_stubs() {
     check_backend_parity(&cpu, &vulkan);
     check_backend_parity(&cpu, &metal);
 }
+
+#[test]
+fn backend_auto_detect_resolves_without_panic() {
+    // Does not assert a specific GPU — only that auto selection is a known kind.
+    let kind = BackendKind::detect_best();
+    assert!(matches!(
+        kind,
+        BackendKind::Cpu
+            | BackendKind::Cuda
+            | BackendKind::Rocm
+            | BackendKind::Vulkan
+            | BackendKind::Metal
+    ));
+    let backend = make_backend(kind);
+    assert_eq!(backend.kind(), kind);
+}
+
+#[test]
+fn backend_intel_alias_maps_to_vulkan() {
+    // Safety: process-local env for this unit test only.
+    std::env::set_var("RBITNET_BACKEND", "intel");
+    assert_eq!(BackendKind::from_env(), BackendKind::Vulkan);
+    std::env::set_var("RBITNET_BACKEND", "cpu");
+    assert_eq!(BackendKind::from_env(), BackendKind::Cpu);
+    std::env::remove_var("RBITNET_BACKEND");
+}

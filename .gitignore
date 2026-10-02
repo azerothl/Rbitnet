@@ -7,3 +7,6 @@
 .env
 *.gguf
 /models/
+/native/cuda_quant/build/
+*.exp
+*.lib
