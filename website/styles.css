@@ -398,7 +398,8 @@ main,
   }
 
   .bit-grid,
-  .hero-copy {
+  .hero-copy,
+  .brand-title::after {
     animation: none;
   }
 
