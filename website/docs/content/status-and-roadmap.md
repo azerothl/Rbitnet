@@ -98,7 +98,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | ---------------------------------------------------------- | ----------------------------------------------------------------- |
 | GGML types documented                                      | `[BITNET_SPEC.md](BITNET_SPEC.md)` + `types.rs`                   |
 | Tensor name aliases                                        | **Done** — `tensor_first_of` (e.g. `lm_head`, `attn_out`)         |
-| Regression / golden tests                                  | Kernel goldens + Qwen3 synthetic greedy in default CI; optional Llama/Hub Qwen3 via `RBITNET_GOLDEN_JSON` + `docs/GOLDEN_TESTS.md`; optional GGUF smoke via `RBITNET_TEST_GGUF` |
+| Regression / golden tests                                  | Kernel + Qwen3 dense + Mixtral MoE synthetic goldens (and Mixtral `/v1` e2e) in default CI; optional Hub via `RBITNET_GOLDEN_JSON` |
 | Second exporter (e.g. llama.cpp vs BitNet) automated tests | **Partial** — optional `RBITNET_TEST_GGUF` mmap + optional engine load when tokenizer beside GGUF; **greedy first-token** optional test when golden JSON is provided |
 | Release process + semver                                   | `[RELEASE.md](RELEASE.md)`                                        |
 | Prebuilt binaries on tag                                   | **Done** — `.github/workflows/release.yml`                        |
