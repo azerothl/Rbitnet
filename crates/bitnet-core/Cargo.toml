@@ -37,3 +37,11 @@ harness = false
 [[example]]
 name = "engine_smoke"
 path = "examples/engine_smoke.rs"
+
+[[example]]
+name = "ternary_microbench"
+path = "examples/ternary_microbench.rs"
+
+[[example]]
+name = "tq_dot_microbench"
+path = "examples/tq_dot_microbench.rs"

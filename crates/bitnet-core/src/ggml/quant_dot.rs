@@ -334,22 +334,50 @@ fn dot_row_q4_k(row: &[u8], x: &[f32]) -> Result<f32> {
     Ok(acc)
 }
 
+/// TQ1_0 row dot using a stack scratch block (avoids per-call heap `Vec`).
 fn dot_row_tq1_0(row: &[u8], x: &[f32]) -> Result<f32> {
     if x.len() % QK_K != 0 {
         return Err(BitNetError::InvalidGguf("tq1_0 ne0 % 256".into()));
     }
-    let mut buf = vec![0.0f32; x.len()];
-    decode_tq1_0_to_f32(row, &mut buf)?;
-    Ok(buf.iter().zip(x.iter()).map(|(w, xi)| w * xi).sum())
+    let nb = x.len() / QK_K;
+    const BLOCK: usize = 2 + 48 + 4;
+    if row.len() != nb * BLOCK {
+        return Err(BitNetError::InvalidGguf("tq1_0 row bytes".into()));
+    }
+    let mut acc = 0.0f32;
+    let mut buf = [0.0f32; QK_K];
+    for b in 0..nb {
+        let o = b * BLOCK;
+        decode_tq1_0_to_f32(&row[o..o + BLOCK], &mut buf)?;
+        let xb = &x[b * QK_K..(b + 1) * QK_K];
+        for i in 0..QK_K {
+            acc = buf[i].mul_add(xb[i], acc);
+        }
+    }
+    Ok(acc)
 }
 
+/// TQ2_0 row dot using a stack scratch block (avoids per-call heap `Vec`).
 fn dot_row_tq2_0(row: &[u8], x: &[f32]) -> Result<f32> {
     if x.len() % QK_K != 0 {
         return Err(BitNetError::InvalidGguf("tq2_0 ne0 % 256".into()));
     }
-    let mut buf = vec![0.0f32; x.len()];
-    decode_tq2_0_to_f32(row, &mut buf)?;
-    Ok(buf.iter().zip(x.iter()).map(|(w, xi)| w * xi).sum())
+    let nb = x.len() / QK_K;
+    const BLOCK: usize = 2 + 64;
+    if row.len() != nb * BLOCK {
+        return Err(BitNetError::InvalidGguf("tq2_0 row bytes".into()));
+    }
+    let mut acc = 0.0f32;
+    let mut buf = [0.0f32; QK_K];
+    for b in 0..nb {
+        let o = b * BLOCK;
+        decode_tq2_0_to_f32(&row[o..o + BLOCK], &mut buf)?;
+        let xb = &x[b * QK_K..(b + 1) * QK_K];
+        for i in 0..QK_K {
+            acc = buf[i].mul_add(xb[i], acc);
+        }
+    }
+    Ok(acc)
 }
 
 fn decode_tq1_0_to_f32(row: &[u8], out: &mut [f32]) -> Result<()> {

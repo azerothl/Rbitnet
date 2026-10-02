@@ -53,10 +53,13 @@ cargo run -p bitnet-core --example engine_smoke
 
 ## Notes Et Limites
 
-Le chemin BitNet natif reutilise le runtime transformeur Llama-shaped de `bitnet-core`, mais selectionne un executor `bitnet` lorsque `general.architecture=bitnet`. Les produits matrice-vecteur ternaires `TQ1_0` et `TQ2_0` sont executes directement depuis le mmap GGUF.
+Le chemin BitNet natif reutilise le runtime transformeur Llama-shaped de `bitnet-core`, mais selectionne un executor `bitnet` lorsque `general.architecture=bitnet`. Les produits matrice-vecteur ternaires `TQ1_0` et `TQ2_0` sont executes directement depuis le mmap GGUF via [`quant_dot`](../crates/bitnet-core/src/ggml/quant_dot.rs) (scratch stack par bloc, sans FFI).
+
+Les helpers I2_S / TL2 dans [`kernels.rs`](../crates/bitnet-core/src/kernels.rs) sont la surface **microbench / research** (patterns bitnet.cpp reimplementes en Rust). Ils ne sont **pas** le chemin chaud du GGUF Microsoft b1.58 aujourd'hui.
 
 Ce qui reste a valider pour une parite complete:
 
 - comparaison logits couche par couche avec l'implementation Microsoft / llama.cpp sur le modele complet;
+- ligne e2e tok/s / RSS publiee dans [MODEL_MATRIX.md](MODEL_MATRIX.md) / [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md);
 - variantes GGUF dont les noms de tenseurs different des conventions Microsoft;
-- kernels optimises SIMD/GPU pour les produits ternaires, au-dela du chemin CPU portable actuel.
+- SIMD TQ (pas seulement I2_S) et eventuel repack — pas de FFI bitnet.cpp ([NATIVE_FIRST.md](NATIVE_FIRST.md)).

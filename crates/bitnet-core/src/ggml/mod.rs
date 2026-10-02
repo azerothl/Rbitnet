@@ -6,7 +6,8 @@ mod types;
 
 pub use dequant::tensor_to_f32;
 pub use quant_dot::{
-    embedding_row_mmap, ggml_type_supported_mmap_matvec, matvec_embd_out_mmap, matvec_ff_mmap,
-    matvec_payload_quant, QuantKernelBackend, QuantMatvecKernel,
+    decode_row_to_f32, dot_row, embedding_row_mmap, ggml_type_supported_mmap_matvec,
+    matvec_embd_out_mmap, matvec_ff_mmap, matvec_payload_quant, QuantKernelBackend,
+    QuantMatvecKernel,
 };
 pub use types::{ggml_nbytes, ggml_row_size};

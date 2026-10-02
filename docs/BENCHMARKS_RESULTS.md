@@ -179,3 +179,36 @@ curl -s http://127.0.0.1:8080/v1/chat/completions \
 | Shape / paths | ns/call | bit_exact | widest gap | notes |
 |---------------|---------|-----------|------------|-------|
 | ternary 64x1024 | i8=34680ns i2s=31834ns tl2=33787ns auto=32469ns | bit_exact=true | widest_gap=i8_vs_i2s | Rust SIMD/LUT (no FFI) |
+
+## BitNet ternary kernels — 2026-10-02 (NATIVE_FIRST, #45 spike)
+
+**Host:** Linux 6.12.94+ x86_64, Intel Xeon (`nproc=4`, AVX2+FMA), `rustc 1.99.0`, contended cloud agent (absolute ns noisy; use ratios).
+
+**Measured progression (release, `N=64 K=1024 ITERS=500`, median of 3):**
+
+| Shape / paths | ns/call | bit_exact | widest gap | notes |
+|---------------|---------|-----------|------------|-------|
+| ternary 64x1024 | i8≈137k i2s≈165k tl2≈34k **auto≈15.5k** | bit_exact≈true (auto approx) | widest_gap=i2s_vs_tl2 | **AVX2+FMA `auto` ~2.2× vs TL2** on this host |
+| TQ row dots 64×256 | tq2_stack≈740ns tq2_heap≈255ns; tq1_stack≈725ns tq1_heap≈280ns | bit_exact≈true | stack vs heap | Stack scratch removes per-row heap; single-row microbench favors heap reuse — keep stack for parallel mmap GEMV |
+
+**Reproduce:**
+
+```bash
+N=64 K=1024 ITERS=500 ./scripts/bench_bitnet_kernels.sh
+# or
+N=64 K=1024 ITERS=500 cargo run -p bitnet-core --example ternary_microbench --release --locked
+TQ_ITERS=400 TQ_ROWS=64 cargo run -p bitnet-core --example tq_dot_microbench --release --locked
+```
+
+### Saturation / gap analysis (why not chase more I2_S alone)
+
+1. **Layout mismatch:** Production Microsoft b1.58 GGUF uses **TQ1_0 / TQ2_0** blocks in `quant_dot` (`BITNET_NATIVE.md`). `kernels.rs` I2_S/TL2 is a research surface inspired by bitnet.cpp — **not wired** into the BitNet forward today. Beating bitnet.cpp I2_S on this microbench does not move e2e tok/s until TQ GEMV (or a repack) uses the same kernels.
+2. **AVX2 auto is the cheap win on the research path:** previous `auto` stubbed to scalar I2_S; now real AVX2+FMA (~2.2× vs TL2 here). Further scalar LUT tweaks are in the noise next to that.
+3. **Naive fuse-into-acc lost to decode+dot:** interleaved decode+FMA prevented autovec; stack-per-block decode + tight mul_add is the right production shape (no per-row `Vec`), even when a microbench with allocator reuse makes heap look faster.
+4. **No FFI:** NATIVE_FIRST — do not link llama.cpp / bitnet.cpp for this gap.
+
+### Explicit next slice
+
+1. Publish a real **BitNet 2B4T e2e** tok/s + RSS row (MODEL_MATRIX still **unpublished**).
+2. SIMD / wider tiles on **TQ2_0** `dot_row` (the actual hot path), optionally sharing decode tables with I2_S research kernels.
+3. Optional offline repack TQ→I2_S only if e2e profiling shows decode dominance — still no FFI.
