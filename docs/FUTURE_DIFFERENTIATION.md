@@ -2,7 +2,7 @@
 
 Priorité indicative, de la plus proche du produit actuel vers les paris plus longs.
 
-Alignement technique (serving, KV, speculative, BitNet, items **deferred** FA2/FA3 / DistServe / MoE / Medusa / AWQ) : [STATUS_AND_ROADMAP.md — Research-backed priorities](STATUS_AND_ROADMAP.md#research-backed-priorities-2026-09) et [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md).
+Alignement technique (serving, KV, speculative, BitNet, items **deferred** FA2/FA3 / DistServe / MoE / Medusa / AWQ / **Lookahead**) : [STATUS_AND_ROADMAP.md — Research-backed priorities](STATUS_AND_ROADMAP.md#research-backed-priorities-2026-09), [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md), décision Lookahead [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
 
 1. **Akasha-first**: faire de Rbitnet le backend local de référence pour Akasha, avec profils de configuration prêts à l’emploi, métriques corrélables (TTFT, `prefix_hit`, `draft_accept`) et diagnostics communs.
 2. **Fiabilité curatée**: maintenir un catalogue court mais vérifié, avec tokenizer, template, RAM minimale, **SHA256 / mode trusted**, commandes de reproduction et résultats bench publiés.
