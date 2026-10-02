@@ -166,6 +166,10 @@ pub struct ContinuousBatchScheduler {
     pub draft_path: DraftPath,
     /// Multi-token prediction width (Atlas-style MTP). `1` disables MTP bursts.
     pub mtp_k: u32,
+    /// When true (`RBITNET_FUSED_MULTI_SEQ`), decode phase calls
+    /// [`ModelExecutor::generate_decode_batch`] for the wave (CPU spike #46).
+    /// Default still sequential; GPU fused is out of scope (#22).
+    pub fused_multi_seq: bool,
 }
 
 impl ContinuousBatchScheduler {
@@ -204,6 +208,7 @@ impl ContinuousBatchScheduler {
             .and_then(|s| s.parse::<u32>().ok())
             .filter(|v| *v > 1)
             .unwrap_or(1);
+        let fused_multi_seq = crate::fused_batch::fused_multi_seq_enabled();
         Self {
             enabled,
             speculative_enabled,
@@ -213,6 +218,7 @@ impl ContinuousBatchScheduler {
             iteration_token_budget,
             draft_path,
             mtp_k,
+            fused_multi_seq,
         }
     }
 
@@ -334,6 +340,8 @@ impl ContinuousBatchScheduler {
     ///
     /// Prefill admission is logical (token-budget accounting) until a seq is promoted to decode;
     /// the first decode step runs the executor (real prefill+token). GPU fused multi-seq stays off.
+    /// With `RBITNET_FUSED_MULTI_SEQ=1`, the decode wave calls [`ModelExecutor::generate_decode_batch`]
+    /// (default = sequential; CPU matvec helper in [`crate::fused_batch`]).
     pub fn run_batch_waves(
         &self,
         executor: &dyn ModelExecutor,
@@ -384,42 +392,49 @@ impl ContinuousBatchScheduler {
             let mut prefill_chunks = 0usize;
 
             // --- Phase 1: decode-first (stall-free) ---
-            let decode_passes = queue.decode_seq_ids.len();
-            for _ in 0..decode_passes {
-                if budget == 0 || queue.decode_seq_ids.is_empty() {
-                    break;
-                }
-                let idx = decode_rr % queue.decode_seq_ids.len();
-                decode_rr = decode_rr.wrapping_add(1);
-                let id = queue.decode_seq_ids[idx];
-                let orig = batch
-                    .requests
-                    .iter()
-                    .find(|r| r.id == id)
-                    .expect("decode id in batch");
-                let entry = acc
-                    .entry(id)
-                    .or_insert_with(|| (String::new(), PhaseTimings::default()));
-                if entry.1.completion_tokens >= orig.request.max_tokens {
-                    queue.mark_done(id);
-                    continue;
-                }
-                let prompt = format!("{}{}", orig.request.prompt, entry.0);
-                let (chunk_text, phases) =
-                    executor.generate_with_timings(&prompt, 1, orig.request.sampling)?;
-                entry.0.push_str(&chunk_text);
-                entry.1.encode_ms = entry.1.encode_ms.saturating_add(phases.encode_ms);
-                entry.1.prefill_ms = entry.1.prefill_ms.saturating_add(phases.prefill_ms);
-                entry.1.decode_ms = entry.1.decode_ms.saturating_add(phases.decode_ms);
-                entry.1.prompt_tokens = entry.1.prompt_tokens.max(phases.prompt_tokens);
-                entry.1.completion_tokens = entry
-                    .1
-                    .completion_tokens
-                    .saturating_add(phases.completion_tokens);
-                budget = budget.saturating_sub(1);
-                decode_steps = decode_steps.saturating_add(1);
-                if entry.1.completion_tokens >= orig.request.max_tokens {
-                    queue.mark_done(id);
+            if self.fused_multi_seq {
+                let (steps, spent) =
+                    self.decode_wave_fused(executor, batch, &mut queue, &mut acc, budget)?;
+                decode_steps = steps;
+                budget = budget.saturating_sub(spent);
+            } else {
+                let decode_passes = queue.decode_seq_ids.len();
+                for _ in 0..decode_passes {
+                    if budget == 0 || queue.decode_seq_ids.is_empty() {
+                        break;
+                    }
+                    let idx = decode_rr % queue.decode_seq_ids.len();
+                    decode_rr = decode_rr.wrapping_add(1);
+                    let id = queue.decode_seq_ids[idx];
+                    let orig = batch
+                        .requests
+                        .iter()
+                        .find(|r| r.id == id)
+                        .expect("decode id in batch");
+                    let entry = acc
+                        .entry(id)
+                        .or_insert_with(|| (String::new(), PhaseTimings::default()));
+                    if entry.1.completion_tokens >= orig.request.max_tokens {
+                        queue.mark_done(id);
+                        continue;
+                    }
+                    let prompt = format!("{}{}", orig.request.prompt, entry.0);
+                    let (chunk_text, phases) =
+                        executor.generate_with_timings(&prompt, 1, orig.request.sampling)?;
+                    entry.0.push_str(&chunk_text);
+                    entry.1.encode_ms = entry.1.encode_ms.saturating_add(phases.encode_ms);
+                    entry.1.prefill_ms = entry.1.prefill_ms.saturating_add(phases.prefill_ms);
+                    entry.1.decode_ms = entry.1.decode_ms.saturating_add(phases.decode_ms);
+                    entry.1.prompt_tokens = entry.1.prompt_tokens.max(phases.prompt_tokens);
+                    entry.1.completion_tokens = entry
+                        .1
+                        .completion_tokens
+                        .saturating_add(phases.completion_tokens);
+                    budget = budget.saturating_sub(1);
+                    decode_steps = decode_steps.saturating_add(1);
+                    if entry.1.completion_tokens >= orig.request.max_tokens {
+                        queue.mark_done(id);
+                    }
                 }
             }
 
@@ -492,6 +507,90 @@ impl ContinuousBatchScheduler {
             }
         }
         Ok(out)
+    }
+
+    /// Collect ready decode seqs (up to remaining budget) and call
+    /// [`ModelExecutor::generate_decode_batch`] once. Falls back to sequential
+    /// via the trait default when the executor has no fused override.
+    fn decode_wave_fused(
+        &self,
+        executor: &dyn ModelExecutor,
+        batch: &InferenceBatch,
+        queue: &mut PrefillDecodeQueue,
+        acc: &mut HashMap<u64, (String, PhaseTimings)>,
+        budget: usize,
+    ) -> Result<(usize, usize)> {
+        if budget == 0 || queue.decode_seq_ids.is_empty() {
+            return Ok((0, 0));
+        }
+
+        let mut selected: Vec<u64> = Vec::new();
+        let mut done_ids: Vec<u64> = Vec::new();
+        for &id in &queue.decode_seq_ids {
+            if selected.len() >= budget {
+                break;
+            }
+            let orig = batch
+                .requests
+                .iter()
+                .find(|r| r.id == id)
+                .expect("decode id in batch");
+            let entry = acc
+                .entry(id)
+                .or_insert_with(|| (String::new(), PhaseTimings::default()));
+            if entry.1.completion_tokens >= orig.request.max_tokens {
+                done_ids.push(id);
+                continue;
+            }
+            selected.push(id);
+        }
+        for id in done_ids {
+            queue.mark_done(id);
+        }
+        if selected.is_empty() {
+            return Ok((0, 0));
+        }
+
+        let mut items: Vec<(String, u32, SamplingOptions)> = Vec::with_capacity(selected.len());
+        for &id in &selected {
+            let orig = batch
+                .requests
+                .iter()
+                .find(|r| r.id == id)
+                .expect("decode id in batch");
+            let entry = acc.get(&id).expect("acc entry");
+            let prompt = format!("{}{}", orig.request.prompt, entry.0);
+            items.push((prompt, 1, orig.request.sampling));
+        }
+
+        let results = executor.generate_decode_batch(&items)?;
+        debug_assert_eq!(results.len(), selected.len());
+
+        let mut steps = 0usize;
+        for (id, (chunk_text, phases)) in selected.into_iter().zip(results) {
+            let orig = batch
+                .requests
+                .iter()
+                .find(|r| r.id == id)
+                .expect("decode id in batch");
+            let entry = acc
+                .get_mut(&id)
+                .expect("acc entry after generate_decode_batch");
+            entry.0.push_str(&chunk_text);
+            entry.1.encode_ms = entry.1.encode_ms.saturating_add(phases.encode_ms);
+            entry.1.prefill_ms = entry.1.prefill_ms.saturating_add(phases.prefill_ms);
+            entry.1.decode_ms = entry.1.decode_ms.saturating_add(phases.decode_ms);
+            entry.1.prompt_tokens = entry.1.prompt_tokens.max(phases.prompt_tokens);
+            entry.1.completion_tokens = entry
+                .1
+                .completion_tokens
+                .saturating_add(phases.completion_tokens);
+            steps = steps.saturating_add(1);
+            if entry.1.completion_tokens >= orig.request.max_tokens {
+                queue.mark_done(id);
+            }
+        }
+        Ok((steps, steps))
     }
 
     fn run_speculative(

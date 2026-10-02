@@ -69,6 +69,7 @@ fn test_scheduler(
         iteration_token_budget: budget,
         draft_path: draft,
         mtp_k: 1,
+        fused_multi_seq: false,
     }
 }
 
@@ -297,4 +298,112 @@ fn sarathi_prefill_decode_queue_starts_prefill_only() {
     assert_eq!(q.decode_seq_ids, vec![7]);
     q.mark_done(7);
     assert_eq!(q.decode_seq_ids, Vec::<u64>::new());
+}
+
+/// Executor that records whether [`ModelExecutor::generate_decode_batch`] was used.
+struct BatchAwareEcho {
+    batch_calls: std::sync::atomic::AtomicUsize,
+    seq_calls: std::sync::atomic::AtomicUsize,
+}
+
+impl ModelExecutor for BatchAwareEcho {
+    fn family(&self) -> &'static str {
+        "bitnet"
+    }
+
+    fn count_prompt_tokens(&self, _prompt: &str) -> Result<u32> {
+        Ok(1)
+    }
+
+    fn backend(&self) -> BackendKind {
+        BackendKind::Cpu
+    }
+    fn backend_accelerated(&self) -> bool {
+        false
+    }
+
+    fn is_ready(&self) -> bool {
+        true
+    }
+
+    fn openai_model_id(&self, _gguf: Option<&GgufArchive>) -> Option<String> {
+        Some("rbitnet-bitnet".into())
+    }
+
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        _sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        self.seq_calls
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Ok((
+            format!("{prompt}[{max_tokens}]"),
+            PhaseTimings {
+                encode_ms: 0,
+                prefill_ms: 1,
+                decode_ms: 0,
+                prompt_tokens: 1,
+                completion_tokens: max_tokens,
+            },
+        ))
+    }
+
+    fn generate_decode_batch(
+        &self,
+        items: &[(String, u32, SamplingOptions)],
+    ) -> Result<Vec<(String, PhaseTimings)>> {
+        self.batch_calls
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let mut out = Vec::with_capacity(items.len());
+        for (prompt, max_tokens, sampling) in items {
+            // Still use per-item generate (toy) but count the batch entrypoint.
+            let (text, phases) = self.generate_with_timings(prompt, *max_tokens, *sampling)?;
+            // Undo seq_calls inflation from the above — batch path owns the wave.
+            self.seq_calls
+                .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+            out.push((text, phases));
+        }
+        Ok(out)
+    }
+}
+
+#[test]
+fn fused_multi_seq_decode_uses_generate_decode_batch() {
+    let mut scheduler = test_scheduler(true, false, DraftPath::TargetModel, 128, 256);
+    scheduler.fused_multi_seq = true;
+    let exec = BatchAwareEcho {
+        batch_calls: std::sync::atomic::AtomicUsize::new(0),
+        seq_calls: std::sync::atomic::AtomicUsize::new(0),
+    };
+    let batch = InferenceBatch {
+        requests: vec![
+            ScheduledRequest {
+                id: 1,
+                request: InferenceRequest {
+                    prompt: "a".into(),
+                    max_tokens: 2,
+                    sampling: SamplingOptions::from_temperature(0.0),
+                },
+            },
+            ScheduledRequest {
+                id: 2,
+                request: InferenceRequest {
+                    prompt: "b".into(),
+                    max_tokens: 2,
+                    sampling: SamplingOptions::from_temperature(0.0),
+                },
+            },
+        ],
+    };
+    let rows = scheduler.run_batch(&exec, &batch).expect("fused batch");
+    assert_eq!(rows.len(), 2);
+    let batch_calls = exec
+        .batch_calls
+        .load(std::sync::atomic::Ordering::Relaxed);
+    assert!(
+        batch_calls >= 1,
+        "fused_multi_seq should call generate_decode_batch (got {batch_calls})"
+    );
 }

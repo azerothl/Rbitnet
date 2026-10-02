@@ -1,7 +1,7 @@
 # Stubs / MVP audit (issue #24)
 
 Inventory of paths that are stubs, intentional smoke modes, shipped MVPs, or still open.
-Last reviewed: **2026-09-30** against `main` (post #17–#21: radix, PLD, BitNet kernels, KV Q8, Sarathi).
+Last reviewed: **2026-10-02** against `main` + #46 fused multi-seq CPU spike.
 
 ## Intentional smoke paths (keep; not “fake support”)
 
@@ -25,7 +25,7 @@ Last reviewed: **2026-09-30** against `main` (post #17–#21: radix, PLD, BitNet
 |---------|------------------------------|---------------|
 | Prefix **response** cache (`RBITNET_PREFIX_CACHE`) | Full responses only | **Correct** — distinct from KV reuse. |
 | Prefix **KV** (`RBITNET_PREFIX_KV`) | “Not real KV reuse” | **Outdated claim** — dense/paged snaps + radix LRU + LCP agent reuse + `rbitnet_core_prefix_hit` shipped (#17). |
-| Continuous batching fused multi-seq | Still stub | **Stall-free Sarathi schedule shipped** (#21); **fused multi-seq matmul still open**. |
+| Continuous batching fused multi-seq | Still stub | **Stall-free Sarathi schedule shipped** (#21). **#46 CPU spike:** `dense_matvec_multi_seq` + `ModelExecutor::generate_decode_batch` + opt-in `RBITNET_FUSED_MULTI_SEQ=1` scheduler decode wave (default still sequential; **no concurrency gain claimed**; GPU fused = #22). |
 | Speculative decoding | Scheduler MVP only | **PLD / n-gram draft + verify/accept shipped** (#18); further research (SPECTRA-class) open. |
 | Paged KV / pool | — | **E2E opt-in shipped** (#16 era). |
 | KV Q8 | — | **Compact CPU pages shipped** (#20). |
@@ -35,13 +35,13 @@ Last reviewed: **2026-09-30** against `main` (post #17–#21: radix, PLD, BitNet
 
 ## Docs sync done with this audit
 
-- [LIMITATIONS.md](LIMITATIONS.md) — distinguish `PREFIX_CACHE` vs `PREFIX_KV`; stop implying KV reuse is absent.
+- [LIMITATIONS.md](LIMITATIONS.md) — distinguish `PREFIX_CACHE` vs `PREFIX_KV`; stop implying KV reuse is absent; note #46 fused multi-seq spike.
 - [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — serving pipeline row reflects stall-free + PLD shipped; fused multi-seq still open.
 - [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) — Phase E Done includes PLD + KV Q8 + BitNet kernel microbench.
 
 ## Remaining #24 work (backlog)
 
-1. **Fused multi-seq forward** (CPU first, then GPU) — largest remaining serving gap.
+1. **Fused multi-seq forward** — #46 CPU spike landed (matvec helper + scheduler hook); **full Llama/BitNet fused decode + measured concurrency ≥4 still open**.
 2. **GPU backends** — owned by #22.
 3. **Non-Llama / MoE / MLA loaders** — owned by #25.
 4. Optional: SlimAttention 1D tiling after KV Q8; MTP research. Lookahead Decoding is **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).

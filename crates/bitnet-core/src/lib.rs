@@ -25,6 +25,7 @@ pub mod backend;
 pub mod cancel;
 pub mod deepseek2;
 pub mod error;
+pub mod fused_batch;
 pub mod ggml;
 pub mod gguf;
 pub mod glm4_moe;

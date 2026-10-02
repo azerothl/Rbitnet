@@ -59,6 +59,22 @@ pub trait ModelExecutor: Send + Sync {
             stats: crate::scheduler::InferenceStats::from_phases(phases, false),
         }))
     }
+
+    /// Decode-phase batch API for fused multi-seq (#46 spike).
+    ///
+    /// Default falls back to sequential [`Self::generate_with_timings`] per item.
+    /// Real fused forwards (shared matmul across N seqs) land behind this hook;
+    /// the CPU matvec building block is [`crate::fused_batch::dense_matvec_multi_seq`].
+    fn generate_decode_batch(
+        &self,
+        items: &[(String, u32, SamplingOptions)],
+    ) -> Result<Vec<(String, PhaseTimings)>> {
+        let mut out = Vec::with_capacity(items.len());
+        for (prompt, max_tokens, sampling) in items {
+            out.push(self.generate_with_timings(prompt, *max_tokens, *sampling)?);
+        }
+        Ok(out)
+    }
 }
 
 pub struct LlamaExecutor {
