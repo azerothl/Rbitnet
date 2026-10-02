@@ -22,7 +22,32 @@ Akasha peut dépendre de cette surface **sans Python** au runtime :
 **Bind par défaut :** `http://127.0.0.1:8080`  
 **Recipe Akasha BitNet :** `recipes/bitnet-b158.recipe.json` (après `rbitnet models install microsoft-bitnet-b1.58-2b-4t`).
 
-Checklist CI / smoke : test `akasha_contract_metrics_series_present` dans `crates/bitnet-server/tests/openai_compat.rs` + script `scripts/smoke_openai.sh`.
+## Triangle produit (≤1 page)
+
+| Couche | Nom | Rôle |
+|--------|-----|------|
+| Assistant / monorepo | **Akasha** | UI, router, `BitNetProvider`, doctor |
+| Daemon OS (optionnel) | **akasha-os** | Caps, IPC, Models UX, placement — *pas* le moteur GGUF Rust |
+| Moteur local | **akasha-infer = Rbitnet** (ce repo) | GGUF mmap + HTTP `/v1` + `/metrics` |
+
+Naming : **akasha-infer** = nom de projet / produit ; **Rbitnet** = nom du dépôt et des crates (`rbitnet`, `bitnet-*`). Un seul moteur.
+
+## Checklist contrat (CI / release)
+
+Cocher avant de qualifier une release « utile Akasha » :
+
+- [ ] `cargo test -p bitnet-server` — inclut `akasha_contract_metrics_series_present` (`openai_compat.rs`)
+- [ ] Job CI `smoke-openai` vert (`scripts/smoke_openai.sh` : health, models, chat JSON + SSE, `/metrics`, `/ui`)
+- [ ] Séries gelées listées dans [AKASHA_METRICS.md](AKASHA_METRICS.md) (TTFT, decode tok/s, `prefix_hit`, `draft_accept`)
+- [ ] Recipe de référence : `recipes/bitnet-b158.recipe.json` (après `rbitnet models install microsoft-bitnet-b1.58-2b-4t` ou tag `bitnet:2b`)
+- [ ] Clients documentés : [INTEGRATIONS.md](INTEGRATIONS.md) (OpenAI SDK / LiteLLM)
+
+Smoke local one-liner :
+
+```bash
+RBITNET_STUB=1 RBITNET_BIND=127.0.0.1:8080 cargo run -p bitnet-server &
+./scripts/smoke_openai.sh
+```
 
 ## Ce que ce contrat n’inclut pas
 
@@ -32,7 +57,9 @@ Checklist CI / smoke : test `akasha_contract_metrics_series_present` dans `crate
 
 ## Docs liées
 
-- État & inspirations (survey) : Project store `docs/etat-et-inspiration-inference.md`
+- Branding visuel : [BRAND.md](BRAND.md)
 - Métriques corrélées : [AKASHA_METRICS.md](AKASHA_METRICS.md)
 - Multi-modèle process-per-model : [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md)
+- Intégrations clients : [INTEGRATIONS.md](INTEGRATIONS.md)
 - Bench vs llama.cpp : [BENCHMARKS.md](BENCHMARKS.md) + [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md)
+- Processus release : [RELEASE.md](RELEASE.md)

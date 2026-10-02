@@ -11,5 +11,5 @@
     "RBITNET_SESSIONS": "1",
     "RBITNET_BIND": "127.0.0.1:8080"
   },
-  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t`. Optional: set RBITNET_MODEL_SHA256 to the catalog sha256 and enable RBITNET_TRUSTED_MODELS_ONLY=1."
+  "notes": "Set RBITNET_MODEL and RBITNET_TOKENIZER to paths from rbitnet.manifest.json after `rbitnet models install microsoft-bitnet-b1.58-2b-4t` (or tag `bitnet:2b`). Equivalent flags: `rbitnet tune bitnet-cpu`. Optional: set RBITNET_MODEL_SHA256 to the catalog sha256 and enable RBITNET_TRUSTED_MODELS_ONLY=1."
 }

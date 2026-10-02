@@ -118,3 +118,58 @@ pub fn apply_profile(profile: TuneProfile, export_shell: bool) {
         profile_env(profile).len()
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn env_map(profile: TuneProfile) -> std::collections::BTreeMap<&'static str, &'static str> {
+        profile_env(profile).iter().copied().collect()
+    }
+
+    #[test]
+    fn parse_aliases() {
+        assert_eq!(TuneProfile::parse("interactive"), Some(TuneProfile::Interactive));
+        assert_eq!(TuneProfile::parse("chat"), Some(TuneProfile::Interactive));
+        assert_eq!(TuneProfile::parse("throughput"), Some(TuneProfile::Throughput));
+        assert_eq!(TuneProfile::parse("batch"), Some(TuneProfile::Throughput));
+        assert_eq!(TuneProfile::parse("bitnet-cpu"), Some(TuneProfile::BitnetCpu));
+        assert_eq!(TuneProfile::parse("battery"), Some(TuneProfile::Battery));
+        assert!(TuneProfile::parse("nope").is_none());
+    }
+
+    #[test]
+    fn interactive_exports_low_latency_flags() {
+        let m = env_map(TuneProfile::Interactive);
+        assert_eq!(m.get("RBITNET_PREFIX_KV"), Some(&"1"));
+        assert_eq!(m.get("RBITNET_CONTINUOUS_BATCHING"), Some(&"0"));
+        assert_eq!(m.get("RBITNET_BACKEND"), Some(&"cpu"));
+        assert_eq!(m.get("RBITNET_MAX_CONCURRENT"), Some(&"2"));
+    }
+
+    #[test]
+    fn throughput_exports_batch_flags() {
+        let m = env_map(TuneProfile::Throughput);
+        assert_eq!(m.get("RBITNET_CONTINUOUS_BATCHING"), Some(&"1"));
+        assert_eq!(m.get("RBITNET_KV_POOL"), Some(&"1"));
+        assert_eq!(m.get("RBITNET_KV_QUANT"), Some(&"q8"));
+        assert_eq!(m.get("RBITNET_PREFIX_KV"), Some(&"1"));
+    }
+
+    #[test]
+    fn bitnet_cpu_exports_provider_flags() {
+        let m = env_map(TuneProfile::BitnetCpu);
+        assert_eq!(m.get("RBITNET_ARCHITECTURE"), Some(&"bitnet"));
+        assert_eq!(m.get("RBITNET_BACKEND"), Some(&"cpu"));
+        assert_eq!(m.get("RBITNET_PREFIX_KV"), Some(&"1"));
+        assert_eq!(m.get("RBITNET_CUDA_GRAPH"), Some(&"0"));
+    }
+
+    #[test]
+    fn battery_disables_heavy_paths() {
+        let m = env_map(TuneProfile::Battery);
+        assert_eq!(m.get("RBITNET_MAX_CONCURRENT"), Some(&"1"));
+        assert_eq!(m.get("RBITNET_PREFIX_KV"), Some(&"0"));
+        assert_eq!(m.get("RBITNET_CONTINUOUS_BATCHING"), Some(&"0"));
+    }
+}
