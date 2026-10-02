@@ -1034,3 +1034,35 @@ async fn response_format_rejects_non_json_stub() {
     let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(v["error"]["code"], "structured_output_validation_failed");
 }
+
+#[tokio::test]
+async fn idle_unload_skips_stub_without_gguf() {
+    use bitnet_server::{create_app_with_expected_model, try_idle_unload};
+    use std::sync::atomic::Ordering;
+
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let (_app, state) =
+        create_app_with_expected_model(engine, Arc::new(ServerConfig::test_defaults()), None);
+    // Force "idle" timestamp.
+    state
+        .last_inference_activity_ms
+        .store(0, Ordering::Relaxed);
+    assert!(
+        !try_idle_unload(&state, 1).await,
+        "stub has no GGUF — idle unload must no-op"
+    );
+    assert_eq!(
+        state.metrics.model_unloads_total.load(Ordering::Relaxed),
+        0
+    );
+}

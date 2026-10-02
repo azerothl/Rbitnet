@@ -195,33 +195,40 @@ fn spawn_idle_unload_watcher(state: AppState, idle_secs: u64) {
         let mut tick = tokio::time::interval(Duration::from_secs(10));
         loop {
             tick.tick().await;
-            let last = state.last_inference_activity_ms.load(Ordering::Relaxed);
-            let now = unix_now_ms();
-            if now.saturating_sub(last) <= idle_ms {
-                continue;
-            }
-            let eng = state.engine.read().await;
-            if !eng.has_gguf() {
-                continue;
-            }
-            drop(eng);
-            {
-                let mut w = state.engine.write().await;
-                *w = Arc::new(stub_engine());
-            }
-            {
-                let mut lid = state.loaded_registry_model_id.write().await;
-                *lid = None;
-            }
-            if state.registry.read().await.is_none() {
-                let mut exp = state.expected_request_model_id.write().await;
-                *exp = None;
-            }
-            state
-                .metrics
-                .model_unloads_total
-                .fetch_add(1, Ordering::Relaxed);
-            tracing::info!(idle_secs, "idle unload: engine swapped for stub");
+            let _ = try_idle_unload(&state, idle_ms).await;
         }
     });
+}
+
+/// If idle longer than `idle_ms` and a GGUF is loaded, swap to stub and bump unload metrics.
+/// Returns `true` when an unload occurred.
+pub async fn try_idle_unload(state: &AppState, idle_ms: u64) -> bool {
+    let last = state.last_inference_activity_ms.load(Ordering::Relaxed);
+    let now = unix_now_ms();
+    if now.saturating_sub(last) <= idle_ms {
+        return false;
+    }
+    let eng = state.engine.read().await;
+    if !eng.has_gguf() {
+        return false;
+    }
+    drop(eng);
+    {
+        let mut w = state.engine.write().await;
+        *w = Arc::new(stub_engine());
+    }
+    {
+        let mut lid = state.loaded_registry_model_id.write().await;
+        *lid = None;
+    }
+    if state.registry.read().await.is_none() {
+        let mut exp = state.expected_request_model_id.write().await;
+        *exp = None;
+    }
+    state
+        .metrics
+        .model_unloads_total
+        .fetch_add(1, Ordering::Relaxed);
+    tracing::info!("idle unload: engine swapped for stub");
+    true
 }

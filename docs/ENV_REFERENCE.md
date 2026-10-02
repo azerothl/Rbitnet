@@ -19,7 +19,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_MODEL_REGISTRY` | path | (none) | JSON registry for multi-model; see [USAGE.md](USAGE.md). |
 | `RBITNET_ACTIVE_MODEL_ID` | string | (none) | Registry key when JSON has no `default`. |
 | `RBITNET_ADMIN_TOKEN` | string | (none) | Enables `POST /v1/admin/unload` and `POST /v1/admin/reload` with matching header. |
-| `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, recycle child runners (proxy) or swap engine for stub (single-process server). |
+| `RBITNET_IDLE_UNLOAD_SECS` | u64 | (none) | After idle, recycle child runners (**proxy** — recommended multi-model path) or swap engine for stub (single-process server). See [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md). Metric: `rbitnet_model_unloads_total`. |
 | `RBITNET_CHAT_BASE_URL` | URL | `http://127.0.0.1:8080/v1` | Default base URL for `rbitnet chat`; `/v1` is appended when omitted. |
 
 ## Runner proxy (`rbitnet-proxy`)
