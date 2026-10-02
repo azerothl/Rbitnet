@@ -1,0 +1,7 @@
+{
+  "format": "rbitnet-golden-v1",
+  "architecture": "qwen3",
+  "prompt": "Hello",
+  "expected_greedy_first_token": 0,
+  "notes": "Template for a real Hub Qwen3 dense GGUF. Replace expected_greedy_first_token with the id from llama.cpp / docs/GOLDEN_TESTS.md, then run optional_golden_greedy_first_token_matches with RBITNET_TEST_GGUF + RBITNET_TOKENIZER."
+}

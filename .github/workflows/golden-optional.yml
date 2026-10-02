@@ -1,4 +1,4 @@
-# Manual optional Llama golden test (self-hosted or runner with GGUF + tokenizer + JSON on disk).
+# Manual optional Llama / Qwen3 golden test (self-hosted or runner with GGUF + tokenizer + JSON on disk).
 name: Golden (optional)
 
 on:
@@ -15,6 +15,11 @@ on:
       tokenizer_path:
         description: "Absolute path to tokenizer.json or tokenizer.model"
         required: true
+        type: string
+      architecture:
+        description: "Optional override (llama|qwen3). Empty = use JSON architecture field / GGUF."
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -34,5 +39,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+      - name: Optional architecture override
+        if: ${{ inputs.architecture != '' }}
+        run: echo "RBITNET_ARCHITECTURE=${{ inputs.architecture }}" >> "$GITHUB_ENV"
       - name: cargo test (optional golden)
         run: cargo test -p bitnet-core optional_golden_greedy_first_token_matches -- --nocapture

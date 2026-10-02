@@ -6,3 +6,4 @@ mod runtime;
 
 pub use config::Qwen3Config;
 pub use executor::Qwen3Executor;
+pub use runtime::Qwen3Runtime;

@@ -1,16 +1,18 @@
-# Golden tests (Llama numerical regression)
+# Golden tests (Llama / Qwen3 numerical regression)
 
 ## Goal
 
-Prove that the Llama-compatible forward in Rbitnet matches a **reproducible external reference**
-(typically **llama.cpp** built from a known commit) on at least one small open GGUF, so text
-quality regressions are caught in CI or in a manual pre-release step.
+Prove that the Llama-compatible and dense **Qwen3** forwards in Rbitnet match a **reproducible
+reference** on at least one small open GGUF (or a synthetic fixture in CI), so text quality
+regressions are caught in CI or in a manual pre-release step.
 
 ## Reference model (recommended)
 
 | Role | Bundle id | GGUF | Tokenizer source |
 |------|-----------|------|-------------------|
 | Primary Llama smoke | `tinyllama-1.1b-chat-q4-k-m` | `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` | `TinyLlama/TinyLlama-1.1B-Chat-v1.0` (`tokenizer.json`) |
+| Qwen3 CI synthetic | (in-test fixture) | built by `qwen3_dense_golden_ci` | WordLevel `tokenizer.json` in-test |
+| Qwen3 Hub (optional) | small dense Q4_K_M | e.g. Qwen3-0.6B/1.7B/4B | matching HF `tokenizer.json` |
 
 Use the **same** GGUF file, tokenizer, and prompt string for both the reference export and Rbitnet.
 
@@ -55,12 +57,14 @@ Record the **integer token id** you obtain.
 ```json
 {
   "format": "rbitnet-golden-v1",
+  "architecture": "llama",
   "prompt": "Hello",
   "expected_greedy_first_token": 12345
 }
 ```
 
-Replace `12345` with the id from llama.cpp / Python.
+Replace `12345` with the id from llama.cpp / Python. Optional `architecture` selects the
+runtime (`llama` default, or `qwen3`); `RBITNET_ARCHITECTURE` overrides when set.
 
 2. Run the optional integration test:
 
@@ -83,17 +87,27 @@ Or use `scripts/run-golden-test.sh` / `scripts/run-golden-test.ps1`.
 - For **logit vectors** (optional future extension), start with `max(abs diff)) < 5e-2` on CPU
   after prefill for the last prompt position, then tighten once kernels are stable.
 
-## Qwen3 dense golden note (#25)
+## Qwen3 dense golden (#25)
 
 Dense **`general.architecture=qwen3`** is the first non-Llama family with an in-tree forward path.
-Until a checked-in `*.golden.json` exists for a small Qwen3 GGUF:
+
+### Default CI (synthetic)
+
+`cargo test -p bitnet-core --test qwen3_dense_golden_ci` builds a tiny 1-layer F32 Qwen3 GGUF
+plus a WordLevel tokenizer, runs `Qwen3Runtime::greedy_next_token_id_after_prompt`, and checks
+`tests/data/golden/qwen3-dense-synthetic.golden.json`. This runs in the main CI job (no Hub
+download).
+
+### Optional Hub Qwen3 golden
 
 1. Prefer a small dense Qwen3 quant (e.g. 0.6B / 1.7B / 4B Q4_K_M) + matching `tokenizer.json`.
 2. Export greedy first-token id with llama.cpp the same way as Llama (section above).
-3. Reuse format `rbitnet-golden-v1` and run `optional_golden_greedy_first_token_matches` with
-   `RBITNET_TEST_GGUF` / `RBITNET_TOKENIZER` / `RBITNET_GOLDEN_JSON` (and optionally
-   `RBITNET_ARCHITECTURE=qwen3` if the file is mis-tagged).
-4. Default CI does **not** download Qwen3 weights — keep the golden optional like Llama.
+3. Use format `rbitnet-golden-v1` with `"architecture": "qwen3"` (see
+   `tests/data/golden/qwen3-dense.example.golden.json`) and run
+   `optional_golden_greedy_first_token_matches` with `RBITNET_TEST_GGUF` /
+   `RBITNET_TOKENIZER` / `RBITNET_GOLDEN_JSON`.
+4. Default CI does **not** download Hub Qwen3 weights — keep Hub goldens optional like Llama.
+   Workflow **Golden (optional)** accepts an optional `architecture` input.
 
 This is **not** a MoE/MLA golden: `qwen35moe`, `deepseek2` MoE, and MLA graphs remain refused or
 CUDA-experimental; see [LIMITATIONS.md](LIMITATIONS.md).
@@ -101,7 +115,8 @@ CUDA-experimental; see [LIMITATIONS.md](LIMITATIONS.md).
 ## Current state in Rbitnet
 
 - Kernel-level matvec tests run in default CI (`tests/golden_kernels.rs`).
-- Llama **end-to-end** golden is **optional** (env vars above) so CI stays lightweight.
+- **Qwen3 dense synthetic** greedy golden runs in default CI (`qwen3_dense_golden_ci`).
+- Llama / Hub Qwen3 **end-to-end** goldens are **optional** (env vars above) so CI stays lightweight.
 - GitHub Actions: workflow **Golden (optional)** — `.github/workflows/golden-optional.yml` — manual
   `workflow_dispatch` to run the same test on a runner where you attach a cached GGUF + JSON.
 

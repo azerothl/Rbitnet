@@ -31,7 +31,7 @@ This page sets expectations for performance, formats, and architectures. For com
 | Family / slug | Status today | Notes |
 |---------------|--------------|-------|
 | Llama / Mistral-shaped (`llama`, `mistral`, …) | **Supported** | Built-in Llama loader + runtime. |
-| Dense **Qwen3** (`qwen3`) | **Supported** (CPU-first) | Native dense path; optional golden note in [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
+| Dense **Qwen3** (`qwen3`) | **Supported** (CPU-first) | Native dense path; **synthetic greedy golden in default CI** + optional Hub golden ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
 | Experimental Qwen3.5 MoE (`qwen35moe`) | **Partial** | Requires `RBITNET_BACKEND=cuda` or `hybrid`; not a general MoE solution. |
 | Roadmap MoE tags (`glm4moe`, `gptoss`, `deepseek2`) | **Llama-shaped only** | Run only when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds; else **startup refuse** via [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs). |
 | Pure MoE expert routing / DeepSeek **MLA** | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE is out of spike scope (#25). |
