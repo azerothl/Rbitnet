@@ -20,7 +20,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
 | Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Deferred** — FA2/FA3 = GPU_NATIVE research only; **#22 Gate E** lands device-resident **quant** matvec API + Llama cuda/hybrid preference (CPU golden in CI; hardware numbers still open) ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)) |
 | KV memory (PagedAttention-style), aggressive cache scheduling | **E2E opt-in** — dense default; `RBITNET_LLAMA_PAGED_KV=1` + `RBITNET_KV_POOL=1` shared phys pages on Llama runtime; reclaim + `/metrics` gauges; see [Research-backed priorities](#research-backed-priorities-2026-09) |
-| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Opt-in shipped MVP** — stall-free Sarathi (#21), prefix KV + radix (#17), PLD (#18); SlimAttention decode opt-in (`RBITNET_SLIM_ATTENTION`); **fused multi-seq e2e stalled** — [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md); remaining stubs → #22/#25 |
+| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Opt-in shipped MVP** — stall-free Sarathi (#21), prefix KV + radix (#17), PLD (#18); SlimAttention decode opt-in (`RBITNET_SLIM_ATTENTION`); **fused multi-seq e2e stalled** — [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md); remaining stubs → #22 only (#25 closed) |
 | Hugging Face–centric “automatic” tokenizer + model pairing      | **Partial** — `models install`, manifests; no embedded Transformers auto-config |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
 
@@ -220,7 +220,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **FlashAttention-2 / FA3 as default path** | [2205.14135](https://arxiv.org/abs/2205.14135), [2307.08691](https://arxiv.org/abs/2307.08691) | GPU-first; keep as GPU_NATIVE research only — **native-first CPU stays default** |
 | **INT-FlashAttention / TurboAttention** | [2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585) | After GPU_NATIVE epic |
 | **DistServe disagg as product default** | [2401.09670](https://arxiv.org/abs/2401.09670) | Cluster KV transfer — out of local/desktop target |
-| **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Pure MoE GGUF still refused; too invasive |
+| **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Follow-up after #25 exit (Mixtral MoE spike shipped); DeepSeek MLA / non-Mixtral MoE graphs still refused |
 | **Lookahead Decoding (Jacobi / tree attention)** | [2402.02057](https://arxiv.org/abs/2402.02057); [#44](https://github.com/azerothl/Rbitnet/issues/44) | **Wontfix for now** after PLD (#18) — see [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
 | **Medusa / EAGLE / EAGLE-2** | [2401.10774](https://arxiv.org/abs/2401.10774), [2401.15077](https://arxiv.org/abs/2401.15077), [2406.16858](https://arxiv.org/abs/2406.16858) | Draft heads / fine-tune — incompatible with download-and-serve GGUF |
 | **AWQ / GPTQ as primary format** | ecosystem | Conflicts with GGUF native-first; Akasha may route vLLM elsewhere |
