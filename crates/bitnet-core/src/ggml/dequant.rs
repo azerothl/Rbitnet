@@ -343,10 +343,11 @@ pub(crate) fn q6_k_superblock_dequant(block: &[u8], y_out: &mut [f32]) -> Result
             let q3 = ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
             let q4 =
                 ((ql[ql_o + l + 32] >> 4) as i32 | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4)) - 32;
-            yb[yp + l] = d * sc[sc_o + is + 0] as f32 * q1 as f32;
-            yb[yp + l + 32] = d * sc[sc_o + is + 2] as f32 * q2 as f32;
-            yb[yp + l + 64] = d * sc[sc_o + is + 4] as f32 * q3 as f32;
-            yb[yp + l + 96] = d * sc[sc_o + is + 6] as f32 * q4 as f32;
+            // GGML stores Q6_K sub-block scales as signed int8_t, not uint8_t.
+            yb[yp + l] = d * (sc[sc_o + is + 0] as i8) as f32 * q1 as f32;
+            yb[yp + l + 32] = d * (sc[sc_o + is + 2] as i8) as f32 * q2 as f32;
+            yb[yp + l + 64] = d * (sc[sc_o + is + 4] as i8) as f32 * q3 as f32;
+            yb[yp + l + 96] = d * (sc[sc_o + is + 6] as i8) as f32 * q4 as f32;
         }
         yp += 128;
         ql_o += 64;
@@ -587,40 +588,7 @@ fn dequant_q6_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
     let mut y = vec![0.0f32; n];
     for i in 0..nb {
         let o = i * 210;
-        let d = fp16_to_f32(u16::from_le_bytes(
-            data[o + 208..o + 210].try_into().unwrap(),
-        ));
-        let ql = &data[o..o + 128];
-        let qh = &data[o + 128..o + 192];
-        let sc = &data[o + 192..o + 208];
-        let yb = &mut y[i * QK_K..(i + 1) * QK_K];
-        let mut ql_o = 0usize;
-        let mut qh_o = 0usize;
-        let mut sc_o = 0usize;
-        let mut yp = 0usize;
-        for _ in 0..2 {
-            for l in 0..32 {
-                let is = l / 16;
-                let q1 =
-                    ((ql[ql_o + l] & 0xF) as i32 | ((((qh[qh_o + l] >> 0) & 3) as i32) << 4)) - 32;
-                let q2 = ((ql[ql_o + l + 32] & 0xF) as i32
-                    | ((((qh[qh_o + l] >> 2) & 3) as i32) << 4))
-                    - 32;
-                let q3 =
-                    ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
-                let q4 = ((ql[ql_o + l + 32] >> 4) as i32
-                    | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4))
-                    - 32;
-                yb[yp + l] = d * sc[sc_o + is + 0] as f32 * q1 as f32;
-                yb[yp + l + 32] = d * sc[sc_o + is + 2] as f32 * q2 as f32;
-                yb[yp + l + 64] = d * sc[sc_o + is + 4] as f32 * q3 as f32;
-                yb[yp + l + 96] = d * sc[sc_o + is + 6] as f32 * q4 as f32;
-            }
-            yp += 128;
-            ql_o += 64;
-            qh_o += 32;
-            sc_o += 8;
-        }
+        q6_k_superblock_dequant(&data[o..o + 210], &mut y[i * QK_K..(i + 1) * QK_K])?;
     }
     Ok(y)
 }
@@ -703,6 +671,44 @@ fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
         }
     }
     Ok(y)
+}
+
+#[cfg(test)]
+mod q6_k_tests {
+    use super::*;
+
+    #[test]
+    fn q6_k_signed_scales_match_known_ggml_values() {
+        // GGML block_q6_K: ql[128], qh[64], int8_t scales[16], fp16 d.
+        // ql=0x21 and qh=0xe4 encode (-31, -15, 2, 18) in each 128-value half.
+        let mut block = [0u8; 210];
+        block[..128].fill(0x21);
+        block[128..192].fill(0xe4);
+        let scales: [i8; 16] = [
+            -128, -2, 0, 3, -7, 11, -1, 127, -64, 5, -3, 9, -12, 31, -127, 1,
+        ];
+        for (dst, scale) in block[192..208].iter_mut().zip(scales) {
+            *dst = scale as u8;
+        }
+        block[208..210].copy_from_slice(&f16::from_f32(0.5).to_bits().to_le_bytes());
+        let expected_groups = [
+            1984.0, 31.0, 0.0, -22.5, -7.0, 11.0, -9.0, 1143.0, 992.0, -77.5, 22.5, -67.5,
+            -12.0, 31.0, -1143.0, 9.0,
+        ];
+        let expected: Vec<f32> = expected_groups
+            .into_iter()
+            .flat_map(|v| [v; 16])
+            .collect();
+        assert_eq!(tensor_to_f32(&block, 14, &[256, 1]).unwrap(), expected);
+        let mut row = [0.0; 256];
+        q6_k_superblock_dequant(&block, &mut row).unwrap();
+        assert_eq!(row.as_slice(), expected);
+        let x = [1.0; 256];
+        assert_eq!(
+            crate::ggml::quant_dot::dot_row(14, &block, &x).unwrap(),
+            46160.0
+        );
+    }
 }
 
 #[cfg(test)]

@@ -168,9 +168,8 @@ pub struct LlamaModel {
     pub layers: Vec<LayerWeights>,
     pub output_norm: Vec<f32>,
     pub output: MatrixWeights,
-    /// Optional per-dimension inverse frequencies from GGUF `rope_freqs.weight` (Llama 3+).
-    /// Length `head_dim / 2`. Used only when values match the analytic inv-freq from `theta`
-    /// (otherwise the tensor may include Yarn/NTK scaling we do not apply yet — fall back to metadata).
+    /// Effective inverse frequencies computed from GGUF `rope_freqs.weight` factors (Llama 3+).
+    /// Length `rope_rot_dims / 2`; each analytic frequency is divided by its GGUF factor.
     pub rope_inv_freq: Option<Vec<f32>>,
 }
 
@@ -203,50 +202,48 @@ fn matrix_mmap_supported(t: &GgufTensorInfo) -> bool {
     ggml_type_supported_mmap_matvec(t.ggml_type)
 }
 
-/// Newer Llama-3 GGUFs may ship `rope_freqs.weight` `[rope_rot_dims/2]`. If it matches the analytic
-/// inv-frequencies from `theta`, use it; otherwise it may encode Yarn/NTK scaling — ignore it.
+/// GGML's RoPE uses `angle = position * analytic_inv_freq / freq_factor`.
+/// `rope_freqs.weight` contains divisors, not inverse frequencies.
 fn try_load_rope_inv_freq(
     archive: &GgufArchive,
     rope_rot_dims: usize,
     theta: f32,
-) -> Option<Vec<f32>> {
-    let half = rope_rot_dims.checked_div(2)?;
-    let t = archive.tensor_first_of(&["rope_freqs.weight"])?;
+) -> Result<Option<Vec<f32>>> {
+    let half = rope_rot_dims / 2;
+    let Some(t) = archive.tensor_first_of(&["rope_freqs.weight"]) else {
+        return Ok(None);
+    };
     if t.dimensions.len() != 1 || t.dimensions[0] as usize != half {
-        tracing::warn!(
-            got_dims = ?t.dimensions,
-            expected_len = half,
-            "rope_freqs.weight: unexpected shape; using analytic RoPE from metadata"
-        );
-        return None;
+        return Err(BitNetError::Inference(format!(
+            "rope_freqs.weight shape {:?}, expected [{half}]",
+            t.dimensions
+        )));
     }
-    let payload = archive.tensor_payload(t).ok()?;
-    let v = tensor_to_f32(payload, t.ggml_type, &t.dimensions).ok()?;
-    if v.len() != half {
-        return None;
+    let payload = archive.tensor_payload(t)?;
+    let factors = tensor_to_f32(payload, t.ggml_type, &t.dimensions)?;
+    Ok(Some(rope_inv_freq_from_factors(
+        &factors,
+        rope_rot_dims,
+        theta,
+    )?))
+}
+
+fn rope_inv_freq_from_factors(factors: &[f32], rope_rot_dims: usize, theta: f32) -> Result<Vec<f32>> {
+    if factors.len() != rope_rot_dims / 2
+        || !theta.is_finite()
+        || theta <= 0.0
+        || factors.iter().any(|f| !f.is_finite() || *f <= 0.0)
+    {
+        return Err(BitNetError::Inference(
+            "invalid rope_freqs.weight factors or frequency base".into(),
+        ));
     }
     let h = rope_rot_dims as f32;
-    let analytical: Vec<f32> = (0..half)
-        .map(|i| 1.0 / theta.powf(2.0 * (i as f32) / h))
-        .collect();
-    let tol = 1e-3_f32;
-    let close = v
+    Ok(factors
         .iter()
-        .zip(analytical.iter())
-        .take(half.min(8))
-        .all(|(a, b)| (a - b).abs() <= tol * b.abs().max(1e-6));
-    if close {
-        tracing::info!(
-            len = half,
-            "llama: using rope_freqs.weight (matches analytic inv_freq)"
-        );
-        Some(v)
-    } else {
-        tracing::warn!(
-            "rope_freqs.weight differs from analytic inv_freq (likely scaled RoPE); using metadata theta only"
-        );
-        None
-    }
+        .enumerate()
+        .map(|(i, factor)| 1.0 / theta.powf(2.0 * i as f32 / h) / factor)
+        .collect())
 }
 
 /// Returns `Ok(())` if every Llama weight matrix uses a GGML type we can mmap-GEMV.
@@ -1039,7 +1036,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1167,7 +1164,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1340,7 +1337,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1626,7 +1623,28 @@ impl LlamaModel {
 
 #[cfg(test)]
 mod rope_norm_tests {
-    use super::rope_inplace;
+    use super::{rope_inplace, rope_inv_freq_from_factors};
+
+    #[test]
+    fn rope_gguf_factors_divide_analytic_frequencies() {
+        let got = rope_inv_freq_from_factors(&[1.0, 2.0, 4.0, 8.0], 8, 100.0).unwrap();
+        let expected = [1.0, 0.15811388, 0.025, 0.003952847];
+        for (a, b) in got.iter().zip(expected) {
+            assert!((a - b).abs() < 1e-7, "got {got:?}");
+        }
+    }
+
+    #[test]
+    fn rope_invalid_factors_are_rejected() {
+        for factors in [
+            [1.0, 0.0],
+            [1.0, -8.0],
+            [1.0, f32::NAN],
+            [1.0, f32::INFINITY],
+        ] {
+            assert!(rope_inv_freq_from_factors(&factors, 4, 100.0).is_err());
+        }
+    }
 
     #[test]
     fn rope_pos_zero_is_identity() {

@@ -17,6 +17,7 @@ pub use kv_storage::{
 };
 pub use model::{llama_mmap_quant_supported, LlamaModel, LlamaWeightMode};
 pub use runtime::LlamaRuntime;
+pub(crate) use runtime::llama_encode_add_special_tokens;
 pub use slim_attention::{
     attention_baseline, attention_tiled, slim_attention_enabled, tile_tokens_from_env,
     DEFAULT_TILE_TOKENS,

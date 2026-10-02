@@ -33,7 +33,7 @@ use super::cuda_graph::CudaDecodeGraph;
 use super::kv_storage::KvStorage;
 use super::model::LlamaModel;
 
-fn llama_encode_add_special_tokens() -> bool {
+pub(crate) fn llama_encode_add_special_tokens() -> bool {
     !matches!(
         std::env::var("RBITNET_LLAMA_ENCODE_ADD_SPECIAL").as_deref(),
         Ok("0") | Ok("false") | Ok("no")
@@ -334,7 +334,7 @@ impl LlamaRuntime {
             })?;
         }
 
-        let eos_id = self.tokenizer.eos_token_id();
+        let eos_ids = self.tokenizer.eos_token_ids();
 
         let t_dec = Instant::now();
         let mut gen = Vec::new();
@@ -347,7 +347,7 @@ impl LlamaRuntime {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
-            if Some(next_id) == eos_id {
+            if eos_ids.contains(&next_id) {
                 break;
             }
             gen.push(next_id);

@@ -1,0 +1,146 @@
+{
+  "kind": "rbitnet-real-model-inference-validation-v1",
+  "captured_at_utc": "2026-10-02T22:24:02.3616849Z",
+  "engine_base_commit": "4936c72fb69ca6c0583a5dcc75443d557f9c9f68",
+  "engine_branch": "codex/fix-gguf-inference",
+  "model": {
+    "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+    "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    "revision": "b69aef112e9f895e6f98d7ae0949f72ff09aa401",
+    "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF"
+  },
+  "tokenizer": {
+    "sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+    "revision": "5a8abab4a5d6f164389b1079fb721cfab8d7126c",
+    "repo": "unsloth/Llama-3.2-1B-Instruct"
+  },
+  "platform": "Windows; AMD Ryzen 7 9800X3D",
+  "backend": "cpu",
+  "weight_mode": "auto (mmap quant)",
+  "special_tokens": "enabled; formatted prompt contains exactly one BOS",
+  "kv_quant": "off",
+  "reference": {
+    "configuration": "CPU (-ngl 0), context 512, one slot, F32 K/V cache, temperature 0, top_k 1, n_probs 5, prompts supplied as token ID arrays",
+    "engine": "llama.cpp",
+    "release": "https://github.com/ggml-org/llama.cpp/releases/tag/b11351",
+    "archive_sha256": "ced25d91ed2c0981420dcfc9e7823892156c13b5c8dc9f26d334d8e3e4c33a09",
+    "version": "b11351",
+    "sources": [
+      "https://github.com/ggml-org/llama.cpp/blob/b11351/ggml/src/ggml-quants.c",
+      "https://github.com/ggml-org/llama.cpp/blob/b11351/ggml/src/ggml-cpu/ops.cpp"
+    ]
+  },
+  "fixes": [
+    "Decode Q6_K sub-block scales as signed i8 in both dense and mmap paths",
+    "Divide analytic RoPE inverse frequencies by GGUF rope_freqs.weight factors",
+    "Avoid a duplicate BOS when the Llama 3 chat prompt already contains one",
+    "Stop on Llama 3 EOT and EOS; use the same special-token policy for prompt limits"
+  ],
+  "cases": [
+    {
+      "name": "capital",
+      "messages": [
+        {
+          "content": "What is the capital of France? Answer in one word.",
+          "role": "user"
+        }
+      ],
+      "native_text": "Paris.",
+      "reference_text": "Paris.",
+      "exact_match": true,
+      "prompt_tokens": 22,
+      "completion_tokens": 2,
+      "native_elapsed_ms": 14674
+    },
+    {
+      "name": "arithmetic",
+      "messages": [
+        {
+          "content": "Combien font 7 multiplié par 8 ? Réponds seulement par le nombre.",
+          "role": "user"
+        }
+      ],
+      "native_text": "56",
+      "reference_text": "56",
+      "exact_match": true,
+      "prompt_tokens": 31,
+      "completion_tokens": 1,
+      "native_elapsed_ms": 31605
+    },
+    {
+      "name": "translation",
+      "messages": [
+        {
+          "content": "Translate 'Good morning' into French. Answer only with the translation.",
+          "role": "user"
+        }
+      ],
+      "native_text": "Bonne matinée",
+      "reference_text": "Bonne matinée",
+      "exact_match": true,
+      "prompt_tokens": 24,
+      "completion_tokens": 5,
+      "native_elapsed_ms": 30377
+    },
+    {
+      "name": "explanation",
+      "messages": [
+        {
+          "content": "Explain in one short sentence why ice melts when heated.",
+          "role": "user"
+        }
+      ],
+      "native_text": "Ice melts when heated because the molecules gain enough energy to break free from the rigid structure of the crystal lattice and turn into water molecules.",
+      "reference_text": "Ice melts when heated because the molecules gain enough energy to break free from the rigid structure of the crystal lattice and turn into water molecules.",
+      "exact_match": true,
+      "prompt_tokens": 22,
+      "completion_tokens": 27,
+      "native_elapsed_ms": 31019
+    },
+    {
+      "name": "multi_turn",
+      "messages": [
+        {
+          "content": "Remember the code ORION. Reply OK.",
+          "role": "user"
+        },
+        {
+          "content": "OK.",
+          "role": "assistant"
+        },
+        {
+          "content": "What is the code? Answer in one word.",
+          "role": "user"
+        }
+      ],
+      "native_text": "ORION.",
+      "reference_text": "ORION.",
+      "exact_match": true,
+      "prompt_tokens": 41,
+      "completion_tokens": 3,
+      "native_elapsed_ms": 38049
+    }
+  ],
+  "dense_cpu": {
+    "prompt_tokens": 22,
+    "text": "Paris.",
+    "request": "capital",
+    "passed": true,
+    "completion_tokens": 2
+  },
+  "streaming": {
+    "text": "Paris.",
+    "end_of_stream_marker_present": true,
+    "finish_reason": "stop"
+  },
+  "checks": {
+    "clippy": "cargo clippy --locked --workspace passed with existing warnings",
+    "sequence_fixture": "tests/data/golden/llama32-1b-instruct-q4-k-m.sequence.json",
+    "sequence_test": "passed: all 43 reference token IDs across 5 cases, plus complete text, BOS count and EOT stop; 224.68 seconds",
+    "unit_tests": 69,
+    "original_default_backend_run": "Mixtral CPU-only test failed when auto selected CUDA on this workstation; CPU-configured workspace suite passed",
+    "workspace_cpu_test_command": "RBITNET_BACKEND=cpu cargo test --locked --workspace",
+    "workspace_cpu_tests_passed": 196
+  },
+  "scope": "This validates the pinned Llama 3.2 1B Q4_K_M on CPU; it is not a GPU or other-architecture quality claim. Timings are observations, not a benchmark."
+}

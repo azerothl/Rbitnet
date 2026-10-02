@@ -128,6 +128,41 @@ DeepSeek MLA / non-Mixtral MoE graphs remain refused or CUDA-experimental; see
 - GitHub Actions: workflow **Golden (optional)** — `.github/workflows/golden-optional.yml` — manual
   `workflow_dispatch` to run the same test on a runner where you attach a cached GGUF + JSON.
 
+## Llama 3.2 real-model sequence regression
+
+`tests/data/golden/llama32-1b-instruct-q4-k-m.sequence.json` records five greedy sequences
+from **llama.cpp b11351 on CPU**, including the final end-of-turn token. The prompts cover
+a fact, arithmetic, translation, an explanation and conversation history. The fixture pins
+the GGUF and tokenizer SHA-256 values; use those exact files.
+
+The comparison sends **token ID arrays** to llama.cpp `/completion`. Sending an already
+formatted BOS-prefixed string to that endpoint can prepend another BOS. Check `/tokenize`
+with `add_special: false` and pass its IDs to `/completion` to keep the inputs identical.
+The reference uses one CPU slot, context 512 and F32 K/V caches (`-ngl 0 -c 512 -np 1
+--cache-type-k f32 --cache-type-v f32 --no-warmup`), with `temperature: 0`, `top_k: 1`
+and `n_probs: 5` in each completion request. Read generated IDs from
+`completion_probabilities`, including the final EOT.
+
+The optional integration test checks the tokenizer IDs, every greedy generated ID, the
+decoded response, the prompt token count and stopping before EOT. It runs the Rust engine
+directly; HTTP JSON and SSE were checked separately in the [validation record](validation/2026-10-03-llama32-inference-fix.json).
+
+From the repository root in PowerShell, with the pinned model and tokenizer already present:
+
+```powershell
+$env:RBITNET_LLAMA_SEQUENCE_JSON = (Resolve-Path tests/data/golden/llama32-1b-instruct-q4-k-m.sequence.json).Path
+$env:RBITNET_TEST_GGUF = (Resolve-Path models/exported-llama/model.gguf).Path
+$env:RBITNET_TOKENIZER = (Resolve-Path models/exported-llama/tokenizer.json).Path
+$env:RBITNET_BACKEND = "cpu"
+$env:RBITNET_LLAMA_WEIGHT_MODE = "auto"
+$env:RBITNET_KV_QUANT = "off"
+cargo test --release --locked -p bitnet-core --test optional_llama_sequence -- --nocapture
+```
+
+Repeat with `RBITNET_LLAMA_WEIGHT_MODE=dense` when changing dense decoding. Without the
+three file variables, this test skips model I/O. Default CI still exercises independent
+Q6_K signed-scale values, RoPE factor validation and Llama 3 BOS/EOT handling without a download.
+
 ## Related docs
 
 - `tests/data/golden/README.md` — schema and file layout.
