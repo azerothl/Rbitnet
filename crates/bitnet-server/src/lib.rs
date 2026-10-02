@@ -308,6 +308,15 @@ async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
 async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     let mut text = state.metrics.prometheus_text();
     text.push_str(&bitnet_core::perf::prometheus_text());
+    if let Some(rss) = process_rss_bytes() {
+        text.push_str("# HELP rbitnet_process_rss_bytes Process resident set size in bytes (Linux /proc; 0 if unavailable)\n");
+        text.push_str("# TYPE rbitnet_process_rss_bytes gauge\n");
+        text.push_str(&format!("rbitnet_process_rss_bytes {rss}\n"));
+    }
+    // VRAM is N/A on the default CPU path; keep a documented zero gauge for Akasha parity.
+    text.push_str("# HELP rbitnet_process_vram_bytes Device VRAM bytes (0 on CPU-default path; see GPU_NATIVE_ROADMAP)\n");
+    text.push_str("# TYPE rbitnet_process_vram_bytes gauge\n");
+    text.push_str("rbitnet_process_vram_bytes 0\n");
     (
         [(
             axum::http::header::CONTENT_TYPE,
@@ -315,6 +324,29 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
         )],
         text,
     )
+}
+
+/// Best-effort process RSS from `/proc/self/status` (Linux). Returns `None` off-Linux.
+fn process_rss_bytes() -> Option<u64> {
+    #[cfg(target_os = "linux")]
+    {
+        let text = std::fs::read_to_string("/proc/self/status").ok()?;
+        for line in text.lines() {
+            if let Some(rest) = line.strip_prefix("VmRSS:") {
+                let kb: u64 = rest
+                    .split_whitespace()
+                    .next()?
+                    .parse()
+                    .ok()?;
+                return Some(kb.saturating_mul(1024));
+            }
+        }
+        None
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
 }
 
 async fn root_health(State(state): State<AppState>, headers: HeaderMap) -> Response {

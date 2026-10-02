@@ -57,6 +57,43 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 
 Derived gauges (`*_avg`, `*_tokens_per_sec`) are computed at scrape time from the sums above; they are part of the frozen contract so Akasha UI can show live TTFT / tok/s without extra series math.
 
+## Process memory gauges (parity helpers)
+
+| Rbitnet series | Meaning | Notes |
+|----------------|---------|-------|
+| `rbitnet_process_rss_bytes` | Process RSS | Linux `/proc/self/status`; omitted on other OS |
+| `rbitnet_process_vram_bytes` | Device VRAM | **Always 0** on the default CPU path (GPU fused off). Do not treat as missing scrape. |
+| `rbitnet_core_kv_pool_allocated_pages` | KV page count | Prefer as **KV RSS proxy** when correlating cache memory |
+| `rbitnet_core_kv_pool_active_seqs` | Active sequences | Prefer as **queue depth** analogue in `/ui` |
+
+## OS Models UX ↔ Rbitnet mapping
+
+| akasha-os Models / live line | Rbitnet series / UI |
+|------------------------------|---------------------|
+| TTFT | `rbitnet_inference_ttft_ms_avg` |
+| Decode tok/s | `rbitnet_inference_decode_tokens_per_sec` |
+| `prefix_hit` | `rbitnet_core_prefix_hit` (= hits total) |
+| `draft_accept` | `rbitnet_core_draft_accept` (= accepted draft tokens) |
+| Queue depth | `rbitnet_core_kv_pool_active_seqs` (fallback: `scheduler_batch_items_total`) |
+| RAM / RSS | `rbitnet_process_rss_bytes` + `kv_pool_allocated_pages` |
+| VRAM | `rbitnet_process_vram_bytes` (0 on CPU) |
+
+`/ui` status line shows TTFT, tok/s, prefix_hit, draft_accept, queue, and memory. Frozen HTTP aliases are **not** renamed — only additive gauges above.
+
+## Correlation script (Akasha doctor)
+
+After traffic through Akasha’s BitNet route:
+
+```bash
+# Rbitnet scrape
+curl -fsS http://127.0.0.1:8080/metrics | grep -E 'rbitnet_(inference_ttft_ms_avg|inference_decode_tokens_per_sec|core_prefix_hit|core_draft_accept|process_rss)'
+
+# Akasha daemon (default 3876) — compare request rates / errors
+curl -fsS http://127.0.0.1:3876/api/router/metrics | head -c 2000
+```
+
+Also run `./scripts/smoke_openai.sh` against a stub or live server.
+
 ## Ports and routing
 
 - **Akasha daemon:** `http://127.0.0.1:3876` — `POST /api/message`, `GET /api/tasks/:id`
