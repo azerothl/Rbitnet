@@ -1,7 +1,21 @@
-# Stubs / MVP audit (issue #24)
+# Stubs / MVP audit (epic #24)
 
 Inventory of paths that are stubs, intentional smoke modes, shipped MVPs, or still open.
-Last reviewed: **2026-10-02** against `main` + #46 fused multi-seq CPU spike.
+Last reviewed: **2026-10-02** against `main` (post #16–#21 + #46 fused multi-seq CPU spike + #44 Lookahead decision).
+
+**Scope of this spike:** refresh the audit and map remaining work to child issues. This does **not** eliminate stubs end-to-end; epic [#24](https://github.com/azerothl/Rbitnet/issues/24) stays open until those issues land (or are explicitly deferred).
+
+## Epic #24 checklist (status map)
+
+| Theme | Status | Owner issue |
+|-------|--------|-------------|
+| Continuous batching **fused** multi-seq | **Spike landed / gain open** | [#46](https://github.com/azerothl/Rbitnet/issues/46) — Sarathi (#21) + CPU `dense_matvec_multi_seq` / `RBITNET_FUSED_MULTI_SEQ=1` spike; concurrency gain still open; GPU fused = #22 |
+| Speculative beyond scheduler MVP | **Partial** | PLD / n-gram shipped (#18); Lookahead **wontfix for now** → [#44](https://github.com/azerothl/Rbitnet/issues/44) / [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
+| Roadmap loaders (`glm4moe`, `gptoss`, `deepseek2`) | **Partial** | Clear `roadmap_unsupported` when non-Llama; full MoE/MLA → [#25](https://github.com/azerothl/Rbitnet/issues/25) |
+| GPU backends | **Open** | [#22](https://github.com/azerothl/Rbitnet/issues/22) |
+| SlimAttention / KIVI | **Open** | [#39](https://github.com/azerothl/Rbitnet/issues/39) |
+| `tokenizer.model` without manual conversion | **Shipped** | SentencePiece path in `prompt_tokenizer.rs`; prefer `tokenizer.json` |
+| Each conversion updates LIMITATIONS / STATUS | **Ongoing** | Required on each child issue close |
 
 ## Intentional smoke paths (keep; not “fake support”)
 
@@ -16,41 +30,44 @@ Last reviewed: **2026-10-02** against `main` + #46 fused multi-seq CPU spike.
 | Backend | Status | Action |
 |---------|--------|--------|
 | `cpu` | **Production path** | Default native-first. |
-| `cuda` / `rocm` / `vulkan` / `metal` | **Parity stubs / MVP** | See #22 / [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). Not claimed as full GPU inference. |
-| `hybrid` | **Partial** | CPU fallback documented; not a full offload product yet. |
+| `cuda` / `rocm` / `vulkan` / `metal` | **Parity stubs / MVP** | [#22](https://github.com/azerothl/Rbitnet/issues/22) / [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). Not claimed as full GPU inference. |
+| `hybrid` | **Partial** | CPU fallback documented; not a full offload product yet (#22). |
 
 ## Serving / KV / speculative (native CPU stack)
 
-| Feature | Issue #24 claim (2026-09-30) | Actual status |
-|---------|------------------------------|---------------|
-| Prefix **response** cache (`RBITNET_PREFIX_CACHE`) | Full responses only | **Correct** — distinct from KV reuse. |
-| Prefix **KV** (`RBITNET_PREFIX_KV`) | “Not real KV reuse” | **Outdated claim** — dense/paged snaps + radix LRU + LCP agent reuse + `rbitnet_core_prefix_hit` shipped (#17). |
-| Continuous batching fused multi-seq | Still stub | **Stall-free Sarathi schedule shipped** (#21). **#46 CPU spike:** `dense_matvec_multi_seq` + `ModelExecutor::generate_decode_batch` + opt-in `RBITNET_FUSED_MULTI_SEQ=1` scheduler decode wave (default still sequential; **no concurrency gain claimed**; GPU fused = #22). |
-| Speculative decoding | Scheduler MVP only | **PLD / n-gram draft + verify/accept shipped** (#18); further research (SPECTRA-class) open. |
-| Paged KV / pool | — | **E2E opt-in shipped** (#16 era). |
-| KV Q8 | — | **Compact CPU pages shipped** (#20). |
-| BitNet ternary kernels | — | **I2_S / TL2 microbench shipped** (#19). |
-| Roadmap loaders (`glm4moe`, `gptoss`, `deepseek2`) | Stub executors | **Clear startup error** via `roadmap_unsupported` when not Llama-shaped; Llama-shaped tensors run for real. Full MoE/MLA = #25. |
-| `tokenizer.model` | Manual conversion required | **SentencePiece path shipped** (`prompt_tokenizer.rs`); `tokenizer.json` preferred. |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Prefix **response** cache (`RBITNET_PREFIX_CACHE`) | **Shipped (MVP)** | Full responses only — distinct from KV reuse. |
+| Prefix **KV** (`RBITNET_PREFIX_KV`) | **Shipped** | Dense/paged snaps + radix LRU + LCP agent reuse + `rbitnet_core_prefix_hit` (#17). **Present** — do not claim absent. |
+| Continuous batching schedule | **Shipped (MVP)** | Stall-free Sarathi (#21); decode-first + chunked prefill. |
+| Continuous batching fused multi-seq | **Spike / open** | #46 CPU spike: `dense_matvec_multi_seq` + `generate_decode_batch` + opt-in `RBITNET_FUSED_MULTI_SEQ=1` (default sequential; **no concurrency gain claimed**; GPU fused = #22). |
+| Speculative decoding | **Shipped (PLD)** | PLD / n-gram draft + verify/accept (#18); further research open. |
+| Paged KV / pool | **Shipped** | E2E opt-in (#16 era). |
+| KV Q8 | **Shipped** | Compact CPU pages (#20). |
+| SlimAttention 1D tiling / KIVI | **Open** | [#39](https://github.com/azerothl/Rbitnet/issues/39) — after KV Q8. |
+| BitNet ternary kernels | **Shipped (microbench)** | I2_S / TL2 (#19). |
+| Roadmap loaders | **Clear refuse / Llama-shaped only** | Full MoE/MLA = [#25](https://github.com/azerothl/Rbitnet/issues/25). |
+| `tokenizer.model` | **Shipped** | SentencePiece path; `tokenizer.json` preferred. |
 
-## Docs sync done with this audit
+## Remaining work (issue map)
 
-- [LIMITATIONS.md](LIMITATIONS.md) — distinguish `PREFIX_CACHE` vs `PREFIX_KV`; stop implying KV reuse is absent; note #46 fused multi-seq spike.
-- [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — serving pipeline row reflects stall-free + PLD shipped; fused multi-seq still open.
+- [ ] **[#46](https://github.com/azerothl/Rbitnet/issues/46)** — Fused multi-seq concurrency gain (CPU then GPU via #22). Primary #24 remainder.
+- [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — GPU backends (CUDA / ROCm / Vulkan / Metal) + hybrid residency.
+- [ ] **[#25](https://github.com/azerothl/Rbitnet/issues/25)** — Non-Llama / MoE / MLA loaders beyond Llama-shaped refuse path.
+- [ ] **[#39](https://github.com/azerothl/Rbitnet/issues/39)** — SlimAttention tiled CPU attention (+ optional KIVI) after KV Q8.
+- [x] **[#44](https://github.com/azerothl/Rbitnet/issues/44)** — Lookahead Decoding **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
+- Keep stub/toy clearly labeled forever (do not remove — CI depends on them).
+
+## Docs sync
+
+- [LIMITATIONS.md](LIMITATIONS.md) — distinguishes `PREFIX_CACHE` vs `PREFIX_KV`; KV reuse is **documented as present** (opt-in); note #46 fused multi-seq spike.
+- [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — serving pipeline reflects stall-free + PLD shipped; fused multi-seq → #46; Lookahead wontfix.
 - [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) — Phase E Done includes PLD + KV Q8 + BitNet kernel microbench.
 
-## Remaining #24 work (backlog)
-
-1. **Fused multi-seq forward** — #46 CPU spike landed (matvec helper + scheduler hook); **full Llama/BitNet fused decode + measured concurrency ≥4 still open**.
-2. **GPU backends** — owned by #22.
-3. **Non-Llama / MoE / MLA loaders** — owned by #25.
-4. Optional: SlimAttention 1D tiling after KV Q8; MTP research. Lookahead Decoding is **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
-5. Keep stub/toy clearly labeled forever (do not remove — CI depends on them).
-
-## Exit criteria mapping
+## Exit criteria (epic #24)
 
 | Criterion | State |
 |-----------|-------|
-| Exhaustive stub audit | **This document** |
-| No path *announced as supported* is a silent stub | **Improved** via LIMITATIONS/STATUS sync; GPU still explicitly stub |
+| Exhaustive stub audit | **This document** (refreshed 2026-10-02) |
+| No path *announced as supported* is a silent stub | **Improved** — GPU / MoE / fused multi-seq explicitly open via #22 / #25 / #46 |
 | Unsupported listed as unsupported | **Yes** for MoE/MLA/GPU |
