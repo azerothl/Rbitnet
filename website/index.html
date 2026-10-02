@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rbitnet — inference GGUF Rust, native-first</title>
-  <meta name="description" content="Rbitnet (Rabbit + bit) : GGUF en Rust, API OpenAI-compatible, BitNet natif. Backend d'inférence pour Akasha." />
+  <title>Rbitnet — pure Rust GGUF inference, native-first</title>
+  <meta name="description" content="Rbitnet (Rabbit + bit): pure-Rust Llama-compatible GGUF inference and an OpenAI-compatible HTTP server. Native BitNet path. Inference backend for Akasha." />
   <meta property="og:title" content="Rbitnet" />
-  <meta property="og:description" content="GGUF Rust native-first — Rabbit + bit." />
+  <meta property="og:description" content="Pure Rust GGUF inference, native-first — Rabbit + bit." />
   <meta property="og:image" content="assets/brand/rbitnet-hero-atmosphere.png" />
   <meta name="theme-color" content="#0B1220" />
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml" />
@@ -20,13 +20,15 @@
   <div class="bit-grid" aria-hidden="true"></div>
 
   <header class="site-header">
-    <a class="brand-chip" href="#top" aria-label="Rbitnet accueil">
+    <a class="brand-chip" href="#top" aria-label="Rbitnet home">
       <img src="assets/brand/rbitnet-icon-128.png" width="36" height="36" alt="" />
       <span>Rbitnet</span>
     </a>
-    <nav class="site-nav" aria-label="Principal">
-      <a href="#pourquoi">Pourquoi</a>
-      <a href="#capacites">Capacités</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#why">Why</a>
+      <a href="#status">Status</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="docs/">Docs</a>
       <a href="#install">Install</a>
       <a href="https://github.com/azerothl/Rbitnet" rel="noopener">GitHub</a>
     </nav>
@@ -38,11 +40,11 @@
         <p class="eyebrow mono">akasha-infer · rabbit + bit</p>
         <h1 id="brand-title" class="brand-title">Rbitnet</h1>
         <p class="lede">
-          Moteur GGUF en Rust — API OpenAI-compatible, BitNet natif, sans runtime d’inférence externe.
+          Pure-Rust GGUF inference — OpenAI-compatible API, native BitNet path, no external engine at runtime.
         </p>
         <div class="cta-row">
-          <a class="btn btn-amber" href="#install">Installer</a>
-          <a class="btn btn-ghost" href="https://github.com/azerothl/Rbitnet#readme" rel="noopener">Documentation</a>
+          <a class="btn btn-amber" href="#install">Install</a>
+          <a class="btn btn-ghost" href="docs/">Documentation</a>
         </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
@@ -56,65 +58,138 @@
       </div>
     </section>
 
-    <section id="pourquoi" class="section section-why">
-      <h2>Un terrier pour les bits</h2>
+    <section id="why" class="section section-why">
+      <h2>A warren for bits</h2>
       <p class="section-lede">
-        Rbitnet mmap le GGUF, déquantifie, exécute le transformer et sert des tokens.
-        Backend satellite d’Akasha — pas un wrapper autour d’un autre moteur.
+        Rbitnet mmaps the GGUF, dequantizes weights, runs the transformer, and serves tokens —
+        self-contained in Rust, built as the satellite inference backend for Akasha
+        (<code>BitNetProvider</code> on port 8080).
       </p>
     </section>
 
-    <section id="capacites" class="section section-caps">
-      <h2>Ce qui tourne aujourd’hui</h2>
+    <section id="capabilities" class="section section-caps">
+      <h2>What ships today</h2>
       <ul class="cap-list">
         <li>
           <span class="cap-k mono">bitnet-core</span>
-          <span>GGUF Llama / Qwen3 / BitNet b1.58, kernels quantifiés CPU, KV paged &amp; quantifié.</span>
+          <span>Llama / Qwen3 / BitNet b1.58 GGUF, CPU quantized kernels, paged &amp; quantized KV hooks.</span>
         </li>
         <li>
           <span class="cap-k mono">rbitnet-server</span>
-          <span>HTTP OpenAI <code>/v1</code>, SSE, health / ready / metrics, reload à chaud.</span>
+          <span>OpenAI <code>/v1</code> HTTP, SSE streaming, health / ready / Prometheus metrics, hot reload.</span>
         </li>
         <li>
           <span class="cap-k mono">rbitnet CLI</span>
-          <span>Catalogue, download, quickstart, TUI chat, recipes BitNet.</span>
+          <span>Curated catalog, Hub download, quickstart, TUI chat, BitNet recipes, optional train helpers.</span>
         </li>
       </ul>
     </section>
 
-    <section id="install" class="section section-install">
-      <h2>Démarrer</h2>
-      <p class="section-lede">Un checkout, un binaire. Python seulement si vous convertissez des checkpoints en GGUF.</p>
-      <pre class="install-block mono" tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
-rbitnet quickstart
-rbitnet-server</code></pre>
-      <p class="install-note">
-        Windows : <code>.\scripts\install.ps1</code> · Docs :
-        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/DEMARRAGE_5MIN.md">démarrage 5 min</a>
+    <section id="status" class="section section-status">
+      <h2>Status</h2>
+      <p class="section-lede">
+        Production-ready is <strong>not claimed</strong> yet — HTTP surface, CI, and core GGUF paths are solid;
+        fused GPU serving and full multi-seq batching remain open.
+      </p>
+      <div class="status-table-wrap">
+        <table class="status-table">
+          <thead>
+            <tr><th>Area</th><th>State</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>OpenAI-shaped HTTP + limits + auth + metrics</td><td><span class="pill pill-done">Done</span></td></tr>
+            <tr><td>CI / release binaries on tag</td><td><span class="pill pill-done">Done</span></td></tr>
+            <tr><td>GGUF Llama forward + tokenizer + BitNet native path</td><td><span class="pill pill-done">Done</span></td></tr>
+            <tr><td>Paged KV, prefix/radix, Sarathi batching, PLD</td><td><span class="pill pill-opt">Opt-in MVP</span></td></tr>
+            <tr><td>llama.cpp golden parity</td><td><span class="pill pill-opt">Optional</span></td></tr>
+            <tr><td>FlashAttention-class GPU kernels</td><td><span class="pill pill-def">Deferred</span></td></tr>
+            <tr><td>Full “prod ready” exit criteria</td><td><span class="pill pill-open">Open</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="section-more mono">
+        <a href="docs/page.html?doc=status-and-roadmap">Full status &amp; roadmap →</a>
       </p>
     </section>
 
-    <section class="section section-stack">
-      <h2>Dans la stack Akasha</h2>
+    <section id="roadmap" class="section section-roadmap">
+      <h2>Roadmap focus</h2>
       <p class="section-lede">
-        akasha-os garde llama.cpp dans le TCB Preview. Le daemon Akasha appelle Rbitnet
-        en HTTP sur le port 8080 — contrat <code>/v1</code> + <code>/metrics</code> gelé.
+        Native-first CPU remains the default. Research priorities track serving gaps vs vLLM-class stacks
+        without chasing every industry feature.
+      </p>
+      <ul class="roadmap-list">
+        <li>
+          <span class="cap-k">Near term</span>
+          <span>Metrics UX (TTFT, prefix_hit, draft_accept), provenance/SHA, structured output, bench gates vs llama.cpp.</span>
+        </li>
+        <li>
+          <span class="cap-k">Medium</span>
+          <span>Fused multi-seq continuous batching, SlimAttention-style CPU tiling, K/V asymmetry after KV Q8, tune profiles.</span>
+        </li>
+        <li>
+          <span class="cap-k">Strategic</span>
+          <span>GPU_NATIVE device KV + fused attention, BitNet packed GPU kernels, optional Metal — after frozen CPU benches.</span>
+        </li>
+      </ul>
+      <p class="section-more mono">
+        <a href="docs/page.html?doc=status-and-roadmap">Priorities &amp; deferred list →</a>
+        ·
+        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/INFERENCE_STACK_V2.md" rel="noopener">Inference stack v2 (repo)</a>
+      </p>
+    </section>
+
+    <section id="install" class="section section-install">
+      <h2>Install</h2>
+      <p class="section-lede">One checkout, one binary. Python only if you convert checkpoints to GGUF upstream.</p>
+      <pre class="install-block mono" tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
+rbitnet models install tinyllama-1.1b-chat-q4-k-m --dir ./models
+rbitnet up tinyllama-1.1b-chat-q4-k-m --dir ./models
+rbitnet serve</code></pre>
+      <p class="install-note">
+        Windows: <code>.\scripts\install.ps1</code> ·
+        <a href="docs/page.html?doc=get-started">Get started</a> ·
+        <a href="docs/page.html?doc=demarrage-5min">FR quickstart</a>
+      </p>
+    </section>
+
+    <section id="docs" class="section section-docs">
+      <h2>Documentation on this site</h2>
+      <p class="section-lede">
+        Start with get-started and usage. Pointy specs (kernel notes, deep GPU research) stay in the repo.
+      </p>
+      <ul class="doc-links">
+        <li><a href="docs/page.html?doc=get-started">Get started</a></li>
+        <li><a href="docs/page.html?doc=usage">Usage</a></li>
+        <li><a href="docs/page.html?doc=env-reference">Env reference</a></li>
+        <li><a href="docs/page.html?doc=integrations">Integrations</a></li>
+        <li><a href="docs/page.html?doc=native-first">Native-first</a></li>
+        <li><a href="docs/">All docs →</a></li>
+      </ul>
+    </section>
+
+    <section class="section section-stack">
+      <h2>In the Akasha stack</h2>
+      <p class="section-lede">
+        akasha-os keeps llama.cpp inside the Preview TCB. The Akasha daemon consumes Rbitnet over HTTP
+        on port 8080 — separate roles, frozen <code>/v1</code> + <code>/metrics</code> contract.
       </p>
       <p class="stack-links mono">
-        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/AKASHA_INFER.md">AKASHA_INFER</a>
+        <a href="docs/page.html?doc=akasha-infer">Akasha Infer</a>
         ·
-        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/NATIVE_FIRST.md">NATIVE_FIRST</a>
+        <a href="docs/page.html?doc=native-first">Native-first</a>
         ·
-        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/BRAND.md">BRAND</a>
+        <a href="docs/page.html?doc=brand">Brand</a>
       </p>
     </section>
   </main>
 
   <footer class="site-footer">
-    <img src="assets/brand/rbitnet-mark.svg" width="28" height="28" alt="" />
+    <img src="assets/brand/rbitnet-icon-128.png" width="28" height="28" alt="" />
     <p>
-      <strong>Rbitnet</strong> · MIT ·
-      <a href="https://github.com/azerothl/Rbitnet" rel="noopener">github.com/azerothl/Rbitnet</a>
+      <strong>Rbitnet</strong> · MIT · English default ·
+      <a href="docs/page.html?doc=demarrage-5min">FR</a> ·
+      <a href="https://github.com/azerothl/Rbitnet" rel="noopener">GitHub</a>
     </p>
   </footer>
 
