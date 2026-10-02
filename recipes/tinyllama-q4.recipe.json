@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "tinyllama-q4-reference",
+  "description": "TinyLlama 1.1B Q4_K_M reference recipe for Akasha / golden tests — tokenizer sidecar required",
+  "model": {
+    "gguf": "./models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+    "tokenizer": "./models/tokenizer.json",
+    "architecture": "llama",
+    "sha256": "9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0"
+  },
+  "env": {
+    "RBITNET_BACKEND": "cpu",
+    "RBITNET_PREFIX_KV": "1",
+    "RBITNET_CONTINUOUS_BATCHING": "0",
+    "RBITNET_MAX_CONCURRENT": "2",
+    "RBITNET_BIND": "127.0.0.1:8080"
+  },
+  "notes": "Install first: `rbitnet models install tinyllama:q4 --dir ./models` (or `rbitnet up tinyllama:q4`). Adjust model/tokenizer paths to match rbitnet.manifest.json. Trusted: RBITNET_TRUSTED_MODELS_ONLY=1 refuses hash mismatch."
+}

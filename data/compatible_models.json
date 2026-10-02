@@ -9,7 +9,13 @@
       "files": [
         "ggml-model-i2_s.gguf"
       ],
-      "notes": "Install with `rbitnet models install microsoft-bitnet-b1.58-2b-4t --dir ./models`. Tokenizer files come from microsoft/bitnet-b1.58-2B-4T; set RBITNET_TOKENIZER or use the generated rbitnet.manifest.json paths.",
+      "tags": [
+        "bitnet:2b",
+        "bitnet"
+      ],
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "tokenizer_repo": "microsoft/bitnet-b1.58-2B-4T",
+      "notes": "Install with `rbitnet models install bitnet:2b --dir ./models` (or id `microsoft-bitnet-b1.58-2b-4t`). Tokenizer sidecars come from microsoft/bitnet-b1.58-2B-4T; set RBITNET_TOKENIZER or use the generated rbitnet.manifest.json paths. Enable RBITNET_TRUSTED_MODELS_ONLY=1 to require this SHA-256.",
       "tier": "bitnet_native",
       "use_case": [
         "chat",
@@ -31,7 +37,13 @@
       "files": [
         "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
       ],
-      "notes": "HF API reports gguf.architecture=llama and context_length=2048. Download tokenizer.json or tokenizer.model from TinyLlama/TinyLlama-1.1B-Chat-v1.0 and set RBITNET_TOKENIZER.",
+      "tags": [
+        "tinyllama:q4",
+        "tinyllama"
+      ],
+      "sha256": "9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0",
+      "tokenizer_repo": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "notes": "Install with `rbitnet models install tinyllama:q4 --dir ./models` or `rbitnet up tinyllama:q4`. Tokenizer.json is required from TinyLlama/TinyLlama-1.1B-Chat-v1.0 (not the GGUF repo).",
       "tier": "recommended_beginner",
       "use_case": [
         "chat"

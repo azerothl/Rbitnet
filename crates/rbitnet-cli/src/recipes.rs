@@ -99,4 +99,20 @@ mod tests {
         assert!(r.model.is_none());
         assert_eq!(r.env.get("RBITNET_PREFIX_KV").map(String::as_str), Some("1"));
     }
+
+    #[test]
+    fn reference_recipes_require_sha_and_tokenizer() {
+        let bitnet = include_str!("../../../recipes/bitnet-b158.recipe.json");
+        let tiny = include_str!("../../../recipes/tinyllama-q4.recipe.json");
+        for (name, raw) in [("bitnet", bitnet), ("tinyllama", tiny)] {
+            let r: ServeRecipe = serde_json::from_str(raw).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let model = r.model.as_ref().unwrap_or_else(|| panic!("{name}: missing model"));
+            assert!(
+                model.tokenizer.as_ref().is_some_and(|t| !t.is_empty()),
+                "{name}: tokenizer sidecar required"
+            );
+            let sha = model.sha256.as_ref().unwrap_or_else(|| panic!("{name}: sha256 required"));
+            assert_eq!(sha.len(), 64, "{name}: sha256 must be 64 hex chars");
+        }
+    }
 }

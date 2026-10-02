@@ -45,6 +45,12 @@ pub struct CatalogModel {
     /// Optional expected SHA-256 (hex) of the primary GGUF file for provenance checks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sha256: Option<String>,
+    /// Stable short tags (Ollama-style), e.g. `bitnet:2b`, `tinyllama:q4`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    /// Optional Hub repo for tokenizer sidecars when they live outside the GGUF repo.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokenizer_repo: Option<String>,
 }
 
 /// Pick one GGUF filename when a repo ships many quantizations (prefers common Q4_K_M-style names).
@@ -86,6 +92,63 @@ pub fn fetch_catalog(url: &str) -> Result<Catalog, String> {
     serde_json::from_str(&body).map_err(|e| format!("parse catalog JSON: {e}"))
 }
 
+/// Load the in-tree curated catalog when present (offline-friendly).
+pub fn load_local_catalog() -> Option<Catalog> {
+    let local = std::path::Path::new("data/compatible_models.json");
+    let text = std::fs::read_to_string(local).ok()?;
+    serde_json::from_str(&text).ok()
+}
+
+/// Resolve a user ref: catalog `id`, stable `tag`, or return `None` (treat as Hub repo id).
+#[must_use]
+pub fn resolve_catalog_ref<'a>(catalog: &'a Catalog, refer: &str) -> Option<&'a CatalogModel> {
+    let key = refer.trim();
+    if key.is_empty() {
+        return None;
+    }
+    let lower = key.to_ascii_lowercase();
+    catalog
+        .models
+        .iter()
+        .find(|m| m.id.eq_ignore_ascii_case(key))
+        .or_else(|| {
+            catalog.models.iter().find(|m| {
+                m.tags
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case(key) || t.to_ascii_lowercase() == lower)
+            })
+        })
+}
+
+/// Human-readable list of stable tags for docs / `--list`.
+#[must_use]
+pub fn format_stable_tags(catalog: &Catalog) -> String {
+    let mut lines = Vec::new();
+    for m in &catalog.models {
+        if m.tags.is_empty() {
+            continue;
+        }
+        let primary = m
+            .file
+            .clone()
+            .or_else(|| pick_primary_gguf(&m.files))
+            .unwrap_or_else(|| "(no file)".into());
+        let sha = m.sha256.as_deref().unwrap_or("(no sha256)");
+        lines.push(format!(
+            "  {} → {} / {}\n    id={}  sha256={sha}",
+            m.tags.join(", "),
+            m.repo,
+            primary,
+            m.id
+        ));
+    }
+    if lines.is_empty() {
+        "  (no stable tags in catalog)\n".into()
+    } else {
+        lines.join("\n")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +185,31 @@ mod tests {
             catalog_id_from_repo("TheBloke/Llama-2-GGUF"),
             "thebloke-llama-2-gguf"
         );
+    }
+
+    #[test]
+    fn resolve_ref_by_id_and_tag() {
+        let j = r#"{
+          "version":1,
+          "models":[{
+            "id":"tinyllama-1.1b-chat-q4-k-m",
+            "repo":"TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+            "description":"d",
+            "file":"tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+            "files":["tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"],
+            "tags":["tinyllama:q4","tinyllama"],
+            "sha256":"9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0"
+          }]
+        }"#;
+        let c: Catalog = serde_json::from_str(j).unwrap();
+        assert_eq!(
+            resolve_catalog_ref(&c, "tinyllama:q4").map(|m| m.id.as_str()),
+            Some("tinyllama-1.1b-chat-q4-k-m")
+        );
+        assert_eq!(
+            resolve_catalog_ref(&c, "tinyllama-1.1b-chat-q4-k-m").map(|m| m.repo.as_str()),
+            Some("TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF")
+        );
+        assert!(resolve_catalog_ref(&c, "org/missing").is_none());
     }
 }
