@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rbitnet — inference GGUF Rust, native-first</title>
-  <meta name="description" content="Rbitnet (Rabbit + bit) : moteur d'inference GGUF en Rust pur, API OpenAI-compatible, chemin BitNet natif. Le backend d'inference pour Akasha." />
+  <meta name="description" content="Rbitnet (Rabbit + bit) : GGUF en Rust, API OpenAI-compatible, BitNet natif. Backend d'inférence pour Akasha." />
   <meta property="og:title" content="Rbitnet" />
-  <meta property="og:description" content="Inference GGUF Rust native-first — Rabbit + bit." />
+  <meta property="og:description" content="GGUF Rust native-first — Rabbit + bit." />
   <meta property="og:image" content="assets/brand/rbitnet-hero-atmosphere.png" />
   <meta name="theme-color" content="#0B1220" />
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml" />
@@ -38,7 +38,7 @@
         <p class="eyebrow mono">akasha-infer · rabbit + bit</p>
         <h1 id="brand-title" class="brand-title">Rbitnet</h1>
         <p class="lede">
-          Moteur GGUF en Rust pur — API OpenAI-compatible, BitNet natif, zéro moteur d’inférence externe.
+          Moteur GGUF en Rust — API OpenAI-compatible, BitNet natif, sans runtime d’inférence externe.
         </p>
         <div class="cta-row">
           <a class="btn btn-amber" href="#install">Installer</a>
@@ -59,8 +59,8 @@
     <section id="pourquoi" class="section section-why">
       <h2>Un terrier pour les bits</h2>
       <p class="section-lede">
-        Rbitnet mmap le GGUF, déquantifie, exécute le transformer et sert des tokens —
-        self-sufficient en Rust, conçu comme backend satellite pour Akasha.
+        Rbitnet mmap le GGUF, déquantifie, exécute le transformer et sert des tokens.
+        Backend satellite d’Akasha — pas un wrapper autour d’un autre moteur.
       </p>
     </section>
 
@@ -97,8 +97,8 @@ rbitnet-server</code></pre>
     <section class="section section-stack">
       <h2>Dans la stack Akasha</h2>
       <p class="section-lede">
-        akasha-os garde llama.cpp dans le TCB Preview. Le daemon Akasha consomme Rbitnet
-        en HTTP sur le port 8080 — rôles séparés, contrat <code>/v1</code> + <code>/metrics</code> gelé.
+        akasha-os garde llama.cpp dans le TCB Preview. Le daemon Akasha appelle Rbitnet
+        en HTTP sur le port 8080 — contrat <code>/v1</code> + <code>/metrics</code> gelé.
       </p>
       <p class="stack-links mono">
         <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/AKASHA_INFER.md">AKASHA_INFER</a>
