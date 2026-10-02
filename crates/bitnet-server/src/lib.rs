@@ -309,6 +309,7 @@ async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
 async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     let mut text = state.metrics.prometheus_text();
     text.push_str(&bitnet_core::perf::prometheus_text());
+    text.push_str(&bitnet_core::memory_budget::prometheus_text());
     if let Some(rss) = process_rss_bytes() {
         text.push_str("# HELP rbitnet_process_rss_bytes Process resident set size in bytes (Linux /proc; 0 if unavailable)\n");
         text.push_str("# TYPE rbitnet_process_rss_bytes gauge\n");

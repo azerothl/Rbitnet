@@ -60,7 +60,10 @@ pub use cancel::{clear_inference_cancel, inference_cancelled, request_inference_
 pub use error::{BitNetError, Result};
 pub use gguf::{GgufArchive, GgufFileInfo, GgufTensorInfo, GgufValue, LlamaHyperParams};
 pub use inference::Engine;
-pub use memory_budget::{check_load_memory_budget, gguf_tensor_payload_bytes};
+pub use memory_budget::{
+    check_load_memory_budget, estimate_llama_kv_cache_bytes_f32, evaluate_load_budget,
+    gguf_tensor_payload_bytes,
+};
 pub use model::ToyLlm;
 pub use paths::validate_no_parent_components;
 pub use stream::StreamEvent;
