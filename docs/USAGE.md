@@ -254,6 +254,8 @@ Invoke-WebRequest `
   -Body "{}"
 ```
 
+**LoadFailed without process restart (akasha-os P16 pattern):** if the initial GGUF load fails (bad path, OOM, unsupported MoE/MLA → see issue #25), `rbitnet-server` still binds HTTP with a stub engine. `GET /health` stays `200`; `GET /ready` returns `503` with a `LoadFailed` message and a hint to retry. Fix the path/env, then `POST /v1/admin/reload` — no need to kill the process. Failed reload responses include `"code":"LoadFailed"`.
+
 Reload a registry model:
 
 ```powershell

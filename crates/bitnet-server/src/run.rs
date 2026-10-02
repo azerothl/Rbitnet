@@ -30,6 +30,24 @@ fn warn_if_insecure_bind(bind: &str) {
     }
 }
 
+fn annotate_startup_load_error(message: &str) -> String {
+    let lower = message.to_ascii_lowercase();
+    if (lower.contains("moe") || lower.contains("mla") || lower.contains("architecture"))
+        && !message.contains("#25")
+    {
+        return format!(
+            "{message} — if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path)."
+        );
+    }
+    if lower.contains("no such file") || lower.contains("not found") || lower.contains("os error 2")
+    {
+        return format!(
+            "{message} — check RBITNET_MODEL / recipe path; HTTP stays up — retry with POST /v1/admin/reload (no process restart)."
+        );
+    }
+    format!("{message} — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).")
+}
+
 /// Run the HTTP server until shutdown or fatal error. Same behavior as the `rbitnet-server` binary.
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if let Err(e) = apply_runtime_config_env() {
@@ -59,37 +77,54 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
     let bind = std::env::var("RBITNET_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
     warn_if_insecure_bind(&bind);
 
+    let mut startup_load_error: Option<String> = None;
+
     let (engine, app_factory): (Arc<Engine>, AppFactory) = match ModelRegistry::load_from_env() {
         Ok(Some((reg, active_id))) => {
             let entry = reg
                 .models
                 .get(&active_id)
                 .expect("registry load validates active id");
-            let engine = Arc::new(
-                Engine::load_path_with_overrides(
-                    &entry.gguf,
-                    entry.tokenizer.as_deref(),
-                    entry.architecture.as_deref(),
-                )
-                .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                    format!("failed to load registry model '{active_id}': {e:?}").into()
-                })?,
+            let load_result = Engine::load_path_with_overrides(
+                &entry.gguf,
+                entry.tokenizer.as_deref(),
+                entry.architecture.as_deref(),
             );
+            let (engine, loaded_id) = match load_result {
+                Ok(eng) => (Arc::new(eng), Some(active_id.clone())),
+                Err(e) => {
+                    let msg = annotate_startup_load_error(&format!(
+                        "failed to load registry model '{active_id}': {e:?}"
+                    ));
+                    error!(%msg, "LoadFailed at startup — binding HTTP with stub for retry");
+                    startup_load_error = Some(msg);
+                    (Arc::new(stub_engine()), None)
+                }
+            };
             let reg_arc = Arc::clone(&reg);
             let cfg = Arc::clone(&server_config);
+            let eng = Arc::clone(&engine);
+            let loaded_for_app = loaded_id.clone();
             (
-                Arc::clone(&engine),
+                engine,
                 Box::new(move || {
-                    create_app_with_registry(engine, cfg, reg_arc, Some(active_id.clone()), None)
+                    create_app_with_registry(eng, cfg, reg_arc, loaded_for_app, None)
                 }),
             )
         }
         Ok(None) => {
-            let engine = Arc::new(Engine::from_env().map_err(
-                |e| -> Box<dyn std::error::Error + Send + Sync> {
-                    format!("failed to init engine from env: {e:?}").into()
-                },
-            )?);
+            let load_result = Engine::from_env();
+            let engine = match load_result {
+                Ok(eng) => Arc::new(eng),
+                Err(e) => {
+                    let msg = annotate_startup_load_error(&format!(
+                        "failed to init engine from env: {e:?}"
+                    ));
+                    error!(%msg, "LoadFailed at startup — binding HTTP with stub for retry");
+                    startup_load_error = Some(msg);
+                    Arc::new(stub_engine())
+                }
+            };
             let expected_request_model_id = if server_config.require_model_match {
                 engine.openai_model_id()
             } else {
@@ -112,6 +147,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
 
     if let Some(summary) = engine.model_summary() {
         info!(%summary, "GGUF loaded (full BitNet inference WIP)");
+    } else if startup_load_error.is_some() {
+        info!("LoadFailed: serving stub until POST /v1/admin/reload succeeds");
     } else if !stub_mode_enabled() {
         info!("no RBITNET_MODEL — set RBITNET_STUB=1 or RBITNET_TOY=1 for testing without weights");
     }
@@ -123,6 +160,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
     }
 
     let (app, app_state) = app_factory();
+    if let Some(msg) = startup_load_error {
+        let mut err = app_state.last_load_error.write().await;
+        *err = Some(msg);
+    }
 
     if let Some(reg) = app_state.registry.read().await.as_ref() {
         info!(

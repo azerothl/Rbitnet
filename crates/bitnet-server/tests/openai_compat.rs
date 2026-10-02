@@ -350,6 +350,87 @@ async fn admin_reload_failure_keeps_old_engine() {
 }
 
 #[tokio::test]
+async fn load_failed_ready_exposes_error_and_reload_recovers() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_MODEL_REGISTRY", None),
+        ("RBITNET_ACTIVE_MODEL_ID", None),
+        ("RBITNET_CONFIG", None),
+        ("RBITNET_CONFIG_DIR", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("engine"));
+    let mut cfg = ServerConfig::test_defaults();
+    cfg.admin_token = Some("secret".into());
+    let (app, state) = create_app_with_expected_model(engine, Arc::new(cfg), None);
+
+    // Simulate startup LoadFailed: stub engine (no GGUF) + last_load_error.
+    {
+        let mut err = state.last_load_error.write().await;
+        *err = Some("failed to init engine from env: bad path /no/such.gguf".into());
+    }
+
+    let health = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("health");
+    assert!(health.status().is_success());
+
+    let ready = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("ready");
+    assert_eq!(ready.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+    let ready_text =
+        String::from_utf8(ready.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+    assert!(ready_text.contains("LoadFailed"), "{ready_text}");
+
+    // Successful reload (stub from env) clears LoadFailed.
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/admin/reload")
+                .header("content-type", "application/json")
+                .header("x-rbitnet-admin-token", "secret")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .expect("reload ok");
+    assert!(res.status().is_success());
+    {
+        let err = state.last_load_error.read().await;
+        assert!(err.is_none(), "expected cleared last_load_error, got {err:?}");
+    }
+    let ready = app
+        .oneshot(
+            Request::builder()
+                .uri("/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("ready after reload");
+    assert!(ready.status().is_success());
+}
+
+#[tokio::test]
 async fn chat_defaults_model_when_omitted() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[

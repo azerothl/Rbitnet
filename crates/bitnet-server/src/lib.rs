@@ -61,6 +61,9 @@ pub struct AppState {
     /// Which registry key’s GGUF is currently in [`AppState::engine`] (`None` after stub unload).
     pub loaded_registry_model_id: Arc<RwLock<Option<String>>>,
     pub last_inference_activity_ms: Arc<AtomicU64>,
+    /// Last model load failure (startup or admin reload). Cleared on successful load.
+    /// When set with a stub/non-ready engine, `/ready` reports `LoadFailed`.
+    pub last_load_error: Arc<RwLock<Option<String>>>,
 }
 
 /// Build [`AppState`] for tests or custom embedders.
@@ -92,6 +95,7 @@ pub fn build_app_state_with_registry(
         registry: Arc::new(RwLock::new(registry)),
         loaded_registry_model_id: Arc::new(RwLock::new(loaded_registry_model_id)),
         last_inference_activity_ms: Arc::new(AtomicU64::new(crate::unix_now_ms())),
+        last_load_error: Arc::new(RwLock::new(None)),
     }
 }
 
@@ -277,12 +281,26 @@ async fn ui_app() -> impl IntoResponse {
 
 async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
     let eng = state.engine.read().await;
+    let load_err = state.last_load_error.read().await.clone();
+    // Startup / hard LoadFailed: stub (no GGUF) + recorded error → block ready until reload.
+    // Soft reload failure that keeps a previous ready GGUF engine stays ready.
+    if let Some(err) = load_err.as_ref() {
+        if !eng.has_gguf() {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                format!(
+                    "not ready: LoadFailed — {err}\n\
+                     retry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)\n"
+                ),
+            );
+        }
+    }
     if eng.is_ready() {
-        (StatusCode::OK, "ready\n")
+        (StatusCode::OK, "ready\n".to_string())
     } else {
         (
             StatusCode::SERVICE_UNAVAILABLE,
-            "not ready: tokenizer missing or model not configured\n",
+            "not ready: tokenizer missing or model not configured\n".to_string(),
         )
     }
 }
@@ -421,6 +439,25 @@ fn admin_token_ok(config: &ServerConfig, headers: &HeaderMap) -> bool {
     from_header == Some(expected.as_str()) || from_bearer == Some(expected.as_str())
 }
 
+/// Enrich load failures with actionable hints (path, MoE/#25).
+fn annotate_load_error(message: &str) -> String {
+    let lower = message.to_ascii_lowercase();
+    if (lower.contains("moe") || lower.contains("mla") || lower.contains("architecture"))
+        && !message.contains("#25")
+    {
+        return format!(
+            "{message} — if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path)."
+        );
+    }
+    if lower.contains("no such file") || lower.contains("not found") || lower.contains("os error 2")
+    {
+        return format!(
+            "{message} — check RBITNET_MODEL / recipe path; then POST /v1/admin/reload without restarting the process."
+        );
+    }
+    message.to_string()
+}
+
 async fn admin_unload(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -544,6 +581,10 @@ async fn admin_reload(
                 .metrics
                 .model_reload_ms_total
                 .fetch_add(elapsed, Ordering::Relaxed);
+            {
+                let mut err = state.last_load_error.write().await;
+                *err = None;
+            }
             Ok((
                 StatusCode::OK,
                 Json(json!({
@@ -560,12 +601,18 @@ async fn admin_reload(
                 .metrics
                 .model_reload_failures_total
                 .fetch_add(1, Ordering::Relaxed);
+            let message = annotate_load_error(&message);
+            {
+                let mut err = state.last_load_error.write().await;
+                *err = Some(message.clone());
+            }
             Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
                     "error": {
                         "message": message,
-                        "type": "rbitnet_error"
+                        "type": "rbitnet_error",
+                        "code": "LoadFailed"
                     }
                 })),
             )
