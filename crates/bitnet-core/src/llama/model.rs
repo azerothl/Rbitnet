@@ -4,11 +4,13 @@ use std::sync::Arc;
 
 use rayon::prelude::*;
 
-use crate::backend::{BackendKind, ComputeBackend, CpuBackend, CudaDeviceMatrix, CudaRuntime};
+use crate::backend::{
+    BackendKind, ComputeBackend, CpuBackend, CudaDeviceMatrix, CudaDeviceQuantMatrix, CudaRuntime,
+};
 use crate::error::{BitNetError, Result};
 use crate::ggml::{
-    embedding_row_mmap, ggml_type_supported_mmap_matvec, matvec_embd_out_mmap, matvec_ff_mmap,
-    tensor_to_f32,
+    embedding_row_mmap, ggml_type_supported_mmap_matvec, ggml_type_supports_cuda_quant,
+    matvec_embd_out_mmap, matvec_ff_mmap, tensor_to_f32,
 };
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 use crate::scratch::ScratchArena;
@@ -52,6 +54,11 @@ pub enum MatrixWeights {
         device: CudaDeviceMatrix,
         label: String,
     },
+    /// Device-resident quantized payload (#22 CUDA vertical) with host fallback.
+    CudaQuant {
+        device: CudaDeviceQuantMatrix,
+        label: String,
+    },
     Quant {
         archive: Arc<GgufArchive>,
         tensor: GgufTensorInfo,
@@ -73,6 +80,14 @@ impl MatrixWeights {
                     Ok(matvec_embd_out_dense(host, x, ne0, ne1))
                 }
             },
+            Self::CudaQuant { device, label } => device.matvec(x).map_err(|e| {
+                tracing::warn!(
+                    tensor = label.as_str(),
+                    error = %e,
+                    "cuda quant matvec failed"
+                );
+                e
+            }),
             Self::Quant { archive, tensor } => {
                 matvec_embd_out_mmap(archive.as_ref(), tensor, x, ne0, ne1)
             }
@@ -93,6 +108,14 @@ impl MatrixWeights {
                     Ok(matvec_ff_embd_dense(host, x, n_ff, n_embd))
                 }
             },
+            Self::CudaQuant { device, label } => device.matvec(x).map_err(|e| {
+                tracing::warn!(
+                    tensor = label.as_str(),
+                    error = %e,
+                    "cuda quant ffn_down failed"
+                );
+                e
+            }),
             Self::Quant { archive, tensor } => {
                 matvec_ff_mmap(archive.as_ref(), tensor, x, n_ff, n_embd)
             }
@@ -113,6 +136,9 @@ impl MatrixWeights {
                 }
                 Ok(())
             }
+            Self::CudaQuant { .. } => Err(BitNetError::Inference(
+                "token embedding does not use CudaQuant residency".into(),
+            )),
             Self::Quant { archive, tensor } => {
                 embedding_row_mmap(archive.as_ref(), tensor, tok, n_embd, n_vocab, out)
             }
@@ -287,8 +313,8 @@ impl LlamaOffloadPlan {
     }
 
     pub fn from_env(kind: BackendKind, cfg: &LlamaConfig) -> Self {
-        if kind != BackendKind::Hybrid {
-            return Self::disabled("backend is not hybrid", cfg.n_layer);
+        if kind != BackendKind::Hybrid && kind != BackendKind::Cuda {
+            return Self::disabled("backend is not cuda/hybrid", cfg.n_layer);
         }
         let min_rows = std::env::var("RBITNET_HYBRID_MIN_ROWS")
             .ok()
@@ -296,13 +322,22 @@ impl LlamaOffloadPlan {
             .filter(|&v| v > 0)
             .unwrap_or(512);
         let layer_bytes = llama_layer_f32_bytes(cfg);
+        // Soft planning budget: hybrid defaults 512 MiB; cuda defaults higher so a single
+        // GPU box can stage several layers without forcing densify of the whole model.
+        let default_vram_mb = if kind == BackendKind::Cuda { 4096 } else { 512 };
         let max_bytes = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
             .ok()
             .and_then(|v| v.trim().parse::<usize>().ok())
-            .unwrap_or(512)
+            .unwrap_or(default_vram_mb)
             .saturating_mul(1024 * 1024);
         let policy = std::env::var("RBITNET_HYBRID_POLICY")
-            .unwrap_or_else(|_| "layers".into())
+            .unwrap_or_else(|_| {
+                if kind == BackendKind::Cuda {
+                    "auto".into()
+                } else {
+                    "layers".into()
+                }
+            })
             .trim()
             .to_ascii_lowercase();
         let layers = hybrid_layer_policy(&policy, cfg, layer_bytes, max_bytes);
@@ -322,6 +357,7 @@ impl LlamaOffloadPlan {
                     0
                 });
         let enabled = layer_count > 0 || output;
+        let kind_label = kind.as_str();
         Self {
             enabled,
             layers,
@@ -329,9 +365,9 @@ impl LlamaOffloadPlan {
             output,
             estimated_weight_bytes,
             reason: if enabled {
-                format!("hybrid offload policy={policy} selected {layer_count} layers")
+                format!("{kind_label} offload policy={policy} selected {layer_count} layers")
             } else {
-                format!("hybrid backend selected but policy={policy} selected no layers")
+                format!("{kind_label} backend selected but policy={policy} selected no layers")
             },
         }
     }
@@ -459,6 +495,55 @@ fn maybe_cuda_dense(
             MatrixWeights::Dense(host)
         }
     }
+}
+
+/// Prefer device-resident quantized weights when the GGML type has a CUDA quant ABI;
+/// otherwise densify to `f32` and reuse the existing [`CudaDeviceMatrix`] path.
+fn maybe_cuda_quant_or_dense(
+    archive: &Arc<GgufArchive>,
+    rt: Option<&Arc<CudaRuntime>>,
+    plan: &LlamaOffloadPlan,
+    label: String,
+    names: &[String],
+    out_rows: usize,
+    in_cols: usize,
+) -> Result<MatrixWeights> {
+    let tensor = tensor_info_strings(archive.as_ref(), names)?;
+    if out_rows < plan.min_rows {
+        return Ok(MatrixWeights::Quant {
+            archive: Arc::clone(archive),
+            tensor,
+        });
+    }
+    if ggml_type_supports_cuda_quant(tensor.ggml_type) {
+        let payload = archive.tensor_payload(&tensor)?.to_vec();
+        match CudaDeviceQuantMatrix::from_payload(
+            rt,
+            tensor.ggml_type,
+            payload,
+            out_rows,
+            in_cols,
+        ) {
+            Ok(device) => {
+                tracing::debug!(
+                    tensor = label.as_str(),
+                    ggml_type = tensor.ggml_type,
+                    device_resident = device.is_device_resident(),
+                    "llama cuda quant residency"
+                );
+                return Ok(MatrixWeights::CudaQuant { device, label });
+            }
+            Err(e) => {
+                tracing::warn!(
+                    tensor = label.as_str(),
+                    error = %e,
+                    "cuda quant residency build failed; densifying"
+                );
+            }
+        }
+    }
+    let host = load_tensor_strings_dense(archive.as_ref(), names)?;
+    Ok(maybe_cuda_dense(rt, plan, label, host, out_rows, in_cols))
 }
 
 /// `y[out] = sum_i W[i + out * n_embd] * x[i]` — GGUF layout `ne[0]=n_embd`, `ne[1]=out`.
@@ -758,8 +843,8 @@ impl LlamaModel {
         archive: Arc<GgufArchive>,
         backend_kind: BackendKind,
     ) -> Result<Self> {
-        if backend_kind == BackendKind::Hybrid {
-            return Self::from_gguf_hybrid_internal(archive);
+        if backend_kind == BackendKind::Hybrid || backend_kind == BackendKind::Cuda {
+            return Self::from_gguf_device_offload_internal(archive, backend_kind);
         }
         let mode = llama_weight_mode_from_env();
         match mode {
@@ -784,9 +869,12 @@ impl LlamaModel {
         }
     }
 
-    fn from_gguf_hybrid_internal(archive: Arc<GgufArchive>) -> Result<Self> {
+    fn from_gguf_device_offload_internal(
+        archive: Arc<GgufArchive>,
+        backend_kind: BackendKind,
+    ) -> Result<Self> {
         let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
-        let plan = LlamaOffloadPlan::from_env(BackendKind::Hybrid, &cfg);
+        let plan = LlamaOffloadPlan::from_env(backend_kind, &cfg);
         let cuda = if plan.enabled {
             CudaRuntime::try_load()
         } else {
@@ -795,7 +883,8 @@ impl LlamaModel {
         tracing::info!(
             summary = plan.summary(),
             cuda = cuda.is_some(),
-            "llama hybrid offload plan"
+            backend = backend_kind.as_str(),
+            "llama device offload plan"
         );
 
         let n_embd = cfg.n_embd;
@@ -816,22 +905,24 @@ impl LlamaModel {
         }
 
         let output = if plan.output {
-            let output_host = if archive
+            let names: Vec<String> = if archive
                 .tensor_first_of(&["output.weight", "lm_head.weight"])
                 .is_some()
             {
-                load_tensor_dense(archive.as_ref(), &["output.weight", "lm_head.weight"])?
+                vec!["output.weight".into(), "lm_head.weight".into()]
             } else {
-                load_tensor_dense(archive.as_ref(), &["token_embd.weight", "token_embd"])?
+                vec!["token_embd.weight".into(), "token_embd".into()]
             };
-            maybe_cuda_dense(
+            let label = names.first().cloned().unwrap_or_else(|| "output.weight".into());
+            maybe_cuda_quant_or_dense(
+                &archive,
                 cuda.as_ref(),
                 &plan,
-                "output.weight".into(),
-                output_host,
+                label,
+                &names,
                 n_vocab,
                 n_embd,
-            )
+            )?
         } else if archive
             .tensor_first_of(&["output.weight", "lm_head.weight"])
             .is_some()
@@ -856,14 +947,15 @@ impl LlamaModel {
                 |names: Vec<String>, out_rows: usize, in_cols: usize| -> Result<MatrixWeights> {
                     if offload {
                         let label = names.first().cloned().unwrap_or_default();
-                        Ok(maybe_cuda_dense(
+                        maybe_cuda_quant_or_dense(
+                            &archive,
                             cuda.as_ref(),
                             &plan,
                             label,
-                            load_tensor_strings_dense(archive.as_ref(), &names)?,
+                            &names,
                             out_rows,
                             in_cols,
-                        ))
+                        )
                     } else {
                         Ok(MatrixWeights::Quant {
                             archive: Arc::clone(&archive),
@@ -895,14 +987,15 @@ impl LlamaModel {
             let ffn_gate = make_embd_out(vec![format!("{p}.ffn_gate.weight")], n_ff, n_embd)?;
             let ffn_up = make_embd_out(vec![format!("{p}.ffn_up.weight")], n_ff, n_embd)?;
             let ffn_down = if offload {
-                maybe_cuda_dense(
+                maybe_cuda_quant_or_dense(
+                    &archive,
                     cuda.as_ref(),
                     &plan,
                     format!("{p}.ffn_down.weight"),
-                    load_tensor_strings_dense(archive.as_ref(), &[format!("{p}.ffn_down.weight")])?,
+                    &[format!("{p}.ffn_down.weight")],
                     n_embd,
                     n_ff,
-                )
+                )?
             } else {
                 MatrixWeights::Quant {
                     archive: Arc::clone(&archive),
@@ -1105,6 +1198,10 @@ impl LlamaModel {
             match m {
                 MatrixWeights::Dense(v) => Ok(v.len()),
                 MatrixWeights::CudaDense { host, .. } => Ok(host.len()),
+                MatrixWeights::CudaQuant { device, .. } => Ok(device
+                    .out_rows()
+                    .checked_mul(device.in_cols())
+                    .ok_or_else(|| BitNetError::Inference("cuda quant dims overflow".into()))?),
                 MatrixWeights::Quant { .. } => Err(BitNetError::Inference(
                     "validate_layer_dense: expected dense matrix".into(),
                 )),
@@ -1275,6 +1372,10 @@ impl LlamaModel {
             match m {
                 MatrixWeights::Dense(v) => Ok(v.len()),
                 MatrixWeights::CudaDense { host, .. } => Ok(host.len()),
+                MatrixWeights::CudaQuant { device, .. } => Ok(device
+                    .out_rows()
+                    .checked_mul(device.in_cols())
+                    .ok_or_else(|| BitNetError::Inference("cuda quant dims overflow".into()))?),
                 MatrixWeights::Quant { tensor, .. } => Ok(tensor
                     .dimensions
                     .iter()
@@ -1298,8 +1399,16 @@ impl LlamaModel {
         }
         // Touch payload bounds once per matrix
         let touch = |m: &MatrixWeights| -> Result<()> {
-            if let MatrixWeights::Quant { archive, tensor } = m {
-                archive.tensor_payload(tensor)?;
+            match m {
+                MatrixWeights::Quant { archive, tensor } => {
+                    archive.tensor_payload(tensor)?;
+                }
+                MatrixWeights::CudaQuant { device, .. } => {
+                    if device.host_payload().is_empty() {
+                        return Err(BitNetError::Inference("cuda quant empty payload".into()));
+                    }
+                }
+                _ => {}
             }
             Ok(())
         };

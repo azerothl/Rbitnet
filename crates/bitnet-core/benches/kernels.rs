@@ -1,7 +1,8 @@
 //! Micro-benchmarks for hot ternary kernels (I2_S / TL2-style, NATIVE_FIRST).
 
-use bitnet_core::backend::{ComputeBackend, CudaBackend};
+use bitnet_core::backend::{ComputeBackend, CudaBackend, CudaDeviceMatrix, CudaDeviceQuantMatrix};
 use bitnet_core::fused_batch::{dense_matvec_multi_seq, dense_matvec_sequential_reference};
+use bitnet_core::ggml::matvec_payload_quant;
 use bitnet_core::kernels::{
     matvec_ternary_auto, matvec_ternary_i2s, matvec_ternary_i8, matvec_ternary_tl2_lut,
     pack_ternary_i2s,
@@ -129,6 +130,35 @@ fn bench_cuda_backend_matvec(c: &mut Criterion) {
             )
         })
     });
+
+    // Device-resident f32 + quant Q4_0 rows (#22 Gate B / E) when CUDA is present.
+    if let Some(rt) = bitnet_core::CudaRuntime::try_load() {
+        if let Some(matrix) = CudaDeviceMatrix::upload(rt.clone(), &w, n, k) {
+            c.bench_function("cuda_device_resident_f32 512x4096", |b| {
+                b.iter(|| black_box(matrix.matvec(black_box(&x)).expect("resident f32")))
+            });
+        }
+
+        let row_bytes = 4096 / 32 * 18;
+        let mut payload = vec![0u8; row_bytes * n];
+        for (i, b) in payload.iter_mut().enumerate() {
+            *b = (i as u8).wrapping_mul(3).wrapping_add(1);
+        }
+        if let Ok(qmatrix) = CudaDeviceQuantMatrix::from_payload(Some(&rt), 2, payload.clone(), n, k)
+        {
+            c.bench_function("cuda_device_quant_q4_0 512x4096", |b| {
+                b.iter(|| {
+                    black_box(
+                        qmatrix
+                            .matvec(black_box(&x))
+                            .expect("resident quant matvec"),
+                    )
+                })
+            });
+            let _ = matvec_payload_quant(2, &payload, &x, k, n);
+            let _ = qmatrix.is_device_resident();
+        }
+    }
 }
 
 criterion_group!(

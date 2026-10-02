@@ -15,8 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RBITNET_MAX_PROMPT_TOKENS` optional HTTP guard; `Engine::count_prompt_tokens` / `ModelExecutor::count_prompt_tokens`.
 - Startup validation for zero-valued caps; bundle install validates GGUF/tokenizer files on disk.
 - Optional `optional_engine_load_from_env_smoke` (`RBITNET_TEST_GGUF` + tokenizer beside GGUF).
+- **#22 Gate E:** `CudaDeviceQuantMatrix` + `device_resident_quant_gemv_calls`; Llama `cuda`/`hybrid` prefers quantized device residency (Q4_0/Q8_0/Q4_K/Q6_K) with CPU golden fallback; CI tests in `cuda_quant_residency`; opt-in `RBITNET_BENCH_CUDA=1` rows + `scripts/smoke_cuda_quant_residency.sh`.
 
 ### Changed
 
 - Documentation: stubs/MVP audit refreshed post #51–#71 ([docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md)); epic #24 remainder = #22 GPU + #25 MoE/MLA; #46/#39/#44 closed in the map.
 - Documentation: published **real TinyLlama Q4_K_M CPU** throughput/RSS row (issue #23); frozen reference models in MODEL_MATRIX; release bench checklist; stub/MVP audit ([docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md)); LIMITATIONS/STATUS/INFERENCE_STACK_V2 synced for prefix-KV, Sarathi, PLD, tokenizer.model (issue #24); DEPLOYMENT rate-limit sketch, STATUS/USAGE cross-links.
+- [docs/GPU_NATIVE_ROADMAP.md](docs/GPU_NATIVE_ROADMAP.md): Gate E quantized residency acceptance + hardware next step.

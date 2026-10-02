@@ -52,6 +52,7 @@ fn device_resident_gemv_metric_defaults_zero_without_cuda() {
     let m = CudaRuntimeMetrics::default();
     assert_eq!(m.gemv_calls, 0);
     assert_eq!(m.device_resident_gemv_calls, 0);
+    assert_eq!(m.device_resident_quant_gemv_calls, 0);
     assert_eq!(m.upload_bytes, 0);
     assert_eq!(m.download_bytes, 0);
 }

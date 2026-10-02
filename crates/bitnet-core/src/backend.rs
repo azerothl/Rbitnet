@@ -160,6 +160,8 @@ pub struct CudaRuntime {
     gemv_calls: AtomicU64,
     /// Successful GEMVs where weight matrix was already on device (not re-uploaded).
     device_resident_gemv_calls: AtomicU64,
+    /// Successful quantized GEMVs where **W** stayed on device ([`CudaDeviceQuantMatrix`]).
+    device_resident_quant_gemv_calls: AtomicU64,
 }
 
 /// Reusable device allocations for the generic `f32` GEMV helper (`matvec_cuda`).
@@ -227,21 +229,42 @@ impl CudaRuntime {
             download_bytes: self.download_bytes.load(Ordering::Relaxed),
             gemv_calls: self.gemv_calls.load(Ordering::Relaxed),
             device_resident_gemv_calls: self.device_resident_gemv_calls.load(Ordering::Relaxed),
+            device_resident_quant_gemv_calls: self
+                .device_resident_quant_gemv_calls
+                .load(Ordering::Relaxed),
         }
     }
 
     pub fn upload_f32(self: &Arc<Self>, src: &[f32]) -> Option<CudaDeviceBuffer> {
         let nbytes = src.len().checked_mul(std::mem::size_of::<f32>())?;
+        self.upload_raw(src.as_ptr().cast::<c_void>(), nbytes)
+    }
+
+    /// Upload an arbitrary host byte blob (e.g. GGML quantized payload) once.
+    pub fn upload_raw(self: &Arc<Self>, src: *const c_void, nbytes: usize) -> Option<CudaDeviceBuffer> {
+        if nbytes == 0 {
+            return None;
+        }
         let ptr = self.alloc_device(nbytes)?;
-        if !self.copy_host_to_device(ptr, src.as_ptr().cast::<c_void>(), nbytes) {
+        if !self.copy_host_to_device(ptr, src, nbytes) {
             self.free_device(ptr);
             return None;
         }
         Some(CudaDeviceBuffer {
             rt: Arc::clone(self),
             ptr: ptr as usize,
-            len: src.len(),
+            nbytes,
         })
+    }
+
+    pub fn upload_u8(self: &Arc<Self>, src: &[u8]) -> Option<CudaDeviceBuffer> {
+        self.upload_raw(src.as_ptr().cast::<c_void>(), src.len())
+    }
+
+    pub(crate) fn record_device_resident_quant_gemv(&self) {
+        self.device_resident_quant_gemv_calls
+            .fetch_add(1, Ordering::Relaxed);
+        self.gemv_calls.fetch_add(1, Ordering::Relaxed);
     }
 
     /// GEMV with weight matrix already resident on device (`d_w`).
@@ -389,6 +412,7 @@ impl CudaRuntime {
                 download_bytes: AtomicU64::new(0),
                 gemv_calls: AtomicU64::new(0),
                 device_resident_gemv_calls: AtomicU64::new(0),
+                device_resident_quant_gemv_calls: AtomicU64::new(0),
             });
         }
         None
@@ -628,30 +652,40 @@ pub struct CudaRuntimeMetrics {
     /// Successful GEMVs where **W** was already on device ([`CudaRuntime::gemv_device_weight_f32`]).
     /// Spike metric for #22 residency checklist; CI does not require CUDA to exercise this.
     pub device_resident_gemv_calls: u64,
+    /// Successful quantized GEMVs with device-resident **W** ([`CudaDeviceQuantMatrix`]).
+    /// Requires optional `librbitnet_cuda_quant` device symbols; CI stays CUDA-free.
+    pub device_resident_quant_gemv_calls: u64,
 }
 
 #[derive(Debug)]
 pub struct CudaDeviceBuffer {
     rt: Arc<CudaRuntime>,
     ptr: usize,
-    len: usize,
+    nbytes: usize,
 }
 
 unsafe impl Send for CudaDeviceBuffer {}
 unsafe impl Sync for CudaDeviceBuffer {}
 
 impl CudaDeviceBuffer {
-    pub fn len(&self) -> usize {
-        self.len
+    pub fn nbytes(&self) -> usize {
+        self.nbytes
+    }
+
+    pub fn as_device_ptr(&self) -> *mut c_void {
+        self.ptr as *mut c_void
     }
 
     pub fn download_f32(&self) -> Option<Vec<f32>> {
-        let nbytes = self.len.checked_mul(std::mem::size_of::<f32>())?;
-        let mut out = vec![0.0f32; self.len];
+        if self.nbytes % std::mem::size_of::<f32>() != 0 {
+            return None;
+        }
+        let n = self.nbytes / std::mem::size_of::<f32>();
+        let mut out = vec![0.0f32; n];
         let ok = self.rt.copy_device_to_host(
             out.as_mut_ptr().cast::<c_void>(),
             self.ptr as *const c_void,
-            nbytes,
+            self.nbytes,
         );
         ok.then_some(out)
     }
@@ -698,7 +732,110 @@ impl CudaDeviceMatrix {
     }
 
     pub fn bytes(&self) -> usize {
-        self.buffer.len() * std::mem::size_of::<f32>()
+        self.buffer.nbytes()
+    }
+}
+
+/// Device-resident **quantized** weight matrix for the #22 CUDA vertical.
+///
+/// Host payload is always retained for CPU golden / fallback. When CUDA loads, the same
+/// bytes are uploaded once; matvec prefers optional `*_matvec_device` symbols from
+/// `librbitnet_cuda_quant`, else falls back to host [`crate::ggml::matvec_payload_quant`].
+#[derive(Debug, Clone)]
+pub struct CudaDeviceQuantMatrix {
+    host: Arc<Vec<u8>>,
+    device: Option<Arc<CudaDeviceBuffer>>,
+    rt: Option<Arc<CudaRuntime>>,
+    ggml_type: u32,
+    out_rows: usize,
+    in_cols: usize,
+    row_bytes: usize,
+}
+
+impl CudaDeviceQuantMatrix {
+    /// Build a resident quant matrix. Device upload is best-effort (None without CUDA).
+    pub fn from_payload(
+        rt: Option<&Arc<CudaRuntime>>,
+        ggml_type: u32,
+        payload: Vec<u8>,
+        out_rows: usize,
+        in_cols: usize,
+    ) -> crate::error::Result<Self> {
+        let row_bytes = crate::ggml::ggml_row_size(ggml_type, in_cols as u64)?;
+        let need = row_bytes
+            .checked_mul(out_rows)
+            .ok_or_else(|| crate::error::BitNetError::Inference("quant payload size overflow".into()))?;
+        if payload.len() < need {
+            return Err(crate::error::BitNetError::Inference(
+                "quant payload truncated for device residency".into(),
+            ));
+        }
+        let host = Arc::new(payload);
+        let (device, rt_keep) = if let Some(rt) = rt {
+            match rt.upload_u8(&host[..need]) {
+                Some(buf) => (Some(Arc::new(buf)), Some(Arc::clone(rt))),
+                None => (None, Some(Arc::clone(rt))),
+            }
+        } else {
+            (None, None)
+        };
+        Ok(Self {
+            host,
+            device,
+            rt: rt_keep,
+            ggml_type,
+            out_rows,
+            in_cols,
+            row_bytes,
+        })
+    }
+
+    pub fn ggml_type(&self) -> u32 {
+        self.ggml_type
+    }
+
+    pub fn out_rows(&self) -> usize {
+        self.out_rows
+    }
+
+    pub fn in_cols(&self) -> usize {
+        self.in_cols
+    }
+
+    pub fn host_payload(&self) -> &[u8] {
+        &self.host
+    }
+
+    pub fn is_device_resident(&self) -> bool {
+        self.device.is_some()
+    }
+
+    pub fn bytes(&self) -> usize {
+        self.row_bytes.saturating_mul(self.out_rows)
+    }
+
+    /// Prefer device-resident CUDA quant kernel; otherwise CPU payload matvec (golden parity).
+    pub fn matvec(&self, x: &[f32]) -> crate::error::Result<Vec<f32>> {
+        if let (Some(dev), Some(rt)) = (self.device.as_ref(), self.rt.as_ref()) {
+            if let Some(result) = crate::ggml::matvec_device_quant_optional(
+                self.ggml_type,
+                dev.as_device_ptr(),
+                self.row_bytes,
+                x,
+                self.out_rows,
+            ) {
+                let y = result?;
+                rt.record_device_resident_quant_gemv();
+                return Ok(y);
+            }
+        }
+        crate::ggml::matvec_payload_quant(
+            self.ggml_type,
+            self.host.as_slice(),
+            x,
+            self.in_cols,
+            self.out_rows,
+        )
     }
 }
 

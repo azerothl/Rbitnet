@@ -659,6 +659,25 @@ fn matvec_rows_parallel(
 type CudaQuantMatvecFn =
     unsafe extern "C" fn(*const c_void, usize, *const f32, usize, usize, *mut f32) -> i32;
 
+/// GGML types with optional native CUDA quant kernels (`librbitnet_cuda_quant`).
+pub fn ggml_type_supports_cuda_quant(ty: u32) -> bool {
+    matches!(ty, 2 | 8 | 12 | 14)
+}
+
+fn cuda_quant_symbol(ty: u32, device_resident: bool) -> Option<&'static [u8]> {
+    match (ty, device_resident) {
+        (2, false) => Some(b"rbitnet_cuda_q4_0_matvec\0"),
+        (8, false) => Some(b"rbitnet_cuda_q8_0_matvec\0"),
+        (12, false) => Some(b"rbitnet_cuda_q4_k_matvec\0"),
+        (14, false) => Some(b"rbitnet_cuda_q6_k_matvec\0"),
+        (2, true) => Some(b"rbitnet_cuda_q4_0_matvec_device\0"),
+        (8, true) => Some(b"rbitnet_cuda_q8_0_matvec_device\0"),
+        (12, true) => Some(b"rbitnet_cuda_q4_k_matvec_device\0"),
+        (14, true) => Some(b"rbitnet_cuda_q6_k_matvec_device\0"),
+        _ => None,
+    }
+}
+
 fn matvec_rows_cuda_quant_optional(
     ty: u32,
     payload: &[u8],
@@ -666,13 +685,7 @@ fn matvec_rows_cuda_quant_optional(
     x: &[f32],
     ne1: usize,
 ) -> Option<Result<Vec<f32>>> {
-    let symbol = match ty {
-        2 => b"rbitnet_cuda_q4_0_matvec\0".as_slice(),
-        8 => b"rbitnet_cuda_q8_0_matvec\0".as_slice(),
-        12 => b"rbitnet_cuda_q4_k_matvec\0".as_slice(),
-        14 => b"rbitnet_cuda_q6_k_matvec\0".as_slice(),
-        _ => return None,
-    };
+    let symbol = cuda_quant_symbol(ty, false)?;
     let lib = load_cuda_quant_library()?;
     let kernel = unsafe { lib.get::<CudaQuantMatvecFn>(symbol).ok()? };
     let mut y = vec![0.0f32; ne1];
@@ -691,6 +704,43 @@ fn matvec_rows_cuda_quant_optional(
     } else {
         Some(Err(BitNetError::Inference(format!(
             "CUDA quant matvec kernel failed for ggml_type={ty} status={status}"
+        ))))
+    }
+}
+
+/// Optional device-resident quantized matvec (`d_w` already on GPU).
+///
+/// Looks up `rbitnet_cuda_*_matvec_device` in `librbitnet_cuda_quant`. Returns `None` when the
+/// library or symbol is absent so callers can fall back to CPU without failing CI.
+pub fn matvec_device_quant_optional(
+    ty: u32,
+    d_w: *mut c_void,
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Option<Result<Vec<f32>>> {
+    if d_w.is_null() || !ggml_type_supports_cuda_quant(ty) {
+        return None;
+    }
+    let symbol = cuda_quant_symbol(ty, true)?;
+    let lib = load_cuda_quant_library()?;
+    let kernel = unsafe { lib.get::<CudaQuantMatvecFn>(symbol).ok()? };
+    let mut y = vec![0.0f32; ne1];
+    let status = unsafe {
+        kernel(
+            d_w as *const c_void,
+            row_bytes,
+            x.as_ptr(),
+            x.len(),
+            ne1,
+            y.as_mut_ptr(),
+        )
+    };
+    if status == 0 {
+        Some(Ok(y))
+    } else {
+        Some(Err(BitNetError::Inference(format!(
+            "CUDA device-resident quant matvec failed for ggml_type={ty} status={status}"
         ))))
     }
 }
