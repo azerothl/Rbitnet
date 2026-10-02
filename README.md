@@ -1,8 +1,14 @@
 # Rbitnet
 
+<p align="center">
+  <img src="website/assets/brand/rbitnet-icon-128.png" width="96" height="96" alt="Rbitnet pixel rabbit mark" />
+</p>
+
 Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
 
 **Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract.
+
+**Brand & site:** [docs/BRAND.md](docs/BRAND.md) · presentation site in [`website/`](website/) (GitHub Pages).
 
 ## Do I need Python?
 
