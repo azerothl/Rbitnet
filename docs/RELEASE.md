@@ -20,6 +20,7 @@ Requirements: `Cargo.lock` must be committed so `--locked` succeeds.
 2. Bump `version` in `Cargo.toml` (semver).
 3. Commit and tag: `git tag v0.x.y && git push origin v0.x.y` (or create the tag from the GitHub UI). This triggers the release workflow and attaches the binaries.
 4. CI (see `.github/workflows/ci.yml`) should be green on the release branch before tagging.
+5. **Benchmarks checklist (issue #23):** before calling a release “measured”, append at least one **real GGUF** row (not stub) to [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) for the frozen TinyLlama Q4_K_M reference (or document why skipped). Prefer also running `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. Update [MODEL_MATRIX.md](MODEL_MATRIX.md) RSS/tok/s cells to match. Stub-only rows must stay labeled as API overhead.
 
 ## Semver guidance
 

@@ -17,4 +17,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Documentation: benchmarks baseline procedure, DEPLOYMENT rate-limit sketch, LIMITATIONS timeout semantics, STATUS/USAGE cross-links.
+- Documentation: published **real TinyLlama Q4_K_M CPU** throughput/RSS row (issue #23); frozen reference models in MODEL_MATRIX; release bench checklist; DEPLOYMENT rate-limit sketch, LIMITATIONS timeout semantics, STATUS/USAGE cross-links.
