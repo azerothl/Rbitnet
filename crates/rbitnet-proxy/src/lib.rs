@@ -810,31 +810,6 @@ fn record_failure(runtime: &mut WorkerRuntime) {
     runtime.backoff_until = Some(Instant::now() + Duration::from_secs(secs));
 }
 
-fn request_model(body: &[u8], registry: &ProxyRegistry) -> Result<String, Box<Response>> {
-    let value: serde_json::Value = serde_json::from_slice(body).map_err(|e| {
-        Box::new(json_error(
-            StatusCode::BAD_REQUEST,
-            format!("invalid JSON request body: {e}"),
-            "invalid_request_error",
-        ))
-    })?;
-    if let Some(model) = value
-        .get("model")
-        .and_then(|m| m.as_str())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        return Ok(model.to_string());
-    }
-    registry.default_or_first_model().ok_or_else(|| {
-        Box::new(json_error(
-            StatusCode::BAD_REQUEST,
-            "request omitted model and registry is empty",
-            "invalid_request_error",
-        ))
-    })
-}
-
 /// Resolve the target model id, optionally using sticky session → model affinity.
 async fn resolve_request_model(
     state: &ProxyState,
@@ -1163,8 +1138,8 @@ mod tests {
         assert!(err.contains("default model"));
     }
 
-    #[test]
-    fn request_model_uses_body_or_registry_default() {
+    #[tokio::test]
+    async fn resolve_request_model_uses_body_or_registry_default() {
         let reg = ProxyRegistry::from_json(
             r#"{
                 "default": "alpha",
@@ -1172,11 +1147,19 @@ mod tests {
             }"#,
         )
         .unwrap();
+        let state = build_proxy_state(test_config(), reg).unwrap();
         assert_eq!(
-            request_model(br#"{"model":"beta","messages":[]}"#, &reg).unwrap(),
+            resolve_request_model(&state, br#"{"model":"beta","messages":[]}"#, None)
+                .await
+                .unwrap(),
             "beta"
         );
-        assert_eq!(request_model(br#"{"messages":[]}"#, &reg).unwrap(), "alpha");
+        assert_eq!(
+            resolve_request_model(&state, br#"{"messages":[]}"#, None)
+                .await
+                .unwrap(),
+            "alpha"
+        );
     }
 
     #[test]
