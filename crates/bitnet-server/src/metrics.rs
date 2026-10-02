@@ -35,6 +35,7 @@ pub struct ServerMetrics {
     pub model_reloads_total: AtomicU64,
     pub model_reload_failures_total: AtomicU64,
     pub model_reload_ms_total: AtomicU64,
+    pub structured_output_validation_failures_total: AtomicU64,
 }
 
 impl ServerMetrics {
@@ -73,6 +74,9 @@ impl ServerMetrics {
         let reloads = self.model_reloads_total.load(Ordering::Relaxed);
         let reload_failures = self.model_reload_failures_total.load(Ordering::Relaxed);
         let reload_ms = self.model_reload_ms_total.load(Ordering::Relaxed);
+        let structured_fail = self
+            .structured_output_validation_failures_total
+            .load(Ordering::Relaxed);
 
         let mut s = String::new();
         writeln!(
@@ -154,6 +158,22 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_model_reload_ms_sum counter").unwrap();
         writeln!(s, "rbitnet_model_reload_ms_sum {reload_ms}").unwrap();
+
+        writeln!(
+            s,
+            "# HELP rbitnet_structured_output_validation_failures_total Completions rejected by response_format JSON / schema checks"
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "# TYPE rbitnet_structured_output_validation_failures_total counter"
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "rbitnet_structured_output_validation_failures_total {structured_fail}"
+        )
+        .unwrap();
 
         writeln!(
             s,

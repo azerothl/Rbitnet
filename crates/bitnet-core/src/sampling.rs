@@ -12,6 +12,8 @@ pub struct SamplingOptions {
     pub seed: Option<u64>,
     pub frequency_penalty: f32,
     pub presence_penalty: f32,
+    /// When true, apply the JSON/tool FSM mask (also enabled by `RBITNET_STRUCTURED_OUTPUT`).
+    pub structured_json: bool,
 }
 
 impl SamplingOptions {
@@ -32,6 +34,7 @@ impl Default for SamplingOptions {
             seed: None,
             frequency_penalty: 0.0,
             presence_penalty: 0.0,
+            structured_json: false,
         }
     }
 }
@@ -55,7 +58,7 @@ pub fn sample_token(
         options.frequency_penalty,
         options.presence_penalty,
     );
-    apply_structured_output_mask_from_env(&mut adjusted, prior_tokens);
+    apply_structured_output_mask(&mut adjusted, prior_tokens, options.structured_json);
 
     if options.temperature <= 0.0 {
         return argmax(&adjusted);
@@ -87,12 +90,14 @@ pub fn sample_token(
     }
 }
 
-fn apply_structured_output_mask_from_env(logits: &mut [f32], prior_tokens: &[u32]) {
+fn apply_structured_output_mask(logits: &mut [f32], prior_tokens: &[u32], force_json: bool) {
     let mode = std::env::var("RBITNET_STRUCTURED_OUTPUT")
         .unwrap_or_else(|_| "off".into())
         .trim()
         .to_ascii_lowercase();
-    if !matches!(mode.as_str(), "json" | "tool" | "tool-call" | "tool_call") {
+    let enabled = force_json
+        || matches!(mode.as_str(), "json" | "tool" | "tool-call" | "tool_call");
+    if !enabled {
         return;
     }
     if logits.len() < 128 {
