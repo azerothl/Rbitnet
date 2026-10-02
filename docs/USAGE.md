@@ -207,6 +207,26 @@ cargo run -p rbitnet-proxy --release
 
 The proxy routes `/v1/chat/completions` and `/v1/completions` by the JSON `model` field. `GET /v1/models` lists the registry and marks a model loaded once its child is running. `RBITNET_API_KEY` is enforced at the proxy and forwarded to children.
 
+### Sticky session affinity (proxy)
+
+For agent workloads that reuse a long system/tools prefix across turns, co-locate requests with a sticky session id:
+
+| Source (priority) | Example |
+|-------------------|---------|
+| Header | `X-Rbitnet-Session: agent-42` |
+| Cookie | `rbitnet_session=agent-42` |
+| Body | `"session":"agent-42"` or OpenAI `"user":"agent-42"` |
+
+```bash
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -H 'X-Rbitnet-Session: agent-42' \
+  -d '{"model":"tiny","messages":[{"role":"user","content":"hi"}]}'
+# Response echoes X-Rbitnet-Session and X-Rbitnet-Sticky-Bucket
+```
+
+Set `RBITNET_PROXY_STICKY=1` so the proxy records `session → model` and, when later requests omit `model`, reuses the bound model id. `RBITNET_PROXY_REPLICAS` (default `1`) sizes the sticky hash bucket for future multi-replica / external LB routing — today the proxy still runs one child per registry model id. See [DEPLOYMENT.md](DEPLOYMENT.md#multiple-replicas-prefix-locality) for the ≥2-session prefix hit-rate scenario.
+
 Native-first policy: the proxy's normal mode supervises only workspace binaries (`rbitnet-runner` / `rbitnet-server` internals) and routes to `bitnet-core`. Experimental delegation to external HTTP inference servers is not built by default; see [NATIVE_FIRST.md](NATIVE_FIRST.md).
 
 **Health and metrics (operations):**

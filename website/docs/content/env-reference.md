@@ -31,6 +31,8 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_RUNNER_BIN` | path/name | sibling `rbitnet-runner`, then `PATH` | Worker executable spawned per model id. |
 | `RBITNET_RUNNER_READY_TIMEOUT_SECS` | u64 | `60` | Time for child `GET /ready` to become 2xx. |
 | `RBITNET_PROXY_REQUEST_TIMEOUT_SECS` | u64 | `600` | Upstream native child request timeout. |
+| `RBITNET_PROXY_STICKY` | flag | off | If `1`/`true`/`yes`, bind sticky session ids to model ids and echo `X-Rbitnet-Session` / `X-Rbitnet-Sticky-Bucket`. Session from header, `rbitnet_session` cookie, or body `session`/`user`. |
+| `RBITNET_PROXY_REPLICAS` | u32 | `1` | Planned replica count for sticky hash-bucket plumbing. Does not spawn extra children today (still one runner per model id); use with an external LB hashing `X-Rbitnet-Session`. |
 | `RBITNET_INFERENCE_BACKEND` | string | `local` | Normal builds accept local native workers only. External delegation values require the dev-only Cargo feature `experimental-external-backends`. |
 | `RBITNET_VLLM_BASE_URL` | URL | (none) | Ignored by default builds; only used when an experimental external backend is compiled in. |
 

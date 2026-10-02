@@ -85,6 +85,8 @@ Optional knobs:
 - `RBITNET_PROXY_REQUEST_TIMEOUT_SECS`: upstream request timeout, default `600`.
 - `RBITNET_API_KEY`: enforced by the proxy and forwarded to workers.
 - `RBITNET_IDLE_UNLOAD_SECS`: when set (>0), recycle a child runner that has been idle at least this many seconds (health recycle still applies).
+- `RBITNET_PROXY_STICKY`: when `1`, bind sticky session ids (`X-Rbitnet-Session` / cookie `rbitnet_session` / body `session`|`user`) to model ids and echo sticky response headers.
+- `RBITNET_PROXY_REPLICAS`: planned replica count for sticky hash-bucket plumbing (default `1`; does not spawn extra same-model children yet).
 
 ## External backend policy
 

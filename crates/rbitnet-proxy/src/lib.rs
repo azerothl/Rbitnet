@@ -28,6 +28,13 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
+/// Response / request header for Magnitude-style session affinity.
+pub const STICKY_SESSION_HEADER: &str = "x-rbitnet-session";
+/// Cookie name accepted as an alternate sticky session id.
+pub const STICKY_SESSION_COOKIE: &str = "rbitnet_session";
+/// Optional response header exposing the hash bucket for future multi-replica routing.
+pub const STICKY_BUCKET_HEADER: &str = "x-rbitnet-sticky-bucket";
+
 #[derive(Debug, Deserialize)]
 struct RegistryFile {
     #[serde(rename = "default")]
@@ -102,6 +109,13 @@ pub struct ProxyConfig {
     pub backend: InferenceBackend,
     /// When set, recycle idle child runners after this duration (Ollama-like VRAM release).
     pub idle_unload: Option<Duration>,
+    /// When true (`RBITNET_PROXY_STICKY=1`), bind sticky session ids to model ids and echo
+    /// `X-Rbitnet-Session` so clients (and future multi-replica LBs) stay co-located.
+    pub sticky: bool,
+    /// Planned replica count for sticky hash-bucket plumbing (`RBITNET_PROXY_REPLICAS`).
+    /// Today the proxy still runs one native child per model id; the bucket is echoed for
+    /// external L7 routers and future same-model multi-replica selection.
+    pub sticky_replicas: u32,
 }
 
 impl ProxyConfig {
@@ -142,6 +156,8 @@ impl ProxyConfig {
             }
             _ => None,
         };
+        let sticky = parse_bool_env("RBITNET_PROXY_STICKY");
+        let sticky_replicas = parse_u32_env("RBITNET_PROXY_REPLICAS", 1)?.max(1);
         Ok(Self {
             bind,
             registry_path,
@@ -152,6 +168,8 @@ impl ProxyConfig {
             request_timeout: request_timeout.max(Duration::from_secs(1)),
             backend,
             idle_unload,
+            sticky,
+            sticky_replicas,
         })
     }
 }
@@ -172,12 +190,19 @@ struct Worker {
     runtime: Mutex<WorkerRuntime>,
 }
 
+/// In-memory session → model affinity used when `RBITNET_PROXY_STICKY=1`.
+#[derive(Debug, Default)]
+struct StickySessionMap {
+    session_to_model: HashMap<String, String>,
+}
+
 #[derive(Clone)]
 pub struct ProxyState {
     config: Arc<ProxyConfig>,
     registry: Arc<ProxyRegistry>,
     client: Client,
     workers: Arc<HashMap<String, Arc<Worker>>>,
+    sticky_map: Arc<Mutex<StickySessionMap>>,
 }
 
 pub fn create_proxy_app(config: ProxyConfig, registry: ProxyRegistry) -> Result<Router, String> {
@@ -212,6 +237,7 @@ fn build_proxy_state(config: ProxyConfig, registry: ProxyRegistry) -> Result<Pro
         registry: Arc::new(registry),
         client,
         workers: Arc::new(workers),
+        sticky_map: Arc::new(Mutex::new(StickySessionMap::default())),
     })
 }
 
@@ -282,8 +308,10 @@ fn router_with_state(state: ProxyState, max_body_bytes: usize) -> Router {
             .allow_headers([
                 axum::http::header::CONTENT_TYPE,
                 axum::http::header::AUTHORIZATION,
+                axum::http::header::COOKIE,
                 HeaderName::from_static("x-api-key"),
                 HeaderName::from_static("x-request-id"),
+                HeaderName::from_static("x-rbitnet-session"),
             ])
     };
 
@@ -437,10 +465,24 @@ async fn proxy_openai_post(
         return *r;
     }
 
-    let request_model = match request_model(&body, &state.registry) {
+    let sticky_session = extract_sticky_session(&headers, Some(body.as_ref()));
+    let request_model = match resolve_request_model(&state, &body, sticky_session.as_deref()).await
+    {
         Ok(model) => model,
         Err(r) => return *r,
     };
+
+    if state.config.sticky {
+        if let Some(session) = sticky_session.as_ref() {
+            let mut map = state.sticky_map.lock().await;
+            map.session_to_model
+                .insert(session.clone(), request_model.clone());
+        }
+    }
+
+    let sticky_bucket = sticky_session
+        .as_ref()
+        .map(|s| sticky_hash_bucket(s, state.config.sticky_replicas));
 
     let base_url = match &state.config.backend {
         InferenceBackend::Vllm { base_url } => base_url.clone(),
@@ -450,7 +492,7 @@ async fn proxy_openai_post(
         },
     };
 
-    match state.forward_post(&base_url, path, &headers, body).await {
+    let mut response = match state.forward_post(&base_url, path, &headers, body).await {
         Ok(res) => res,
         Err(e) => {
             if matches!(state.config.backend, InferenceBackend::LocalWorkers) {
@@ -463,7 +505,15 @@ async fn proxy_openai_post(
                 "rbitnet_proxy_error",
             )
         }
-    }
+    };
+
+    attach_sticky_response_headers(
+        &mut response,
+        sticky_session.as_deref(),
+        sticky_bucket,
+        state.config.sticky || sticky_session.is_some(),
+    );
+    response
 }
 
 impl ProxyState {
@@ -760,7 +810,12 @@ fn record_failure(runtime: &mut WorkerRuntime) {
     runtime.backoff_until = Some(Instant::now() + Duration::from_secs(secs));
 }
 
-fn request_model(body: &[u8], registry: &ProxyRegistry) -> Result<String, Box<Response>> {
+/// Resolve the target model id, optionally using sticky session → model affinity.
+async fn resolve_request_model(
+    state: &ProxyState,
+    body: &[u8],
+    sticky_session: Option<&str>,
+) -> Result<String, Box<Response>> {
     let value: serde_json::Value = serde_json::from_slice(body).map_err(|e| {
         Box::new(json_error(
             StatusCode::BAD_REQUEST,
@@ -776,13 +831,125 @@ fn request_model(body: &[u8], registry: &ProxyRegistry) -> Result<String, Box<Re
     {
         return Ok(model.to_string());
     }
-    registry.default_or_first_model().ok_or_else(|| {
+
+    if state.config.sticky {
+        if let Some(session) = sticky_session {
+            let map = state.sticky_map.lock().await;
+            if let Some(bound) = map.session_to_model.get(session) {
+                return Ok(bound.clone());
+            }
+        }
+    }
+
+    state.registry.default_or_first_model().ok_or_else(|| {
         Box::new(json_error(
             StatusCode::BAD_REQUEST,
             "request omitted model and registry is empty",
             "invalid_request_error",
         ))
     })
+}
+
+/// Extract a sticky session id from `X-Rbitnet-Session`, `rbitnet_session` cookie, or body
+/// `session` / `user` string fields (OpenAI-compatible clients often set `user`).
+pub fn extract_sticky_session(headers: &HeaderMap, body: Option<&[u8]>) -> Option<String> {
+    if let Some(v) = headers
+        .get(STICKY_SESSION_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return Some(v.to_string());
+    }
+
+    if let Some(cookie) = headers
+        .get(axum::http::header::COOKIE)
+        .and_then(|v| v.to_str().ok())
+    {
+        if let Some(v) = cookie_value(cookie, STICKY_SESSION_COOKIE) {
+            return Some(v);
+        }
+    }
+
+    let Some(bytes) = body else {
+        return None;
+    };
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(bytes) else {
+        return None;
+    };
+    for key in ["session", "user"] {
+        if let Some(v) = value
+            .get(key)
+            .and_then(|m| m.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            return Some(v.to_string());
+        }
+    }
+    None
+}
+
+fn cookie_value(cookie_header: &str, name: &str) -> Option<String> {
+    for part in cookie_header.split(';') {
+        let part = part.trim();
+        let mut kv = part.splitn(2, '=');
+        let key = kv.next()?.trim();
+        if !key.eq_ignore_ascii_case(name) {
+            continue;
+        }
+        let value = kv.next().unwrap_or("").trim();
+        if value.is_empty() {
+            return None;
+        }
+        return Some(value.to_string());
+    }
+    None
+}
+
+/// Stable FNV-1a 64-bit hash of a sticky session id (independent of Rust `DefaultHasher`).
+pub fn sticky_hash(session: &str) -> u64 {
+    fnv1a64(session.as_bytes())
+}
+
+/// Map a sticky session id onto `[0, replicas)` for consistent replica / child selection.
+pub fn sticky_hash_bucket(session: &str, replicas: u32) -> u32 {
+    let n = replicas.max(1);
+    (sticky_hash(session) % u64::from(n)) as u32
+}
+
+fn fnv1a64(data: &[u8]) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for &b in data {
+        hash ^= u64::from(b);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+fn attach_sticky_response_headers(
+    response: &mut Response,
+    sticky_session: Option<&str>,
+    sticky_bucket: Option<u32>,
+    echo: bool,
+) {
+    if !echo {
+        return;
+    }
+    if let Some(session) = sticky_session {
+        if let Ok(v) = HeaderValue::from_str(session) {
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static(STICKY_SESSION_HEADER), v);
+        }
+    }
+    if let Some(bucket) = sticky_bucket {
+        if let Ok(v) = HeaderValue::from_str(&bucket.to_string()) {
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static(STICKY_BUCKET_HEADER), v);
+        }
+    }
 }
 
 fn check_auth(state: &ProxyState, headers: &HeaderMap) -> Result<(), Box<Response>> {
@@ -877,6 +1044,21 @@ fn parse_u64_env(key: &str, default: u64) -> Result<u64, String> {
     }
 }
 
+fn parse_u32_env(key: &str, default: u32) -> Result<u32, String> {
+    let raw = parse_u64_env(key, u64::from(default))?;
+    u32::try_from(raw).map_err(|_| format!("{key}: value too large for u32"))
+}
+
+fn parse_bool_env(key: &str) -> bool {
+    match std::env::var(key) {
+        Ok(s) => {
+            let t = s.trim();
+            t == "1" || t.eq_ignore_ascii_case("true") || t.eq_ignore_ascii_case("yes")
+        }
+        Err(_) => false,
+    }
+}
+
 fn parse_usize_env(key: &str, default: usize) -> Result<usize, String> {
     let raw = parse_u64_env(key, default as u64)?;
     usize::try_from(raw).map_err(|_| format!("{key}: value too large for usize"))
@@ -956,8 +1138,8 @@ mod tests {
         assert!(err.contains("default model"));
     }
 
-    #[test]
-    fn request_model_uses_body_or_registry_default() {
+    #[tokio::test]
+    async fn resolve_request_model_uses_body_or_registry_default() {
         let reg = ProxyRegistry::from_json(
             r#"{
                 "default": "alpha",
@@ -965,11 +1147,19 @@ mod tests {
             }"#,
         )
         .unwrap();
+        let state = build_proxy_state(test_config(), reg).unwrap();
         assert_eq!(
-            request_model(br#"{"model":"beta","messages":[]}"#, &reg).unwrap(),
+            resolve_request_model(&state, br#"{"model":"beta","messages":[]}"#, None)
+                .await
+                .unwrap(),
             "beta"
         );
-        assert_eq!(request_model(br#"{"messages":[]}"#, &reg).unwrap(), "alpha");
+        assert_eq!(
+            resolve_request_model(&state, br#"{"messages":[]}"#, None)
+                .await
+                .unwrap(),
+            "alpha"
+        );
     }
 
     #[test]
@@ -992,7 +1182,110 @@ mod tests {
             request_timeout: Duration::from_secs(1),
             backend: InferenceBackend::LocalWorkers,
             idle_unload: None,
+            sticky: false,
+            sticky_replicas: 1,
         }
+    }
+
+    #[test]
+    fn sticky_hash_is_stable_and_deterministic() {
+        assert_eq!(sticky_hash("agent-a"), sticky_hash("agent-a"));
+        assert_ne!(sticky_hash("agent-a"), sticky_hash("agent-b"));
+        // Frozen FNV-1a fixture so CI catches accidental hasher changes.
+        assert_eq!(sticky_hash("rbitnet-sticky-fixture"), 0x4da6_bd74_07b5_3a65);
+        assert_eq!(
+            sticky_hash("rbitnet-sticky-fixture"),
+            fnv1a64(b"rbitnet-sticky-fixture")
+        );
+    }
+
+    #[test]
+    fn sticky_hash_bucket_is_consistent_across_replicas() {
+        let session = "akasha-agent-1";
+        let bucket = sticky_hash_bucket(session, 4);
+        assert!(bucket < 4);
+        assert_eq!(sticky_hash_bucket(session, 4), bucket);
+        assert_eq!(sticky_hash_bucket(session, 1), 0);
+        let left = sticky_hash_bucket(session, 2);
+        assert_eq!(sticky_hash_bucket(session, 2), left);
+        let mut seen = [false; 8];
+        for i in 0..64 {
+            let b = sticky_hash_bucket(&format!("session-{i}"), 8) as usize;
+            seen[b] = true;
+        }
+        assert!(seen.iter().filter(|&&v| v).count() >= 4);
+    }
+
+    #[test]
+    fn extract_sticky_session_prefers_header_then_cookie_then_body() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            HeaderName::from_static(STICKY_SESSION_HEADER),
+            HeaderValue::from_static("from-header"),
+        );
+        headers.insert(
+            axum::http::header::COOKIE,
+            HeaderValue::from_static("rbitnet_session=from-cookie; other=1"),
+        );
+        let body = br#"{"user":"from-body","messages":[]}"#;
+        assert_eq!(
+            extract_sticky_session(&headers, Some(body)).as_deref(),
+            Some("from-header")
+        );
+
+        headers.remove(STICKY_SESSION_HEADER);
+        assert_eq!(
+            extract_sticky_session(&headers, Some(body)).as_deref(),
+            Some("from-cookie")
+        );
+
+        headers.remove(axum::http::header::COOKIE);
+        assert_eq!(
+            extract_sticky_session(&headers, Some(body)).as_deref(),
+            Some("from-body")
+        );
+        assert_eq!(
+            extract_sticky_session(&headers, Some(br#"{"session":"s1"}"#)).as_deref(),
+            Some("s1")
+        );
+        assert!(extract_sticky_session(&headers, Some(br#"{}"#)).is_none());
+    }
+
+    #[tokio::test]
+    async fn sticky_map_binds_omitted_model_to_prior_session() {
+        let reg = ProxyRegistry::from_json(
+            r#"{
+                "default": "alpha",
+                "models": { "alpha": { "gguf": "a.gguf" }, "beta": { "gguf": "b.gguf" } }
+            }"#,
+        )
+        .unwrap();
+        let mut cfg = test_config();
+        cfg.sticky = true;
+        cfg.sticky_replicas = 4;
+        let state = build_proxy_state(cfg, reg).unwrap();
+
+        {
+            let mut map = state.sticky_map.lock().await;
+            map.session_to_model
+                .insert("agent-42".into(), "beta".into());
+        }
+
+        let model = resolve_request_model(&state, br#"{"messages":[]}"#, Some("agent-42"))
+            .await
+            .unwrap();
+        assert_eq!(model, "beta");
+
+        let defaulted = resolve_request_model(&state, br#"{"messages":[]}"#, Some("unknown"))
+            .await
+            .unwrap();
+        assert_eq!(defaulted, "alpha");
+
+        let explicit =
+            resolve_request_model(&state, br#"{"model":"alpha","messages":[]}"#, Some("agent-42"))
+                .await
+                .unwrap();
+        assert_eq!(explicit, "alpha");
     }
 
     #[tokio::test]

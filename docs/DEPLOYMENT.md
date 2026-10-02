@@ -45,16 +45,17 @@ location /v1/ {
 
 ## Multiple replicas (prefix locality)
 
-If you run **several** `rbitnet-server` processes behind a load balancer and later enable **prefix KV** reuse or session-heavy workloads, **random** balancing prevents cache hits on a single worker. Options:
+If you run **several** `rbitnet-server` processes (or multiple proxy hosts) behind a load balancer and enable **prefix KV** reuse or session-heavy workloads, **random** balancing prevents cache hits on a single worker. Options:
 
-- **Sticky sessions:** route the same client (cookie or client IP) to the same upstream.
-- **Hash routing:** `hash $http_authorization consistent` (or a custom header) so the same API key always hits the same instance.
+- **Sticky sessions (preferred for agents):** send `X-Rbitnet-Session: <id>` (or cookie `rbitnet_session=<id>`) on every request. `rbitnet-proxy` echoes the header and an `X-Rbitnet-Sticky-Bucket` hash when sticky is enabled.
+- **Hash routing:** `hash $http_x_rbitnet_session consistent` (or `$http_authorization`) so the same session always hits the same instance.
+- **Proxy sticky map:** set `RBITNET_PROXY_STICKY=1` so the proxy remembers `session → model` when the JSON body omits `model` (useful for multi-turn clients that only set the session id).
 
 Example (same TLS block as above; adjust upstream names):
 
 ```nginx
 upstream rbitnet_backends {
-    hash $http_authorization consistent;
+    hash $http_x_rbitnet_session consistent;
     server 127.0.0.1:8080;
     server 127.0.0.1:8081;
 }
@@ -62,11 +63,24 @@ upstream rbitnet_backends {
 location /v1/ {
     proxy_pass http://rbitnet_backends;
     proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Rbitnet-Session $http_x_rbitnet_session;
     proxy_read_timeout 600s;
 }
 ```
 
-See [LIMITATIONS.md — Multi-replica deployments](LIMITATIONS.md#multi-replica-deployments).
+`RBITNET_PROXY_REPLICAS` documents the planned replica count and drives the sticky hash-bucket plumbing (`sticky_hash_bucket`). Today the proxy still supervises **one native child per model id**; multi-replica same-model children are not spawned yet — use an external LB with the sticky header until that lands.
+
+### Multi-session prefix hit-rate scenario
+
+With **`RBITNET_PREFIX_KV=1`** on a single runner (or a sticky-pinned replica), ≥2 concurrent agent sessions that share a long system/tools prefix should raise `rbitnet_core_prefix_hit` on `/metrics` after warm-up:
+
+1. Start one worker (or pin both clients via the same sticky session / replica).
+2. Session A and session B send chat turns with the **same** system + tools preamble and different user tails.
+3. After the first request warms the radix, subsequent turns from either session should increment `rbitnet_core_prefix_hit` (Akasha alias `prefix_hit`). Unit gate: `agent_style_prefix_hit_rate_after_warmup` in `bitnet-core` targets ≥70% after warm-up.
+
+Without sticky co-location across replicas, each worker keeps a private radix and multi-session hit rate collapses to near zero.
+
+See [LIMITATIONS.md — Multi-replica deployments](LIMITATIONS.md#multi-replica-deployments) and [AUTOTUNE_DESIGN.md](AUTOTUNE_DESIGN.md) (kernel autotune is deferred).
 
 ## Health checks
 
