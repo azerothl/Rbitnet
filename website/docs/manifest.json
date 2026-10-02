@@ -1,0 +1,40 @@
+{
+  "defaultLang": "en",
+  "secondaryLang": "fr",
+  "groups": [
+    {
+      "title": "Start here",
+      "items": [
+        { "slug": "get-started", "title": "Get started", "blurb": "Install, download a model, serve in five minutes." },
+        { "slug": "usage", "title": "Usage", "blurb": "Models, tokenizer, env vars, chat, curl examples." },
+        { "slug": "integrations", "title": "Integrations", "blurb": "OpenAI clients, LiteLLM, Akasha BitNetProvider." }
+      ]
+    },
+    {
+      "title": "Product",
+      "items": [
+        { "slug": "status-and-roadmap", "title": "Status & roadmap", "blurb": "What ships today, gaps, research-backed priorities." },
+        { "slug": "native-first", "title": "Native-first", "blurb": "No external inference engine at runtime." },
+        { "slug": "bitnet-native", "title": "BitNet native", "blurb": "Native BitNet GGUF path and recipes." },
+        { "slug": "limitations", "title": "Limitations", "blurb": "Honest constraints on perf and formats." },
+        { "slug": "changelog", "title": "Changelog", "blurb": "Release-facing changes." }
+      ]
+    },
+    {
+      "title": "Reference",
+      "items": [
+        { "slug": "env-reference", "title": "Env reference", "blurb": "All RBITNET_* variables in one place." },
+        { "slug": "akasha-infer", "title": "Akasha Infer contract", "blurb": "Frozen /v1 + /metrics surface." },
+        { "slug": "deployment", "title": "Deployment", "blurb": "Docker, systemd, reverse proxy." },
+        { "slug": "benchmarks", "title": "Benchmarks", "blurb": "How to record kernel and HTTP benches." },
+        { "slug": "brand", "title": "Brand", "blurb": "Phosphor Warren logo, color, type." }
+      ]
+    },
+    {
+      "title": "Secondary",
+      "items": [
+        { "slug": "demarrage-5min", "title": "Démarrage 5 min (FR)", "blurb": "French quickstart — secondary language." }
+      ]
+    }
+  ]
+}

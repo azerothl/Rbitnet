@@ -8,7 +8,7 @@ Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP se
 
 **Project name:** *akasha-infer* · **Code / crates:** *Rbitnet* — see [docs/AKASHA_INFER.md](docs/AKASHA_INFER.md) for the frozen `/v1` + `/metrics` contract.
 
-**Brand & site:** [docs/BRAND.md](docs/BRAND.md) · presentation site in [`website/`](website/) (GitHub Pages).
+**Brand & site:** [docs/BRAND.md](docs/BRAND.md) · presentation site in [`website/`](website/) (GitHub Pages; English default, docs on-site under `website/docs/`).
 
 ## Do I need Python?
 

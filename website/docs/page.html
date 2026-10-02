@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doc — Rbitnet</title>
+  <meta name="description" content="Rbitnet documentation page." />
+  <link rel="icon" href="../assets/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Sora:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="docs.css" />
+</head>
+<body class="docs-body">
+  <div class="bit-grid" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand-chip" href="../">
+      <img src="../assets/brand/rbitnet-icon-128.png" width="36" height="36" alt="" />
+      <span>Rbitnet</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="./">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="https://github.com/azerothl/Rbitnet" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-aside" id="docs-aside" aria-label="Docs navigation"></aside>
+    <main class="docs-main">
+      <p class="docs-crumb mono"><a href="./">Docs</a> <span aria-hidden="true">/</span> <span id="docs-slug"></span></p>
+      <article id="docs-article" class="docs-article prose">
+        <p class="docs-loading">Loading…</p>
+      </article>
+      <p class="docs-source mono" id="docs-source"></p>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <img src="../assets/brand/rbitnet-icon-128.png" width="28" height="28" alt="" />
+    <p><strong>Rbitnet</strong> · MIT · <a href="./">All docs</a></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js" defer></script>
+  <script src="page.js" defer></script>
+</body>
+</html>
