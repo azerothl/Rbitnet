@@ -12,7 +12,9 @@ This page sets expectations for performance, formats, and architectures. For com
 
 ## Prefix cache vs KV prompt caching
 
-- **`RBITNET_PREFIX_CACHE`** stores **full responses** for requests where `(prompt, max_tokens, temperature)` matches exactly. It does **not** skip prefill by reusing **attention KV** for a shared token prefix (what hosted APIs call prompt caching). Implementing true prefix-KV reuse needs block-wise KV and routing/co-location policies across replicas.
+- **`RBITNET_PREFIX_CACHE`** stores **full responses** for requests where `(prompt, max_tokens, temperature)` matches exactly. It does **not** skip prefill by reusing attention KV.
+- **`RBITNET_PREFIX_KV`** (opt-in) **does** reuse tensorial KV for shared token prefixes: dense or paged snapshots, longest-common-prefix agent reuse, and a radix LRU (`RBITNET_PREFIX_KV_RADIX_MAX`). Hits are exposed as `rbitnet_core_prefix_hit` on `/metrics`. This is still single-process (no multi-replica sticky routing); see [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md).
+- Implementing **hosted-API-style** prompt caching across replicas still needs block-wise policies and L7 co-location — not the default today.
 
 ## Multi-replica deployments
 
@@ -36,11 +38,11 @@ Dense DeepSeek checkpoints that remain **Llama-shaped** are the supported path t
 
 ## Tokenizer
 
-- The bundled generation path loads `**tokenizer.json`** via the Hugging Face `tokenizers` crate. If your workflow only produced `tokenizer.model`, convert or obtain a compatible `tokenizer.json` for Rbitnet (see [USAGE.md](USAGE.md)).
+- The bundled generation path loads **`tokenizer.json`** (Hugging Face `tokenizers`) or **`tokenizer.model`** (SentencePiece) via env / beside the GGUF. Prefer `tokenizer.json` when both exist. See [USAGE.md](USAGE.md) and [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md).
 
 ## Research directions (not shipped)
 
-- **Training-free speculative decoding** beyond the current scheduler MVP (for example methods in the spirit of [SPECTRA, ACL 2025](https://aclanthology.org/2025.acl-long.685/)) would be a separate research or prototype track, not a dependency of the HTTP server today.
+- **Training-free speculative decoding** beyond the shipped PLD / n-gram path (for example methods in the spirit of [SPECTRA, ACL 2025](https://aclanthology.org/2025.acl-long.685/)) would be a separate research or prototype track, not a dependency of the HTTP server today.
 
 ## HTTP server
 

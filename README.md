@@ -104,6 +104,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
   - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — systemd / reverse proxy / health checks
   - [docs/LIMITATIONS.md](docs/LIMITATIONS.md) — performance and format constraints
+  - [docs/STUBS_AND_MVP_AUDIT.md](docs/STUBS_AND_MVP_AUDIT.md) — stubs vs shipped MVPs (issue #24)
   - [docs/RELEASE.md](docs/RELEASE.md) — versioning and release checklist
   - [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md) — long-term inference backlog (PagedAttention-class epic)
 

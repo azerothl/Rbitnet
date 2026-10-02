@@ -18,7 +18,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | **C — Cache semantics** | Dense/paged prefix KV (`RBITNET_PREFIX_KV`); radix LRU + LCP agent reuse; **`rbitnet_core_prefix_hit`** on `/metrics` | L7 sticky routing notes |
 | **C — Streaming** | Live SSE (`StreamEvent`, `complete_streaming`) | GGUF load tests under sustained concurrency |
 | **D — GPU decode** | `CudaDecodeGraph` metrics + capture hook; `RBITNET_KV_BACKEND=gpu` planning bit; cuBLASLt M=1 policy env | Full graph replay; fused norm+quant — **after** CPU benches; FA2/FA3 not default |
-| **E — Speculative / CPU attention / BitNet** | Speculative MVP (`RBITNET_SPECULATIVE`); KV quant env; ternary CPU path | PLD/n-gram ([2211.17192](https://arxiv.org/abs/2211.17192)); SlimAttention+KV Q8 ([2407.07304](https://arxiv.org/abs/2407.07304)); Rust SIMD vs bitnet.cpp ([2502.11880](https://arxiv.org/abs/2502.11880)) |
+| **E — Speculative / CPU attention / BitNet** | Speculative + **PLD/n-gram** (`RBITNET_DRAFT_PATH=ngram`); **KV Q8** compact pages; BitNet **I2_S/TL2** microbench | SlimAttention 1D tiling; further training-free draft research; bitnet.cpp parity chase |
 
 ## Phase A — KV and memory
 

@@ -20,7 +20,7 @@ This document complements `[PLAN_PRODUCTION.md](PLAN_PRODUCTION.md)`: it tracks 
 | Profiling report (hot paths, prioritized follow-ups)           | **Checklist + archived snapshots** — see `[PROFILING.md](PROFILING.md)`, `[profiling/](profiling/README.md)` |
 | Production-grade GPU kernels (FlashAttention-class, fused GEMM/MoE) | **Deferred** — FA2/FA3 = GPU_NATIVE research only, **not** near-term default ([GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md)) |
 | KV memory (PagedAttention-style), aggressive cache scheduling | **E2E opt-in** — dense default; `RBITNET_LLAMA_PAGED_KV=1` + `RBITNET_KV_POOL=1` shared phys pages on Llama runtime; reclaim + `/metrics` gauges; see [Research-backed priorities](#research-backed-priorities-2026-09) |
-| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Hooks / MVP** — env-flagged; fused multi-seq + stall-free schedule still open — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) |
+| Full serving pipeline (continuous batching, chunked prefill, prefix cache, graphs, speculative decoding) | **Opt-in shipped MVP** — stall-free Sarathi (#21), prefix KV + radix (#17), PLD (#18); **fused multi-seq still open** — [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md), [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md) |
 | Hugging Face–centric “automatic” tokenizer + model pairing      | **Partial** — `models install`, manifests; no embedded Transformers auto-config |
 | “Prod ready” exit criteria (all of PLAN)                       | **Not claimed** — several doc-only / measurement items remain |
 
