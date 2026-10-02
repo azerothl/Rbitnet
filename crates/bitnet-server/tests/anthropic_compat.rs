@@ -110,7 +110,7 @@ async fn anthropic_stub_messages_non_stream() {
 }
 
 #[tokio::test]
-async fn anthropic_stub_messages_minimal_stream() {
+async fn anthropic_stub_messages_live_stream() {
     let (engine, _guard) = {
         let _lock = ENV_MUTEX.lock().unwrap();
         let guard = EnvGuard::set(&[
@@ -149,8 +149,61 @@ async fn anthropic_stub_messages_minimal_stream() {
     let bytes = res.into_body().collect().await.unwrap().to_bytes();
     let text = String::from_utf8_lossy(&bytes);
     assert!(text.contains("event: message_start"));
+    assert!(text.contains("event: content_block_start"));
     assert!(text.contains("event: content_block_delta"));
     assert!(text.contains("text_delta"));
+    assert!(text.contains("event: content_block_stop"));
+    assert!(text.contains("event: message_delta"));
     assert!(text.contains("event: message_stop"));
     assert!(text.contains("stub"), "unexpected stream body: {text}");
+}
+
+#[tokio::test]
+async fn anthropic_messages_respects_api_key() {
+    let (engine, _guard) = {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        let guard = EnvGuard::set(&[
+            ("RBITNET_MODEL", None),
+            ("RBITNET_TOY", None),
+            ("RBITNET_STUB", Some("1")),
+            ("RBITNET_API_KEY", Some("secret-test-key")),
+        ]);
+        let engine = Arc::new(Engine::from_env().expect("engine"));
+        (engine, guard)
+    };
+    let mut cfg = ServerConfig::test_defaults();
+    cfg.api_key = Some("secret-test-key".into());
+    let app = create_app_with_config(engine, Arc::new(cfg));
+    let body = json!({
+        "model": "rbitnet-stub",
+        "max_tokens": 8,
+        "messages": [{ "role": "user", "content": "hello" }]
+    });
+    let denied = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/messages")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("denied");
+    assert_eq!(denied.status(), http::StatusCode::UNAUTHORIZED);
+
+    let ok = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/messages")
+                .header("content-type", "application/json")
+                .header("x-api-key", "secret-test-key")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("authorized");
+    assert!(ok.status().is_success());
 }
