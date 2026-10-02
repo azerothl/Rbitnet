@@ -119,7 +119,21 @@ curl -s http://127.0.0.1:8080/v1/chat/completions \
   -d '{"model":"rbitnet-llama","messages":[{"role":"user","content":"Say hello."}],"max_tokens":8,"temperature":0.0}'
 ```
 
-**Still open for follow-up benches:** Llama-3.2-1B + BitNet rows; fair `llama-bench` side-by-side; live prefix-KV / KV Q8 / Sarathi delta rows; GPU columns (see #22).
+## Follow-up benches checklist (#41) — 2026-10-02
+
+Published culture for release rows: **machine** (CPU/OS/`nproc`), **engine version** (git SHA + `rustc`), **GGUF basename**, **backend**, **peak RSS**. Stub/API rows stay labeled as overhead only.
+
+| Slot | Status | Why / how to fill |
+|------|--------|-------------------|
+| Fair `llama-bench` vs Rbitnet (same TinyLlama Q4_K_M) | **non mesuré** | `llama-bench` binary absent in cloud agent images; set `LLAMA_BENCH` + unset `SKIP_LLAMA` then `RESULTS_MD=docs/BENCHMARKS_RESULTS.md ./scripts/compare_llamacpp_rbitnet.sh` |
+| Llama-3.2-1B Instruct Q4_K_M e2e tok/s | **non mesuré** | Weights not present here; matrix reproduce: `rbitnet up unsloth/Llama-3.2-1B-Instruct-GGUF --file Llama-3.2-1B-Instruct-Q4_K_M.gguf` then `NO_START_SERVER=1 MODEL=rbitnet-llama … scripts/bench_matrix.sh` |
+| BitNet b1.58 2B4T e2e tok/s | **non mesuré** | Bundle install per [BITNET_NATIVE.md](BITNET_NATIVE.md); kernel microbench already published below — e2e HTTP row still open (ties #45) |
+| Prefix-KV live delta @ concurrency 1/4/8 | **non mesuré** | Unit/metrics exist (`rbitnet_core_prefix_hit`); live matrix needs TinyLlama + `RBITNET_PREFIX_KV=1` vs off |
+| KV Q8 live RSS/tok/s @ 1/4/8 | **non mesuré** | Unit gate shipped; live: `scripts/bench_kv_q8.sh` with real GGUF |
+| Sarathi stall-free live @ 1/4/8 | **non mesuré** | Unit gate shipped; live: `scripts/bench_sarathi.sh` with real GGUF |
+| GPU columns | deferred | Owned by #22 — do not invent CPU rows as GPU |
+
+**Acceptance for closing #41:** fill ≥1 of Llama-3.2 or BitNet **measured** e2e row **or** a fair `llama-bench` compare (not stub), plus keep this table updated so remaining cells stay explicit `non mesuré` rather than silent gaps. This PR documents the slots; measured fills are follow-up commits on real hardware.
 
 ## llama.cpp comparison — 2026-09-25T20:07:31Z
 
