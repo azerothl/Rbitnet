@@ -46,7 +46,7 @@ Même protocole et contexte, plafond total réduit à 6 144 Mio, cache désactiv
 
 ## Correction et contrôles
 
-- 250 tests workspace réussis, un ignoré ; Clippy et compilations release/CUDA réussis avec les warnings publiés.
+- 248 tests workspace réussis, un ignoré ; Clippy et compilations release/CUDA réussis avec les warnings publiés.
 - Test matériel du registre : partage de vues, catégories, refus au plafond, libération invalide, rollback d'une création native échouée, changement de plafond et admission concurrente. Sous 64 Kio, huit threads demandent chacun 16 Kio ; exactement quatre allocations sont admises.
 - 19 régressions natives et un contrôle réel des leases de groupes d'experts ; la sélection reste protégée jusqu'à la fin des lectures GPU.
 - GPT réel : 72 positions de logits et 18 générations, graphes/eager/split, maximum KL 3,465e-12 et delta NLL 6,442e-6. Cette vérification numérique est bornée, sans garantie universelle sur tous les prompts.
