@@ -1,5 +1,6 @@
 //! Autoregressive GPT-OSS and DeepSeek/GLM MLA graphs over GGUF quantized weights.
 //! Operations follow llama.cpp 631109b34 openai-moe.cpp and deepseek2.cpp.
+use super::moe_cost::{Cost, Execution};
 use super::weights::Weights;
 use crate::backend::BackendKind;
 use crate::cancel::inference_cancelled;
@@ -286,6 +287,8 @@ pub(crate) struct Runtime {
     gpu_moe: Vec<Option<super::moe::GpuMoe>>,
     gpu_head: Option<super::head::GpuHead>,
     use_gpu_attention: bool,
+    moe_execution: Execution,
+    moe_cost: Vec<Cost>,
 }
 impl Runtime {
     fn load(
@@ -489,7 +492,16 @@ impl Runtime {
         } else {
             0
         };
-        let weights = Weights::new_with_state_reserve(archive, kind, state_reserve)?;
+        let mut weights = Weights::new_with_state_reserve(archive, kind, state_reserve)?;
+        let name = match weights.archive.metadata.get("general.name") {
+            Some(GgufValue::String(name)) => name.clone(),
+            _ => cfg.family.name().to_owned(),
+        };
+        weights.enable_moe_metrics(super::moe_metrics::Model::new(
+            name,
+            cfg.family.name().to_owned(),
+            cfg.layers,
+        ))?;
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer)?;
         let kv = (0..cfg.layers)
             .map(|_| LayerKv {
@@ -536,7 +548,11 @@ impl Runtime {
         } else {
             None
         };
+        let moe_execution = Execution::from_env();
+        let moe_cost = (0..cfg.layers).map(|_| Cost::new(moe_execution)).collect();
         Ok(Self {
+            moe_execution,
+            moe_cost,
             cfg,
             gpu_full,
             gpu_mla,
@@ -548,6 +564,27 @@ impl Runtime {
             gpu_head,
             use_gpu_attention,
         })
+    }
+    fn choose_moe_cpu(&mut self, il: usize, ids: &[usize]) -> Result<bool> {
+        // Default cache behavior preserves the existing fallback path. Explicit
+        // CPU and adaptive policies always use the dedicated CPU payload API.
+        if self.moe_execution == Execution::Cache {
+            return Ok(false);
+        }
+        let (fits, missing) = match &self.gpu_moe[il] {
+            Some(moe) => moe.estimate_selected(ids)?,
+            None => (false, 0),
+        };
+        let cpu = self.moe_cost[il].choose_cpu(fits, missing);
+        if let Some(layer) = self.weights.moe_metrics.as_ref().and_then(|m| m.layer(il)) {
+            use std::sync::atomic::Ordering;
+            if cpu {
+                layer.cpu_decisions.fetch_add(1, Ordering::Relaxed);
+            } else {
+                layer.gpu_decisions.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        Ok(cpu)
     }
     fn linear(&self, il: usize, suffix: &str, x: &[f32]) -> Result<Vec<f32>> {
         let name = format!("blk.{il}.{suffix}");
@@ -569,6 +606,20 @@ impl Runtime {
         let mut y = self
             .weights
             .expert(&(name.clone() + ".weight"), expert, x)?;
+        if let Ok(bias) = self.weights.dense(&(name + ".bias")) {
+            let rows = y.len();
+            let b = bias
+                .get(expert * rows..(expert + 1) * rows)
+                .ok_or_else(|| BitNetError::Inference("expert bias shape".into()))?;
+            add(&mut y, b)?;
+        }
+        Ok(y)
+    }
+    fn expert_cpu(&self, il: usize, suffix: &str, expert: usize, x: &[f32]) -> Result<Vec<f32>> {
+        let name = format!("blk.{il}.{suffix}");
+        let mut y = self
+            .weights
+            .expert_cpu(&(name.clone() + ".weight"), expert, x)?;
         if let Ok(bias) = self.weights.dense(&(name + ".bias")) {
             let rows = y.len();
             let b = bias
@@ -641,21 +692,39 @@ impl Runtime {
                 *w /= sum;
             }
         }
+        let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
+        let force_cpu = self.choose_moe_cpu(il, &selected)?;
         let ffn_start = Instant::now();
-        let gpu_result = if let Some(gpu) = &mut self.gpu_moe[il] {
-            let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
-            gpu.run(x, &selected, &scaled)?
+        let gpu_result = if force_cpu {
+            None
+        } else if let Some(gpu) = &mut self.gpu_moe[il] {
+            gpu.run_with_upload(x, &selected, &scaled)?
         } else {
             None
         };
         let fallback = gpu_result.is_none();
-        let mut result = if let Some(result) = gpu_result {
-            result
+        let mut result = if let Some((output, upload)) = gpu_result {
+            let elapsed = ffn_start.elapsed().as_nanos().min(u64::MAX as u128) as u64;
+            self.moe_cost[il].observe_gpu(elapsed, upload.bytes, upload.ns);
+            output
         } else {
-            let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
-            self.routed_ffn(il, x, &selected, &scaled)?
+            let cpu_start = Instant::now();
+            let output = if self.moe_execution == Execution::Cache {
+                self.routed_ffn(il, x, &selected, &scaled)?
+            } else {
+                self.routed_ffn_cpu(il, x, &selected, &scaled)?
+            };
+            if self.moe_execution != Execution::Cache {
+                self.moe_cost[il]
+                    .observe_cpu(cpu_start.elapsed().as_nanos().min(u64::MAX as u128) as u64);
+            }
+            output
         };
-        crate::perf::record_native_moe(!fallback, 1, ffn_start.elapsed().as_nanos() as u64);
+        let elapsed = ffn_start.elapsed().as_nanos().min(u64::MAX as u128) as u64;
+        crate::perf::record_native_moe(!fallback, 1, elapsed);
+        if let Some(metrics) = &self.weights.moe_metrics {
+            metrics.ffn(il, !fallback, Some(elapsed));
+        }
         if self
             .weights
             .archive
@@ -703,6 +772,42 @@ impl Runtime {
         }
         Ok(result)
     }
+    fn routed_ffn_cpu(
+        &self,
+        il: usize,
+        x: &[f32],
+        selected: &[usize],
+        scaled: &[f32],
+    ) -> Result<Vec<f32>> {
+        if selected.len() != self.cfg.used
+            || scaled.len() != selected.len()
+            || selected.iter().any(|&e| e >= self.cfg.experts)
+        {
+            return Err(BitNetError::Inference("routed FFN shape mismatch".into()));
+        }
+        let mut result = vec![0.0; self.cfg.embd];
+        for (&expert, &weight) in selected.iter().zip(scaled) {
+            let gate = self.expert_cpu(il, "ffn_gate_exps", expert, x)?;
+            let up = self.expert_cpu(il, "ffn_up_exps", expert, x)?;
+            let hidden: Vec<f32> = gate
+                .iter()
+                .zip(&up)
+                .map(|(&g, &u)| {
+                    if self.cfg.family == Family::GptOss {
+                        let g = g.min(7.0);
+                        g / (1.0 + (-1.702 * g).exp()) * (u.clamp(-7.0, 7.0) + 1.0)
+                    } else {
+                        g / (1.0 + (-g).exp()) * u
+                    }
+                })
+                .collect();
+            let down = self.expert_cpu(il, "ffn_down_exps", expert, &hidden)?;
+            for (out, d) in result.iter_mut().zip(down) {
+                *out += weight * d;
+            }
+        }
+        Ok(result)
+    }
     fn resident_gpt_forward(
         &mut self,
         x: &[f32],
@@ -723,24 +828,49 @@ impl Runtime {
                     return Err(BitNetError::Inference("inference cancelled".into()));
                 }
                 let (ids, weights) = full.prepare(il)?;
+                let force_cpu = self.choose_moe_cpu(il, &ids)?;
                 let start = Instant::now();
-                let leased = if let Some(moe) = &self.gpu_moe[il] {
+                let leased = if force_cpu {
+                    None
+                } else if let Some(moe) = &self.gpu_moe[il] {
                     moe.lease_selected(&ids)?
                 } else {
                     None
                 };
                 let resident = leased.is_some();
                 if let Some(leased) = leased {
+                    let upload = leased.upload();
                     full.finish(il, leased.pointers(), None)?;
-                    // Lease owners remain live until the private stream has
-                    // finished reading the selected dynamic expert buffers.
+                    // Synchronous finish guarantees the selected slot is no
+                    // longer being read before the lease owners are dropped.
                     drop(leased);
+                    self.moe_cost[il].observe_gpu(
+                        start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        upload.bytes,
+                        upload.ns,
+                    );
                 } else {
+                    // Failed admission cost is recorded separately. It cannot
+                    // contaminate the CPU calibration used for future choices.
+                    let cpu_start = Instant::now();
                     let input = full.ffn_input()?;
-                    let routed = self.routed_ffn(il, &input, &ids, &weights)?;
+                    let routed = if self.moe_execution == Execution::Cache {
+                        self.routed_ffn(il, &input, &ids, &weights)?
+                    } else {
+                        self.routed_ffn_cpu(il, &input, &ids, &weights)?
+                    };
                     full.finish(il, None, Some(&routed))?;
+                    if self.moe_execution != Execution::Cache {
+                        self.moe_cost[il].observe_cpu(
+                            cpu_start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        );
+                    }
                 }
-                crate::perf::record_native_moe(resident, 1, start.elapsed().as_nanos() as u64);
+                let elapsed = start.elapsed().as_nanos().min(u64::MAX as u128) as u64;
+                crate::perf::record_native_moe(resident, 1, elapsed);
+                if let Some(metrics) = &self.weights.moe_metrics {
+                    metrics.ffn(il, resident, Some(elapsed));
+                }
             }
             full.end(logits, greedy)
         })();
@@ -771,24 +901,49 @@ impl Runtime {
                     full.finish(il, None, None)?;
                     continue;
                 }
+                let force_cpu = self.choose_moe_cpu(il, &ids)?;
                 let start = Instant::now();
-                let leased = if let Some(moe) = &self.gpu_moe[il] {
+                let leased = if force_cpu {
+                    None
+                } else if let Some(moe) = &self.gpu_moe[il] {
                     moe.lease_selected(&ids)?
                 } else {
                     None
                 };
                 let resident = leased.is_some();
                 if let Some(leased) = leased {
+                    let upload = leased.upload();
                     full.finish(il, leased.pointers(), None)?;
-                    // Lease owners remain live until the private stream has
-                    // finished reading the selected dynamic expert buffers.
+                    // Synchronous finish guarantees the selected slot is no
+                    // longer being read before the lease owners are dropped.
                     drop(leased);
+                    self.moe_cost[il].observe_gpu(
+                        start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        upload.bytes,
+                        upload.ns,
+                    );
                 } else {
+                    // Failed admission cost is recorded separately. It cannot
+                    // contaminate the CPU calibration used for future choices.
+                    let cpu_start = Instant::now();
                     let input = full.ffn_input()?;
-                    let routed = self.routed_ffn(il, &input, &ids, &weights)?;
+                    let routed = if self.moe_execution == Execution::Cache {
+                        self.routed_ffn(il, &input, &ids, &weights)?
+                    } else {
+                        self.routed_ffn_cpu(il, &input, &ids, &weights)?
+                    };
                     full.finish(il, None, Some(&routed))?;
+                    if self.moe_execution != Execution::Cache {
+                        self.moe_cost[il].observe_cpu(
+                            cpu_start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        );
+                    }
                 }
-                crate::perf::record_native_moe(resident, 1, start.elapsed().as_nanos() as u64);
+                let elapsed = start.elapsed().as_nanos().min(u64::MAX as u128) as u64;
+                crate::perf::record_native_moe(resident, 1, elapsed);
+                if let Some(metrics) = &self.weights.moe_metrics {
+                    metrics.ffn(il, resident, Some(elapsed));
+                }
             }
             full.end(logits, greedy)
         })();
@@ -1611,3 +1766,7 @@ mod tests {
 #[cfg(test)]
 #[path = "mla_runtime_tests.rs"]
 mod mla_runtime_tests;
+
+#[cfg(test)]
+#[path = "moe_policy_runtime_tests.rs"]
+mod moe_policy_runtime_tests;
