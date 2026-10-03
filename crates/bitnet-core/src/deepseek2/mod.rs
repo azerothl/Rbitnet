@@ -2,9 +2,9 @@
 //!
 //! Layout reference: llama.cpp `deepseek2` loader / converters.
 //!
-//! When tensors match the **Llama-compatible** matrix naming (`blk.*`, `token_embd`, …),
-//! inference uses the in-tree Llama runtime while reporting family **`deepseek2`**.
-//! Otherwise loading fails immediately with a clear error (no placeholder executor).
+//! Native split MLA with compressed KV, routed experts and optional shared experts.
+//! Real-model validation targets GLM-4.7-Flash; alternate/fused projections are not certified.
+//! Required shapes are checked before readiness on CPU/CUDA/hybrid.
 
 mod config;
 mod dispatch;

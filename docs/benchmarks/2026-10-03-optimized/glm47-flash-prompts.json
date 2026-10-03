@@ -1,0 +1,298 @@
+[
+  {
+    "id": "capital",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the capital of France? Answer in one word."
+      }
+    ],
+    "expected": "paris",
+    "prompt": "[gMASK]<sop><|user|>What is the capital of France? Answer in one word.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      3838,
+      374,
+      279,
+      6722,
+      315,
+      9621,
+      30,
+      21754,
+      304,
+      825,
+      3409,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "arithmetic",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is 7 multiplied by 8? Answer only with the number."
+      }
+    ],
+    "expected": "56",
+    "prompt": "[gMASK]<sop><|user|>What is 7 multiplied by 8? Answer only with the number.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      3838,
+      374,
+      220,
+      22,
+      54548,
+      553,
+      220,
+      23,
+      30,
+      21754,
+      1172,
+      448,
+      279,
+      1372,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "memory",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Remember the code ORION. Reply OK."
+      },
+      {
+        "role": "assistant",
+        "content": "OK."
+      },
+      {
+        "role": "user",
+        "content": "What is the code? Answer in one word."
+      }
+    ],
+    "expected": "orion",
+    "prompt": "[gMASK]<sop><|user|>Remember the code ORION. Reply OK.<|assistant|></think>OK.<|user|>What is the code? Answer in one word.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      28490,
+      279,
+      2038,
+      2726,
+      1271,
+      13,
+      17815,
+      10397,
+      13,
+      154828,
+      154842,
+      3925,
+      13,
+      154827,
+      3838,
+      374,
+      279,
+      2038,
+      30,
+      21754,
+      304,
+      825,
+      3409,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "throughput-0",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 0. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "[gMASK]<sop><|user|>Case 0. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      4207,
+      220,
+      15,
+      13,
+      9641,
+      264,
+      11676,
+      3364,
+      315,
+      518,
+      3245,
+      220,
+      101220,
+      4244,
+      911,
+      264,
+      12299,
+      23899,
+      264,
+      13629,
+      13,
+      5145,
+      279,
+      3364,
+      7069,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "throughput-1",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 1. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "[gMASK]<sop><|user|>Case 1. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      4207,
+      220,
+      16,
+      13,
+      9641,
+      264,
+      11676,
+      3364,
+      315,
+      518,
+      3245,
+      220,
+      101220,
+      4244,
+      911,
+      264,
+      12299,
+      23899,
+      264,
+      13629,
+      13,
+      5145,
+      279,
+      3364,
+      7069,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "throughput-2",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 2. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "[gMASK]<sop><|user|>Case 2. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      4207,
+      220,
+      17,
+      13,
+      9641,
+      264,
+      11676,
+      3364,
+      315,
+      518,
+      3245,
+      220,
+      101220,
+      4244,
+      911,
+      264,
+      12299,
+      23899,
+      264,
+      13629,
+      13,
+      5145,
+      279,
+      3364,
+      7069,
+      13,
+      154828,
+      154842
+    ]
+  },
+  {
+    "id": "throughput-3",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 3. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "[gMASK]<sop><|user|>Case 3. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|assistant|></think>",
+    "token_ids": [
+      154822,
+      154824,
+      154827,
+      4207,
+      220,
+      18,
+      13,
+      9641,
+      264,
+      11676,
+      3364,
+      315,
+      518,
+      3245,
+      220,
+      101220,
+      4244,
+      911,
+      264,
+      12299,
+      23899,
+      264,
+      13629,
+      13,
+      5145,
+      279,
+      3364,
+      7069,
+      13,
+      154828,
+      154842
+    ]
+  }
+]

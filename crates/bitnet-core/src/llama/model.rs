@@ -122,7 +122,13 @@ impl MatrixWeights {
         }
     }
 
-    fn embed_row(&self, tok: usize, n_embd: usize, n_vocab: usize, out: &mut [f32]) -> Result<()> {
+    pub(super) fn embed_row(
+        &self,
+        tok: usize,
+        n_embd: usize,
+        n_vocab: usize,
+        out: &mut [f32],
+    ) -> Result<()> {
         match self {
             Self::Dense(v) => {
                 for j in 0..n_embd {
@@ -168,9 +174,8 @@ pub struct LlamaModel {
     pub layers: Vec<LayerWeights>,
     pub output_norm: Vec<f32>,
     pub output: MatrixWeights,
-    /// Optional per-dimension inverse frequencies from GGUF `rope_freqs.weight` (Llama 3+).
-    /// Length `head_dim / 2`. Used only when values match the analytic inv-freq from `theta`
-    /// (otherwise the tensor may include Yarn/NTK scaling we do not apply yet — fall back to metadata).
+    /// Effective inverse frequencies computed from GGUF `rope_freqs.weight` factors (Llama 3+).
+    /// Length `rope_rot_dims / 2`; each analytic frequency is divided by its GGUF factor.
     pub rope_inv_freq: Option<Vec<f32>>,
 }
 
@@ -203,50 +208,52 @@ fn matrix_mmap_supported(t: &GgufTensorInfo) -> bool {
     ggml_type_supported_mmap_matvec(t.ggml_type)
 }
 
-/// Newer Llama-3 GGUFs may ship `rope_freqs.weight` `[rope_rot_dims/2]`. If it matches the analytic
-/// inv-frequencies from `theta`, use it; otherwise it may encode Yarn/NTK scaling — ignore it.
+/// GGML's RoPE uses `angle = position * analytic_inv_freq / freq_factor`.
+/// `rope_freqs.weight` contains divisors, not inverse frequencies.
 fn try_load_rope_inv_freq(
     archive: &GgufArchive,
     rope_rot_dims: usize,
     theta: f32,
-) -> Option<Vec<f32>> {
-    let half = rope_rot_dims.checked_div(2)?;
-    let t = archive.tensor_first_of(&["rope_freqs.weight"])?;
+) -> Result<Option<Vec<f32>>> {
+    let half = rope_rot_dims / 2;
+    let Some(t) = archive.tensor_first_of(&["rope_freqs.weight"]) else {
+        return Ok(None);
+    };
     if t.dimensions.len() != 1 || t.dimensions[0] as usize != half {
-        tracing::warn!(
-            got_dims = ?t.dimensions,
-            expected_len = half,
-            "rope_freqs.weight: unexpected shape; using analytic RoPE from metadata"
-        );
-        return None;
+        return Err(BitNetError::Inference(format!(
+            "rope_freqs.weight shape {:?}, expected [{half}]",
+            t.dimensions
+        )));
     }
-    let payload = archive.tensor_payload(t).ok()?;
-    let v = tensor_to_f32(payload, t.ggml_type, &t.dimensions).ok()?;
-    if v.len() != half {
-        return None;
+    let payload = archive.tensor_payload(t)?;
+    let factors = tensor_to_f32(payload, t.ggml_type, &t.dimensions)?;
+    Ok(Some(rope_inv_freq_from_factors(
+        &factors,
+        rope_rot_dims,
+        theta,
+    )?))
+}
+
+fn rope_inv_freq_from_factors(
+    factors: &[f32],
+    rope_rot_dims: usize,
+    theta: f32,
+) -> Result<Vec<f32>> {
+    if factors.len() != rope_rot_dims / 2
+        || !theta.is_finite()
+        || theta <= 0.0
+        || factors.iter().any(|f| !f.is_finite() || *f <= 0.0)
+    {
+        return Err(BitNetError::Inference(
+            "invalid rope_freqs.weight factors or frequency base".into(),
+        ));
     }
     let h = rope_rot_dims as f32;
-    let analytical: Vec<f32> = (0..half)
-        .map(|i| 1.0 / theta.powf(2.0 * (i as f32) / h))
-        .collect();
-    let tol = 1e-3_f32;
-    let close = v
+    Ok(factors
         .iter()
-        .zip(analytical.iter())
-        .take(half.min(8))
-        .all(|(a, b)| (a - b).abs() <= tol * b.abs().max(1e-6));
-    if close {
-        tracing::info!(
-            len = half,
-            "llama: using rope_freqs.weight (matches analytic inv_freq)"
-        );
-        Some(v)
-    } else {
-        tracing::warn!(
-            "rope_freqs.weight differs from analytic inv_freq (likely scaled RoPE); using metadata theta only"
-        );
-        None
-    }
+        .enumerate()
+        .map(|(i, factor)| 1.0 / theta.powf(2.0 * i as f32 / h) / factor)
+        .collect())
 }
 
 /// Returns `Ok(())` if every Llama weight matrix uses a GGML type we can mmap-GEMV.
@@ -340,22 +347,24 @@ impl LlamaOffloadPlan {
             })
             .trim()
             .to_ascii_lowercase();
-        let layers = hybrid_layer_policy(&policy, cfg, layer_bytes, max_bytes);
-        let layer_count = layers.iter().filter(|&&v| v).count();
-        let output = matches!(
-            std::env::var("RBITNET_HYBRID_OUTPUT").as_deref(),
-            Ok("1") | Ok("true") | Ok("yes")
+        // Reserve the vocabulary projection first: leaving it on CPU dominated CUDA decode.
+        let output_bytes = cfg.n_embd.saturating_mul(cfg.n_vocab).saturating_mul(4);
+        let output_requested = match std::env::var("RBITNET_HYBRID_OUTPUT").as_deref() {
+            Ok("0" | "false" | "no") => false,
+            Ok("1" | "true" | "yes") => true,
+            _ => kind == BackendKind::Cuda,
+        };
+        let output = output_requested && output_bytes <= max_bytes;
+        let layers = hybrid_layer_policy(
+            &policy,
+            cfg,
+            layer_bytes,
+            max_bytes.saturating_sub(if output { output_bytes } else { 0 }),
         );
-        let estimated_weight_bytes =
-            layer_count
-                .saturating_mul(layer_bytes)
-                .saturating_add(if output {
-                    cfg.n_embd
-                        .saturating_mul(cfg.n_vocab)
-                        .saturating_mul(std::mem::size_of::<f32>())
-                } else {
-                    0
-                });
+        let layer_count = layers.iter().filter(|&&v| v).count();
+        let estimated_weight_bytes = layer_count
+            .saturating_mul(layer_bytes)
+            .saturating_add(if output { output_bytes } else { 0 });
         let enabled = layer_count > 0 || output;
         let kind_label = kind.as_str();
         Self {
@@ -374,6 +383,82 @@ impl LlamaOffloadPlan {
 
     pub fn layer_enabled(&self, layer: usize) -> bool {
         self.enabled && self.layers.get(layer).copied().unwrap_or(false)
+    }
+
+    fn for_quant_archive(
+        kind: BackendKind,
+        cfg: &LlamaConfig,
+        archive: &GgufArchive,
+    ) -> Result<Self> {
+        let mut plan = Self::from_env(kind, cfg);
+        let policy = std::env::var("RBITNET_HYBRID_POLICY").unwrap_or_else(|_| {
+            if kind == BackendKind::Cuda {
+                "auto".into()
+            } else {
+                "layers".into()
+            }
+        });
+        if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid)
+            || !policy.trim().eq_ignore_ascii_case("auto")
+            || std::env::var("RBITNET_HYBRID_LAYERS").is_ok()
+        {
+            return Ok(plan);
+        }
+        #[cfg(feature = "profile-llama")]
+        if std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref() == Ok("1") {
+            return Ok(plan);
+        }
+        let budget = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(if kind == BackendKind::Cuda { 4096 } else { 512 })
+            .saturating_mul(1024 * 1024);
+        let cost = |t: &GgufTensorInfo| -> Result<usize> {
+            if t.dimensions.get(1).copied().unwrap_or(0) < plan.min_rows as u64 {
+                return Ok(0);
+            }
+            if ggml_type_supports_cuda_quant(t.ggml_type) {
+                Ok(archive.tensor_payload(t)?.len())
+            } else {
+                t.dimensions
+                    .iter()
+                    .try_fold(4usize, |n, &d| n.checked_mul(d as usize))
+                    .ok_or_else(|| BitNetError::Inference("offload size overflow".into()))
+            }
+        };
+        let output = archive
+            .tensor_first_of(&["output.weight", "token_embd.weight"])
+            .ok_or_else(|| BitNetError::Inference("missing output weights".into()))?;
+        let requested = match std::env::var("RBITNET_HYBRID_OUTPUT").as_deref() {
+            Ok("0" | "false" | "no") => false,
+            Ok("1" | "true" | "yes") => true,
+            _ => kind == BackendKind::Cuda,
+        };
+        let output_bytes = cost(output)?;
+        plan.output = requested && output_bytes <= budget;
+        let mut used = if plan.output { output_bytes } else { 0 };
+        for il in 0..cfg.n_layer {
+            let prefix = format!("blk.{il}.");
+            let mut bytes = 0usize;
+            for t in archive
+                .tensors
+                .iter()
+                .filter(|t| t.name.starts_with(&prefix) && t.dimensions.len() == 2)
+            {
+                bytes = bytes.saturating_add(cost(t)?);
+            }
+            plan.layers[il] = bytes > 0 && used.saturating_add(bytes) <= budget;
+            if plan.layers[il] {
+                used += bytes;
+            }
+        }
+        plan.estimated_weight_bytes = used;
+        plan.enabled = plan.output || plan.layers.iter().any(|&v| v);
+        plan.reason = format!(
+            "{} auto offload uses actual quantized payload sizes",
+            kind.as_str()
+        );
+        Ok(plan)
     }
 
     pub fn summary(&self) -> String {
@@ -403,7 +488,7 @@ fn hybrid_layer_policy(
     let max_layers = if layer_bytes == 0 {
         0
     } else {
-        (max_bytes / layer_bytes).max(1).min(cfg.n_layer)
+        (max_bytes / layer_bytes).min(cfg.n_layer)
     };
     match policy {
         // Keep the first N layers for compatibility with the initial hybrid implementation.
@@ -515,15 +600,18 @@ fn maybe_cuda_quant_or_dense(
             tensor,
         });
     }
-    if ggml_type_supports_cuda_quant(tensor.ggml_type) {
+    // Diagnostic ablation only: compare resident cuBLAS F32 with the native quant kernel.
+    #[cfg(feature = "profile-llama")]
+    let force_dense = matches!(
+        std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref(),
+        Ok("1")
+    );
+    #[cfg(not(feature = "profile-llama"))]
+    let force_dense = false;
+    if !force_dense && ggml_type_supports_cuda_quant(tensor.ggml_type) {
         let payload = archive.tensor_payload(&tensor)?.to_vec();
-        match CudaDeviceQuantMatrix::from_payload(
-            rt,
-            tensor.ggml_type,
-            payload,
-            out_rows,
-            in_cols,
-        ) {
+        match CudaDeviceQuantMatrix::from_payload(rt, tensor.ggml_type, payload, out_rows, in_cols)
+        {
             Ok(device) => {
                 tracing::debug!(
                     tensor = label.as_str(),
@@ -571,8 +659,7 @@ fn matvec_ff_embd_dense(w: &[f32], x: &[f32], n_ff: usize, n_embd: usize) -> Vec
     let mut y = vec![0.0f32; n_embd];
     if blas_runtime::blas_attention_enabled()
         && blas_runtime::blas_ready()
-        && blas_runtime::sgemv_row_major_notrans(w, n_embd, n_ff, n_ff, 1.0, x, &mut y, 0.0)
-            .is_ok()
+        && blas_runtime::sgemv_row_major_notrans(w, n_embd, n_ff, n_ff, 1.0, x, &mut y, 0.0).is_ok()
     {
         return y;
     }
@@ -784,39 +871,26 @@ fn llama_cpu_attention_one_head(
         if blas_ok {
             mask_sliding_window_scores(&mut scores, sw_start);
         } else {
-            kv.attention_scores_cpu(
-                il,
-                pos,
-                kv_h,
-                head_dim,
-                stride,
-                q_slice,
-                scale,
-                &mut scores,
-            );
+            kv.attention_scores_cpu(il, pos, kv_h, head_dim, stride, q_slice, scale, &mut scores);
             mask_sliding_window_scores(&mut scores, sw_start);
         }
     } else {
-        kv.attention_scores_cpu(
-            il,
-            pos,
-            kv_h,
-            head_dim,
-            stride,
-            q_slice,
-            scale,
-            &mut scores,
-        );
+        kv.attention_scores_cpu(il, pos, kv_h, head_dim, stride, q_slice, scale, &mut scores);
         mask_sliding_window_scores(&mut scores, sw_start);
     }
     softmax_inplace(&mut scores);
     let mut comb = vec![0.0f32; head_dim];
     let mut v_values = vec![0.0f32; head_dim];
     for p in 0..=pos {
-        kv.fill_v_head_values(il, p, kv_h, head_dim, stride, &mut v_values);
+        let values = if matches!(kv, KvStorage::Dense(_)) {
+            kv.v_head_slice(il, p, kv_h, head_dim, stride)
+        } else {
+            kv.fill_v_head_values(il, p, kv_h, head_dim, stride, &mut v_values);
+            &v_values
+        };
         let sp = scores[p];
         for i in 0..head_dim {
-            comb[i] += sp * v_values[i];
+            comb[i] += sp * values[i];
         }
     }
     (qh, comb)
@@ -874,7 +948,7 @@ impl LlamaModel {
         backend_kind: BackendKind,
     ) -> Result<Self> {
         let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
-        let plan = LlamaOffloadPlan::from_env(backend_kind, &cfg);
+        let plan = LlamaOffloadPlan::for_quant_archive(backend_kind, &cfg, archive.as_ref())?;
         let cuda = if plan.enabled {
             CudaRuntime::try_load()
         } else {
@@ -913,7 +987,10 @@ impl LlamaModel {
             } else {
                 vec!["token_embd.weight".into(), "token_embd".into()]
             };
-            let label = names.first().cloned().unwrap_or_else(|| "output.weight".into());
+            let label = names
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "output.weight".into());
             maybe_cuda_quant_or_dense(
                 &archive,
                 cuda.as_ref(),
@@ -1039,7 +1116,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1167,7 +1244,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1340,7 +1417,7 @@ impl LlamaModel {
         }
 
         let rope_inv_freq =
-            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta);
+            try_load_rope_inv_freq(archive.as_ref(), cfg.rope_rot_dims, cfg.rope_theta)?;
 
         Ok(Self {
             cfg,
@@ -1453,6 +1530,19 @@ impl LlamaModel {
         backend: &dyn ComputeBackend,
         scratch: &mut ScratchArena,
     ) -> Result<Vec<f32>> {
+        self.forward_step(kv, token, pos, backend, scratch, true)
+    }
+
+    /// Updates all layer caches, optionally omitting the unused vocabulary projection.
+    pub(crate) fn forward_step(
+        &self,
+        kv: &mut KvStorage,
+        token: u32,
+        pos: usize,
+        backend: &dyn ComputeBackend,
+        scratch: &mut ScratchArena,
+        logits_required: bool,
+    ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         if pos >= cfg.max_seq {
             return Err(BitNetError::Inference(
@@ -1476,6 +1566,8 @@ impl LlamaModel {
         for (il, layer) in self.layers.iter().enumerate() {
             let mut h = scratch.take(n_embd);
             rmsnorm_into(&x, &layer.attn_norm, cfg.norm_eps, &mut h);
+            #[cfg(feature = "profile-llama")]
+            let qkv_span = super::profile::Span::new("qkv");
             let q = layer.wq.matvec_embd_out(&h, n_embd, n_embd)?;
             let k = layer
                 .wk
@@ -1483,6 +1575,8 @@ impl LlamaModel {
             let v = layer
                 .wv
                 .matvec_embd_out(&h, n_embd, cfg.n_kv * cfg.head_dim)?;
+            #[cfg(feature = "profile-llama")]
+            drop(qkv_span);
             scratch.recycle(h);
 
             let mut q_heads = q;
@@ -1530,19 +1624,33 @@ impl LlamaModel {
             let stride = cfg.n_kv * cfg.head_dim;
             kv.write_layer_kv(il, pos, &k_heads, &v, stride)?;
 
+            #[cfg(feature = "profile-llama")]
+            let attention_span = super::profile::Span::new("attention");
             let mut attn_out = scratch.take(n_embd);
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
             let sw_start = cfg.sliding_window_key_start(pos);
 
-            if matches!(
-                backend.kind(),
-                BackendKind::Cpu | BackendKind::Hybrid
-            ) {
+            let cuda_attention = matches!(backend.kind(), BackendKind::Cuda | BackendKind::Hybrid)
+                && !matches!(
+                    std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
+                    Ok("0" | "false" | "no")
+                )
+                && kv.attention_cuda(
+                    il,
+                    pos,
+                    sw_start,
+                    &q_heads,
+                    cfg.n_head,
+                    cfg.n_kv,
+                    cfg.head_dim,
+                    scale,
+                    &mut attn_out,
+                )?;
+            // Paged/quantized KV and older native libraries use the combined CPU path.
+            if !cuda_attention {
                 let use_blas_scores =
                     blas_runtime::blas_attention_enabled() && blas_runtime::blas_ready();
-                // SAFETY: `write_layer_kv` for this layer/position finished above; attention only
-                // reads KV for `il` and positions `0..=pos` until the next layer iteration.
-                let kv_ro: &KvStorage = unsafe { &*(kv as *mut KvStorage as *const KvStorage) };
+                let kv_ro: &KvStorage = kv;
                 let mut head_parts: Vec<(usize, Vec<f32>)> = (0..cfg.n_head)
                     .into_par_iter()
                     .map(|qh| {
@@ -1566,58 +1674,49 @@ impl LlamaModel {
                     let dst = qh * cfg.head_dim;
                     attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
                 }
-            } else {
-                for qh in 0..cfg.n_head {
-                    let kv_h = qh / n_rep;
-                    let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                    let mut scores: Vec<f32> = {
-                        let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
-                        kv.fill_k_rows_gpu(il, pos, kv_h, cfg.head_dim, stride, &mut k_mat);
-                        let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
-                        scratch.recycle(k_mat);
-                        for v in &mut s {
-                            *v *= scale;
-                        }
-                        mask_sliding_window_scores(&mut s, sw_start);
-                        s
-                    };
-                    softmax_inplace(&mut scores);
-                    let mut comb = scratch.take(cfg.head_dim);
-                    let mut v_values = scratch.take(cfg.head_dim);
-                    for p in 0..=pos {
-                        kv.fill_v_head_values(il, p, kv_h, cfg.head_dim, stride, &mut v_values);
-                        let sp = scores[p];
-                        for i in 0..cfg.head_dim {
-                            comb[i] += sp * v_values[i];
-                        }
-                    }
-                    let dst = qh * cfg.head_dim;
-                    attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
-                    scratch.recycle(scores);
-                    scratch.recycle(comb);
-                    scratch.recycle(v_values);
-                }
             }
 
+            #[cfg(feature = "profile-llama")]
+            drop(attention_span);
+            #[cfg(feature = "profile-llama")]
+            let attn_output_span = super::profile::Span::new("attn_output");
             let y = layer.wo.matvec_embd_out(&attn_out, n_embd, n_embd)?;
+            #[cfg(feature = "profile-llama")]
+            drop(attn_output_span);
             scratch.recycle(attn_out);
             add_residual_inplace(&mut x, &y);
 
             let mut h2 = scratch.take(n_embd);
             rmsnorm_into(&x, &layer.ffn_norm, cfg.norm_eps, &mut h2);
+            #[cfg(feature = "profile-llama")]
+            let gate_up_span = super::profile::Span::new("ffn_gate_up");
             let gate = layer.ffn_gate.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
             let up = layer.ffn_up.matvec_embd_out(&h2, n_embd, cfg.n_ff)?;
+            #[cfg(feature = "profile-llama")]
+            drop(gate_up_span);
             let mut tmp = scratch.take(cfg.n_ff);
             silu_mul_into(&gate, &up, &mut tmp);
             scratch.recycle(h2);
+            #[cfg(feature = "profile-llama")]
+            let down_span = super::profile::Span::new("ffn_down");
             let y2 = layer.ffn_down.matvec_ff(&tmp, cfg.n_ff, n_embd)?;
+            #[cfg(feature = "profile-llama")]
+            drop(down_span);
             scratch.recycle(tmp);
             add_residual_inplace(&mut x, &y2);
         }
 
+        if !logits_required {
+            scratch.recycle(x);
+            return Ok(Vec::new());
+        }
         let mut xn = scratch.take(n_embd);
         rmsnorm_into(&x, &self.output_norm, cfg.norm_eps, &mut xn);
+        #[cfg(feature = "profile-llama")]
+        let output_span = super::profile::Span::new("output");
         let logits = self.output.matvec_embd_out(&xn, n_embd, cfg.n_vocab);
+        #[cfg(feature = "profile-llama")]
+        drop(output_span);
         scratch.recycle(xn);
         scratch.recycle(x);
         logits
@@ -1626,7 +1725,28 @@ impl LlamaModel {
 
 #[cfg(test)]
 mod rope_norm_tests {
-    use super::rope_inplace;
+    use super::{rope_inplace, rope_inv_freq_from_factors};
+
+    #[test]
+    fn rope_gguf_factors_divide_analytic_frequencies() {
+        let got = rope_inv_freq_from_factors(&[1.0, 2.0, 4.0, 8.0], 8, 100.0).unwrap();
+        let expected = [1.0, 0.15811388, 0.025, 0.003952847];
+        for (a, b) in got.iter().zip(expected) {
+            assert!((a - b).abs() < 1e-7, "got {got:?}");
+        }
+    }
+
+    #[test]
+    fn rope_invalid_factors_are_rejected() {
+        for factors in [
+            [1.0, 0.0],
+            [1.0, -8.0],
+            [1.0, f32::NAN],
+            [1.0, f32::INFINITY],
+        ] {
+            assert!(rope_inv_freq_from_factors(&factors, 4, 100.0).is_err());
+        }
+    }
 
     #[test]
     fn rope_pos_zero_is_identity() {

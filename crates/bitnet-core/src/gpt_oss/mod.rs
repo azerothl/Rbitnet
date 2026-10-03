@@ -1,8 +1,7 @@
-//! OpenAI **gpt-oss** GGUF (`general.architecture = gptoss`).
+//! OpenAI **gpt-oss** GGUF (`general.architecture = gpt-oss`, alias `gptoss`).
 //!
-//! MXFP4 weights are supported at the GGML layer via [`crate::ggml::tensor_to_f32`].
-//! Llama-shaped tensors run on [`LlamaExecutor`] with reported family **`gptoss`**.
-//! Other layouts fail at load time with a clear error.
+//! Native biased attention with sinks, alternating windows, YaRN and MXFP4 MoE.
+//! CPU/CUDA/hybrid execution validates the real topology before readiness.
 
 mod config;
 mod dispatch;

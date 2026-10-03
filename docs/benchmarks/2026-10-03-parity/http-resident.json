@@ -1,0 +1,186 @@
+{
+  "rows": [
+    {
+      "mode": "greedy",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 64,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Eté, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791010238,
+        "id": "chatcmpl-1791010238",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 11,
+          "prompt_tokens": 51,
+          "total_tokens": 62
+        }
+      },
+      "stream_text": "Eté, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true
+    },
+    {
+      "mode": "sampling",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 64,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Café, été, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791010238,
+        "id": "chatcmpl-1791010238",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 12,
+          "prompt_tokens": 51,
+          "total_tokens": 63
+        }
+      },
+      "stream_text": "Café, été, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true
+    },
+    {
+      "mode": "penalties",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 64,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Eté, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791010239,
+        "id": "chatcmpl-1791010239",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 11,
+          "prompt_tokens": 51,
+          "total_tokens": 62
+        }
+      },
+      "stream_text": "Eté, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true
+    }
+  ],
+  "metrics": {
+    "rbitnet_chat_requests_total": 6.0,
+    "rbitnet_chat_errors_total": 0.0,
+    "rbitnet_inference_timeouts_total": 0.0,
+    "rbitnet_inference_ms_sum": 2114.0,
+    "rbitnet_inference_calls_total": 6.0,
+    "rbitnet_unauthorized_total": 0.0,
+    "rbitnet_model_unloads_total": 0.0,
+    "rbitnet_model_reloads_total": 0.0,
+    "rbitnet_model_reload_failures_total": 0.0,
+    "rbitnet_model_reload_ms_sum": 0.0,
+    "rbitnet_structured_output_validation_failures_total": 0.0,
+    "rbitnet_inference_ttft_ms_sum": 515.0,
+    "rbitnet_inference_ttft_ms_avg": 85.0,
+    "rbitnet_inference_decode_tokens_per_sec": 829.268293,
+    "rbitnet_inference_encode_ms_sum": 0.0,
+    "rbitnet_inference_prefill_ms_sum": 259.0,
+    "rbitnet_inference_decode_ms_sum": 82.0,
+    "rbitnet_inference_itl_us_sum": 7203.0,
+    "rbitnet_inference_tpot_us_sum": 7203.0,
+    "rbitnet_speculative_requests_total": 0.0,
+    "rbitnet_completion_tokens_total": 68.0,
+    "rbitnet_native_accelerated_calls_total": 6.0,
+    "rbitnet_core_quant_matvec_calls_total": 0.0,
+    "rbitnet_core_quant_matvec_rows_total": 0.0,
+    "rbitnet_core_quant_matvec_ns_total": 0.0,
+    "rbitnet_core_gpu_upload_bytes_total": 802657752.0,
+    "rbitnet_core_gpu_download_bytes_total": 25651296.0,
+    "rbitnet_core_gpu_gemv_calls_total": 41962.0,
+    "rbitnet_core_gpu_attention_calls_total": 5984.0,
+    "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+    "rbitnet_core_scratch_reuse_hits_total": 0.0,
+    "rbitnet_core_kv_write_bytes_total": 0.0,
+    "rbitnet_core_kv_physical_pages": 0.0,
+    "rbitnet_core_kv_new_physical_pages_total": 0.0,
+    "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+    "rbitnet_core_kv_quant_format_code": 0.0,
+    "rbitnet_core_kv_pool_active_seqs": 0.0,
+    "rbitnet_core_kv_pool_allocated_pages": 0.0,
+    "rbitnet_core_kv_pool_free_pages": 0.0,
+    "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+    "rbitnet_core_model_load_ms_total": 77.0,
+    "rbitnet_core_model_loads_total": 1.0,
+    "rbitnet_core_scheduler_batches_total": 0.0,
+    "rbitnet_core_scheduler_batch_items_total": 0.0,
+    "rbitnet_core_prefix_cache_hits_total": 0.0,
+    "rbitnet_core_prefix_hit": 0.0,
+    "rbitnet_core_prefix_cache_misses_total": 0.0,
+    "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+    "rbitnet_core_speculative_draft_tokens_total": 0.0,
+    "rbitnet_core_speculative_verified_tokens_total": 0.0,
+    "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+    "rbitnet_core_draft_accept": 0.0,
+    "rbitnet_core_cuda_graph_replays_total": 374.0,
+    "rbitnet_core_scheduler_decode_waves_total": 0.0,
+    "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+    "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+    "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+    "rbitnet_core_memory_budget_checks_total": 1.0,
+    "rbitnet_core_memory_budget_refusals_total": 0.0,
+    "rbitnet_core_memory_budget_estimated_load_bytes": 9389797504.0,
+    "rbitnet_core_memory_budget_weight_bytes": 799862912.0,
+    "rbitnet_core_memory_budget_kv_estimate_bytes": 8589934592.0,
+    "rbitnet_process_vram_bytes": 0.0
+  }
+}

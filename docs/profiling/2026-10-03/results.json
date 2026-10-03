@@ -1,0 +1,1367 @@
+{
+  "format": "rbitnet-performance-diagnosis-v1",
+  "archived_at_utc": "2026-10-02T23:29:33.935547+00:00",
+  "environment": {
+    "ollama_kv_dtype": "default f16",
+    "ram_bytes": 66157723648,
+    "driver": "610.88",
+    "ollama_version": "0.35.0",
+    "llama_rbitnet_kv_dtype": "f32",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "logical_cores": 16,
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "gpu_vram_mib": 16376,
+    "llama_cpp_build": "b11351",
+    "llama_cpp_commit": "631109b34",
+    "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+    "rbitnet_commit": "7eca9adb8e41aaa45d0e19aa0bf2534b0375cb8e",
+    "os": "Microsoft Windows NT 10.0.26220.0",
+    "physical_cores": 8,
+    "ollama_scenario_note": "Llama used the existing idle daemon; the other models used an isolated Ollama 0.35.0 daemon with NUM_PARALLEL=1 and MAX_LOADED_MODELS=1.",
+    "binary_sha256": {
+      "rbitnet": "b4d2344d1ee150313b400f14dc3f387584a3fb3798bf9a9d36b2ada2c81d6684",
+      "llama_cpp_cpu": "b2d560492f8cf9a73423bc61d40289ff26e9e7478c62140cf6c10c4e6f468960",
+      "llama_cpp_cuda12_4": "b2d560492f8cf9a73423bc61d40289ff26e9e7478c62140cf6c10c4e6f468960",
+      "rbitnet_cuda_quant": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e"
+    }
+  },
+  "summary": [
+    {
+      "variant": "cpu",
+      "decode_tps_median": 1.531991483442975,
+      "decode_ms_per_token": 652.936865625,
+      "prefill_ms_median": 22561.0924,
+      "qkv_ms_per_token": 58.954553125000004,
+      "attn_output_ms_per_token": 36.782228125,
+      "ffn_gate_up_ms_per_token": 281.97760625,
+      "ffn_down_ms_per_token": 146.15596875,
+      "attention_ms_per_token": 1.80665625,
+      "output_ms_per_token": 126.48139375,
+      "other_ms_per_token": 0.7784593750000113
+    },
+    {
+      "variant": "cuda-default",
+      "decode_tps_median": 4.22697377255127,
+      "decode_ms_per_token": 236.8376,
+      "prefill_ms_median": 7063.89245,
+      "qkv_ms_per_token": 17.458581249999998,
+      "attn_output_ms_per_token": 5.1194749999999996,
+      "ffn_gate_up_ms_per_token": 14.13195625,
+      "ffn_down_ms_per_token": 23.80369375,
+      "attention_ms_per_token": 51.15115,
+      "output_ms_per_token": 124.42229375,
+      "other_ms_per_token": 0.7504500000000007
+    },
+    {
+      "variant": "cuda-output",
+      "decode_tps_median": 16.826566491766563,
+      "decode_ms_per_token": 59.43115625,
+      "prefill_ms_median": 1909.15215,
+      "qkv_ms_per_token": 6.605071875,
+      "attn_output_ms_per_token": 2.00236875,
+      "ffn_gate_up_ms_per_token": 4.39116875,
+      "ffn_down_ms_per_token": 7.496515625000001,
+      "attention_ms_per_token": 34.318068749999995,
+      "output_ms_per_token": 3.9755031250000004,
+      "other_ms_per_token": 0.6424593750000014
+    },
+    {
+      "variant": "cuda-cpu-attention",
+      "decode_tps_median": 5.509130959846237,
+      "decode_ms_per_token": 181.613853125,
+      "prefill_ms_median": 5978.31855,
+      "qkv_ms_per_token": 16.167909375,
+      "attn_output_ms_per_token": 5.558378125,
+      "ffn_gate_up_ms_per_token": 11.72965625,
+      "ffn_down_ms_per_token": 20.69946875,
+      "attention_ms_per_token": 1.5441500000000001,
+      "output_ms_per_token": 125.2552625,
+      "other_ms_per_token": 0.6590281249999919
+    },
+    {
+      "variant": "cuda-output-cpu-attention",
+      "decode_tps_median": 36.00582273590474,
+      "decode_ms_per_token": 27.852425,
+      "prefill_ms_median": 966.5976499999999,
+      "qkv_ms_per_token": 6.92120625,
+      "attn_output_ms_per_token": 2.740365625,
+      "ffn_gate_up_ms_per_token": 4.67724375,
+      "ffn_down_ms_per_token": 7.4794406250000005,
+      "attention_ms_per_token": 1.387453125,
+      "output_ms_per_token": 4.03753125,
+      "other_ms_per_token": 0.6091843750000017
+    },
+    {
+      "variant": "cuda-dense-output-cpu-attention",
+      "decode_tps_median": 61.09003791660405,
+      "decode_ms_per_token": 16.40784375,
+      "prefill_ms_median": 604.724,
+      "qkv_ms_per_token": 3.397446875,
+      "attn_output_ms_per_token": 1.7711062499999999,
+      "ffn_gate_up_ms_per_token": 5.251503124999999,
+      "ffn_down_ms_per_token": 2.55366875,
+      "attention_ms_per_token": 1.150946875,
+      "output_ms_per_token": 1.693446875,
+      "other_ms_per_token": 0.5897250000000014
+    }
+  ],
+  "records": [
+    {
+      "attention_backend": "cpu",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 25.5518,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 1808,
+            "cpu_quant_ns": 10222375700,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 10267.9737,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 26719900
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 570816000
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 2294073600
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 4418076700
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 2012515900
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 933535100
+            }
+          },
+          "decode_tps": 1.558243180930625,
+          "prefill_counters": {
+            "cpu_quant_calls": 4068,
+            "cpu_quant_ns": 22118712100,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 22209.4338,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 52764400
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 1236883100
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 4950386700
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 9569831200
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4389939100
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 1985911200
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 1808,
+            "cpu_quant_ns": 10575376800,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 10626.006,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 31093100
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 606215300
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 2382917400
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 4605206700
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 2034888700
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 953010600
+            }
+          },
+          "decode_tps": 1.505739785955325,
+          "prefill_counters": {
+            "cpu_quant_calls": 4068,
+            "cpu_quant_ns": 22817890600,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 22912.751,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 56198600
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 1289513800
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 5173911100
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 9873151500
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4421430800
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 2074463500
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "0",
+      "weight_mode": "auto",
+      "weights_backend": "cpu",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "162c762bffd1613e2d39c82d7565931e5f72a819edacede1d29e45f0f2f437a7",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cpu"
+    },
+    {
+      "attention_backend": "cuda",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 520.9713,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 16,
+            "cpu_quant_ns": 1992230400,
+            "gpu_cublas_gemv_calls": 8192,
+            "gpu_download_bytes": 1458176,
+            "gpu_upload_bytes": 95420416
+          },
+          "decode_ms": 3663.4303,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 758289200
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 76797100
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 353918700
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 215497600
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 1992370300
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 253906400
+            }
+          },
+          "decode_tps": 4.367491309988893,
+          "prefill_counters": {
+            "cpu_quant_calls": 36,
+            "cpu_quant_ns": 4309465500,
+            "gpu_cublas_gemv_calls": 18432,
+            "gpu_download_bytes": 1363968,
+            "gpu_upload_bytes": 92012544
+          },
+          "prefill_ms": 6242.6103,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 1037270500
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 85607700
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 328876100
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 181526400
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4309741900
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 277879700
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 16,
+            "cpu_quant_ns": 1989002700,
+            "gpu_cublas_gemv_calls": 8192,
+            "gpu_download_bytes": 1458176,
+            "gpu_upload_bytes": 95420416
+          },
+          "decode_ms": 3915.3729,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 878547600
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 87026100
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 407799500
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 236725000
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 1989143100
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 304768200
+            }
+          },
+          "decode_tps": 4.086456235113647,
+          "prefill_counters": {
+            "cpu_quant_calls": 36,
+            "cpu_quant_ns": 4244654900,
+            "gpu_cublas_gemv_calls": 18432,
+            "gpu_download_bytes": 1363968,
+            "gpu_upload_bytes": 92012544
+          },
+          "prefill_ms": 7885.1746,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 1353278000
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 189851300
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 910297100
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 505350700
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4244958300
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 660354500
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "0",
+      "weight_mode": "auto",
+      "weights_backend": "cuda",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "162c762bffd1613e2d39c82d7565931e5f72a819edacede1d29e45f0f2f437a7",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cuda-default"
+    },
+    {
+      "attention_backend": "cuda",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 532.4891,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 8192,
+            "gpu_download_bytes": 1458176,
+            "gpu_upload_bytes": 95420416
+          },
+          "decode_ms": 946.4078999999999,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 539890600
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 32588600
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 121355800
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 70929300
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 62758000
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 107921600
+            }
+          },
+          "decode_tps": 16.90602963056416,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 18432,
+            "gpu_download_bytes": 1363968,
+            "gpu_upload_bytes": 92012544
+          },
+          "prefill_ms": 1871.4457,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 987419800
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 72239000
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 263250200
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 152934400
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 142756400
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 235484200
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 8192,
+            "gpu_download_bytes": 1458176,
+            "gpu_upload_bytes": 95420416
+          },
+          "decode_ms": 955.3891,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 558287600
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 31487200
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 118532700
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 69588100
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 64458100
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 103440700
+            }
+          },
+          "decode_tps": 16.747103352968963,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 18432,
+            "gpu_download_bytes": 1363968,
+            "gpu_upload_bytes": 92012544
+          },
+          "prefill_ms": 1946.8586,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 1043450000
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 74825100
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 268091300
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 159328800
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 141806100
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 237713300
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "1",
+      "weight_mode": "auto",
+      "weights_backend": "cuda",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "162c762bffd1613e2d39c82d7565931e5f72a819edacede1d29e45f0f2f437a7",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cuda-output"
+    },
+    {
+      "attention_backend": "cpu",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 408.1288,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 16,
+            "cpu_quant_ns": 2036509400,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 2838.6591000000003,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 25161000
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 80249500
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 281070900
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 168144600
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 2036593500
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 236674000
+            }
+          },
+          "decode_tps": 5.636464061500023,
+          "prefill_counters": {
+            "cpu_quant_calls": 36,
+            "cpu_quant_ns": 4632137700,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 5582.6708,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 53765100
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 106612100
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 298870400
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 189489600
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4632341700
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 279166200
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 16,
+            "cpu_quant_ns": 1971490900,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 2972.9842,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 24251800
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 97618600
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 381312100
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 207204400
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 1971574900
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 280699100
+            }
+          },
+          "decode_tps": 5.381797858192452,
+          "prefill_counters": {
+            "cpu_quant_calls": 36,
+            "cpu_quant_ns": 4294451800,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 6373.9663,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 54280300
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 204979000
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 744540600
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 470818700
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 4294631000
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 584067700
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "0",
+      "weight_mode": "auto",
+      "weights_backend": "cuda",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "162c762bffd1613e2d39c82d7565931e5f72a819edacede1d29e45f0f2f437a7",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cuda-cpu-attention"
+    },
+    {
+      "attention_backend": "cpu",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 501.409,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 421.88419999999996,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 18058700
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 40198200
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 116127500
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 69953600
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 63520000
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 105280200
+            }
+          },
+          "decode_tps": 37.92509887784373,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 975.4821999999999,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 42725300
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 95868300
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 264921400
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 166375300
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 143568100
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 242599900
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "decode_ms": 469.39340000000004,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 26339800
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 47493500
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 123214600
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 79718200
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 65681000
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 116198400
+            }
+          },
+          "decode_tps": 34.08654659396574,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 0,
+            "gpu_download_bytes": 0,
+            "gpu_upload_bytes": 0
+          },
+          "prefill_ms": 957.7130999999999,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 39188900
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 91772700
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 265299900
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 160510700
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 141213900
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 241999200
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "1",
+      "weight_mode": "auto",
+      "weights_backend": "cuda",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "162c762bffd1613e2d39c82d7565931e5f72a819edacede1d29e45f0f2f437a7",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cuda-output-cpu-attention"
+    },
+    {
+      "attention_backend": "cpu",
+      "cuda_dense_ablation": "1",
+      "format": "rbitnet-llama-profile-v1",
+      "load_ms": 1880.3683,
+      "max_seq": 8192,
+      "measurements": [
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 1808,
+            "gpu_download_bytes": 32325632,
+            "gpu_upload_bytes": 21102592
+          },
+          "decode_ms": 275.25260000000003,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 19509200
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 30802700
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 42407200
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 88389900
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 25927900
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 58336700
+            }
+          },
+          "decode_tps": 58.128424581638825,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 4068,
+            "gpu_download_bytes": 72732672,
+            "gpu_upload_bytes": 47480832
+          },
+          "prefill_ms": 599.2294,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 39162100
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 68121500
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 91078800
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 194462600
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 58137600
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 129905200
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 0,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        },
+        {
+          "completion_tokens": 16,
+          "decode_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 1808,
+            "gpu_download_bytes": 32325632,
+            "gpu_upload_bytes": 21102592
+          },
+          "decode_ms": 249.79840000000002,
+          "decode_stages": {
+            "attention": {
+              "calls": 256,
+              "elapsed_ns": 17321100
+            },
+            "attn_output": {
+              "calls": 256,
+              "elapsed_ns": 25872700
+            },
+            "ffn_down": {
+              "calls": 256,
+              "elapsed_ns": 39310200
+            },
+            "ffn_gate_up": {
+              "calls": 256,
+              "elapsed_ns": 79658200
+            },
+            "output": {
+              "calls": 16,
+              "elapsed_ns": 28262400
+            },
+            "qkv": {
+              "calls": 256,
+              "elapsed_ns": 50381600
+            }
+          },
+          "decode_tps": 64.05165125156927,
+          "prefill_counters": {
+            "cpu_quant_calls": 0,
+            "cpu_quant_ns": 0,
+            "gpu_cublas_gemv_calls": 4068,
+            "gpu_download_bytes": 72732672,
+            "gpu_upload_bytes": 47480832
+          },
+          "prefill_ms": 610.2186,
+          "prefill_stages": {
+            "attention": {
+              "calls": 576,
+              "elapsed_ns": 41605600
+            },
+            "attn_output": {
+              "calls": 576,
+              "elapsed_ns": 67416700
+            },
+            "ffn_down": {
+              "calls": 576,
+              "elapsed_ns": 94224600
+            },
+            "ffn_gate_up": {
+              "calls": 576,
+              "elapsed_ns": 193369400
+            },
+            "output": {
+              "calls": 36,
+              "elapsed_ns": 62945400
+            },
+            "qkv": {
+              "calls": 576,
+              "elapsed_ns": 131527700
+            }
+          },
+          "prompt_tokens": 36,
+          "repetition": 1,
+          "text": "As the sun rose over the forest, a lone robot named Zeta stirred to",
+          "token_ids": [
+            2170,
+            279,
+            7160,
+            16392,
+            927,
+            279,
+            13952,
+            11,
+            264,
+            47766,
+            12585,
+            7086,
+            1901,
+            1955,
+            75940,
+            311
+          ]
+        }
+      ],
+      "output_offload": "1",
+      "weight_mode": "auto",
+      "weights_backend": "cuda",
+      "provenance": {
+        "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+        "prompts_sha256": "6ba3da176584eb2a27535468cadfce1741c62cada7cb998556220a6f56bcc3a1",
+        "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+        "binary_sha256": "3cbd725bb93bcc3bea281119aad2549c5d667c1b6b9c6a79a25322090d2179ab",
+        "cuda_lib_sha256": "515bb6ad4c87e541e1415f0c9bca81d3f2f78cb04ff5a8ca8c0356347e2b3a1e",
+        "source_base": "27828be3e353ff80511d459e24f09841c5dd1ef8",
+        "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+        "note": "source_base plus opt-in profiling instrumentation; no production optimization"
+      },
+      "variant": "cuda-dense-output-cpu-attention"
+    }
+  ],
+  "validation": {
+    "same_greedy_ids_all_samples": true,
+    "sample_count": 12,
+    "reference_text_prefix_matches": true,
+    "stage_and_counter_counts_match": true
+  },
+  "counter_note": "gpu_cublas_gemv_calls excludes native quant GEMV; native quant copy traffic is not included in perf GPU byte counters.",
+  "protocol_note": "Direct real forward, 36 prompt tokens from throughput-1, 16 generated tokens, two repeats, three-token warmup excluded, F32 dense KV/max_seq 8192; includes final unused forward to match current runtime. HTTP, tokenization and sampling excluded; CPU-attention and F32 CUDA variants are diagnostics, not shipped optimizations."
+}

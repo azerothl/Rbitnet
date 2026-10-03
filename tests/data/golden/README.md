@@ -52,3 +52,15 @@ cargo test -p bitnet-core --test qwen3_dense_golden_ci -- --nocapture
 ```
 
 See also `scripts/run-golden-test.sh` and `scripts/run-golden-test.ps1`.
+
+## Llama 3.2 multi-token reference
+
+`llama32-1b-instruct-q4-k-m.sequence.json` uses `rbitnet-llama-sequence-v1`: five cases
+with `name`, formatted `prompt`, `prompt_ids`, reference `greedy_ids` (including EOT) and
+decoded `text`. These are outputs from llama.cpp b11351 on the pinned GGUF, not example IDs.
+The file records the GGUF and tokenizer SHA-256 values.
+
+`optional_llama_sequence` checks every greedy token, text, stop behavior and BOS count.
+See [the run instructions](../../../docs/GOLDEN_TESTS.md) for the three required absolute
+file paths. Without those environment variables the real-model test skips; the default CI
+kernel and tokenizer regressions still run.

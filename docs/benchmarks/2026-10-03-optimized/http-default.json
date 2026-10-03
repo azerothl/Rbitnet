@@ -1,0 +1,694 @@
+{
+  "kind": "ordinary-http-chat-validation-v1",
+  "source_commit": "817850ade2ebfdc3c47e85c85337ee96a91a8f95",
+  "binaries": {
+    "rbitnet": {
+      "path": "<repo>\\target\\release\\rbitnet.exe",
+      "sha256": "04758058c7de3f401e75448c08489acf0b6f95bef08e25ee821f835f1d8397bf"
+    },
+    "cuda_quant_library": {
+      "path": "<repo>\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+      "sha256": "373365b17aee9678fd0e961c7f18f352054989453e65aa742b1f28246e5e5a93"
+    }
+  },
+  "note": "RBITNET_CHAT_TEMPLATE and RBITNET_CHAT_FORMAT unset; templates discovered automatically from GGUF. wall_ms covers all three requests in each model probe, not individual request latency. French responses are qualitative examples, not scored benchmark questions.",
+  "rows": [
+    {
+      "french_request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Explique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "french_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "La glace fond lorsqu'on la chauffe parce que sa température augmente, ce qui provoque une réduction de sa densité et de sa viscosité, entraînant ainsi sa dissipation.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988656,
+        "id": "chatcmpl-1790988656",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 45,
+          "prompt_tokens": 58,
+          "total_tokens": 103
+        }
+      },
+      "model": "llama32-1b",
+      "backend": "cuda",
+      "gguf_template_enabled": true,
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "What is the capital of France? Answer in one word."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988654,
+        "id": "chatcmpl-1790988654",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 47,
+          "total_tokens": 48
+        }
+      },
+      "wall_ms": 4125.0,
+      "stream_text": "Paris",
+      "stream_done": true,
+      "sse": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null,\"index\":0}],\"created\":1790988654,\"id\":\"chatcmpl-stream-1790988654\",\"model\":\"llama32-1b\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null,\"index\":0}],\"created\":1790988654,\"id\":\"chatcmpl-stream-1790988654\",\"model\":\"llama32-1b\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790988654,\"id\":\"chatcmpl-stream-1790988654\",\"model\":\"llama32-1b\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n",
+      "metrics": {
+        "rbitnet_chat_requests_total": 3.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 4109.0,
+        "rbitnet_inference_calls_total": 3.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 2523.0,
+        "rbitnet_inference_ttft_ms_avg": 841.0,
+        "rbitnet_inference_decode_tokens_per_sec": 56.900726,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 1755.0,
+        "rbitnet_inference_decode_ms_sum": 826.0,
+        "rbitnet_inference_itl_us_sum": 35955.0,
+        "rbitnet_inference_tpot_us_sum": 35955.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 47.0,
+        "rbitnet_native_accelerated_calls_total": 3.0,
+        "rbitnet_core_quant_matvec_calls_total": 4179.0,
+        "rbitnet_core_quant_matvec_rows_total": 14060544.0,
+        "rbitnet_core_quant_matvec_ns_total": 1202788300.0,
+        "rbitnet_core_gpu_upload_bytes_total": 939233280.0,
+        "rbitnet_core_gpu_download_bytes_total": 295450624.0,
+        "rbitnet_core_gpu_gemv_calls_total": 18159.0,
+        "rbitnet_core_gpu_attention_calls_total": 3184.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 114688.0,
+        "rbitnet_core_scratch_reuse_hits_total": 12980.0,
+        "rbitnet_core_kv_write_bytes_total": 13041664.0,
+        "rbitnet_core_kv_physical_pages": 16.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 75.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 9389797504.0,
+        "rbitnet_core_memory_budget_weight_bytes": 799862912.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 8589934592.0,
+        "rbitnet_process_vram_bytes": 0.0
+      }
+    },
+    {
+      "french_request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Explique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "french_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "La glace fond lorsqu'on la chauffe car l'énergie thermique transférée augmente l'agitation moléculaire de la structure cristalline. Cette augmentation de l'énergie permet aux liaisons hydrogène qui maintiennent la glace en place de se rompre, provoquant ainsi une transition de phase vers l'état liquide.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988663,
+        "id": "chatcmpl-1790988663",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 67,
+          "prompt_tokens": 32,
+          "total_tokens": 99
+        }
+      },
+      "model": "qwen35-2b",
+      "backend": "cuda",
+      "gguf_template_enabled": true,
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "What is the capital of France? Answer in one word."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988660,
+        "id": "chatcmpl-1790988660",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 24,
+          "total_tokens": 25
+        }
+      },
+      "wall_ms": 3859.0000000112923,
+      "stream_text": "Paris",
+      "stream_done": true,
+      "sse": "data: {\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null,\"index\":0}],\"created\":1790988660,\"id\":\"chatcmpl-stream-1790988660\",\"model\":\"qwen35-2b\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790988660,\"id\":\"chatcmpl-stream-1790988660\",\"model\":\"qwen35-2b\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n",
+      "metrics": {
+        "rbitnet_chat_requests_total": 3.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 3827.0,
+        "rbitnet_inference_calls_total": 3.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 1931.0,
+        "rbitnet_inference_ttft_ms_avg": 643.0,
+        "rbitnet_inference_decode_tokens_per_sec": 37.540805,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 1354.0,
+        "rbitnet_inference_decode_ms_sum": 1838.0,
+        "rbitnet_inference_itl_us_sum": 55014.0,
+        "rbitnet_inference_tpot_us_sum": 55014.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 69.0,
+        "rbitnet_native_accelerated_calls_total": 3.0,
+        "rbitnet_core_quant_matvec_calls_total": 5364.0,
+        "rbitnet_core_quant_matvec_rows_total": 85824.0,
+        "rbitnet_core_quant_matvec_ns_total": 219019000.0,
+        "rbitnet_core_gpu_upload_bytes_total": 2252627968.0,
+        "rbitnet_core_gpu_download_bytes_total": 419389440.0,
+        "rbitnet_core_gpu_gemv_calls_total": 22422.0,
+        "rbitnet_core_gpu_attention_calls_total": 894.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 2008.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 2001050880.0,
+        "rbitnet_core_memory_budget_weight_bytes": 2001050880.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_vram_bytes": 0.0
+      }
+    },
+    {
+      "french_request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Explique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "french_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "La glace fond lorsqu’on la chauffe parce que l’énergie thermique augmente les vibrations des molécules d’eau, les forçant à surmonter les liaisons solides qui les maintiennent en état solide. Au moment où l’énergie fournie dépasse la chaleur latente de fusion, les molécules se libèrent de leur réseau cristallin et passent à l’état liquide.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988689,
+        "id": "chatcmpl-1790988689",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 90,
+          "prompt_tokens": 87,
+          "total_tokens": 177
+        }
+      },
+      "model": "gpt-oss-20b",
+      "backend": "cuda",
+      "gguf_template_enabled": true,
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "What is the capital of France? Answer in one word."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988677,
+        "id": "chatcmpl-1790988677",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 15,
+          "prompt_tokens": 79,
+          "total_tokens": 94
+        }
+      },
+      "wall_ms": 16000.0,
+      "stream_text": "Paris",
+      "stream_done": true,
+      "sse": "data: {\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null,\"index\":0}],\"created\":1790988677,\"id\":\"chatcmpl-stream-1790988677\",\"model\":\"gpt-oss-20b\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790988677,\"id\":\"chatcmpl-stream-1790988677\",\"model\":\"gpt-oss-20b\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n",
+      "metrics": {
+        "rbitnet_chat_requests_total": 3.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 15950.0,
+        "rbitnet_inference_calls_total": 3.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 10434.0,
+        "rbitnet_inference_ttft_ms_avg": 3478.0,
+        "rbitnet_inference_decode_tokens_per_sec": 24.635598,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 6999.0,
+        "rbitnet_inference_decode_ms_sum": 4871.0,
+        "rbitnet_inference_itl_us_sum": 92066.0,
+        "rbitnet_inference_tpot_us_sum": 92066.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 120.0,
+        "rbitnet_native_accelerated_calls_total": 3.0,
+        "rbitnet_core_quant_matvec_calls_total": 8760.0,
+        "rbitnet_core_quant_matvec_rows_total": 280320.0,
+        "rbitnet_core_quant_matvec_ns_total": 511759200.0,
+        "rbitnet_core_gpu_upload_bytes_total": 13017181440.0,
+        "rbitnet_core_gpu_download_bytes_total": 1733761536.0,
+        "rbitnet_core_gpu_gemv_calls_total": 140283.0,
+        "rbitnet_core_gpu_attention_calls_total": 8760.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 9315.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_weight_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_vram_bytes": 0.0
+      }
+    },
+    {
+      "french_request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Explique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "french_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "La glace fond car la chaleur augmente l'énergie cinétique des molécules, ce qui rompt les liaisons hydrogène qui les maintiennent ensemble. Cette agitation thermique permet aux molécules de se déplacer librement, transformant la matière solide en liquide.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988728,
+        "id": "chatcmpl-1790988728",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 61,
+          "prompt_tokens": 27,
+          "total_tokens": 88
+        }
+      },
+      "model": "glm47-flash",
+      "backend": "cuda",
+      "gguf_template_enabled": true,
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "What is the capital of France? Answer in one word."
+          }
+        ],
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1790988714,
+        "id": "chatcmpl-1790988714",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 17,
+          "total_tokens": 18
+        }
+      },
+      "wall_ms": 16532.00000000652,
+      "stream_text": "Paris",
+      "stream_done": true,
+      "sse": "data: {\"choices\":[{\"delta\":{\"content\":\"Paris\"},\"finish_reason\":null,\"index\":0}],\"created\":1790988714,\"id\":\"chatcmpl-stream-1790988714\",\"model\":\"glm47-flash\",\"object\":\"chat.completion.chunk\"}\n\ndata: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1790988714,\"id\":\"chatcmpl-stream-1790988714\",\"model\":\"glm47-flash\",\"object\":\"chat.completion.chunk\"}\n\ndata: [DONE]\n\n",
+      "metrics": {
+        "rbitnet_chat_requests_total": 3.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 16484.0,
+        "rbitnet_inference_calls_total": 3.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 8061.0,
+        "rbitnet_inference_ttft_ms_avg": 2687.0,
+        "rbitnet_inference_decode_tokens_per_sec": 7.578492,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 6062.0,
+        "rbitnet_inference_decode_ms_sum": 8313.0,
+        "rbitnet_inference_itl_us_sum": 257262.0,
+        "rbitnet_inference_tpot_us_sum": 257262.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 63.0,
+        "rbitnet_native_accelerated_calls_total": 3.0,
+        "rbitnet_core_quant_matvec_calls_total": 26536.0,
+        "rbitnet_core_quant_matvec_rows_total": 35918336.0,
+        "rbitnet_core_quant_matvec_ns_total": 4803420900.0,
+        "rbitnet_core_gpu_upload_bytes_total": 14224425984.0,
+        "rbitnet_core_gpu_download_bytes_total": 1289157632.0,
+        "rbitnet_core_gpu_gemv_calls_total": 100134.0,
+        "rbitnet_core_gpu_attention_calls_total": 5828.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 19353.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 18302863872.0,
+        "rbitnet_core_memory_budget_weight_bytes": 18302863872.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_vram_bytes": 0.0
+      }
+    }
+  ],
+  "llama_french_reference": {
+    "model": "llama32-1b",
+    "engine": "llama.cpp",
+    "backend": "gpu",
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nExplique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+    "prompt_ids": [
+      128000,
+      128006,
+      9125,
+      128007,
+      271,
+      38766,
+      1303,
+      33025,
+      2696,
+      25,
+      6790,
+      220,
+      2366,
+      18,
+      198,
+      15724,
+      2696,
+      25,
+      220,
+      2839,
+      5020,
+      220,
+      2366,
+      21,
+      271,
+      128009,
+      128006,
+      882,
+      128007,
+      271,
+      45053,
+      2428,
+      665,
+      26633,
+      32847,
+      87320,
+      1208,
+      2840,
+      580,
+      21901,
+      37953,
+      447,
+      54386,
+      1208,
+      74817,
+      68,
+      13,
+      51223,
+      3595,
+      82,
+      665,
+      55467,
+      13,
+      128009,
+      128006,
+      78191,
+      128007,
+      271
+    ],
+    "request": {
+      "model": "llama32-1b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Explique en deux phrases pourquoi la glace fond lorsqu'on la chauffe. Réponds en français."
+        }
+      ],
+      "temperature": 0,
+      "max_tokens": 256
+    },
+    "reference": {
+      "text": "La glace fond lorsqu'on la chauffe parce que sa température augmente, ce qui provoque une réduction de sa densité et de sa viscosité, entraînant ainsi une diminution de sa pression de surface et une rupture de la surface de la glace.",
+      "prompt_tokens": 58,
+      "completion_tokens": 62,
+      "prefill_ms": 10.694,
+      "decode_ms": 123.302,
+      "cached_prompt_tokens": 119,
+      "stopped_eos": true,
+      "raw_timing": {
+        "cache_n": 0,
+        "prompt_n": 58,
+        "prompt_ms": 10.694,
+        "prompt_per_token_ms": 0.1843793103448276,
+        "prompt_per_second": 5423.6020198242,
+        "predicted_n": 62,
+        "predicted_ms": 123.302,
+        "predicted_per_token_ms": 2.021344262295082,
+        "predicted_per_second": 494.7202802874244
+      },
+      "wall_ms": 135.5905999953393,
+      "expected_prompt_tokens": 58,
+      "prompt_count_matches": true,
+      "decode_tokens_per_second": 502.8304488167264,
+      "wall_tokens_per_second": 457.25883654273343
+    },
+    "rbitnet": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "message": {
+            "content": "La glace fond lorsqu'on la chauffe parce que sa température augmente, ce qui provoque une réduction de sa densité et de sa viscosité, entraînant ainsi sa dissipation.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1790988656,
+      "id": "chatcmpl-1790988656",
+      "model": "llama32-1b",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 58,
+        "total_tokens": 103
+      }
+    },
+    "identical_content": false,
+    "prompt_count_matches_rbitnet": true
+  }
+}

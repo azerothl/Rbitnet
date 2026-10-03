@@ -60,7 +60,7 @@ fn meta_req_i64(
     key: &str,
     label: &str,
 ) -> Result<i64> {
-    metadata_i64(md, key).ok_or_else(|| {
+    metadata_i64(md, key).filter(|&v| v > 0).ok_or_else(|| {
         BitNetError::Inference(format!(
             "missing or invalid GGUF metadata `{key}` for {label}"
         ))
@@ -80,28 +80,8 @@ pub fn kv_prefix_from_arch(arch_key: &str) -> Result<String> {
     match trimmed.as_str() {
         "qwen35moe" | "qwen35" => Ok(format!("{}.", trimmed)),
         _ => Err(BitNetError::Inference(
-            "unsupported qwen GGUF architecture key — expected qwen35moe".into(),
+            "unsupported qwen GGUF architecture key — expected qwen35 or qwen35moe".into(),
         )),
-    }
-}
-
-fn infer_blk_count(archive: &GgufArchive) -> usize {
-    let mut m = None;
-    let mut max_i: i64 = -1;
-    for t in &archive.tensors {
-        let parts: Vec<&str> = t.name.split('.').collect();
-        if parts.len() >= 2 && parts[0] == "blk" && parts[1].bytes().all(|b| b.is_ascii_digit()) {
-            let i: i64 = parts[1].parse().unwrap_or(-1);
-            if i >= 0 {
-                max_i = max_i.max(i);
-                m.get_or_insert(0);
-            }
-        }
-    }
-    if max_i >= 0 {
-        (max_i + 1) as usize
-    } else {
-        m.unwrap_or(0)
     }
 }
 
@@ -130,27 +110,26 @@ impl Qwen35Config {
         };
 
         let blk_meta = meta_req_i64(md, &format!("{}{}", kv_prefix, "block_count"), "layers")?;
-        let blk_inf = infer_blk_count(archive) as i64;
-
-        let n_layer_i = if blk_inf > 0 {
-            std::cmp::max(blk_meta, blk_inf)
-        } else {
-            blk_meta
-        };
+        // Extra MTP tensors are not autoregressive trunk layers.
+        let n_layer_i = blk_meta;
 
         let ctx_len = meta_req_i64(md, &format!("{}{}", kv_prefix, "context_length"), "context")?;
 
-        let n_expert_i = meta_req_i64(
-            md,
-            &format!("{}{}", kv_prefix, "expert_count"),
-            "moe experts",
-        )?;
-
-        let n_expert_used_i = meta_req_i64(
-            md,
-            &format!("{}{}", kv_prefix, "expert_used_count"),
-            "moe routed experts",
-        )?;
+        let dense = raw_arch == "qwen35";
+        let n_expert_i = if dense {
+            0
+        } else {
+            meta_req_i64(md, &format!("{}expert_count", kv_prefix), "moe experts")?
+        };
+        let n_expert_used_i = if dense {
+            0
+        } else {
+            meta_req_i64(
+                md,
+                &format!("{}expert_used_count", kv_prefix),
+                "moe routed experts",
+            )?
+        };
 
         let n_embd_us = i64_to_usize(n_embd_i)?
             .ok_or_else(|| BitNetError::Inference("invalid embedding_length".into()))?;
@@ -181,7 +160,11 @@ impl Qwen35Config {
         let n_ff_exp_us = std::cmp::max(
             i64_to_usize(n_ff_exp)?
                 .ok_or_else(|| BitNetError::Inference("negative expert_ff length".into()))?,
-            infer_ff_exp_fallback(archive, n_expert_i as usize)?.unwrap_or(0),
+            if dense {
+                0
+            } else {
+                infer_ff_exp_fallback(archive, n_expert_i as usize)?.unwrap_or(0)
+            },
         );
         let dense_us = i64_to_usize(n_ff_dense)?.unwrap_or(0);
         let n_ff_shexp_us = std::cmp::max(i64_to_usize(n_ff_shexp)?.unwrap_or(dense_us), 0);
@@ -200,29 +183,11 @@ impl Qwen35Config {
         let key_len = meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.key_length"))
             .map(|v| v as i64)
             .or_else(|| metadata_i64(md, &format!("{}{}", kv_prefix, "attention.key_length")));
-        let mut head_dim_est =
-            metadata_i64(md, &format!("{}{}", kv_prefix, "rope.dimension_count"))
-                .map(|rc| rc as usize);
-        if head_dim_est.is_none() {
-            if let Some(kl) = key_len {
-                if n_head_kv_i > 0 {
-                    head_dim_est = usize::try_from(kl.max(1) / n_head_kv_i.max(1))
-                        .ok()
-                        .filter(|&h| h > 0);
-                }
-            }
-        }
-        let head_dim = head_dim_est
-            .or_else(|| {
-                if n_head_i > 0 {
-                    usize::checked_div(n_embd_i as usize, n_head_i as usize).filter(|&h| h > 0)
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                BitNetError::Inference("unable to derive attention head dimensions".into())
-            })?;
+        // key_length is per attention head; rotary width is a separate quantity.
+        let head_dim = key_len
+            .and_then(|v| usize::try_from(v).ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(n_embd_i as usize / n_head_i as usize);
 
         let mut ssm_conv = meta_req_i64(
             md,
@@ -295,7 +260,14 @@ impl Qwen35Config {
             n_embd: i64_to_usize(n_embd_i)?
                 .ok_or_else(|| BitNetError::Inference("invalid embedding size".into()))?,
             max_seq: usize::try_from(ctx_len)
-                .map_err(|_| BitNetError::Inference("context length OOB".into()))?,
+                .map_err(|_| BitNetError::Inference("context length OOB".into()))?
+                .min(
+                    std::env::var("RBITNET_MAX_SEQ")
+                        .ok()
+                        .and_then(|s| s.parse().ok())
+                        .filter(|&v| v > 0)
+                        .unwrap_or(8192),
+                ),
             n_layer: n_layer_us,
             rope_freq_base: rope_base,
             rope_dim_pairs: rope_dim_pairs / 2 * 2, // pairs
@@ -303,7 +275,7 @@ impl Qwen35Config {
             n_expert: i64_to_usize(n_expert_i)?
                 .ok_or_else(|| BitNetError::Inference("invalid expert_count".into()))?,
             n_expert_used: i64_to_usize(n_expert_used_i)?
-                .filter(|x| *x > 0)
+                .filter(|x| dense || *x > 0)
                 .ok_or_else(|| BitNetError::Inference("invalid expert_used_count".into()))?,
             n_ff_exp: n_ff_exp_us,
             n_ff_shexp: n_ff_shexp_us.max(1),
@@ -406,7 +378,7 @@ fn parse_rope_dim_pairs(
             ));
         }
         let s = usize::try_from(sum).unwrap_or(fallback);
-        Ok(std::cmp::min((s / 2) * 2, (fallback / 2) * 2))
+        Ok(std::cmp::min(s * 2, (fallback / 2) * 2))
     } else {
         Ok((fallback / 2) * 2)
     }

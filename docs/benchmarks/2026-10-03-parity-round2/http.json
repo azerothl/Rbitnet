@@ -1,0 +1,907 @@
+{
+  "rows": [
+    {
+      "model": "llama32-1b",
+      "resident_head_requested": false,
+      "mode": "greedy",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Eté, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014692,
+        "id": "chatcmpl-1791014692",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 11,
+          "prompt_tokens": 51,
+          "total_tokens": 62
+        }
+      },
+      "stream_text": "Eté, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "llama32-1b",
+      "resident_head_requested": false,
+      "mode": "sampling",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Café, été, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014692,
+        "id": "chatcmpl-1791014692",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 12,
+          "prompt_tokens": 51,
+          "total_tokens": 63
+        }
+      },
+      "stream_text": "Café, été, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "llama32-1b",
+      "resident_head_requested": false,
+      "mode": "penalties",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Eté, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014693,
+        "id": "chatcmpl-1791014693",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 11,
+          "prompt_tokens": 51,
+          "total_tokens": 62
+        }
+      },
+      "stream_text": "Eté, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": false,
+      "mode": "greedy",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014696,
+        "id": "chatcmpl-1791014696",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": false,
+      "mode": "sampling",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014696,
+        "id": "chatcmpl-1791014696",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": false,
+      "mode": "penalties",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014697,
+        "id": "chatcmpl-1791014697",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": true,
+      "mode": "greedy",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014699,
+        "id": "chatcmpl-1791014699",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": true,
+      "mode": "sampling",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014699,
+        "id": "chatcmpl-1791014699",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "qwen35-2b",
+      "resident_head_requested": true,
+      "mode": "penalties",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014700,
+        "id": "chatcmpl-1791014700",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 7,
+          "prompt_tokens": 24,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": false,
+      "mode": "greedy",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014712,
+        "id": "chatcmpl-1791014712",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": false,
+      "mode": "sampling",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014716,
+        "id": "chatcmpl-1791014716",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": false,
+      "mode": "penalties",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014720,
+        "id": "chatcmpl-1791014720",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": true,
+      "mode": "greedy",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014734,
+        "id": "chatcmpl-1791014734",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": true,
+      "mode": "sampling",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014738,
+        "id": "chatcmpl-1791014738",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "resident_head_requested": true,
+      "mode": "penalties",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014742,
+        "id": "chatcmpl-1791014742",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 80,
+          "total_tokens": 111
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": false,
+      "mode": "greedy",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014762,
+        "id": "chatcmpl-1791014762",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": false,
+      "mode": "sampling",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014767,
+        "id": "chatcmpl-1791014767",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": false,
+      "mode": "penalties",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014771,
+        "id": "chatcmpl-1791014771",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": true,
+      "mode": "greedy",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014786,
+        "id": "chatcmpl-1791014786",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": true,
+      "mode": "sampling",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014791,
+        "id": "chatcmpl-1791014791",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    },
+    {
+      "model": "glm47-flash",
+      "resident_head_requested": true,
+      "mode": "penalties",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Répète exactement : été, café, résumé, 🙂."
+          }
+        ],
+        "max_tokens": 256,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "été, café, résumé, 🙂.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791014796,
+        "id": "chatcmpl-1791014796",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 10,
+          "prompt_tokens": 21,
+          "total_tokens": 31
+        }
+      },
+      "stream_text": "été, café, résumé, 🙂.",
+      "stream_done": true,
+      "stream_equals_completion": true,
+      "utf8_complete": true,
+      "nonempty": true
+    }
+  ]
+}

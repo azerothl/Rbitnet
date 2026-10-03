@@ -36,9 +36,13 @@ pub fn stitch_conv_window_mut(
         return;
     }
     let k1 = d_conv.saturating_sub(1);
-    dst[..k1 * d_inner].copy_from_slice(&hist[..k1 * d_inner.max(1)]);
-    let base = k1 * d_inner;
-    dst[base..base + d_inner].copy_from_slice(strip);
+    // History is token-major; ggml's convolution window is channel-major.
+    for channel in 0..d_inner {
+        for tap in 0..k1 {
+            dst[channel * d_conv + tap] = hist[tap * d_inner + channel];
+        }
+        dst[channel * d_conv + k1] = strip[channel];
+    }
 }
 
 #[inline]
@@ -49,6 +53,7 @@ fn silu(x: f32) -> f32 {
 /// Apply `ggml_gated_delta_net` for one timestep; returns attention chunk `[S_v]` and writes new state `[S_v*S_v]`.
 ///
 /// Layout matches GGML contiguous-row storage with transposed conceptual state (`s[row * S_v + col]` corresponds to logical `S[col][row]`).
+#[cfg(test)]
 pub fn gated_delta_net_step(
     state_in: &[f32], // S_v*S_v
     q: &[f32],
@@ -114,6 +119,51 @@ pub fn gated_delta_net_step(
     (attn, s_out)
 }
 
+/// Same F32 operations as the reference, updating one independent value row at
+/// a time. Avoids cloning the complete recurrent matrix and two full traversals.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn gated_delta_net_step_inplace(
+    state: &mut [f32],
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    gate: &[f32],
+    beta: f32,
+    sv: usize,
+    scale_over_sqrt_sv: bool,
+) -> Vec<f32> {
+    if sv == 0 {
+        return Vec::new();
+    }
+    debug_assert_eq!(state.len(), sv * sv);
+    let decay: Vec<f32> = if gate.len() == sv {
+        gate.iter().map(|x| x.exp()).collect()
+    } else {
+        vec![gate.first().copied().unwrap_or(0.0).exp(); sv]
+    };
+    let scale = if scale_over_sqrt_sv {
+        1.0 / (sv as f32).sqrt()
+    } else {
+        1.0
+    };
+    let mut attn = vec![0.0; sv];
+    for (j, row) in state.chunks_exact_mut(sv).enumerate() {
+        let mut prediction = 0.0;
+        for i in 0..sv {
+            row[i] *= decay[i];
+            prediction += row[i] * k[i];
+        }
+        let delta = (v[j] - prediction) * beta;
+        let mut output = 0.0;
+        for i in 0..sv {
+            row[i] += k[i] * delta;
+            output += row[i] * q[i];
+        }
+        attn[j] = output * scale;
+    }
+    attn
+}
+
 pub(crate) fn l2_normalize_vec(x: &mut [f32], eps: f32) {
     let s: f32 = x.iter().map(|v| v * v).sum::<f32>();
     let inv = 1.0 / (s.max(eps)).sqrt();
@@ -153,5 +203,57 @@ mod tests {
         let v = vec![3.0, 4.0];
         let (attn, s1) = gated_delta_net_step(&s0, &q, &k, &v, &[0.0], 1.0, sv, false);
         assert!(s1.iter().chain(attn.iter()).all(|z| z.is_finite()));
+    }
+
+    #[test]
+    fn inplace_recurrence_preserves_reference_f32_state_and_outputs() {
+        for sv in [3, 32, 128] {
+            for kda in [false, true] {
+                let mut state: Vec<_> = (0..sv * sv)
+                    .map(|i| (i as f32 * 0.13).cos() * 0.02)
+                    .collect();
+                for step in 0..8 {
+                    let q: Vec<_> = (0..sv)
+                        .map(|i| (i as f32 * 0.3 + step as f32).sin() * 0.1)
+                        .collect();
+                    let k: Vec<_> = (0..sv)
+                        .map(|i| (i as f32 * 0.7 - step as f32).cos() * 0.1)
+                        .collect();
+                    let v: Vec<_> = (0..sv)
+                        .map(|i| (i as f32 * 0.4 + step as f32).cos())
+                        .collect();
+                    let gate: Vec<_> = (0..if kda { sv } else { 1 })
+                        .map(|i| -0.1 - i as f32 * 0.007)
+                        .collect();
+                    let (expected, s) =
+                        gated_delta_net_step(&state, &q, &k, &v, &gate, 0.7, sv, step % 2 == 0);
+                    let got = gated_delta_net_step_inplace(
+                        &mut state,
+                        &q,
+                        &k,
+                        &v,
+                        &gate,
+                        0.7,
+                        sv,
+                        step % 2 == 0,
+                    );
+                    assert_eq!(got, expected);
+                    assert_eq!(state, s);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn conv_window_transposes_time_and_channel_axes() {
+        let history = [1.0, 10.0, 2.0, 20.0];
+        let strip = [3.0, 30.0];
+        let mut window = [0.0; 6];
+        stitch_conv_window_mut(&history, &strip, &mut window, 3, 2);
+        assert_eq!(window, [1.0, 2.0, 3.0, 10.0, 20.0, 30.0]);
+        assert_eq!(
+            ssm_conv_f32(&window, &[1.0, 2.0, 3.0, 3.0, 2.0, 1.0], 3, 2),
+            [14.0, 100.0]
+        );
     }
 }

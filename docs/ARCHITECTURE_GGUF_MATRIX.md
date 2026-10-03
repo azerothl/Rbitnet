@@ -8,11 +8,11 @@ Reference for Z.ai **GLM**, OpenAI **gpt-oss**, and **DeepSeek** support. Source
 |----------------|----------------------------------------|----------------|
 | Dense Qwen3 | `qwen3` | Native dense CPU path ([`qwen3`](../crates/bitnet-core/src/qwen3)); **default-CI synthetic golden** + optional Hub path in [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
 | Mixtral MoE | `mixtral` | Native CPU top-k MoE ([`mixtral`](../crates/bitnet-core/src/mixtral)); default-CI synthetic golden + `/v1` e2e ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
-| Qwen3.5 MoE (experimental) | `qwen35moe` | CUDA/hybrid only; not a substitute for DeepSeek MoE/MLA (#25). |
+| Qwen3.5 dense / MoE | `qwen35`, `qwen35moe` | Native GDN + gated GQA graph on CPU/CUDA/hybrid. Real-model validation covers **Qwen3.5-2B Q8_0 dense**, text only; other sizes and MoE exports remain unvalidated. |
 | GLM-4.5 / 4.7 / 5 (MoE exports) | `glm4moe` (verify per release on HF) | [`glm4_moe`](../crates/bitnet-core/src/glm4_moe): **Llama-compatible tensors only** → Llama runtime; else **clear refuse** ([`roadmap_unsupported`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs)). |
-| OpenAI gpt-oss | `gptoss` | [`gpt_oss`](../crates/bitnet-core/src/gpt_oss): same; **MXFP4** (GGML 39) in [`dequant`](../crates/bitnet-core/src/ggml/dequant.rs). |
-| DeepSeek V2 / V3 / V4 MoE + MLA | `deepseek2` (verify V4 slug when GGUF available) | [`deepseek2`](../crates/bitnet-core/src/deepseek2): Llama-shaped only; **pure MoE/MLA refused at load** (no full DeepSeek MoE in this spike). |
-| DeepSeek dense Llama-shaped | `llama`, `mistral`, … | Use existing [`Llama` loader](../crates/bitnet-core/src/loaders/llama) when tensors match. |
+| OpenAI gpt-oss | `gpt-oss`, alias `gptoss` | Native biased attention, sinks, alternating sliding window, YaRN and MXFP4 routed experts. CPU/CUDA/hybrid; real-model validation covers **GPT-OSS-20B Q4_K_M**. Harmony analysis is hidden until a final channel appears. |
+| GLM-4.7 Flash, MLA + MoE | `deepseek2` | Native compressed MLA cache, split K/V head matrices, sigmoid router with selection bias, routed + shared experts. CPU/CUDA/hybrid; real-model validation covers **GLM-4.7-Flash Q4_K_M**. Other DeepSeek exports, fused MLA tensors, and alternate query projections are not certified. |
+| DeepSeek dense Llama-shaped | `llama`, `mistral`, … | Use existing [`Llama` loader](../crates/bitnet-core/src/loaders/llama.rs) when tensors match. |
 
 ### DeepSeek generations vs MoE slug (verify on your GGUF)
 
@@ -24,7 +24,7 @@ Rollout order for full inference work: **V4 → V3 → V2**. Confirm `general.ar
 | V3 | DeepSeek-V3, R1 distill, … | Usually `deepseek2` in community GGUF |
 | V2 | DeepSeek-V2 | Usually `deepseek2` |
 
-If a generation only publishes MoE GGUF, there is no Llama dense shortcut — Rbitnet refuses load until a native MoE graph exists or you obtain a Llama-shaped export.
+The native `deepseek2` loader checks the split MLA tensor layout eagerly. A shared architecture slug does not prove that another generation uses the supported layout. Missing or incompatible projections fail at load rather than falling through to Llama.
 
 ## Test checkpoints (Flash / Lite first)
 
@@ -33,7 +33,7 @@ For CI and local smokes, prefer **Lite**, **Flash**, or **Air** quantizations wh
 | Family | Suggested first GGUF for iteration | Notes |
 |--------|-------------------------------------|--------|
 | GLM | GLM-4.x **Flash** / **Lite** GGUF (e.g. bartowski/zai-org repos) | Confirm `general.architecture` with `cargo run -p bitnet-core --example inspect_gguf --`. |
-| gpt-oss | Smallest single-file quant (e.g. ~12 GiB class) | Same `gptoss` slug; perf validation on larger quant later. |
+| gpt-oss | GPT-OSS-20B Q4_K_M, with MXFP4 experts | Canonical `gpt-oss` slug; CPU and CUDA measurements use the same GGUF bytes. |
 | DeepSeek | **V4** Lite/Flash if published with `deepseek2` | Then V3, V2 per roadmap; see [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md). |
 
 ## Related code
@@ -41,3 +41,4 @@ For CI and local smokes, prefer **Lite**, **Flash**, or **Air** quantizations wh
 - Dispatch: [`crates/bitnet-core/src/loaders/registry.rs`](../crates/bitnet-core/src/loaders/registry.rs)
 - Unsupported roadmap layout (not Llama-tensor compatible): [`crates/bitnet-core/src/loaders/roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs)
 - Builders: [`deepseek2`](../crates/bitnet-core/src/deepseek2), [`gpt_oss`](../crates/bitnet-core/src/gpt_oss), [`glm4_moe`](../crates/bitnet-core/src/glm4_moe)
+- Shared native graph and weight residency: [`native`](../crates/bitnet-core/src/native). Measured exports, results and limits: [native inference validation](benchmarks/2026-10-03-optimized/README.md).

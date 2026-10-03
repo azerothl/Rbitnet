@@ -1,0 +1,14 @@
+[
+  {
+    "backend": "cpu",
+    "architecture_override": "gptoss",
+    "status": "load_failed",
+    "error": "Model load failed: not ready: LoadFailed \u2014 failed to init engine from env: Inference(\"GGUF `gptoss`: CUDA backend required (`RBITNET_BACKEND=cuda`). See docs/ARCHITECTURE_GGUF_MATRIX.md.\") \u2014 if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)"
+  },
+  {
+    "backend": "gpu",
+    "architecture_override": "gptoss",
+    "status": "load_failed",
+    "error": "Model load failed: not ready: LoadFailed \u2014 failed to init engine from env: Inference(\"GGUF architecture `gptoss` is refused: tensors are not Llama-shaped (need token_embd + blk.N.* in the built-in Llama layout). DeepSeek-style MLA attention and non-Mixtral MoE graphs are not implemented in Rbitnet yet (see docs/ARCHITECTURE_GGUF_MATRIX.md and docs/LIMITATIONS.md \u2014 issue #25). Supported today: Llama/Mistral-shaped GGUF, dense `qwen3` (CPU), Mixtral MoE (`mixtral`, CPU top-k experts), and experimental `qwen35moe` only with RBITNET_BACKEND=cuda|hybrid. If this file is mis-tagged but actually Llama-shaped, set RBITNET_ARCHITECTURE=llama; otherwise use a Llama-compatible dense export (not a full DeepSeek MoE GGUF).\") \u2014 HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)"
+  }
+]

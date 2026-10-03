@@ -1,0 +1,94 @@
+[
+  {
+    "id": "capital",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the capital of France? Answer in one word."
+      }
+    ],
+    "expected": "paris",
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is the capital of France? Answer in one word.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "arithmetic",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is 7 multiplied by 8? Answer only with the number."
+      }
+    ],
+    "expected": "56",
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is 7 multiplied by 8? Answer only with the number.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "memory",
+    "kind": "quality",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Remember the code ORION. Reply OK."
+      },
+      {
+        "role": "assistant",
+        "content": "OK."
+      },
+      {
+        "role": "user",
+        "content": "What is the code? Answer in one word."
+      }
+    ],
+    "expected": "orion",
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nRemember the code ORION. Reply OK.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nOK.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is the code? Answer in one word.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "throughput-0",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 0. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nCase 0. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "throughput-1",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 1. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nCase 1. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "throughput-2",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 2. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nCase 2. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  {
+    "id": "throughput-3",
+    "kind": "throughput",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Case 3. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."
+      }
+    ],
+    "expected": null,
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 03 Oct 2026\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nCase 3. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  }
+]

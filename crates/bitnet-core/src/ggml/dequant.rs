@@ -70,6 +70,49 @@ const KVALUES_MXFP4: [i8; 16] = [0, 1, 2, 3, 4, 6, 8, 12, 0, -1, -2, -3, -4, -6,
 
 const QK_MXFP4: usize = 32;
 
+pub(crate) fn decode_extra_block(ty: u32, data: &[u8], out: &mut [f32]) -> Result<()> {
+    match ty {
+        6 if data.len() == 22 && out.len() == 32 => {
+            let d = fp16_to_f32(u16::from_le_bytes(data[..2].try_into().unwrap()));
+            let high = u32::from_le_bytes(data[2..6].try_into().unwrap());
+            for j in 0..16 {
+                out[j] =
+                    (((data[6 + j] & 15) as u32 | ((high >> j) & 1) << 4) as i32 - 16) as f32 * d;
+                out[j + 16] = (((data[6 + j] >> 4) as u32 | ((high >> (j + 16)) & 1) << 4) as i32
+                    - 16) as f32
+                    * d;
+            }
+        }
+        13 if data.len() == 176 && out.len() == 256 => {
+            let d = fp16_to_f32(u16::from_le_bytes(data[..2].try_into().unwrap()));
+            let min = fp16_to_f32(u16::from_le_bytes(data[2..4].try_into().unwrap()));
+            let scales = &data[4..16];
+            let high = &data[16..48];
+            let low = &data[48..];
+            for pair in 0..4 {
+                let (s0, m0) = get_scale_min_k4(pair * 2, scales);
+                let (s1, m1) = get_scale_min_k4(pair * 2 + 1, scales);
+                for j in 0..32 {
+                    let q = low[pair * 32 + j];
+                    let q0 = (q & 15) + (((high[j] >> (pair * 2)) & 1) << 4);
+                    let q1 = (q >> 4) + (((high[j] >> (pair * 2 + 1)) & 1) << 4);
+                    out[pair * 64 + j] = d * s0 as f32 * q0 as f32 - min * m0 as f32;
+                    out[pair * 64 + 32 + j] = d * s1 as f32 * q1 as f32 - min * m1 as f32;
+                }
+            }
+        }
+        39 if data.len() == 17 && out.len() == 32 => {
+            let d = ggml_e8m0_to_fp32_half(data[0]);
+            for j in 0..16 {
+                out[j] = d * KVALUES_MXFP4[(data[j + 1] & 15) as usize] as f32;
+                out[j + 16] = d * KVALUES_MXFP4[(data[j + 1] >> 4) as usize] as f32;
+            }
+        }
+        _ => return Err(BitNetError::InvalidGguf("invalid extra quant block".into())),
+    }
+    Ok(())
+}
+
 fn dequant_mxfp4(data: &[u8], n: usize) -> Result<Vec<f32>> {
     if n % QK_MXFP4 != 0 {
         return Err(BitNetError::InvalidGguf(
@@ -343,10 +386,11 @@ pub(crate) fn q6_k_superblock_dequant(block: &[u8], y_out: &mut [f32]) -> Result
             let q3 = ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
             let q4 =
                 ((ql[ql_o + l + 32] >> 4) as i32 | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4)) - 32;
-            yb[yp + l] = d * sc[sc_o + is + 0] as f32 * q1 as f32;
-            yb[yp + l + 32] = d * sc[sc_o + is + 2] as f32 * q2 as f32;
-            yb[yp + l + 64] = d * sc[sc_o + is + 4] as f32 * q3 as f32;
-            yb[yp + l + 96] = d * sc[sc_o + is + 6] as f32 * q4 as f32;
+            // GGML stores Q6_K sub-block scales as signed int8_t, not uint8_t.
+            yb[yp + l] = d * (sc[sc_o + is + 0] as i8) as f32 * q1 as f32;
+            yb[yp + l + 32] = d * (sc[sc_o + is + 2] as i8) as f32 * q2 as f32;
+            yb[yp + l + 64] = d * (sc[sc_o + is + 4] as i8) as f32 * q3 as f32;
+            yb[yp + l + 96] = d * (sc[sc_o + is + 6] as i8) as f32 * q4 as f32;
         }
         yp += 128;
         ql_o += 64;
@@ -549,32 +593,11 @@ fn dequant_q5_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
     let nb = n / QK_K;
     let mut y = vec![0.0f32; n];
     for i in 0..nb {
-        let o = i * 176;
-        let d = fp16_to_f32(u16::from_le_bytes(data[o..o + 2].try_into().unwrap()));
-        let min = fp16_to_f32(u16::from_le_bytes(data[o + 2..o + 4].try_into().unwrap()));
-        let scales = &data[o + 4..o + 16];
-        let qh = &data[o + 16..o + 48];
-        let qs = &data[o + 48..o + 176];
-
-        let yb = &mut y[i * QK_K..(i + 1) * QK_K];
-        for g in 0..8 {
-            let (sc, m) = get_scale_min_k4(g, scales);
-            let dg = d * sc as f32;
-            let mg = min * m as f32;
-            let qoff = g * 16;
-            let voff = g * 32;
-            for l in 0..16 {
-                let q = qs[qoff + l];
-                let i0 = voff + l;
-                let i1 = voff + l + 16;
-                let hb0 = ((qh[i0 >> 3] >> (i0 & 7)) & 1) << 4;
-                let hb1 = ((qh[i1 >> 3] >> (i1 & 7)) & 1) << 4;
-                let v0 = ((q & 0x0F) | hb0) as f32;
-                let v1 = ((q >> 4) | hb1) as f32;
-                yb[i0] = dg * v0 - mg;
-                yb[i1] = dg * v1 - mg;
-            }
-        }
+        decode_extra_block(
+            13,
+            &data[i * 176..(i + 1) * 176],
+            &mut y[i * 256..(i + 1) * 256],
+        )?;
     }
     Ok(y)
 }
@@ -587,40 +610,7 @@ fn dequant_q6_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
     let mut y = vec![0.0f32; n];
     for i in 0..nb {
         let o = i * 210;
-        let d = fp16_to_f32(u16::from_le_bytes(
-            data[o + 208..o + 210].try_into().unwrap(),
-        ));
-        let ql = &data[o..o + 128];
-        let qh = &data[o + 128..o + 192];
-        let sc = &data[o + 192..o + 208];
-        let yb = &mut y[i * QK_K..(i + 1) * QK_K];
-        let mut ql_o = 0usize;
-        let mut qh_o = 0usize;
-        let mut sc_o = 0usize;
-        let mut yp = 0usize;
-        for _ in 0..2 {
-            for l in 0..32 {
-                let is = l / 16;
-                let q1 =
-                    ((ql[ql_o + l] & 0xF) as i32 | ((((qh[qh_o + l] >> 0) & 3) as i32) << 4)) - 32;
-                let q2 = ((ql[ql_o + l + 32] & 0xF) as i32
-                    | ((((qh[qh_o + l] >> 2) & 3) as i32) << 4))
-                    - 32;
-                let q3 =
-                    ((ql[ql_o + l] >> 4) as i32 | ((((qh[qh_o + l] >> 4) & 3) as i32) << 4)) - 32;
-                let q4 = ((ql[ql_o + l + 32] >> 4) as i32
-                    | ((((qh[qh_o + l] >> 6) & 3) as i32) << 4))
-                    - 32;
-                yb[yp + l] = d * sc[sc_o + is + 0] as f32 * q1 as f32;
-                yb[yp + l + 32] = d * sc[sc_o + is + 2] as f32 * q2 as f32;
-                yb[yp + l + 64] = d * sc[sc_o + is + 4] as f32 * q3 as f32;
-                yb[yp + l + 96] = d * sc[sc_o + is + 6] as f32 * q4 as f32;
-            }
-            yp += 128;
-            ql_o += 64;
-            qh_o += 32;
-            sc_o += 8;
-        }
+        q6_k_superblock_dequant(&data[o..o + 210], &mut y[i * QK_K..(i + 1) * QK_K])?;
     }
     Ok(y)
 }
@@ -706,6 +696,41 @@ fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
 }
 
 #[cfg(test)]
+mod q6_k_tests {
+    use super::*;
+
+    #[test]
+    fn q6_k_signed_scales_match_known_ggml_values() {
+        // GGML block_q6_K: ql[128], qh[64], int8_t scales[16], fp16 d.
+        // ql=0x21 and qh=0xe4 encode (-31, -15, 2, 18) in each 128-value half.
+        let mut block = [0u8; 210];
+        block[..128].fill(0x21);
+        block[128..192].fill(0xe4);
+        let scales: [i8; 16] = [
+            -128, -2, 0, 3, -7, 11, -1, 127, -64, 5, -3, 9, -12, 31, -127, 1,
+        ];
+        for (dst, scale) in block[192..208].iter_mut().zip(scales) {
+            *dst = scale as u8;
+        }
+        block[208..210].copy_from_slice(&f16::from_f32(0.5).to_bits().to_le_bytes());
+        let expected_groups = [
+            1984.0, 31.0, 0.0, -22.5, -7.0, 11.0, -9.0, 1143.0, 992.0, -77.5, 22.5, -67.5, -12.0,
+            31.0, -1143.0, 9.0,
+        ];
+        let expected: Vec<f32> = expected_groups.into_iter().flat_map(|v| [v; 16]).collect();
+        assert_eq!(tensor_to_f32(&block, 14, &[256, 1]).unwrap(), expected);
+        let mut row = [0.0; 256];
+        q6_k_superblock_dequant(&block, &mut row).unwrap();
+        assert_eq!(row.as_slice(), expected);
+        let x = [1.0; 256];
+        assert_eq!(
+            crate::ggml::quant_dot::dot_row(14, &block, &x).unwrap(),
+            46160.0
+        );
+    }
+}
+
+#[cfg(test)]
 mod mxfp4_tests {
     use super::*;
 
@@ -715,5 +740,26 @@ mod mxfp4_tests {
         block[0] = 127;
         let v = dequant_mxfp4(&block, 32).unwrap();
         assert_eq!(v.len(), 32);
+    }
+
+    #[test]
+    fn q5_k_high_bits_follow_pairs_of_32_values() {
+        let mut block = [0u8; 176];
+        block[..2].copy_from_slice(&half::f16::from_f32(1.0).to_bits().to_le_bytes());
+        // Unit scale for every group and zero minimum. Only the eight high-bit planes differ.
+        block[4..8].fill(1);
+        block[12..16].fill(1);
+        for i in 0..32 {
+            block[16 + i] = 1 << (i % 8);
+        }
+        let output = dequant_q5_k(&block, 256).unwrap();
+        for group in 0..8 {
+            for lane in 0..32 {
+                assert_eq!(
+                    output[group * 32 + lane],
+                    if lane % 8 == group { 16.0 } else { 0.0 }
+                );
+            }
+        }
     }
 }

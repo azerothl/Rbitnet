@@ -1,0 +1,328 @@
+{
+  "workspace": {
+    "passed": 216,
+    "failed": 0,
+    "ignored": 1
+  },
+  "checks": [
+    {
+      "name": "workspace",
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--release"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\workspace.log",
+      "log_sha256": "f89abe61d280d5774ff4067371810dfa17e2314cec43c2ba2cba40be03a6f2cb",
+      "evidence_path": "validation-logs/workspace.log"
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--release"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\clippy.log",
+      "log_sha256": "eb0a2cabf7e8f0c2294cacbce818b8f0da823667ec8789bbe26651752b914233",
+      "evidence_path": "validation-logs/clippy.log"
+    },
+    {
+      "name": "cuda-native-oracles",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "native::",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_CUDA_QUANT_SMOKE": "1"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\cuda-native-oracles.log",
+      "log_sha256": "7ed5b2ffb66a00050c3e2b21bb5de76cfb576e40163994a3cdab6503c4dd60d8",
+      "evidence_path": "validation-logs/cuda-native-oracles.log"
+    },
+    {
+      "name": "cuda-quant",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "cuda_quant_residency",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_CUDA_QUANT_SMOKE": "1"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\cuda-quant.log",
+      "log_sha256": "9bf08ed43b5fd916396569e05ac23c5510d1c63c4d14ab24c5bcc0e62e5db2da",
+      "evidence_path": "validation-logs/cuda-quant.log"
+    },
+    {
+      "name": "qwen-golden-cpu",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "qwen35::runtime::sequence_tests",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_QWEN_TEST_GGUF": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+        "RBITNET_QWEN_TEST_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+        "RBITNET_QWEN_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\qwen35-2b-q8_0.sequence.json",
+        "RBITNET_QWEN_SEQUENCE_BACKEND": "cpu"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\qwen-golden-cpu.log",
+      "log_sha256": "326b7bc034386a657d04cda69c83b1ce01521927e9cf327b2c5f563926a7a9b1",
+      "evidence_path": "validation-logs/qwen-golden-cpu.log"
+    },
+    {
+      "name": "qwen-golden-cuda",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "qwen35::runtime::sequence_tests",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_QWEN_TEST_GGUF": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+        "RBITNET_QWEN_TEST_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+        "RBITNET_QWEN_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\qwen35-2b-q8_0.sequence.json",
+        "RBITNET_QWEN_SEQUENCE_BACKEND": "cuda",
+        "RBITNET_QWEN_REQUIRE_RESIDENT": "1",
+        "RBITNET_CUDA_HEAD": "1"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\qwen-golden-cuda.log",
+      "log_sha256": "3d5821604e6b2a634e49720d6142b01fae0d8cde617c1fb8580f59c30e6fbc74",
+      "evidence_path": "validation-logs/qwen-golden-cuda.log"
+    },
+    {
+      "name": "qwen-golden-eager",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "qwen35::runtime::sequence_tests",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_QWEN_TEST_GGUF": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+        "RBITNET_QWEN_TEST_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+        "RBITNET_QWEN_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\qwen35-2b-q8_0.sequence.json",
+        "RBITNET_QWEN_SEQUENCE_BACKEND": "cuda",
+        "RBITNET_QWEN_REQUIRE_RESIDENT": "1",
+        "RBITNET_CUDA_QWEN_RECURRENT_GRAPH": "0",
+        "RBITNET_CUDA_HEAD": "1"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\qwen-golden-eager.log",
+      "log_sha256": "fc55068fab18b67bd48e7b9ed86beac823871a2e5f9ab6ea34b8da2cf73526fd",
+      "evidence_path": "validation-logs/qwen-golden-eager.log"
+    },
+    {
+      "name": "qwen-golden-fallback",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "qwen35::runtime::sequence_tests",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_QWEN_TEST_GGUF": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+        "RBITNET_QWEN_TEST_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+        "RBITNET_QWEN_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\qwen35-2b-q8_0.sequence.json",
+        "RBITNET_QWEN_SEQUENCE_BACKEND": "cuda",
+        "RBITNET_CUDA_QWEN_RECURRENT": "0",
+        "RBITNET_CUDA_HEAD": "0"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\qwen-golden-fallback.log",
+      "log_sha256": "5fa2dc0676595773b031f7eea326bfb3899ecdea2318a84b11e025fb24679eb0",
+      "evidence_path": "validation-logs/qwen-golden-fallback.log"
+    },
+    {
+      "name": "qwen-golden-old-dll",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "qwen35::runtime::sequence_tests",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\baseline\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_QWEN_TEST_GGUF": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+        "RBITNET_QWEN_TEST_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+        "RBITNET_QWEN_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\qwen35-2b-q8_0.sequence.json",
+        "RBITNET_QWEN_SEQUENCE_BACKEND": "cuda"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\qwen-golden-old-dll.log",
+      "log_sha256": "21a4811eed51c7d28061430596a9ebb6ad38130990ecde03a379778ebf38aa4d",
+      "evidence_path": "validation-logs/qwen-golden-old-dll.log"
+    },
+    {
+      "name": "llama-golden-cuda",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "optional_llama_sequence",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16",
+        "RBITNET_TEST_GGUF": "E:\\devs\\Rbitnet\\models\\exported-llama\\model.gguf",
+        "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json",
+        "RBITNET_LLAMA_SEQUENCE_JSON": "E:\\devs\\Rbitnet\\tests\\data\\golden\\llama32-1b-instruct-q4-k-m.sequence.json",
+        "RBITNET_SEQUENCE_BACKEND": "cuda",
+        "RBITNET_REQUIRE_RESIDENT": "1",
+        "RBITNET_PREFIX_KV": "0"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\llama-golden-cuda.log",
+      "log_sha256": "ee2a7bd954f15144c6bb0ac700c3c12fd0bc81be060821c318e584c9b72403c9",
+      "evidence_path": "validation-logs/llama-golden-cuda.log"
+    },
+    {
+      "name": "cli-build",
+      "command": [
+        "cargo",
+        "build",
+        "--release",
+        "-p",
+        "rbitnet-cli",
+        "--bin",
+        "rbitnet"
+      ],
+      "environment": {
+        "RBITNET_BACKEND": "cpu",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\round2\\cuda\\rbitnet_cuda_quant64.dll",
+        "RAYON_NUM_THREADS": "16"
+      },
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\round2\\validation\\cli-build.log",
+      "log_sha256": "fe6d0cfbd0048516661206fe0000eff9a4daf12d71def21c8e54478b6eba997a",
+      "evidence_path": "validation-logs/cli-build.log"
+    }
+  ],
+  "qwen_sequences": {
+    "ids_including_eos": 53,
+    "cases": 4,
+    "reference": "llama.cpp b11351 / 631109b34 GPU, Q8_0, F32 KV, temperature0, top_k1, cache_prompt=false; generated IDs returned directly by server",
+    "backends_verified": [
+      "CPU",
+      "CUDA captured recurrent + head",
+      "CUDA eager recurrent + captured head",
+      "CUDA fallback (recurrent/head disabled)",
+      "previous DLL"
+    ]
+  },
+  "recurrent_oracle": {
+    "precision": "independent F64 full block",
+    "timesteps_with_reset_per_case": 34,
+    "cases": 4,
+    "max_absolute_error": 5.939338350025025e-07
+  },
+  "llama_sequence_ids": 43,
+  "binary_sha256": {
+    "target/release/rbitnet.exe": "b5eaada394b41f5c179bdedc2d7b1e98af0f11f80ece9ca576cbd9a9969d017a",
+    "native/cuda_quant/build/rbitnet_cuda_quant64.dll": "d38eb0e59d280ca659f8328ec1dc1c81c87ada532277d506589c6118e79648b7"
+  },
+  "clippy": "exit 0; pre-existing warnings remain",
+  "formatting": "changed Rust modules formatted; unrelated pre-existing formatting left untouched",
+  "cuda_shared_head_default": "off after head-ablation; captured/eager Qwen sequence checks explicitly set RBITNET_CUDA_HEAD=1",
+  "http": {
+    "pairs": 21,
+    "models": 4,
+    "modes": [
+      "greedy",
+      "seeded sampling",
+      "penalties"
+    ],
+    "default_head_off_pairs": 12,
+    "experimental_head_on_pairs": 9,
+    "sse_equals_completion": true,
+    "done_received": true,
+    "unicode_complete": true,
+    "evidence": "http.json"
+  },
+  "final_hashes_match_measurement": true
+}

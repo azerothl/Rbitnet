@@ -131,7 +131,9 @@ impl ModelExecutor for LlamaExecutor {
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
         let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
-        Ok(tok.encode_ids(prompt, true)?.len() as u32)
+        Ok(tok
+            .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())?
+            .len() as u32)
     }
 
     fn backend(&self) -> BackendKind {
@@ -242,7 +244,9 @@ impl ModelExecutor for BitNetNativeExecutor {
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
         let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
-        Ok(tok.encode_ids(prompt, true)?.len() as u32)
+        Ok(tok
+            .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())?
+            .len() as u32)
     }
 
     fn backend(&self) -> BackendKind {

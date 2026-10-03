@@ -70,15 +70,16 @@ GPU backends remain MVP unless measured under #22; hybrid planning still runs so
 | Llama / Mistral-shaped (`llama`, `mistral`, …) | **Supported** | Built-in Llama loader + runtime. |
 | Dense **Qwen3** (`qwen3`) | **Supported** (CPU-first) | Native dense path; **synthetic greedy golden in default CI** + optional Hub golden ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
 | **Mixtral MoE** (`mixtral`) | **Supported** (CPU-first spike) | Native top-k expert router; synthetic golden + `/v1` e2e in default CI ([GOLDEN_TESTS.md](GOLDEN_TESTS.md)). |
-| Experimental Qwen3.5 MoE (`qwen35moe`) | **Partial** | Requires `RBITNET_BACKEND=cuda` or `hybrid`; not a general MoE solution. |
-| Roadmap MoE tags (`glm4moe`, `gptoss`, `deepseek2`) | **Llama-shaped only** | Run only when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds; else **startup refuse** via [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs). |
-| DeepSeek **MLA** / non-Mixtral MoE graphs | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE/MLA remains out of spike scope (#25). |
+| Qwen3.5 (`qwen35`, `qwen35moe`) | **Native CPU/CUDA/hybrid** | GDN + gated attention; actual GGUF validation covers dense Qwen3.5-2B text inference. MoE variants are unvalidated. |
+| GPT-OSS (`gpt-oss`, `gptoss`) | **Native CPU/CUDA/hybrid** | GPT-OSS-20B tested; biased attention, sinks, sliding window, YaRN, MXFP4 MoE and Harmony turn boundaries. |
+| Split MLA + MoE (`deepseek2`) | **Native CPU/CUDA/hybrid** | GLM-4.7-Flash tested. Requires `attn_q_a`, `attn_q_b`, `attn_kv_a_mqa`, separate `attn_k_b` / `attn_v_b` tensors; other DeepSeek layouts fail eager validation. |
+| Roadmap GLM tag (`glm4moe`) | **Llama-shaped only** | Separate architecture from GLM-4.7-Flash; incompatible tensors still fail at startup. |
 
 When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.
 
-**gpt-oss** MXFP4 weights: GGML type **39** dequantizes via [`tensor_to_f32`](../crates/bitnet-core/src/ggml/dequant.rs).
+MXFP4 (GGML **39**), Q5_0 and Q5_K have mmap CPU matvec and optional resident CUDA kernels, without expanding all expert weights to F32.
 
-Dense DeepSeek checkpoints that remain **Llama-shaped** are the supported path today — see [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md). Matrix detail: [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md).
+CUDA attention fuses all heads of one layer and keeps F32 K/V on device for capacities up to **8192**. CPU fallback handles absent symbols or paged/quantized Llama KV. Attention/output activations still cross the host boundary between projections; this is not a fully device-resident transformer or a FlashAttention prefill implementation. Qwen GDN state updates remain CPU operations. Large MoE exports can execute selected experts on CPU when the weight residency budget is exhausted. See [measured native inference](benchmarks/2026-10-03-optimized/README.md) and [architecture matrix](ARCHITECTURE_GGUF_MATRIX.md).
 
 ## Tokenizer
 

@@ -1,8 +1,8 @@
 //! CUDA graph capture scaffolding for decode loops (rvllm-style D2D token feedback).
 //!
-//! When `RBITNET_CUDA_GRAPH=1` and the backend is CUDA, the runtime records decode
-//! steps into a graph once shapes stabilize. Until full device capture lands, this
-//! module tracks eager vs graphed mode and exports metrics for A/B comparison.
+//! `RBITNET_CUDA_GRAPH=1` enables legacy scheduling diagnostics only.
+//! Actual capture/replay lives in `resident.rs` and the optional native CUDA DLL.
+//! This module does not contribute to the native replay performance counter.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -55,7 +55,8 @@ impl CudaDecodeGraph {
                     self.capture_rounds.fetch_add(1, Ordering::Relaxed);
                 }
                 self.graphed_steps.fetch_add(1, Ordering::Relaxed);
-                crate::perf::record_cuda_graph_replay();
+                // This legacy scheduling hook does not launch a device graph.
+                // Only successful native graph launches increment the shared replay metric.
             }
         }
     }

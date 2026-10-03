@@ -1,5 +1,7 @@
 # Archived profiling snapshots
 
+The [3 October 2026 real-model diagnosis](2026-10-03/README.md) profiles Llama CPU/CUDA and traces the three unsupported architectures from the cross-engine benchmark. Six measured ablations, raw timings and CPU code generation evidence are archived with it.
+
 Per [docs/PLAN_PRODUCTION.md](../PLAN_PRODUCTION.md) Phase 2, record **one snapshot per major release** (or after significant kernel changes):
 
 1. Hardware (CPU model, RAM), Rust toolchain version, **git commit SHA**.

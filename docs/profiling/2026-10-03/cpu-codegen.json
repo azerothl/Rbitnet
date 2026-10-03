@@ -1,0 +1,146 @@
+{
+  "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+  "target": "x86_64-pc-windows-msvc",
+  "configured_rustflags": [
+    "-C",
+    "target-feature=+crt-static"
+  ],
+  "core_command": "cargo rustc -p bitnet-core --release --features profile-llama --lib -- --emit=asm,link",
+  "core_assembly_sha256": "e93b708c884e7f2f7bec5108132a05a8dd4d585604d0aa7e1b1b21b007c4e8c4",
+  "probe_command": "rustc -O -C target-feature=+crt-static --emit=asm,link scripts/fma_diagnostic.rs --out-dir target/fma-diagnostic",
+  "probe_assembly_sha256": "37529054c9d7cf93a56cd0b119bf71dfc7905cd7ef3bc157fc2ec4e6fc9bed72",
+  "probe_binary_sha256": "efb8d19e824919a36bb2d329b52ea83602fa83b4c011de24bfd8e2fc72f8272f",
+  "codegen": [
+    {
+      "function": "dot_row_q4_k",
+      "source_start_line": 110018,
+      "fmaf_call_sites": 4,
+      "vfmadd_instruction_sites": 0,
+      "excerpt": [
+        "\tmovss\t84(%rsp,%r15,4), %xmm7",
+        "\tmovss\t-12(%rbx,%r15,4), %xmm1",
+        "\tmovss\t-8(%rbx,%r15,4), %xmm8",
+        "\tmovaps\t%xmm6, %xmm2",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovaps\t%xmm7, %xmm0",
+        "\tmovaps\t%xmm8, %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovss\t88(%rsp,%r15,4), %xmm0",
+        "\tmovss\t-4(%rbx,%r15,4), %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tleaq\t4(%r15), %rdi",
+        "\tmovss\t92(%rsp,%r15,4), %xmm0",
+        "\tmovss\t(%rbx,%r15,4), %xmm1",
+        "\tcallq\tfmaf"
+      ]
+    },
+    {
+      "function": "dot_row_q6_k",
+      "source_start_line": 110189,
+      "fmaf_call_sites": 4,
+      "vfmadd_instruction_sites": 0,
+      "excerpt": [
+        "\tmovss\t84(%rsp,%rdi,4), %xmm7",
+        "\tmovss\t-12(%rbx,%rdi,4), %xmm1",
+        "\tmovss\t-8(%rbx,%rdi,4), %xmm8",
+        "\tmovaps\t%xmm6, %xmm2",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovaps\t%xmm7, %xmm0",
+        "\tmovaps\t%xmm8, %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovss\t88(%rsp,%rdi,4), %xmm0",
+        "\tmovss\t-4(%rbx,%rdi,4), %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tleaq\t4(%rdi), %r15",
+        "\tmovss\t92(%rsp,%rdi,4), %xmm0",
+        "\tmovss\t(%rbx,%rdi,4), %xmm1",
+        "\tcallq\tfmaf"
+      ]
+    },
+    {
+      "function": "generic_dot",
+      "source_start_line": 14,
+      "fmaf_call_sites": 5,
+      "vfmadd_instruction_sites": 0,
+      "excerpt": [
+        "\tmovss\t(%rdi,%r15,4), %xmm0",
+        "\tmovss\t4(%rdi,%r15,4), %xmm6",
+        "\tmovss\t(%rsi,%r15,4), %xmm1",
+        "\tmovss\t4(%rsi,%r15,4), %xmm7",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovaps\t%xmm6, %xmm0",
+        "\tmovaps\t%xmm7, %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tmovss\t8(%rdi,%r15,4), %xmm0",
+        "\tmovss\t8(%rsi,%r15,4), %xmm1",
+        "\tcallq\tfmaf",
+        "\tmovaps\t%xmm0, %xmm2",
+        "\tleaq\t4(%r15), %r12",
+        "\tmovss\t12(%rdi,%r15,4), %xmm0",
+        "\tmovss\t12(%rsi,%r15,4), %xmm1",
+        "\tcallq\tfmaf"
+      ]
+    },
+    {
+      "function": "hardware_dot",
+      "source_start_line": 118,
+      "fmaf_call_sites": 0,
+      "vfmadd_instruction_sites": 5,
+      "excerpt": [
+        "\txorl\t%r10d, %r10d",
+        "\t.p2align\t4",
+        ".LBB1_5:",
+        "\tvmovss\t(%rcx,%r10,4), %xmm1",
+        "\tvfmadd132ss\t(%r8,%r10,4), %xmm0, %xmm1",
+        "\tvmovss\t4(%rcx,%r10,4), %xmm0",
+        "\tvfmadd231ss\t4(%r8,%r10,4), %xmm0, %xmm1",
+        "\tvmovss\t8(%rcx,%r10,4), %xmm2",
+        "\tvfmadd132ss\t8(%r8,%r10,4), %xmm1, %xmm2",
+        "\tleaq\t4(%r10), %r9",
+        "\tvmovss\t12(%rcx,%r10,4), %xmm0",
+        "\tvfmadd132ss\t12(%r8,%r10,4), %xmm2, %xmm0",
+        "\tmovq\t%r9, %r10",
+        "\tcmpq\t%r9, %rdx",
+        "\tjne\t.LBB1_5",
+        ".LBB1_6:",
+        "\ttestq\t%rax, %rax",
+        "\tje\t.LBB1_9"
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "repetition": 0,
+      "elements": 2048,
+      "iterations": 20000,
+      "generic_ms": 113.0356,
+      "hardware_fma_ms": 32.6523,
+      "result_bits": 1100543948
+    },
+    {
+      "repetition": 1,
+      "elements": 2048,
+      "iterations": 20000,
+      "generic_ms": 117.3685,
+      "hardware_fma_ms": 34.4671,
+      "result_bits": 1100543948
+    },
+    {
+      "repetition": 2,
+      "elements": 2048,
+      "iterations": 20000,
+      "generic_ms": 113.0538,
+      "hardware_fma_ms": 31.07,
+      "result_bits": 1100543948
+    }
+  ],
+  "limitation": "Isolated floating dot, not a full-model speedup measurement. FMA results bit-identical for these vectors."
+}

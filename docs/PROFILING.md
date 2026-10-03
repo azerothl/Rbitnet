@@ -4,6 +4,8 @@ Use this as a **working checklist** when investigating CPU time in `bitnet-core`
 
 **Archived snapshots:** store dated findings under [docs/profiling/](profiling/README.md) and link them from [BENCHMARKS.md](BENCHMARKS.md) for the same release.
 
+The [3 October 2026 diagnosis](profiling/2026-10-03/README.md) includes opt-in operator spans (`profile-llama`), a real-model driver and measured CPU/CUDA ablations for the cross-engine benchmark.
+
 ## What to measure first
 
 1. **`cargo bench -p bitnet-core`** — Criterion reports for ternary / matvec kernels (`benches/kernels.rs`).

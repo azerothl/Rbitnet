@@ -15,8 +15,8 @@ use crate::error::{BitNetError, Result};
 use crate::gguf::GgufArchive;
 use crate::loaders::{
     dispatch_gguf_executor, dispatch_gguf_executor_for_load, family_override_token,
-    normalize_architecture_slug, validate_gguf_serving_bundle, resolve_architecture_key,
-    resolve_architecture_key_for_load,
+    normalize_architecture_slug, resolve_architecture_key, resolve_architecture_key_for_load,
+    validate_gguf_serving_bundle,
 };
 use crate::memory_budget::check_load_memory_budget;
 use crate::model::{ModelExecutor, ToyLlm};
@@ -317,8 +317,18 @@ impl Engine {
         }
     }
 
-    /// Best-effort Hugging Face chat template from `tokenizer_config.json` next to the tokenizer.
+    /// Prefer the template embedded in the loaded GGUF, with tokenizer config as a fallback.
     pub fn tokenizer_chat_template(&self) -> Option<String> {
+        if let Some(template) = self
+            .inner
+            .gguf
+            .as_ref()
+            .and_then(|g| g.metadata_str("tokenizer.chat_template"))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            return Some(template.to_string());
+        }
         let path = self
             .inner
             .tokenizer_dir
@@ -552,12 +562,12 @@ impl Engine {
             return Ok(());
         }
         if self.inner.toy.is_some() {
-            let text = self
-                .inner
-                .toy
-                .as_ref()
-                .unwrap()
-                .generate(prompt, max_tokens, sampling.temperature);
+            let text =
+                self.inner
+                    .toy
+                    .as_ref()
+                    .unwrap()
+                    .generate(prompt, max_tokens, sampling.temperature);
             let mut full = String::new();
             for w in text.split_whitespace() {
                 let piece = if full.is_empty() {
@@ -787,5 +797,42 @@ mod tests {
     fn stub_engine_is_ready() {
         let e = stub_engine();
         assert!(e.is_ready());
+    }
+
+    #[test]
+    fn embedded_gguf_chat_template_works_without_tokenizer_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("metadata.gguf");
+        let template = "{% for m in messages %}{{ m.content }}{% endfor %}";
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"GGUF");
+        bytes.extend_from_slice(&3u32.to_le_bytes());
+        bytes.extend_from_slice(&0u64.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        let key = "tokenizer.chat_template";
+        bytes.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        bytes.extend_from_slice(key.as_bytes());
+        bytes.extend_from_slice(&8u32.to_le_bytes()); // GGUF string value
+        bytes.extend_from_slice(&(template.len() as u64).to_le_bytes());
+        bytes.extend_from_slice(template.as_bytes());
+        bytes.resize(bytes.len().div_ceil(32) * 32, 0);
+        std::fs::write(&path, bytes).unwrap();
+        let mut engine = stub_engine();
+        let inner = Arc::get_mut(&mut engine.inner).unwrap();
+        inner.gguf = Some(Arc::new(GgufArchive::mmap_path(&path).unwrap()));
+        // No tokenizer directory is needed to discover the embedded template.
+        assert_eq!(engine.tokenizer_chat_template().as_deref(), Some(template));
+        std::fs::write(
+            dir.path().join("tokenizer_config.json"),
+            r#"{"chat_template":"other template"}"#,
+        )
+        .unwrap();
+        Arc::get_mut(&mut engine.inner).unwrap().tokenizer_dir = Some(dir.path().to_path_buf());
+        assert_eq!(engine.tokenizer_chat_template().as_deref(), Some(template));
+        Arc::get_mut(&mut engine.inner).unwrap().gguf = None;
+        assert_eq!(
+            engine.tokenizer_chat_template().as_deref(),
+            Some("other template")
+        );
     }
 }

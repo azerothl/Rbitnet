@@ -30,5 +30,5 @@ pub fn build_qwen35_moe_executor(
         gguf,
         backend,
         tokenizer_path,
-    )))
+    )?))
 }

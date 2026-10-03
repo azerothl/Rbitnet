@@ -1,0 +1,110 @@
+{
+  "kind": "native-inference-validation-v1",
+  "source_commit": "817850ade2ebfdc3c47e85c85337ee96a91a8f95",
+  "workspace": {
+    "command": "RBITNET_BACKEND=cpu cargo test --workspace --release",
+    "passed": 208,
+    "failed": 0,
+    "ignored": 1,
+    "note": "Optional hardware/model tests return early unless their explicit environment variables are supplied. Their actual opt-in executions are recorded separately below."
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets --release",
+    "completed": true,
+    "warnings_present": true
+  },
+  "actual_opt_in_checks": [
+    {
+      "model": "llama32-1b",
+      "check": "all_seven_prompt_id_sequences",
+      "passed": true
+    },
+    {
+      "model": "qwen35-2b",
+      "check": "all_seven_prompt_id_sequences",
+      "passed": true
+    },
+    {
+      "model": "gpt-oss-20b",
+      "check": "all_seven_prompt_id_sequences",
+      "passed": true
+    },
+    {
+      "model": "glm47-flash",
+      "check": "all_seven_prompt_id_sequences",
+      "passed": true
+    },
+    {
+      "check": "cuda-quant-tests",
+      "hardware_opt_in": true,
+      "passed": true
+    },
+    {
+      "check": "cuda-attention-tests",
+      "hardware_opt_in": true,
+      "passed": true
+    }
+  ],
+  "llama_greedy_sequence": {
+    "fixture": "../../../tests/data/golden/llama32-1b-instruct-q4-k-m.sequence.json",
+    "backends": [
+      "cpu",
+      "cuda"
+    ],
+    "conversations": 5,
+    "greedy_token_ids": 43,
+    "all_matched": true,
+    "prior_validation": "../../validation/2026-10-03-llama32-inference-fix.json"
+  },
+  "attention_reference": {
+    "independent_accumulation": "f64",
+    "query_heads": 4,
+    "shapes": [
+      {
+        "kv_heads": 2,
+        "key_width": 64,
+        "value_width": 64
+      },
+      {
+        "kv_heads": 1,
+        "key_width": 576,
+        "value_width": 512
+      }
+    ],
+    "positions": [
+      0,
+      18,
+      256,
+      2047,
+      31
+    ],
+    "window_sinks_and_changed_prefix_reset": true,
+    "absolute_error_tolerance": 2e-05
+  },
+  "cuda_quant_formats": [
+    "F32",
+    "Q4_0",
+    "Q5_0",
+    "Q8_0",
+    "Q4_K",
+    "Q5_K",
+    "Q6_K",
+    "MXFP4"
+  ],
+  "cuda_quant_checks": [
+    "full dequantized row oracle",
+    "resident row views",
+    "independent head batches",
+    "four concurrent threads"
+  ],
+  "template_reference": {
+    "exact_rendered_strings_per_model": 7,
+    "qwen_gpt_glm_reference": "llama.cpp frozen benchmark fixtures",
+    "llama_reference": "independent Python Jinja2 rendering of embedded GGUF template, which includes its default system date unlike the original manually formatted Llama benchmark"
+  },
+  "ordinary_http": {
+    "models": 4,
+    "plain_chat_and_sse_paris": true,
+    "gguf_templates_discovered": true
+  }
+}

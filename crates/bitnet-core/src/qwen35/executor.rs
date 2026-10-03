@@ -10,7 +10,6 @@ use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::SamplingOptions;
 use crate::timings::PhaseTimings;
 
-use super::cuda_ctx::QwenCudaContext;
 use super::runtime::Qwen35Runtime;
 
 pub struct Qwen35MoeExecutor {
@@ -19,7 +18,6 @@ pub struct Qwen35MoeExecutor {
     pub backend_impl: Box<dyn ComputeBackend>,
     pub gguf: Arc<GgufArchive>,
     pub tokenizer_path: PathBuf,
-    cuda_ctx: Option<QwenCudaContext>,
     runtime: Mutex<Option<Qwen35Runtime>>,
 }
 
@@ -29,21 +27,25 @@ impl Qwen35MoeExecutor {
         gguf: Arc<GgufArchive>,
         backend: Box<dyn ComputeBackend>,
         tokenizer_path: PathBuf,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let runtime = Qwen35Runtime::load(Arc::clone(&gguf), &tokenizer_path, backend_kind)?;
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
-            cuda_ctx: QwenCudaContext::try_load(),
-            runtime: Mutex::new(None),
-        }
+            runtime: Mutex::new(Some(runtime)),
+        })
     }
 }
 
 impl crate::model::ModelExecutor for Qwen35MoeExecutor {
     fn family(&self) -> &'static str {
-        "qwen35moe"
+        if self.gguf.normalized_architecture().as_deref() == Some("qwen35") {
+            "qwen35"
+        } else {
+            "qwen35moe"
+        }
     }
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
@@ -68,8 +70,11 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
     }
 
     fn offload_metadata(&self) -> Option<String> {
-        (self.backend_kind == BackendKind::Hybrid)
-            .then(|| "hybrid selected; qwen35moe uses its CUDA-required native path".into())
+        let runtime = self.runtime.lock().ok()?;
+        let rt = runtime.as_ref()?;
+        let bytes = rt.resident_weights_bytes();
+        let (gpu, total, head) = rt.gpu_execution_summary();
+        Some(format!("native qwen35 graph; {} MiB quantized weights resident on CUDA; {gpu}/{total} recurrent blocks resident; resident output head: {head}; remaining operations use the existing CPU/GPU path", bytes / (1024 * 1024)))
     }
 
     fn generate_with_timings(
@@ -78,34 +83,37 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
-        if !matches!(self.backend_kind, BackendKind::Cuda | BackendKind::Hybrid) {
-            return Err(BitNetError::Inference(
-                "native qwen35moe requires CUDA for this phase (`RBITNET_BACKEND=cuda` or `hybrid`).".into(),
-            ));
-        }
-        let cuda = self.cuda_ctx.clone().ok_or_else(|| {
-            BitNetError::Inference(
-                "CUDA backend selected but NVIDIA CUDA/cuBLAS failed to load — see docs/USAGE.md for driver requirements."
-                    .into(),
-            )
-        })?;
-
         let mut slot_rt = self
             .runtime
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
-        if slot_rt.is_none() {
-            *slot_rt = Some(Qwen35Runtime::load(
-                Arc::clone(&self.gguf),
-                &self.tokenizer_path,
-                cuda,
-                self.backend_kind,
-            )?);
-        }
-
         slot_rt
             .as_mut()
             .unwrap()
             .generate_with_timings(prompt, max_tokens, sampling)
+    }
+    fn generate_streaming(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+        callback: &mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let mut runtime = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        let (text, phases) = runtime.as_mut().unwrap().generate_inner(
+            prompt,
+            max_tokens,
+            sampling,
+            Some(callback),
+        )?;
+        callback(crate::stream::StreamEvent::Done(
+            crate::scheduler::InferenceOutput {
+                text,
+                stats: crate::scheduler::InferenceStats::from_phases(phases, false),
+            },
+        ))
     }
 }

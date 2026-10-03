@@ -1,14 +1,16 @@
 //! Full multi-head attention (non-recurrent layers), GQA + RoPE (MRoPE approximated as standard RoPE on `rope_dim_pairs`).
 
 use super::config::Qwen35Config;
-use super::qmatvec::quant_matmul_vec;
+use super::qmatvec::weighted_matmul_vec as quant_matmul_vec;
 use crate::error::{BitNetError, Result};
+use crate::native::weights::Weights;
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct AttnKvCache {
     mode: KvMode,
     stride: usize,
     kv_head_span: usize,
+    cuda_attention: Vec<Option<crate::native::attention::CudaAttention>>,
 }
 
 #[derive(Clone, Default)]
@@ -34,6 +36,17 @@ struct PagedLayerKv {
     token_to_offset: Vec<usize>,
 }
 
+impl Clone for AttnKvCache {
+    fn clone(&self) -> Self {
+        Self {
+            mode: self.mode.clone(),
+            stride: self.stride,
+            kv_head_span: self.kv_head_span,
+            cuda_attention: (0..self.cuda_attention.len()).map(|_| None).collect(),
+        }
+    }
+}
+
 impl AttnKvCache {
     pub fn new(cfg: &Qwen35Config, max_seq: usize) -> Self {
         let stride = cfg.n_head_kv * cfg.head_dim;
@@ -43,12 +56,29 @@ impl AttnKvCache {
         );
         if !paged_enabled {
             let len = stride * max_seq;
-            let k = (0..cfg.n_layer).map(|_| vec![0f32; len]).collect();
-            let v = (0..cfg.n_layer).map(|_| vec![0f32; len]).collect();
+            let k = (0..cfg.n_layer)
+                .map(|il| {
+                    if cfg.is_recurrent_layer(il) {
+                        Vec::new()
+                    } else {
+                        vec![0f32; len]
+                    }
+                })
+                .collect();
+            let v = (0..cfg.n_layer)
+                .map(|il| {
+                    if cfg.is_recurrent_layer(il) {
+                        Vec::new()
+                    } else {
+                        vec![0f32; len]
+                    }
+                })
+                .collect();
             return Self {
                 mode: KvMode::DenseBuffers { k, v },
                 stride,
                 kv_head_span: cfg.head_dim,
+                cuda_attention: (0..cfg.n_layer).map(|_| None).collect(),
             };
         }
 
@@ -79,10 +109,14 @@ impl AttnKvCache {
             },
             stride,
             kv_head_span: cfg.head_dim,
+            cuda_attention: (0..cfg.n_layer).map(|_| None).collect(),
         }
     }
 
     pub fn clear(&mut self) {
+        for attention in self.cuda_attention.iter_mut().flatten() {
+            attention.clear();
+        }
         match &mut self.mode {
             KvMode::Dense => {}
             KvMode::DenseBuffers { k, v } => {
@@ -297,7 +331,8 @@ fn rope_inplace_partial(slice: &mut [f32], pos: usize, theta: f32, rot_dims: usi
 
 /// Qwen3 full attention block (Llama-cpp style gate on attention output branches).
 #[allow(clippy::too_many_arguments)]
-pub fn block_full_attention(
+pub(crate) fn block_full_attention(
+    weights: &Weights,
     cfg: &Qwen35Config,
     kv: &mut AttnKvCache,
     il: usize,
@@ -327,8 +362,8 @@ pub fn block_full_attention(
     }
     let n_rep = cfg.n_head / cfg.n_head_kv;
 
-    let k_lin = quant_matmul_vec(wk_py, wk_ty, wk_ne0, wk_ne1, x)?;
-    let v_lin = quant_matmul_vec(wv_py, wv_ty, wv_ne0, wv_ne1, x)?;
+    let k_lin = quant_matmul_vec(weights, wk_py, wk_ty, wk_ne0, wk_ne1, x)?;
+    let v_lin = quant_matmul_vec(weights, wv_py, wv_ty, wv_ne0, wv_ne1, x)?;
     if cfg.n_head_kv == 0 {
         return Err(BitNetError::Inference(
             "attention: n_head_kv is zero".into(),
@@ -351,7 +386,7 @@ pub fn block_full_attention(
         ));
     }
 
-    let q_full = quant_matmul_vec(wq_py, wq_ty, wq_ne0, wq_ne1, x)?;
+    let q_full = quant_matmul_vec(weights, wq_py, wq_ty, wq_ne0, wq_ne1, x)?;
     if cfg.n_head == 0 || q_full.len() % cfg.n_head != 0 {
         return Err(BitNetError::Inference(format!(
             "attention: q projection width {} not divisible by n_head {}",
@@ -419,24 +454,63 @@ pub fn block_full_attention(
     let attn_out_head_dim = (wo_ne0 / cfg.n_head).max(1);
     let mut attn_out = vec![0f32; wo_ne0];
 
-    for qh in 0..cfg.n_head {
-        let kv_h = qh / n_rep;
-        let q_slice = &q_heads_actual[qh * cfg.head_dim..qh * cfg.head_dim + kv_head_dim];
-        let mut scores = Vec::with_capacity(pos + 1);
-        for p in 0..=pos {
-            let k_slice = kv.read_k_slice(il, p, kv_h, kv_head_dim)?;
-            let dot: f32 = q_slice.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
-            scores.push(dot * cfg.attn_scale);
-        }
-        softmax_inplace(&mut scores);
-        let mut comb = vec![0f32; kv_head_dim];
-        for p in 0..=pos {
-            let v_slice = kv.read_v_slice(il, p, kv_h, kv_head_dim)?;
-            let sp = scores[p];
-            for i in 0..kv_head_dim {
-                comb[i] += sp * v_slice[i];
+    let mut cuda_done = false;
+    if weights.resident_bytes > 0
+        && !matches!(
+            std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
+            Ok("0" | "false" | "no")
+        )
+    {
+        if let KvMode::DenseBuffers { k, v } = &kv.mode {
+            let slot = &mut kv.cuda_attention[il];
+            if slot.is_none() {
+                *slot = crate::native::attention::CudaAttention::new(
+                    cfg.max_seq,
+                    cfg.n_head_kv,
+                    kv_head_dim,
+                    kv_head_dim,
+                    cfg.n_head,
+                );
+            }
+            if let Some(attention) = slot {
+                attention.run(
+                    &q_heads_actual,
+                    &k[il],
+                    &v[il],
+                    pos,
+                    0,
+                    cfg.attn_scale,
+                    None,
+                    &mut attn_out,
+                )?;
+                cuda_done = true;
             }
         }
+    }
+
+    for qh in 0..cfg.n_head {
+        let comb = if cuda_done {
+            attn_out[qh * attn_out_head_dim..(qh + 1) * attn_out_head_dim].to_vec()
+        } else {
+            let kv_h = qh / n_rep;
+            let q_slice = &q_heads_actual[qh * cfg.head_dim..qh * cfg.head_dim + kv_head_dim];
+            let mut scores = Vec::with_capacity(pos + 1);
+            for p in 0..=pos {
+                let k_slice = kv.read_k_slice(il, p, kv_h, kv_head_dim)?;
+                let dot: f32 = q_slice.iter().zip(k_slice.iter()).map(|(a, b)| a * b).sum();
+                scores.push(dot * cfg.attn_scale);
+            }
+            softmax_inplace(&mut scores);
+            let mut comb = vec![0f32; kv_head_dim];
+            for p in 0..=pos {
+                let v_slice = kv.read_v_slice(il, p, kv_h, kv_head_dim)?;
+                let sp = scores[p];
+                for i in 0..kv_head_dim {
+                    comb[i] += sp * v_slice[i];
+                }
+            }
+            comb
+        };
         let dst = qh * attn_out_head_dim;
         if dst >= attn_out.len() {
             continue;
@@ -454,7 +528,7 @@ pub fn block_full_attention(
         }
     }
 
-    let y = quant_matmul_vec(wo_py, wo_ty, wo_ne0, wo_ne1, &attn_out)?;
+    let y = quant_matmul_vec(weights, wo_py, wo_ty, wo_ne0, wo_ne1, &attn_out)?;
     if y.len() != cfg.n_embd {
         return Err(BitNetError::Inference(
             "attention: wo output width mismatch".into(),
