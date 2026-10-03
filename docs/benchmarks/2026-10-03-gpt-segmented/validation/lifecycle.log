@@ -1,0 +1,10 @@
+fixed passed GPT ABI, output and managed memory checks
+forced-segments passed GPT ABI, output and managed memory checks
+cached passed GPT ABI, output and managed memory checks
+cpu-routed passed GPT ABI, output and managed memory checks
+partial-fixed passed GPT ABI, output and managed memory checks
+hybrid-cached passed GPT ABI, output and managed memory checks
+legacy-fixed passed GPT ABI, output and managed memory checks
+legacy-optional passed GPT ABI, output and managed memory checks
+legacy-required passed GPT ABI, output and managed memory checks
+insufficient-state passed GPT ABI, output and managed memory checks

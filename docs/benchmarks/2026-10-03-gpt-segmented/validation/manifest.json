@@ -1,0 +1,101 @@
+{
+  "source_parent_commit": "e4b88980d3222ff31615919cd25640773b69498d",
+  "source_sha256": {
+    "crates/bitnet-core/src/native/gpt_full.rs": "d92bcfdc7620cdcfe2ad9d5616e49bfe9a39a5a1c49be3b1c825a854efba4c8e",
+    "crates/bitnet-core/src/native/graph.rs": "df8ddb404cffa9a67108fd10173b8d02471775ae50d8e85122e93ad2dba37ee5",
+    "crates/bitnet-core/src/native/state_budget.rs": "03cc901674ab13c44d25ad9f433b73c831a2071a46db2972e1c3383acd39e7e2",
+    "crates/bitnet-core/src/native/weights.rs": "957eb2418c1ff989e9e0ca6e05cfca369ec5a5d8a992eb322bf0482fa56f4b04",
+    "crates/bitnet-core/src/native/moe.rs": "e895c1f0d3e944561d7aca3e34e18fd632750264de9cf882616039ca8c558a4e",
+    "crates/bitnet-core/src/native/expert_cache.rs": "6f0e519b9b42eb76e077671a8bfaa12affe0b173c73ec305b742e2fa6b7c2901",
+    "crates/bitnet-core/src/native/gpt_segmented_tests.rs": "0da292d20ddc42edfbea2691b337018d3f25a3cf730fa4fd6f48019830edeb20",
+    "crates/bitnet-core/src/native/gpt_segmented_runtime_tests.rs": "638c2f7577d6892be60e11e44df7875a01a4402ef39c3f9be7df3523859e2c4d",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "0bace242a1afc8463f9010ebf7e6a76b32b13728b5eee6f7c8df8de0703826f6",
+    "native/cuda_quant/src/device_memory.cuh": "14869e0ea819fd846a9b4e859ee5a99a806bbf88f0a56ea693a2c0c2d5babf2c",
+    "native/cuda_quant/src/gpt_full.cuh": "9f3cb6d973a7a684c2a05548e7bfa146c9603d913389f76e46cebdda18a015f4",
+    "native/cuda_quant/src/llama_resident.cuh": "9e9513561e56e455ac23870144f3ccdff558a1a245aeb7c920ba661dbef455aa",
+    "native/cuda_quant/src/mla_full.cuh": "a6b2a9c5c9b90382188b3cbeffa2c3fd5d6e7b44e170f42a315d7538d1a211fb",
+    "native/cuda_quant/src/moe_resident.cuh": "bc891217e5b8ad3ff95d1d29768f0bf89a8b599d5d510cc40d5f82261a66dd52",
+    "native/cuda_quant/src/native_completion.cuh": "eaa924c6cf9c247c4f8ec550b6904170e1a0e2ad5b6e8b6f4cba7ca4a21016ee",
+    "native/cuda_quant/src/native_completion_check.cuh": "61711961057026b8f215b07154024b0f86496d0142f76ad98725795c93aa2188",
+    "native/cuda_quant/src/output_head.cuh": "6668a0486e14ce66ef7a018f974a1b1d70d0b52679b4810260f81cf74985fe02",
+    "native/cuda_quant/src/prefill_quant.cuh": "7e07c9d2fc085f8f0c7dfa2dac5755bbcf7fde06aa0f1d47fa387ebbe77e65ff",
+    "native/cuda_quant/src/qwen_full.cuh": "8999e8a96fda7807a8165a62913e60629075ac7f17847740a0f89ab72e6a4d3b",
+    "native/cuda_quant/src/qwen_prefill.cuh": "99e4cdafcb1403e58de9467bd008eeab870c83b02c76369d2fc38c6735276cad",
+    "native/cuda_quant/src/qwen_recurrent.cuh": "69d612227d0e25fcc099642b52c367500eb880628b9bdfdd72c6a53d0de03bed",
+    "native/cuda_quant/src/split_attention.cuh": "f8f8effeda891cf8b3e24fab2ef7365344f9cc66098c068d1207802b88372e23",
+    "native/cuda_quant/src/quant_matvec.cu": "e5c901d8140e9fd921d2a51db56065fd05539bb3343992b6513ffd319ce7700f",
+    "scripts/validate_gpt_segmented.ps1": "b80670207e5a3cb731907f9f6091dc1c209d78970c64c01c81d6be950372b6c5",
+    "scripts/benchmark_cache_stack.py": "35e1b086e480f3615fb0aa71e615bbe68e92603225cc4d23b45259646c5de3a1",
+    "scripts/validate_cache_streaming.py": "0af4c825ec76593e319043642910b135116192b442f8e0f9752cc78084754375"
+  },
+  "dll_sha256": "b8fb68b35761e2fc13a373846c21e9ffd3e5e62eb83aa060ecedc86cbf73ed43",
+  "cli_sha256": "016ed0f518a0125b3441ab2945f3ece0f2ce99be95e0c9cc59788801c77e6f45",
+  "teacher_cases": [
+    {
+      "cache_mib": 0,
+      "cap_mib": 12288
+    },
+    {
+      "cache_mib": 8192,
+      "cap_mib": 12288
+    },
+    {
+      "cache_mib": 16,
+      "cap_mib": 12288
+    },
+    {
+      "cache_mib": 0,
+      "cap_mib": 6144
+    }
+  ],
+  "live_phases": [
+    "fixed/segments/cache/CPU/hybrid/legacy lifecycle",
+    "streaming cached",
+    "streaming cpu",
+    "streaming partial"
+  ],
+  "implementation_commit": "84f686e",
+  "original_capture_sha256": {
+    "validation/serving-manifest.json": "1fa639339e6e4f70ebe6e6dce0a105eccda4e3c0e3b0834d1546aba72ac6c18e",
+    "validation/workspace.log": "0596b874d39a13d3967747cab2aa44132d082127a20f7b008c44fd930cd8bde8",
+    "validation/cuda-build.log": "b78f66a29900672430cd30e1b0a0c66b259fda68260a697d18bbaebd6fbfc98f",
+    "validation/native.log": "801e8d3794a16eeeab4a9f190eab43d02a798f122b9523426000c684810e1371",
+    "validation/real.log": "157fb3b50c9bfcab42770b1ba874f7bf28b9c043a2ecfad66533722fa1ef2849",
+    "validation/fixed-real.log": "9cd3f99e3e2ebd0529fb864a7b094589252f1868b2dd8f308a02dee39c50999a",
+    "validation/cli-build.log": "4c5423473d4b6f1c4cf933844199ccc62b07a8a0fbd4c0eda7c597896276523e",
+    "validation/clippy.log": "b3500b1b01ed15a2b80d2f8423ad6b4043a536244bc2762adba55020a31d6dd6",
+    "validation/final-validation.log": "24474846fff93a10e48fd285885bdfdf4f4228bbe939bf1aa158e772d0299f3d",
+    "validation/live-chain.log": "8609f86c57d13d8326cb2f06d3953217056a9ec0bfa0f037199ceb12ac698f74",
+    "validation/lifecycle.log": "57404b51e7c5d589062143ae498d4ce3bba6fb1fb59fd73173802cfa1c3ae1be",
+    "validation/streaming-cached.log": "4c5b7d88d7558eb8fe4ac357f88a78f0d84883d637c3462ff31a941d10bf5a14",
+    "validation/streaming-cpu.log": "4c5b7d88d7558eb8fe4ac357f88a78f0d84883d637c3462ff31a941d10bf5a14",
+    "validation/streaming-partial.log": "4c5b7d88d7558eb8fe4ac357f88a78f0d84883d637c3462ff31a941d10bf5a14",
+    "validation/lifecycle.json": "e9554fe7b94f8d1b8f34ea733fed9c785bda7c7a5dbc054a8c2e70449ce0c077",
+    "validation/streaming-cached.json": "525dae9bdef659585363c852bc76d1f829e1db10a60ebe81249ec9721845b7e8",
+    "validation/streaming-cpu.json": "19b4206e15515e98ab3639b7c87f424e52bd0b0a5a27cd1d1c6d5501fd2f1f7c",
+    "validation/streaming-partial.json": "2822be0eab48e6e9121ada2e164813363c1d5154e4c541c8415c3e33994e20b3",
+    "scripts/lifecycle.py": "8c887c0358a6c051d1b8dec28c63d6db73bff419e9eed46a31ce23323f983741"
+  },
+  "proof_sha256": {
+    "validation/serving-manifest.json": "1fa639339e6e4f70ebe6e6dce0a105eccda4e3c0e3b0834d1546aba72ac6c18e",
+    "validation/workspace.log": "5088f25deaf16d7a61b7ad180164ca4a5feea846b05d02f5bc78ebd97fc3b707",
+    "validation/cuda-build.log": "2b198a152d01bcbd8d784c17f097255a964cc1aa3788ec6686147167b6b4265b",
+    "validation/native.log": "3fd0280706f443403d629786f01e11922739106dc673d375205df77c046d3b25",
+    "validation/real.log": "ac1409431d737f656c3836ca7713e6cce0a93934d8e33dfe1ceeb0deafa2ff67",
+    "validation/fixed-real.log": "4eef18e899f9ece06a09f051d267325466c89dee9f238cc2554326c8a82f6571",
+    "validation/cli-build.log": "4c5423473d4b6f1c4cf933844199ccc62b07a8a0fbd4c0eda7c597896276523e",
+    "validation/clippy.log": "b3500b1b01ed15a2b80d2f8423ad6b4043a536244bc2762adba55020a31d6dd6",
+    "validation/final-validation.log": "28c3814a1c230e708f686edbaa326361da4d9182f2390e0ece48172050b0de4c",
+    "validation/live-chain.log": "ab9422424a384f3e05c30d936fd27866429605115b5d80b0e591e60a6aa8d164",
+    "validation/lifecycle.log": "c276f952b2ff7b30f2ac0e317342ffa132989b22142ccb35b2471d0635ce7604",
+    "validation/streaming-cached.log": "f2adedf752e216104b768664d7d58a565acae945611e5c8b85a4351ff24c367d",
+    "validation/streaming-cpu.log": "f2adedf752e216104b768664d7d58a565acae945611e5c8b85a4351ff24c367d",
+    "validation/streaming-partial.log": "f2adedf752e216104b768664d7d58a565acae945611e5c8b85a4351ff24c367d",
+    "validation/lifecycle.json": "e9554fe7b94f8d1b8f34ea733fed9c785bda7c7a5dbc054a8c2e70449ce0c077",
+    "validation/streaming-cached.json": "525dae9bdef659585363c852bc76d1f829e1db10a60ebe81249ec9721845b7e8",
+    "validation/streaming-cpu.json": "19b4206e15515e98ab3639b7c87f424e52bd0b0a5a27cd1d1c6d5501fd2f1f7c",
+    "validation/streaming-partial.json": "2822be0eab48e6e9121ada2e164813363c1d5154e4c541c8415c3e33994e20b3",
+    "scripts/lifecycle.py": "8c887c0358a6c051d1b8dec28c63d6db73bff419e9eed46a31ce23323f983741"
+  },
+  "log_normalization": "Published UTF-8 LF logs omit trailing blank lines; original and published SHA256 recorded separately."
+}
