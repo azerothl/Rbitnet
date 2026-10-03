@@ -119,6 +119,29 @@ RBITNET_CUDA_API int rbitnet_cuda_moe_dynamic_step(void *context, const float *i
 RBITNET_CUDA_API int rbitnet_cuda_moe_step(void *context,const float *input,
     const unsigned *experts,const float *probabilities,float *output);
 
+/* Optional fully resident GPT-OSS token graph. Expert contexts and matrix
+ * weights are borrowed, exclusive to this runtime, and must outlive it. Host
+ * norm/bias/frequency arrays are copied during creation. Fixed expert banks only.
+ * Top-k uses Rust total_cmp order and the lower expert ID wins ties. */
+typedef struct {
+    unsigned embd,vocab,layers,heads,kv_heads,head_dim,rotary,capacity,window,experts,used,graphs,split,ordered;
+    float epsilon,rope_magnitude,weight_scale;
+} RbitnetGptConfig;
+typedef struct {
+    RbitnetLlamaMatrix q,k,v,out,router;
+    const float *attn_norm,*ffn_norm,*q_bias,*k_bias,*v_bias,*out_bias,*router_bias,*selection_bias,*sinks;
+    void *moe;
+} RbitnetGptLayer;
+RBITNET_CUDA_API void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig*,const RbitnetGptLayer*,
+    const RbitnetLlamaMatrix *head,const float *output_norm,const float *frequency);
+RBITNET_CUDA_API void rbitnet_cuda_gpt_full_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_full_step(void*,const float*,unsigned position,unsigned mode,float*,unsigned*);
+/* Diagnostic host-array APIs share the production enqueue/router kernels. */
+RBITNET_CUDA_API int rbitnet_cuda_gpt_full_hidden_check(void*,const float*,unsigned position,float*);
+/* Output per layer: embd hidden values, experts raw router logits, used IDs as F32. */
+RBITNET_CUDA_API int rbitnet_cuda_gpt_full_layers_check(void*,const float*,unsigned position,float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_router_check(const float*,const float*,unsigned,unsigned,float,unsigned*,float*);
+
 /* A complete dense Qwen3.5 recurrent block, including both residuals and FFN.
  * Matrices, in order: qkv, z, beta, alpha, ssm_out, ffn_gate, ffn_up, ffn_down.
  * Matrix weights are device pointers retained by the caller. All other pointers

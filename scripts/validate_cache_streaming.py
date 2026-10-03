@@ -23,14 +23,16 @@ def main():
     p.add_argument('--split-kv', action='store_true', help='Validate exact split-KV with runtime graphs and cached prefixes')
     p.add_argument('--tf32x3', action='store_true', help='Validate Llama compensated block prefill with prefix reuse')
     p.add_argument('--qwen-prefill', action='store_true', help='Validate full Qwen block prefill with checkpoints')
+    p.add_argument('--gpt-full', action='store_true', help='Validate fixed-bank resident GPT-OSS resets, disconnects and serialization')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
     if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
+    if args.gpt_full and (args.qwen_full or args.tf32x3 or args.speculative): p.error('select only one architecture experiment')
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, split_kv=args.split_kv, tf32x3=args.tf32x3, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
@@ -38,6 +40,7 @@ def main():
         if args.speculative: p.error('select only one architecture experiment')
         modes = [(next(m for m in config['models'] if m['id']=='qwen35-2b'), '0')]
     if args.tf32x3 and not args.qwen_prefill: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
+    if args.gpt_full: modes = [(next(m for m in config['models'] if m['id']=='gpt-oss-20b'), '0')]
     for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
@@ -51,6 +54,7 @@ def main():
                                  RBITNET_CUDA_PREFILL_TF32X3='1' if args.tf32x3 else '0',
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
+                kw['env'].update(RBITNET_CUDA_GPT_FULL='1' if args.gpt_full else '0',RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full else '0',RBITNET_MOE_CACHE_MB='0')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
             return original(*a, **kw)
         server = Server(config, model, 'rbitnet', 'gpu', root); server.log_path = root/(label+'.log')
@@ -109,9 +113,10 @@ def main():
             assert equal, label
             if args.speculative: assert delta.get('rbitnet_core_speculative_verify_blocks_total', 0) > 0
             if args.qwen_full: assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0
+            if args.gpt_full: assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0
             if args.split_kv:
                 used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
-                if model['id']=='llama32-1b' or args.qwen_full: assert used > 0
+                if model['id']=='llama32-1b' or args.qwen_full or args.gpt_full: assert used > 0
                 else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
             if args.tf32x3 or args.qwen_prefill:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
