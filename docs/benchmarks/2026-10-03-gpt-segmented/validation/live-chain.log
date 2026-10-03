@@ -1,0 +1,9 @@
+Starting live fixed/segments/cache/CPU/hybrid/legacy lifecycle
+Completed live fixed/segments/cache/CPU/hybrid/legacy lifecycle exit 0
+Starting live streaming cached
+Completed live streaming cached exit 0
+Starting live streaming cpu
+Completed live streaming cpu exit 0
+Starting live streaming partial
+Completed live streaming partial exit 0
+All ten GPT lifecycle cases and three streaming suites completed with unchanged source/CLI/DLL.
