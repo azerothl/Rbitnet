@@ -1,0 +1,1754 @@
+{
+  "cli_sha256": "016ed0f518a0125b3441ab2945f3ece0f2ce99be95e0c9cc59788801c77e6f45",
+  "dll_sha256": "b8fb68b35761e2fc13a373846c21e9ffd3e5e62eb83aa060ecedc86cbf73ed43",
+  "captures": {
+    "performance/cache0/baseline.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-fixed.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-split-prefix.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-split.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/results.json": "a8af5ff0f416794df37ca25d1b4d4e974933386032528cbc17da649b155d7e73",
+    "performance/cache0/validation-manifest.json": "1095f4c0f0846abedd77153a0cad378995f163bdda342435ff8350264464a676",
+    "performance/cache0/runner.log": "9742417669f458818428a808bb348cfc5f871b1b9f907852b18895abf3344448",
+    "performance/cache8192/baseline.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full-split-prefix.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full-split.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/results.json": "5aa3ba9a3a9d2698a9e384b63cd4b21b49048f20d2492d6985c2699c9491cfd5",
+    "performance/cache8192/validation-manifest.json": "1095f4c0f0846abedd77153a0cad378995f163bdda342435ff8350264464a676",
+    "performance/cache8192/runner.log": "9eac3ec08f7867c34132ecede5d3bc38870249fa1b96b4ba6ffafb0f18486648",
+    "scripts/benchmark_cache_stack.py": "35e1b086e480f3615fb0aa71e615bbe68e92603225cc4d23b45259646c5de3a1",
+    "scripts/benchmark_final.py": "6b82c036d2f4e652bfda9068281de18541b2be0d03a7d50f6519581fa9e98436",
+    "performance/chain.log": "682dd335327cbcd3afc48860977f925d13473fae34d2b357400e754517ce1ece"
+  },
+  "original_captures": {
+    "performance/cache0/baseline.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-fixed.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-split-prefix.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full-split.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/full.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache0/results.json": "0d62f5daa0014c2c173770bdd9bde290b920fc10679bf982ebcc0c33cd82c438",
+    "performance/cache0/validation-manifest.json": "1fa639339e6e4f70ebe6e6dce0a105eccda4e3c0e3b0834d1546aba72ac6c18e",
+    "performance/cache0/runner.log": "b7c9870e6dc1c83700ee3270b171878945da944a1caedbc2ce3a848bad397994",
+    "performance/cache8192/baseline.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full-split-prefix.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full-split.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/full.log": "4a3e0162c3053a5eef50e5bdd48d61085e1a077401a47e229d5f385579d7cc4a",
+    "performance/cache8192/results.json": "63e06330c958374447acb460e3f841b1d768affeedb84e9b9d2477d93883268e",
+    "performance/cache8192/validation-manifest.json": "1fa639339e6e4f70ebe6e6dce0a105eccda4e3c0e3b0834d1546aba72ac6c18e",
+    "performance/cache8192/runner.log": "dc3009151ff5b86b1fe961af8d9e57602b938f426cd009d1ebb1ed3bf8fcfd2b",
+    "scripts/benchmark_cache_stack.py": "35e1b086e480f3615fb0aa71e615bbe68e92603225cc4d23b45259646c5de3a1",
+    "scripts/benchmark_final.py": "6b82c036d2f4e652bfda9068281de18541b2be0d03a7d50f6519581fa9e98436",
+    "performance/chain.log": "beafe42aca68a03d5c71a60c5936288683e6c9abe6a473dc6b58118ccd34634f"
+  },
+  "summary": {
+    "0": {
+      "baseline": {
+        "long": {
+          "prefill_ms": {
+            "median": 31354.5,
+            "minimum": 30660.0,
+            "maximum": 31613.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 3295.0,
+            "minimum": 3139.0,
+            "maximum": 3476.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 38.87638974613098,
+            "minimum": 36.82393555811277,
+            "maximum": 40.777317617075504,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 34638.590600006864,
+            "minimum": 34140.164399985224,
+            "maximum": 34824.02100000763,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 3195585792.0,
+            "minimum": 3195585792.0,
+            "maximum": 3195585792.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 2401832960.0,
+            "minimum": 2401832960.0,
+            "maximum": 2401832960.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 11410218752.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 1419.5,
+            "minimum": 1413.0,
+            "maximum": 1426.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 261.0,
+            "minimum": 260.0,
+            "maximum": 262.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 53.64063417498532,
+            "minimum": 53.43511450381679,
+            "maximum": 53.84615384615385,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1701.5603000036208,
+            "minimum": 1692.6455000066198,
+            "maximum": 1710.4751000006218,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 191939328.0,
+            "minimum": 191939328.0,
+            "maximum": 191939328.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 150084096.0,
+            "minimum": 150084096.0,
+            "maximum": 150084096.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 11410218752.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 23003439104,
+          "gpu_global_baseline_mib": 2150.0,
+          "gpu_global_peak_mib": 13429.0,
+          "gpu_global_peak_delta_mib": 11279.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 31496.776500018314,
+          "sampling": 31509.427199984202,
+          "penalties": 32347.691499977373
+        }
+      },
+      "full-fixed": {
+        "long": {
+          "prefill_ms": {
+            "median": 18804.0,
+            "minimum": 18794.0,
+            "maximum": 18807.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 2169.0,
+            "minimum": 2167.0,
+            "maximum": 2172.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 59.01342039218571,
+            "minimum": 58.93186003683241,
+            "maximum": 59.067835717581914,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 20982.907500001602,
+            "minimum": 20977.776199986693,
+            "maximum": 20986.46029998781,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 18426876.0,
+            "minimum": 18426876.0,
+            "maximum": 18426876.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 512.0,
+            "minimum": 512.0,
+            "maximum": 512.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 1599.0,
+            "minimum": 1599.0,
+            "maximum": 1599.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 11420201116.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 788.0,
+            "minimum": 783.0,
+            "maximum": 793.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 153.5,
+            "minimum": 152.0,
+            "maximum": 155.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 91.21392190152801,
+            "minimum": 90.3225806451613,
+            "maximum": 92.10526315789474,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 959.0910999831976,
+            "minimum": 952.7329999837093,
+            "maximum": 965.449199982686,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 1106304.0,
+            "minimum": 1106304.0,
+            "maximum": 1106304.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 60.0,
+            "minimum": 60.0,
+            "maximum": 60.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 96.0,
+            "minimum": 96.0,
+            "maximum": 96.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 11420201116.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 22860640256,
+          "gpu_global_baseline_mib": 2144.0,
+          "gpu_global_peak_mib": 13516.0,
+          "gpu_global_peak_delta_mib": 11372.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 19158.767400018405,
+          "sampling": 19277.867299999343,
+          "penalties": 19223.719300003722
+        }
+      },
+      "full": {
+        "long": {
+          "prefill_ms": {
+            "median": 21059.0,
+            "minimum": 20970.0,
+            "maximum": 21173.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 2358.0,
+            "minimum": 2349.0,
+            "maximum": 2385.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 54.283447131263415,
+            "minimum": 53.66876310272537,
+            "maximum": 54.491272882077475,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 23451.209850012674,
+            "minimum": 23327.620399999432,
+            "maximum": 23552.927300013835,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 18426876.0,
+            "minimum": 18426876.0,
+            "maximum": 18426876.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 1228544.0,
+            "minimum": 1228544.0,
+            "maximum": 1228544.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 1599.0,
+            "minimum": 1599.0,
+            "maximum": 1599.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 11420201148.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 900.0,
+            "minimum": 898.0,
+            "maximum": 902.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 174.5,
+            "minimum": 174.0,
+            "maximum": 175.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 80.22988505747126,
+            "minimum": 80.0,
+            "maximum": 80.45977011494253,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1077.7196499984711,
+            "minimum": 1075.0687000108883,
+            "maximum": 1080.370599986054,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 1106304.0,
+            "minimum": 1106304.0,
+            "maximum": 1106304.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 73788.0,
+            "minimum": 73788.0,
+            "maximum": 73788.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 96.0,
+            "minimum": 96.0,
+            "maximum": 96.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 11420201148.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 22969171968,
+          "gpu_global_baseline_mib": 2199.0,
+          "gpu_global_peak_mib": 13491.0,
+          "gpu_global_peak_delta_mib": 11292.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 21411.264900001697,
+          "sampling": 21582.088700000895,
+          "penalties": 21374.623100011377
+        }
+      },
+      "full-split": {
+        "long": {
+          "prefill_ms": {
+            "median": 16663.5,
+            "minimum": 16623.0,
+            "maximum": 16760.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 1583.5,
+            "minimum": 1560.0,
+            "maximum": 1603.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 80.8354098402499,
+            "minimum": 79.85028072364317,
+            "maximum": 82.05128205128204,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 18274.561049984186,
+            "minimum": 18207.89920000243,
+            "maximum": 18355.135499994503,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 18426876.0,
+            "minimum": 18426876.0,
+            "maximum": 18426876.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 1228544.0,
+            "minimum": 1228544.0,
+            "maximum": 1228544.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 1599.0,
+            "minimum": 1599.0,
+            "maximum": 1599.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 11420336316.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 887.0,
+            "minimum": 886.0,
+            "maximum": 888.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 171.0,
+            "minimum": 170.0,
+            "maximum": 172.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 81.87414500683994,
+            "minimum": 81.39534883720931,
+            "maximum": 82.35294117647058,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1069.5413500070572,
+            "minimum": 1058.7712000124156,
+            "maximum": 1080.3115000016987,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 1106304.0,
+            "minimum": 1106304.0,
+            "maximum": 1106304.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 73788.0,
+            "minimum": 73788.0,
+            "maximum": 73788.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 96.0,
+            "minimum": 96.0,
+            "maximum": 96.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 11420336316.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 22971342848,
+          "gpu_global_baseline_mib": 2185.0,
+          "gpu_global_peak_mib": 13468.0,
+          "gpu_global_peak_delta_mib": 11283.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 16937.1026000008,
+          "sampling": 17077.10870000301,
+          "penalties": 17036.449300008826
+        }
+      },
+      "full-split-prefix": {
+        "long": {
+          "prefill_ms": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 76.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 1583.0,
+            "minimum": 1571.0,
+            "maximum": 1614.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 80.85941864734144,
+            "minimum": 79.30607187112763,
+            "maximum": 81.47676639083387,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 1662.4527500098338,
+            "minimum": 1649.4480000110343,
+            "maximum": 1703.415900003165,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 1532692.0,
+            "minimum": 1532692.0,
+            "maximum": 1532692.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 102656.0,
+            "minimum": 102656.0,
+            "maximum": 102656.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 133.0,
+            "minimum": 133.0,
+            "maximum": 133.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 1.0,
+            "minimum": 1.0,
+            "maximum": 1.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 144113664.0,
+            "minimum": 144113664.0,
+            "maximum": 144113664.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 11573100732.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 221.5,
+            "minimum": 220.0,
+            "maximum": 223.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 165.0,
+            "minimum": 164.0,
+            "maximum": 166.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 84.85160152806347,
+            "minimum": 84.33734939759036,
+            "maximum": 85.36585365853658,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 389.8583999834955,
+            "minimum": 389.57489997847006,
+            "maximum": 390.1418999885209,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 391816.0,
+            "minimum": 391816.0,
+            "maximum": 391816.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 26172.0,
+            "minimum": 26172.0,
+            "maximum": 26172.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 34.0,
+            "minimum": 34.0,
+            "maximum": 34.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 1.0,
+            "minimum": 1.0,
+            "maximum": 1.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 6094848.0,
+            "minimum": 6094848.0,
+            "maximum": 6094848.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 11573100732.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 22914199552,
+          "gpu_global_baseline_mib": 2186.0,
+          "gpu_global_peak_mib": 13603.0,
+          "gpu_global_peak_delta_mib": 11417.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 313.52890000562184,
+          "sampling": 388.04789999267086,
+          "penalties": 305.2318000118248
+        }
+      }
+    },
+    "8192": {
+      "baseline": {
+        "long": {
+          "prefill_ms": {
+            "median": 27160.5,
+            "minimum": 26833.0,
+            "maximum": 28646.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 3128.5,
+            "minimum": 3079.0,
+            "maximum": 3257.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 40.92137681270495,
+            "minimum": 39.299969296898986,
+            "maximum": 41.571938941214675,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 30372.509999986505,
+            "minimum": 29949.193100008415,
+            "maximum": 31736.74409999512,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 5406876288.0,
+            "minimum": 4983861888.0,
+            "maximum": 5829890688.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 2401832960.0,
+            "minimum": 2401832960.0,
+            "maximum": 2401832960.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 153337.0,
+            "minimum": 153305.0,
+            "maximum": 153369.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 2207606400.0,
+            "minimum": 1784592000.0,
+            "maximum": 2630620800.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 501647050.0,
+            "minimum": 386469400.0,
+            "maximum": 606010300.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 9837136256.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 1446.5,
+            "minimum": 1365.0,
+            "maximum": 1528.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 267.5,
+            "minimum": 250.0,
+            "maximum": 285.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 52.56140350877193,
+            "minimum": 49.12280701754386,
+            "maximum": 56.0,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1717.3261499992805,
+            "minimum": 1618.43790000421,
+            "maximum": 1816.214399994351,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 1170381312.0,
+            "minimum": 1170381312.0,
+            "maximum": 1170381312.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 150084096.0,
+            "minimum": 150084096.0,
+            "maximum": 150084096.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 9142.0,
+            "minimum": 9142.0,
+            "maximum": 9142.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 978220800.0,
+            "minimum": 978220800.0,
+            "maximum": 978220800.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 221959600.0,
+            "minimum": 207324200.0,
+            "maximum": 236595000.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 9837136256.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 20808810496,
+          "gpu_global_baseline_mib": 2150.0,
+          "gpu_global_peak_mib": 15534.0,
+          "gpu_global_peak_delta_mib": 13384.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 28610.381300008157,
+          "sampling": 27794.49709999608,
+          "penalties": 28996.197300002677
+        }
+      },
+      "full": {
+        "long": {
+          "prefill_ms": {
+            "median": 22763.5,
+            "minimum": 22426.0,
+            "maximum": 22940.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 2743.0,
+            "minimum": 2687.0,
+            "maximum": 2773.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 46.66563173194907,
+            "minimum": 46.159394157951674,
+            "maximum": 47.63676963155936,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 25534.80040001159,
+            "minimum": 25116.952399985166,
+            "maximum": 25682.63759999536,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 2229717372.0,
+            "minimum": 1806702972.0,
+            "maximum": 2652731772.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 1228544.0,
+            "minimum": 1228544.0,
+            "maximum": 1228544.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 153337.0,
+            "minimum": 153305.0,
+            "maximum": 153369.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 2207606400.0,
+            "minimum": 1784592000.0,
+            "maximum": 2630620800.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 515443450.0,
+            "minimum": 406621000.0,
+            "maximum": 636292800.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 1599.0,
+            "minimum": 1599.0,
+            "maximum": 1599.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 9847118652.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 1201.0,
+            "minimum": 1193.0,
+            "maximum": 1209.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 220.5,
+            "minimum": 215.0,
+            "maximum": 226.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 63.531590862317344,
+            "minimum": 61.94690265486725,
+            "maximum": 65.11627906976744,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1431.9676499872003,
+            "minimum": 1422.3625999875367,
+            "maximum": 1441.5726999868639,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 979548288.0,
+            "minimum": 979548288.0,
+            "maximum": 979548288.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 73788.0,
+            "minimum": 73788.0,
+            "maximum": 73788.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 9142.0,
+            "minimum": 9142.0,
+            "maximum": 9142.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 978220800.0,
+            "minimum": 978220800.0,
+            "maximum": 978220800.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 238382650.0,
+            "minimum": 231620700.0,
+            "maximum": 245144600.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 96.0,
+            "minimum": 96.0,
+            "maximum": 96.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 9847118652.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 20658139136,
+          "gpu_global_baseline_mib": 2303.0,
+          "gpu_global_peak_mib": 15558.0,
+          "gpu_global_peak_delta_mib": 13255.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 23454.0427000029,
+          "sampling": 23443.59449998592,
+          "penalties": 23162.31099999277
+        }
+      },
+      "full-split": {
+        "long": {
+          "prefill_ms": {
+            "median": 18117.0,
+            "minimum": 18007.0,
+            "maximum": 18172.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 1885.5,
+            "minimum": 1869.0,
+            "maximum": 1906.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 67.8878819298134,
+            "minimum": 67.1563483735572,
+            "maximum": 68.48582129481007,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 20026.99414998642,
+            "minimum": 19894.8337000038,
+            "maximum": 20069.910499994876,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 2229717372.0,
+            "minimum": 1806702972.0,
+            "maximum": 2652731772.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 1228544.0,
+            "minimum": 1228544.0,
+            "maximum": 1228544.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 153337.0,
+            "minimum": 153305.0,
+            "maximum": 153369.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 167.0,
+            "minimum": 135.0,
+            "maximum": 199.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 2207606400.0,
+            "minimum": 1784592000.0,
+            "maximum": 2630620800.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 510078400.0,
+            "minimum": 398781900.0,
+            "maximum": 626328900.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 1599.0,
+            "minimum": 1599.0,
+            "maximum": 1599.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 9847253820.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 1162.5,
+            "minimum": 1148.0,
+            "maximum": 1177.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 214.5,
+            "minimum": 213.0,
+            "maximum": 216.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 65.27125717266563,
+            "minimum": 64.81481481481481,
+            "maximum": 65.72769953051643,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 1390.6099500018172,
+            "minimum": 1367.249200004153,
+            "maximum": 1413.9706999994814,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 979548288.0,
+            "minimum": 979548288.0,
+            "maximum": 979548288.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 73788.0,
+            "minimum": 73788.0,
+            "maximum": 73788.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 9142.0,
+            "minimum": 9142.0,
+            "maximum": 9142.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 74.0,
+            "minimum": 74.0,
+            "maximum": 74.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 978220800.0,
+            "minimum": 978220800.0,
+            "maximum": 978220800.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 234707550.0,
+            "minimum": 233673500.0,
+            "maximum": 235741600.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 96.0,
+            "minimum": 96.0,
+            "maximum": 96.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 9847253820.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 20658442240,
+          "gpu_global_baseline_mib": 2285.0,
+          "gpu_global_peak_mib": 15493.0,
+          "gpu_global_peak_delta_mib": 13208.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 18530.984999990324,
+          "sampling": 18521.06030000141,
+          "penalties": 18333.33880000282
+        }
+      },
+      "full-split-prefix": {
+        "long": {
+          "prefill_ms": {
+            "median": 79.0,
+            "minimum": 75.0,
+            "maximum": 94.0,
+            "samples": 4
+          },
+          "decode_ms": {
+            "median": 1640.0,
+            "minimum": 1629.0,
+            "maximum": 1651.0,
+            "samples": 4
+          },
+          "decode_tokens_per_sec": {
+            "median": 78.049505962838,
+            "minimum": 77.52877044215627,
+            "maximum": 78.57581338244322,
+            "samples": 4
+          },
+          "http_ms": {
+            "median": 1724.5937999978196,
+            "minimum": 1710.651700006565,
+            "maximum": 1742.2965999867301,
+            "samples": 4
+          },
+          "gpu_upload_bytes": {
+            "median": 1839124.0,
+            "minimum": 1839124.0,
+            "maximum": 1839124.0,
+            "samples": 4
+          },
+          "gpu_download_bytes": {
+            "median": 102656.0,
+            "minimum": 102656.0,
+            "maximum": 102656.0,
+            "samples": 4
+          },
+          "expert_cache_hits": {
+            "median": 12768.0,
+            "minimum": 12768.0,
+            "maximum": 12768.0,
+            "samples": 4
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 4
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 133.0,
+            "minimum": 133.0,
+            "maximum": 133.0,
+            "samples": 4
+          },
+          "prefix_cache_hits": {
+            "median": 1.0,
+            "minimum": 1.0,
+            "maximum": 1.0,
+            "samples": 4
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 144113664.0,
+            "minimum": 144113664.0,
+            "maximum": 144113664.0,
+            "samples": 4
+          },
+          "managed_peak_bytes": 10000018236.0
+        },
+        "short": {
+          "prefill_ms": {
+            "median": 232.0,
+            "minimum": 228.0,
+            "maximum": 236.0,
+            "samples": 2
+          },
+          "decode_ms": {
+            "median": 172.5,
+            "minimum": 170.0,
+            "maximum": 175.0,
+            "samples": 2
+          },
+          "decode_tokens_per_sec": {
+            "median": 81.17647058823529,
+            "minimum": 80.0,
+            "maximum": 82.35294117647058,
+            "samples": 2
+          },
+          "http_ms": {
+            "median": 407.9486499977065,
+            "minimum": 405.7363999891095,
+            "maximum": 410.16090000630356,
+            "samples": 2
+          },
+          "gpu_upload_bytes": {
+            "median": 470152.0,
+            "minimum": 470152.0,
+            "maximum": 470152.0,
+            "samples": 2
+          },
+          "gpu_download_bytes": {
+            "median": 26172.0,
+            "minimum": 26172.0,
+            "maximum": 26172.0,
+            "samples": 2
+          },
+          "expert_cache_hits": {
+            "median": 3264.0,
+            "minimum": 3264.0,
+            "maximum": 3264.0,
+            "samples": 2
+          },
+          "expert_cache_misses": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_evictions": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_bytes": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "expert_cache_upload_ns": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "samples": 2
+          },
+          "gpu_gpt_full_tokens": {
+            "median": 34.0,
+            "minimum": 34.0,
+            "maximum": 34.0,
+            "samples": 2
+          },
+          "prefix_cache_hits": {
+            "median": 1.0,
+            "minimum": 1.0,
+            "maximum": 1.0,
+            "samples": 2
+          },
+          "prefix_cache_bytes_saved": {
+            "median": 6094848.0,
+            "minimum": 6094848.0,
+            "maximum": 6094848.0,
+            "samples": 2
+          },
+          "managed_peak_bytes": 10000018236.0
+        },
+        "memory": {
+          "peak_process_tree_rss_bytes": 20654948352,
+          "gpu_global_baseline_mib": 2265.0,
+          "gpu_global_peak_mib": 15602.0,
+          "gpu_global_peak_delta_mib": 13337.0
+        },
+        "sse_first_content_ms": {
+          "greedy": 332.6826000120491,
+          "sampling": 417.5067000032868,
+          "penalties": 336.7288000008557
+        }
+      }
+    }
+  },
+  "method": {
+    "context_tokens": 2048,
+    "device_limit_mib": 12288,
+    "device_margin_mib": 256,
+    "cycles": 3,
+    "warmup_cycle": 0,
+    "measured_cycles": [
+      1,
+      2
+    ],
+    "long_prompts": [
+      0,
+      1
+    ],
+    "short_prompt": 2,
+    "requests_per_mode": 9,
+    "sse_per_mode": 3,
+    "stop_per_mode": 1,
+    "scope": "one request at a time; not native batching",
+    "transfer_counters": "logical API bytes, not PCIe wire counters"
+  }
+}
