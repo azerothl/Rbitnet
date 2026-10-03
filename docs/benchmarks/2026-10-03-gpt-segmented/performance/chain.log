@@ -1,0 +1,6 @@
+Waiting for target/gpt-segmented/final_validation.py with no competing benchmark.
+Starting quiet GPT ablation cache 0 cap 12288, three cycles; no builds or other inference.
+Completed GPT ablation cache 0 exit 0
+Starting quiet GPT ablation cache 8192 cap 12288, three cycles; no builds or other inference.
+Completed GPT ablation cache 8192 exit 0
+Both GPT same-build ablations completed with unchanged source/CLI/DLL.
