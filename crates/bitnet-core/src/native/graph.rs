@@ -16,6 +16,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+#[cfg(test)]
+#[path = "gpt_segmented_runtime_tests.rs"]
+mod gpt_segmented_runtime_tests;
 #[path = "gpt_full.rs"]
 mod gpu_full;
 #[path = "mla_full.rs"]
@@ -522,7 +525,7 @@ impl Runtime {
             );
         let gpu_full = gpu_full::GpuFull::new(&weights, &cfg, &gpu_moe, kind);
         if std::env::var("RBITNET_REQUIRE_GPT_FULL").as_deref() == Ok("1") && gpu_full.is_none() {
-            return Err(BitNetError::Inference("fully resident GPT-OSS unavailable: requires CUDA, supported native DLL, CPU quant SIMD, all fixed expert banks and attention/output weights within budget".into()));
+            return Err(BitNetError::Inference("resident GPT-OSS unavailable: requires CUDA or hybrid, supported native DLL, CPU quant SIMD, compatible biased GPT backbone within budget and fixed or host-admitted expert execution".into()));
         }
         let gpu_mla = gpu_mla::GpuMla::new(&weights, &cfg, &gpu_moe, kind);
         if std::env::var("RBITNET_REQUIRE_MLA_FULL").as_deref() == Ok("1") && gpu_mla.is_none() {
@@ -699,6 +702,50 @@ impl Runtime {
             }
         }
         Ok(result)
+    }
+    fn resident_gpt_forward(
+        &mut self,
+        x: &[f32],
+        pos: usize,
+        logits: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
+        // Reinsert on every Result path, including cancellation. The native next
+        // request begins at zero or restores an immutable, complete checkpoint.
+        let mut full = self
+            .gpu_full
+            .take()
+            .ok_or_else(|| BitNetError::Inference("resident GPT unavailable".into()))?;
+        let result = (|| {
+            full.begin(x, pos)?;
+            for il in 0..self.cfg.layers {
+                if inference_cancelled() {
+                    return Err(BitNetError::Inference("inference cancelled".into()));
+                }
+                let (ids, weights) = full.prepare(il)?;
+                let start = Instant::now();
+                let leased = if let Some(moe) = &self.gpu_moe[il] {
+                    moe.lease_selected(&ids)?
+                } else {
+                    None
+                };
+                let resident = leased.is_some();
+                if let Some(leased) = leased {
+                    full.finish(il, leased.pointers(), None)?;
+                    // Lease owners remain live until the private stream has
+                    // finished reading the selected dynamic expert buffers.
+                    drop(leased);
+                } else {
+                    let input = full.ffn_input()?;
+                    let routed = self.routed_ffn(il, &input, &ids, &weights)?;
+                    full.finish(il, None, Some(&routed))?;
+                }
+                crate::perf::record_native_moe(resident, 1, start.elapsed().as_nanos() as u64);
+            }
+            full.end(logits, greedy)
+        })();
+        self.gpu_full = Some(full);
+        result
     }
     fn resident_mla_forward(
         &mut self,
@@ -942,6 +989,13 @@ impl Runtime {
             c.vocab,
             &mut x,
         )?;
+        if self
+            .gpu_full
+            .as_ref()
+            .is_some_and(|full| full.is_segmented())
+        {
+            return self.resident_gpt_forward(&x, pos, logits, greedy);
+        }
         if let Some(full) = &mut self.gpu_full {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -1020,7 +1074,9 @@ impl Runtime {
         let gpu_greedy =
             (self.gpu_full.is_some() || self.gpu_mla.is_some() || self.gpu_head.is_some())
                 && sampling.device_greedy_eligible();
-        let reused = if let Some(full) = &mut self.gpu_mla {
+        let reused = if let Some(full) = &mut self.gpu_full {
+            full.restore_prefix(&ids)?
+        } else if let Some(full) = &mut self.gpu_mla {
             full.restore_prefix(&ids)?
         } else {
             0
@@ -1028,7 +1084,9 @@ impl Runtime {
         for (pos, &id) in ids.iter().enumerate().skip(reused) {
             (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
         }
-        if let Some(full) = &mut self.gpu_mla {
+        if let Some(full) = &mut self.gpu_full {
+            full.save_prefix(&ids)?;
+        } else if let Some(full) = &mut self.gpu_mla {
             full.save_prefix(&ids)?;
         }
         let prefill_ms = pf.elapsed().as_millis() as u64;
@@ -1140,7 +1198,12 @@ impl ModelExecutor for NativeExecutor {
     fn offload_metadata(&self) -> Option<String> {
         self.runtime.lock().ok().map(|r| {
             let execution=if let Some(full)=&r.gpu_full {
-                format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: true; fixed expert banks; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
+                let mode = if full.is_segmented() {
+                    "host-admitted per-layer segments; CPU routed FFN fallback available"
+                } else {
+                    "fixed expert banks; whole-token graph"
+                };
+                format!("resident quantized weights: {} MiB; resident GPT-OSS attention/router/head: true; fully resident GPT-OSS token pipeline: {}; {}; prefix snapshot ABI: {}; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),!full.is_segmented(),mode,full.supports_prefix(),full.graphs,full.split,r.cfg.max_seq)
             } else if let Some(full)=&r.gpu_mla {
                 format!("resident quantized weights: {} MiB; resident MLA attention/router/head: true; compressed KV on device: true; host expert admission per layer; CPU routed FFN fallback available; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
             } else {
@@ -1416,7 +1479,10 @@ mod tests {
                 Family::GptOss,
             )
             .unwrap();
-            assert!(actual.gpu_full.is_some());
+            assert!(actual
+                .gpu_full
+                .as_ref()
+                .is_some_and(|full| !full.is_segmented()));
             for (case, ids) in inputs.iter().enumerate() {
                 let mut n = 0;
                 for (pos, &id) in ids.iter().enumerate() {

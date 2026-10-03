@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Fixed-bank GPT-OSS graph. No layer activation/router traffic crosses the host.
+// GPT-OSS fixed-bank token graph and segmented expert admission path.
 namespace {
 __device__ unsigned gpt_total_key(float value) {
     unsigned bits=__float_as_uint(value);
@@ -83,6 +83,18 @@ __global__ void gpt_trace_layer(const float *x,const float *router,const unsigne
     if(i<experts)out[embd+i]=router[i];
     if(i<used)out[embd+experts+i]=float(ids[i]);
 }
+uint64_t gpt_identity() {
+    static std::mutex mutex;static uint64_t next=0;
+    std::lock_guard<std::mutex> lock(mutex);
+    if(next==std::numeric_limits<uint64_t>::max())return 0;
+    return ++next;
+}
+struct GptSnapshot {
+    uint64_t owner=0;unsigned layers=0,width=0,length=0;
+    float *data=nullptr;
+    ~GptSnapshot() {if(data)cudaFree(data);}
+};
+
 struct ResidentGpt {
     RbitnetGptConfig cfg;
     RbitnetLlamaMatrix head;
@@ -92,12 +104,19 @@ struct ResidentGpt {
     float *x=nullptr,*h=nullptr,*q=nullptr,*k=nullptr,*v=nullptr,*attn=nullptr,*projection=nullptr,*router=nullptr;
     float *norm=nullptr,*frequency=nullptr,*phases=nullptr,*logits=nullptr,*maxima=nullptr,*maximum=nullptr,*scratch=nullptr;
     unsigned *position=nullptr,*ids=nullptr,*token=nullptr;
-    unsigned filled=0;
+    uint64_t identity=gpt_identity();
+    unsigned filled=0,host_position=0,next_layer=0;
+    bool segmented=false,prepared=false,token_started=false,output_ready=false;
+    unsigned *selected_ids=nullptr;float *selected_probabilities=nullptr;
+    std::vector<cudaGraph_t> segment_graphs;
+    std::vector<cudaGraphExec_t> segment_executable;
     cudaStream_t stream=nullptr;
     cudaGraph_t graphs[3]={};cudaGraphExec_t executable[3]={};
     ~ResidentGpt() {
         if(stream)cudaStreamSynchronize(stream);
         for(auto p:executable)if(p)cudaGraphExecDestroy(p);
+        for(auto p:segment_executable)if(p)cudaGraphExecDestroy(p);
+        for(auto p:segment_graphs)if(p)cudaGraphDestroy(p);
         for(auto p:graphs)if(p)cudaGraphDestroy(p);
         for(auto p:allocations)cudaFree(p);
         if(stream)cudaStreamDestroy(stream);
@@ -157,9 +176,62 @@ struct ResidentGpt {
             resident_argmax<<<1,256,0,stream>>>(maxima,ids,blocks,maximum,token);
         }
     }
+    void enqueue_prepare(unsigned il) {
+        const auto &c=cfg;unsigned qs=c.heads*c.head_dim,ks=c.kv_heads*c.head_dim;
+        const auto &l=layers[il];
+            normalize(x,l.attn_norm,h);
+            matrix(l.q,h,q);bias(q,l.q_bias,qs);
+            matrix(l.k,h,k);bias(k,l.k_bias,ks);
+            matrix(l.v,h,v);bias(v,l.v_bias,ks);
+            if(c.rotary)gpt_rope<<<((c.heads+c.kv_heads)*(c.rotary/2)+255)/256,256,0,stream>>>(q,k,frequency,position,c.heads,c.kv_heads,c.head_dim,c.rotary,c.rope_magnitude,phases);
+            gpt_write_kv<<<(ks+255)/256,256,0,stream>>>(k,v,keys[il],values[il],position,ks);
+            unsigned window=il%2==0?c.window:0;
+            float scale=1.0f/sqrtf(float(c.head_dim));
+            if(c.split)launch_split_attention(keys[il],values[il],q,position,c.kv_heads,c.heads,c.head_dim,window,scale,c.capacity,1,scratch,attn,stream,l.sinks);
+            else resident_attention<<<c.heads,128,size_t(c.capacity)*sizeof(float),stream>>>(keys[il],values[il],q,position,c.kv_heads,c.heads,c.head_dim,window,scale,attn,l.sinks);
+            matrix(l.out,attn,projection);bias(projection,l.out_bias,c.embd);
+            normalize(x,l.ffn_norm,h,projection);
+            if(c.ordered && l.router.type==0)gpt_router_matrix_ordered<<<(c.experts+7)/8,256,0,stream>>>(static_cast<const float*>(l.router.weights),l.router.row_bytes,h,c.embd,c.experts,c.ordered,router);
+            else matrix(l.router,h,router);
+            bias(router,l.router_bias,c.experts);
+            gpt_router<<<1,1,0,stream>>>(router,l.selection_bias,c.experts,c.used,c.weight_scale,
+                selected_ids,selected_probabilities,c.ordered!=0);
+    }
+    void enqueue_finish(unsigned il,bool cpu) {
+        if(!cpu) {
+            auto *m=static_cast<ResidentMoe*>(layers[il].moe);
+            cudaMemcpyAsync(m->experts,selected_ids,cfg.used*sizeof(unsigned),cudaMemcpyDeviceToDevice,stream);
+            cudaMemcpyAsync(m->probabilities,selected_probabilities,cfg.used*sizeof(float),cudaMemcpyDeviceToDevice,stream);
+            auto previous_stream=m->stream;auto *previous_input=m->input,*previous_output=m->output;
+            m->stream=stream;m->input=h;m->output=projection;m->enqueue();
+            m->stream=previous_stream;m->input=previous_input;m->output=previous_output;
+        }
+        resident_add<<<(cfg.embd+255)/256,256,0,stream>>>(x,projection,cfg.embd);
+    }
+    void enqueue_head(unsigned mode) {
+        const auto &c=cfg;
+        if(mode) {
+            normalize(x,norm,h);matrix(head,h,logits);
+        }
+        if(mode==2) {
+            unsigned blocks=(c.vocab+255)/256;
+            resident_argmax<<<blocks,256,0,stream>>>(logits,nullptr,c.vocab,maxima,ids);
+            resident_argmax<<<1,256,0,stream>>>(maxima,ids,blocks,maximum,token);
+        }
+    }
+    template<typename Fn> bool launch_segment(unsigned slot,Fn enqueue) {
+        if(!cfg.graphs) {enqueue();return cudaGetLastError()==cudaSuccess;}
+        if(!segment_executable[slot]) {
+            if(cudaStreamBeginCapture(stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return false;
+            enqueue();
+            if(cudaStreamEndCapture(stream,&segment_graphs[slot])!=cudaSuccess
+                || cudaGraphInstantiate(&segment_executable[slot],segment_graphs[slot],0)!=cudaSuccess)return false;
+        }
+        return cudaGraphLaunch(segment_executable[slot],stream)==cudaSuccess && cudaGetLastError()==cudaSuccess;
+    }
 };
 int gpt_step(ResidentGpt *r,const float *input,unsigned pos,unsigned mode,float *out,unsigned *id,bool hidden=false) {
-    if(!r || !input || mode>2 || pos>=r->cfg.capacity || (mode==1 && !out) || (mode==2 && !id) || (hidden && !out))return 1;
+    if(!r || r->segmented || !input || mode>2 || pos>=r->cfg.capacity || (mode==1 && !out) || (mode==2 && !id) || (hidden && !out))return 1;
     NativeCallCompletion completion(r->stream);
     if(pos==0)r->filled=0;if(pos!=r->filled)return 2;
     if(cudaMemcpyAsync(r->x,input,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
@@ -182,8 +254,8 @@ int gpt_step(ResidentGpt *r,const float *input,unsigned pos,unsigned mode,float 
 }
 }
 extern "C" {
-void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLayer *layers,
-    const RbitnetLlamaMatrix *head,const float *norm,const float *frequency) {
+static void *gpt_create(const RbitnetGptConfig *c,const RbitnetGptLayer *layers,
+    const RbitnetLlamaMatrix *head,const float *norm,const float *frequency,bool segmented) {
     if(!c || !layers || !head || !norm || (c->rotary && !frequency) || !c->embd || c->embd>32768
         || !c->vocab || c->vocab>1048576 || !c->layers || c->layers>256 || !c->heads || c->heads>128
         || !c->kv_heads || c->heads%c->kv_heads || !c->head_dim || c->head_dim>512 || c->rotary>c->head_dim
@@ -194,14 +266,20 @@ void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLay
     unsigned qs=c->heads*c->head_dim,ks=c->kv_heads*c->head_dim;
     for(unsigned i=0;i<c->layers;i++) {
         const auto &l=layers[i];auto *m=static_cast<ResidentMoe*>(l.moe);
-        if(!m || m->dynamic || m->cfg.embd!=c->embd || m->cfg.experts!=c->experts || m->cfg.used!=c->used || !m->cfg.oai
+        if((!segmented && (!m || m->dynamic)) || (m && (m->cfg.embd!=c->embd || m->cfg.experts!=c->experts || m->cfg.used!=c->used || !m->cfg.oai))
             || !l.attn_norm || !l.ffn_norm || !l.q_bias || !l.k_bias || !l.v_bias || !l.out_bias || !l.router_bias || !l.sinks
             || !qwen_matrix_valid(l.q,c->embd,qs) || !qwen_matrix_valid(l.k,c->embd,ks) || !qwen_matrix_valid(l.v,c->embd,ks)
             || !qwen_matrix_valid(l.out,qs,c->embd) || !qwen_matrix_valid(l.router,c->embd,c->experts))return nullptr;
         // Complete any work on the borrowed stream before capturing on ours.
-        if(cudaStreamSynchronize(m->stream)!=cudaSuccess)return nullptr;
+        if(m && cudaStreamSynchronize(m->stream)!=cudaSuccess)return nullptr;
     }
     auto *r=new(std::nothrow) ResidentGpt;if(!r)return nullptr;r->cfg=*c;r->head=*head;r->layers.assign(layers,layers+c->layers);
+    if(!r->identity) {delete r;return nullptr;}
+    r->segmented=segmented;
+    if(segmented) {
+        r->segment_graphs.resize(size_t(c->layers)*3+3,nullptr);
+        r->segment_executable.resize(r->segment_graphs.size(),nullptr);
+    }
     unsigned maxima=(c->vocab+255)/256;
     if(cudaStreamCreateWithFlags(&r->stream,cudaStreamNonBlocking)!=cudaSuccess || !r->alloc(r->x,c->embd) || !r->alloc(r->h,c->embd)
         || !r->alloc(r->q,qs) || !r->alloc(r->k,ks) || !r->alloc(r->v,ks) || !r->alloc(r->attn,qs)
@@ -209,6 +287,7 @@ void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLay
         || (c->rotary && !r->alloc(r->frequency,c->rotary/2,frequency)) || !r->alloc(r->position,1)
         || !r->alloc(r->logits,c->vocab) || !r->alloc(r->maxima,maxima) || !r->alloc(r->ids,maxima)
         || !r->alloc(r->maximum,1) || !r->alloc(r->token,1)
+        || (segmented && (!r->alloc(r->selected_ids,c->used) || !r->alloc(r->selected_probabilities,c->used)))
         || (c->split && !r->alloc(r->scratch,size_t(c->heads)*((c->capacity+attention_tile-1)/attention_tile)*(c->head_dim+2)))) {delete r;return nullptr;}
     if(c->ordered && c->rotary) {
         std::vector<float> phase(size_t(c->capacity)*c->rotary);
@@ -229,6 +308,115 @@ void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLay
     }
     return r;
 }
+void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLayer *layers,
+    const RbitnetLlamaMatrix *head,const float *norm,const float *frequency) {
+    return gpt_create(c,layers,head,norm,frequency,false);
+}
+void *rbitnet_cuda_gpt_segmented_create(const RbitnetGptConfig *c,const RbitnetGptLayer *layers,
+    const RbitnetLlamaMatrix *head,const float *norm,const float *frequency) {
+    return gpt_create(c,layers,head,norm,frequency,true);
+}
+int rbitnet_cuda_gpt_segmented_begin(void *context,const float *embedding,unsigned pos) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !r->segmented || !embedding || pos>=r->cfg.capacity || pos>r->filled)return 1;
+    NativeCallCompletion completion(r->stream);
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
+    r->host_position=pos;r->next_layer=0;r->prepared=false;r->token_started=false;r->output_ready=false;r->filled=pos;
+    if(cudaMemcpyAsync(r->x,embedding,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
+        || cudaMemcpyAsync(r->position,&r->host_position,sizeof(unsigned),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 2;
+    int status=completion.complete(0,2);if(!status)r->token_started=true;return status;
+}
+int rbitnet_cuda_gpt_segmented_prepare(void *context,unsigned il,unsigned *ids,float *probabilities) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !r->segmented || !r->token_started || !ids || !probabilities || il>=r->cfg.layers || il!=r->next_layer || r->prepared)return 1;
+    NativeCallCompletion completion(r->stream);
+    if(!r->launch_segment(il*3,[&]{r->enqueue_prepare(il);}))return 2;
+    if(cudaMemcpyAsync(ids,r->selected_ids,r->cfg.used*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
+        || cudaMemcpyAsync(probabilities,r->selected_probabilities,r->cfg.used*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
+    r->prepared=true;completion.dismiss();return 0;
+}
+int rbitnet_cuda_gpt_segmented_ffn_input(void *context,float *input) {
+    auto *r=static_cast<ResidentGpt*>(context);if(!r || !r->segmented || !input || !r->prepared)return 1;
+    NativeCallCompletion completion(r->stream);
+    return completion.complete(cudaMemcpyAsync(input,r->h,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess?0:2,2);
+}
+int rbitnet_cuda_gpt_segmented_finish(void *context,unsigned il,const void *const *selected,const float *cpu_routed) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !r->segmented || il>=r->cfg.layers || il!=r->next_layer || !r->prepared)return 1;
+    NativeCallCompletion completion(r->stream);
+    if(cpu_routed) {
+        if(cudaMemcpyAsync(r->projection,cpu_routed,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 2;
+    } else {
+        auto *m=static_cast<ResidentMoe*>(r->layers[il].moe);
+        if(!m || (m->dynamic && !selected))return 1;
+        if(m->dynamic) {
+            for(unsigned i=0;i<3*r->cfg.used;i++)if(!selected[i])return 1;
+            if(cudaMemcpyAsync(m->selected,selected,3*r->cfg.used*sizeof(void*),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 2;
+        }
+    }
+    if(!r->launch_segment(il*3+(cpu_routed?2:1),[&]{r->enqueue_finish(il,cpu_routed!=nullptr);})
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
+    r->prepared=false;r->next_layer++;if(r->next_layer==r->cfg.layers)r->filled=r->host_position+1;
+    completion.dismiss();return 0;
+}
+int rbitnet_cuda_gpt_segmented_end(void *context,unsigned mode,float *logits,unsigned *token) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !r->segmented || !r->token_started || mode>2 || r->prepared || r->next_layer!=r->cfg.layers
+        || (mode==1 && !logits) || (mode==2 && !token))return 1;
+    NativeCallCompletion completion(r->stream);
+    if(!r->launch_segment(r->cfg.layers*3+mode,[&]{r->enqueue_head(mode);}))return 2;
+    if(mode==1 && cudaMemcpyAsync(logits,r->logits,r->cfg.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 3;
+    if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 3;
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
+    r->token_started=false;r->output_ready=true;completion.dismiss();return 0;
+}
+void rbitnet_cuda_gpt_snapshot_destroy(void *snapshot) {delete static_cast<GptSnapshot*>(snapshot);}
+void *rbitnet_cuda_gpt_snapshot(void *context,unsigned length) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !length || length>r->filled || r->prepared
+        || (r->segmented && (r->token_started || r->next_layer!=r->cfg.layers)))return nullptr;
+    auto *s=new(std::nothrow) GptSnapshot;if(!s)return nullptr;
+    s->owner=r->identity;s->layers=r->cfg.layers;
+    s->width=r->cfg.kv_heads*r->cfg.head_dim;s->length=length;
+    size_t words=size_t(length)*s->width;
+    {MemoryCategoryScope category(MemoryPrefix);
+        if(cudaMalloc(reinterpret_cast<void**>(&s->data),size_t(s->layers)*2*words*sizeof(float))!=cudaSuccess) {delete s;return nullptr;}}
+    for(unsigned il=0;il<s->layers;il++) {
+        if(cudaMemcpyAsync(s->data+size_t(il)*2*words,r->keys[il],words*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+            || cudaMemcpyAsync(s->data+(size_t(il)*2+1)*words,r->values[il],words*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess) {
+            cudaStreamSynchronize(r->stream);delete s;return nullptr;
+        }
+    }
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess) {delete s;return nullptr;}
+    return s;
+}
+int rbitnet_cuda_gpt_restore(void *context,const void *snapshot,unsigned length) {
+    auto *r=static_cast<ResidentGpt*>(context);auto *s=static_cast<const GptSnapshot*>(snapshot);
+    if(!r || !s || s->owner!=r->identity || s->layers!=r->cfg.layers || s->width!=r->cfg.kv_heads*r->cfg.head_dim
+        || !length || length>s->length || length>r->cfg.capacity)return 1;
+    NativeCallCompletion completion(r->stream);
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
+    // Restoring KV does not restore the last-token activation. Never expose
+    // a previously completed token as the hidden state of this prefix.
+    r->output_ready=false;
+    size_t words=size_t(length)*s->width,source_words=size_t(s->length)*s->width;
+    for(unsigned il=0;il<s->layers;il++) {
+        if(cudaMemcpyAsync(r->keys[il],s->data+size_t(il)*2*source_words,words*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+            || cudaMemcpyAsync(r->values[il],s->data+(size_t(il)*2+1)*source_words,words*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess) {
+            cudaStreamSynchronize(r->stream);return 2;
+        }
+    }
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
+    r->filled=length;r->next_layer=r->cfg.layers;r->prepared=false;r->token_started=false;completion.dismiss();return 0;
+}
+int rbitnet_cuda_gpt_segmented_hidden_check(void *context,float *hidden) {
+    auto *r=static_cast<ResidentGpt*>(context);
+    if(!r || !r->segmented || !hidden || !r->output_ready || r->prepared || r->token_started || r->next_layer!=r->cfg.layers)return 1;
+    NativeCallCompletion completion(r->stream);
+    return completion.complete(cudaMemcpyAsync(hidden,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess?0:2,2);
+}
+
 void rbitnet_cuda_gpt_full_destroy(void *p) {delete static_cast<ResidentGpt*>(p);}
 int rbitnet_cuda_gpt_full_step(void *p,const float *input,unsigned pos,unsigned mode,float *out,unsigned *id) {
     return gpt_step(static_cast<ResidentGpt*>(p),input,pos,mode,out,id);
@@ -237,7 +425,7 @@ int rbitnet_cuda_gpt_full_hidden_check(void *p,const float *input,unsigned pos,f
     return gpt_step(static_cast<ResidentGpt*>(p),input,pos,0,out,nullptr,true);
 }
 int rbitnet_cuda_gpt_full_layers_check(void *p,const float *input,unsigned pos,float *out) {
-    auto *r=static_cast<ResidentGpt*>(p);if(!r || !input || !out || pos>=r->cfg.capacity || (pos && pos!=r->filled))return 1;
+    auto *r=static_cast<ResidentGpt*>(p);if(!r || r->segmented || !input || !out || pos>=r->cfg.capacity || (pos && pos!=r->filled))return 1;
     if(!pos)r->filled=0;
     float *trace=nullptr;size_t bytes=size_t(r->cfg.layers)*(r->cfg.embd+r->cfg.experts+r->cfg.used)*sizeof(float);
     if(cudaMalloc(reinterpret_cast<void**>(&trace),bytes)!=cudaSuccess)return 2;

@@ -28,13 +28,15 @@ def main():
     parser.add_argument('--qwen-prefill', action='store_true', help='Compare full Qwen serial/SIMT block/Tensor Core block prefill')
     parser.add_argument('--gpt-full', action='store_true', help='Compare GPT-OSS partial, resident, and resident split-KV paths')
     parser.add_argument('--mla-full', action='store_true', help='Compare resident compressed MLA, split attention and prefixes')
-    parser.add_argument('--moe-cache', type=int, default=0, help='MiB expert cache for MLA modes; zero retains fixed placement')
+    parser.add_argument('--gpt-segmented', action='store_true', help='Compare GPT host-admitted expert segments and immutable prefixes; requires --gpt-full')
+    parser.add_argument('--moe-cache', type=int, default=0, help='MiB expert cache for MLA/segmented GPT modes; zero retains fixed placement')
     parser.add_argument('--device-mib', type=int, default=12288)
     args = parser.parse_args()
     if args.mla_full and (args.model!='glm47-flash' or args.backend!='gpu' or args.gpt_full or args.qwen_full or args.qwen_prefill or args.tf32x3): parser.error('--mla-full requires GLM GPU alone')
     if args.model=='glm47-flash' and not args.mla_full: parser.error('GLM requires --mla-full')
     if args.moe_cache<0 or args.device_mib<1: parser.error('invalid memory budgets')
-    if args.moe_cache and not args.mla_full: parser.error('this cache ablation is currently scoped to MLA')
+    if args.gpt_segmented and not args.gpt_full: parser.error('--gpt-segmented requires --gpt-full')
+    if args.moe_cache and not (args.mla_full or args.gpt_segmented): parser.error('cache ablation requires resident MLA or segmented GPT')
     if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
     if args.qwen_full and (args.model != 'qwen35-2b' or args.backend != 'gpu'): parser.error('--qwen-full requires dense Qwen GPU')
     if args.gpt_full and (args.model != 'gpt-oss-20b' or args.backend != 'gpu' or args.qwen_full or args.qwen_prefill or args.tf32x3): parser.error('--gpt-full requires GPT-OSS GPU')
@@ -86,6 +88,10 @@ def main():
         else: modes += [('block-prefix','1','0','1',split,'0','1')]
     if args.gpt_full:
         modes=[('baseline','0','0','0','0','0','0'),('full','0','0','0','0','0','0'),('full-split','0','0','0','1','0','0')]
+    if args.gpt_segmented:
+        if not args.moe_cache:
+            modes.insert(1,('full-fixed','0','0','0','0','0','0'))
+        modes += [('full-split-prefix','1','0','0','1','0','0')]
     if args.mla_full:
         modes=[('baseline','0','0','0','0','0','0'),('mla','0','0','0','0','0','0')]
         if args.split_kv: modes += [('mla-split','0','0','0','1','0','0'),('mla-split-prefix','1','0','0','1','0','0')]
@@ -102,6 +108,7 @@ def main():
                          RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full and mode != 'baseline' else '0',
                          RBITNET_CUDA_MLA_FULL='1' if args.mla_full and mode!='baseline' else '0',
                          RBITNET_REQUIRE_MLA_FULL='1' if args.mla_full and mode!='baseline' else '0',
+                         RBITNET_CUDA_GPT_SEGMENTED='1' if args.gpt_segmented and mode not in ('baseline','full-fixed') else '0',
                          RBITNET_MOE_CACHE_MB=str(args.moe_cache),
 
                          RBITNET_CUDA_SPLIT_KV=split,
@@ -109,7 +116,7 @@ def main():
                          RBITNET_CUDA_QWEN_PREFILL=qwen_block,
                          RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128', RBITNET_CUDA_PREFILL=block,
                          RBITNET_CUDA_PREFILL_TOKENS='128', RBITNET_REQUIRE_RESIDENT='1' if args.backend == 'gpu' and args.model == 'llama32-1b' else '0')
-        if args.mla_full: overrides.update(RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
+        if args.mla_full or args.gpt_segmented: overrides.update(RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
         def popen(*a, **kw):
             if kw.get('env'):
                 kw['env'] = kw['env'].copy(); kw['env'].update(overrides)
@@ -140,7 +147,7 @@ def main():
                     if full == '1': assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0, 'full Qwen pipeline was not used'
                     if args.gpt_full and mode != 'baseline': assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0, 'full GPT-OSS pipeline was not used'
                     if args.mla_full and mode != 'baseline': assert delta.get('rbitnet_core_gpu_mla_full_tokens_total',0)>0, 'MLA pipeline was not used'
-                    if args.mla_full:
+                    if args.mla_full or args.gpt_segmented:
                         assert after['rbitnet_core_cuda_managed_memory_available']==1
                         assert after['rbitnet_core_cuda_managed_live_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']<=args.device_mib*1024*1024
                         row['managed_metrics']={k:v for k,v in after.items() if 'cuda_managed' in k};save()

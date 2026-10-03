@@ -28,20 +28,24 @@ def main():
     p.add_argument('--moe-model', choices=['gpt-oss-20b','glm47-flash'], default='gpt-oss-20b')
     p.add_argument('--device-mib', type=int, default=12288)
     p.add_argument('--mla-full', action='store_true', help='Validate compressed MLA segmented graphs, dynamic expert admission and prefix restore')
-    p.add_argument('--expect-cpu-routed', action='store_true', help='Require MLA routed FFNs to fall back to CPU under an explicitly too-small expert cache')
+    p.add_argument('--gpt-segmented', action='store_true', help='Validate GPT host-admitted FFNs, prefixes and cache/CPU recovery; requires --gpt-full')
+    p.add_argument('--expect-cpu-routed', action='store_true', help='Require resident MLA/GPT routed FFNs to fall back to CPU under an explicitly too-small expert cache')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
     if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
     if args.gpt_full and (args.qwen_full or args.tf32x3 or args.speculative): p.error('select only one architecture experiment')
-    if args.moe_cache is not None and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative or args.moe_cache<=0): p.error('select a positive MoE cache budget as a separate experiment')
+    if args.gpt_segmented and not args.gpt_full:p.error('--gpt-segmented requires --gpt-full')
+    if args.moe_cache is not None and ((args.gpt_full and not args.gpt_segmented) or args.qwen_full or args.tf32x3 or args.speculative or args.moe_cache<=0): p.error('select a positive MoE cache budget with MLA or segmented GPT')
     if args.mla_full and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative):p.error('select only MLA')
-    if args.expect_cpu_routed and (not args.mla_full or args.moe_cache is None):p.error('--expect-cpu-routed requires --mla-full and an explicit cache budget')
+    if args.expect_cpu_routed and (not (args.mla_full or args.gpt_segmented) or args.moe_cache is None):p.error('--expect-cpu-routed requires MLA/segmented GPT and an explicit cache budget')
+    if args.gpt_segmented:args.moe_model='gpt-oss-20b'
+    if args.device_mib<1:p.error('device budget must be positive')
     if args.mla_full:args.moe_model='glm47-flash'
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, moe_cache_mib=args.moe_cache, mla_full=args.mla_full, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, moe_cache_mib=args.moe_cache, mla_full=args.mla_full, gpt_segmented=args.gpt_segmented, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
@@ -66,7 +70,8 @@ def main():
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
                 kw['env'].update(RBITNET_CUDA_GPT_FULL='1' if args.gpt_full else '0',RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full else '0',RBITNET_MOE_CACHE_MB='0')
-                if args.moe_cache is not None or args.mla_full:
+                kw['env']['RBITNET_CUDA_GPT_SEGMENTED']='1' if args.gpt_segmented else '0'
+                if args.moe_cache is not None or args.mla_full or args.gpt_segmented:
                     kw['env'].update(RBITNET_MOE_CACHE_MB=str(args.moe_cache or 0),RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
                 kw['env'].update(RBITNET_CUDA_MLA_FULL='1' if args.mla_full else '0',RBITNET_REQUIRE_MLA_FULL='1' if args.mla_full else '0')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
@@ -78,6 +83,10 @@ def main():
             if args.mla_full:
                 loaded=requests.get(server.base+'/v1/models',timeout=10).json()
                 assert 'resident MLA attention/router/head: true' in json.dumps(loaded),loaded
+            if args.gpt_segmented:
+                loaded=requests.get(server.base+'/v1/models',timeout=10).json()
+                assert 'resident GPT-OSS attention/router/head: true' in json.dumps(loaded),loaded
+                assert 'fully resident GPT-OSS token pipeline: false' in json.dumps(loaded),loaded
             def complete(body):
                 r = requests.post(server.base+'/v1/chat/completions', json=body, timeout=300); r.raise_for_status(); return r.json()
             def request(question, **opts):
@@ -146,6 +155,7 @@ def main():
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
                 report['cases'][-1]['all_cases_metrics_delta']=usage;save()
                 if args.mla_full:assert usage.get('rbitnet_core_gpu_mla_full_tokens_total',0)>0
+                if args.gpt_segmented:assert usage.get('rbitnet_core_gpu_gpt_full_tokens_total',0)>0
                 if args.expect_cpu_routed:
                     assert usage.get('rbitnet_core_native_moe_fallback_layers_total',0)>0, 'CPU routed fallback was not exercised'
                     assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)==0, 'tiny-cache test must route all FFNs on CPU'
