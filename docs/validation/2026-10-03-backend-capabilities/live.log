@@ -1,0 +1,4 @@
+stub-cuda-requested passed
+auto-cuda-qwen passed
+vulkan-refused passed
+metal-refused passed

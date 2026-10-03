@@ -282,3 +282,52 @@ fn qwen3_dense_synthetic_greedy_matches_checked_in_golden() {
         "Qwen3 dense synthetic golden mismatch (see docs/GOLDEN_TESTS.md)"
     );
 }
+
+#[test]
+fn qwen3_cpu_selection_readiness_and_unsupported_gpu_loads_are_truthful() {
+    use bitnet_core::{
+        backend::BackendKind, inference::Engine, loaders::dispatch_gguf_executor_for_load,
+        sampling::SamplingOptions,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let gguf = dir.path().join("qwen3-tiny.gguf");
+    let tok = dir.path().join("tokenizer.json");
+    write_tiny_qwen3_gguf(&gguf).unwrap();
+    write_wordlevel_tokenizer(&tok).unwrap();
+    let engine = Engine::load_path_with_overrides(&gguf, Some(&tok), Some("qwen3")).unwrap();
+    assert!(engine.is_ready());
+    assert!(!engine.model_metadata().backend_accelerated);
+    let result = engine
+        .complete_detailed_with_options("Hello", 1, SamplingOptions::from_temperature(0.0))
+        .unwrap();
+    assert_eq!(result.stats.prompt_tokens, 1);
+    let archive = Arc::new(GgufArchive::mmap_path(&gguf).unwrap());
+    let load = |backend| {
+        dispatch_gguf_executor_for_load(
+            backend,
+            Arc::clone(&archive),
+            &gguf,
+            Some(&tok),
+            Some("qwen3"),
+        )
+    };
+    for backend in [
+        BackendKind::Cuda,
+        BackendKind::Rocm,
+        BackendKind::Vulkan,
+        BackendKind::Metal,
+    ] {
+        assert!(
+            load(backend).is_err(),
+            "unsupported accelerator must fail during load"
+        );
+    }
+    let hybrid = load(BackendKind::Hybrid).unwrap();
+    assert!(!hybrid.backend_accelerated());
+    assert!(hybrid.offload_metadata().unwrap().contains("CPU fallback"));
+    std::fs::write(&tok, "invalid tokenizer").unwrap();
+    assert!(
+        load(BackendKind::Cpu).is_err(),
+        "readiness must parse the tokenizer during load"
+    );
+}

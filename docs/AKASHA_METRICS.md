@@ -61,8 +61,8 @@ Derived gauges (`*_avg`, `*_tokens_per_sec`) are computed at scrape time from th
 
 | Rbitnet series | Meaning | Notes |
 |----------------|---------|-------|
-| `rbitnet_process_rss_bytes` | Process RSS | Linux `/proc/self/status`; omitted on other OS |
-| `rbitnet_process_vram_bytes` | Device VRAM | **Always 0** on the default CPU path (GPU fused off). Do not treat as missing scrape. |
+| `rbitnet_process_rss_bytes` | Process resident working set | Linux `/proc/self/status` or Windows PSAPI; omitted when unavailable |
+| `rbitnet_process_vram_measurement_available` | Availability of a process VRAM measurement | `0` until an actual process-scoped GPU query is implemented. The old constant `rbitnet_process_vram_bytes 0` placeholder is omitted: unknown is not zero. Consumers must show unavailable for a missing VRAM measurement. |
 | `rbitnet_core_kv_pool_allocated_pages` | KV page count | Prefer as **KV RSS proxy** when correlating cache memory |
 | `rbitnet_core_kv_pool_active_seqs` | Active sequences | Prefer as **queue depth** analogue in `/ui` |
 
@@ -76,9 +76,9 @@ Derived gauges (`*_avg`, `*_tokens_per_sec`) are computed at scrape time from th
 | `draft_accept` | `rbitnet_core_draft_accept` (= accepted draft tokens) |
 | Queue depth | `rbitnet_core_kv_pool_active_seqs` (fallback: `scheduler_batch_items_total`) |
 | RAM / RSS | `rbitnet_process_rss_bytes` + `kv_pool_allocated_pages` |
-| VRAM | `rbitnet_process_vram_bytes` (0 on CPU) |
+| VRAM | Unavailable when `rbitnet_process_vram_measurement_available=0`; no synthetic memory value |
 
-`/ui` status line shows TTFT, tok/s, prefix_hit, draft_accept, queue, and memory. Frozen HTTP aliases are **not** renamed — only additive gauges above.
+`/ui` status line shows TTFT, tok/s, prefix_hit, draft_accept, queue, and memory. Frozen inference HTTP aliases are unchanged. The removed constant VRAM placeholder is a telemetry correction; integrations must handle the absent value as unavailable.
 
 ## Correlation script (Akasha doctor)
 

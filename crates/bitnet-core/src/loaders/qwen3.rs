@@ -30,5 +30,5 @@ pub fn build_qwen3_executor(
         gguf,
         backend,
         tokenizer_path,
-    )))
+    )?))
 }
