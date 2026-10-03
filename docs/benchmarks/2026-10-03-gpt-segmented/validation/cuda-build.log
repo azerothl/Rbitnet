@@ -1,0 +1,11 @@
+nvcc: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\nvcc.exe
+cl:   C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\bin\HostX64\x64\cl.exe
+out:  E:\devs\Rbitnet\target\gpt-segmented\cuda\rbitnet_cuda_quant64.dll
+quant_matvec.cu
+tmpxft_00002ae4_00000000-7_quant_matvec.compute_75.cudafe1.cpp
+   Création de la bibliothèque E:\devs\Rbitnet\target\gpt-segmented\cuda\rbitnet_cuda_quant64.lib et de l'objet E:\devs\Rbitnet\target\gpt-segmented\cuda\rbitnet_cuda_quant64.exp
+Built OK. Add to PATH or set RBITNET_CUDA_QUANT_LIB=E:\devs\Rbitnet\target\gpt-segmented\cuda\rbitnet_cuda_quant64.dll
+
+FullName      : E:\devs\Rbitnet\target\gpt-segmented\cuda\rbitnet_cuda_quant64.dll
+Length        : 2955776
+LastWriteTime : 03/10/2026 21:42:57

@@ -1,0 +1,24 @@
+Starting workspace tests
+Completed workspace tests exit 0
+Starting CUDA build
+Completed CUDA build exit 0
+Starting native GPU regression
+Completed native GPU regression exit 0
+Starting GPT teacher {'cache_mib': 0, 'cap_mib': 12288}
+Completed GPT teacher {'cache_mib': 0, 'cap_mib': 12288} exit 0
+Starting GPT teacher {'cache_mib': 8192, 'cap_mib': 12288}
+Completed GPT teacher {'cache_mib': 8192, 'cap_mib': 12288} exit 0
+Starting GPT teacher {'cache_mib': 16, 'cap_mib': 12288}
+Completed GPT teacher {'cache_mib': 16, 'cap_mib': 12288} exit 0
+Starting GPT teacher {'cache_mib': 0, 'cap_mib': 6144}
+Completed GPT teacher {'cache_mib': 0, 'cap_mib': 6144} exit 0
+Starting fixed GPT real regression
+Completed fixed GPT real regression exit 0
+Starting CLI release build
+Completed CLI release build exit 0
+Starting Clippy
+Completed Clippy exit 0
+All GPT cache/cap teacher, fixed real, native regression, release and Clippy checks completed.
+Starting ten lifecycle and three streaming suites
+Completed ten lifecycle and three streaming suites exit 0
+Final output-readiness build passed correctness and live checks.

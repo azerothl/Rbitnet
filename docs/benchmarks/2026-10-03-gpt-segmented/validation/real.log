@@ -1,0 +1,59 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+test native::graph::gpt_segmented_runtime_tests::opt_in_gpt_segmented_real_teacher_forcing_greedy_seed_penalty_reset_and_prefix ... GPT reference resident weights 10659 MiB; fixed expert layers 24/24
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=0, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=1, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=1, prefix=1
+GPT real worst KL=1.644e-11, worst absolute target NLL delta=6.442e-6
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 69.55s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+test native::graph::gpt_segmented_runtime_tests::opt_in_gpt_segmented_real_teacher_forcing_greedy_seed_penalty_reset_and_prefix ... GPT reference resident weights 977 MiB; fixed expert layers 24/24
+GPT-OSS segmented real teacher-forcing + six generations passed cache=8192, graphs=0, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=8192, graphs=1, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=8192, graphs=1, split=1, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=8192, graphs=1, split=1, prefix=1
+GPT real worst KL=1.644e-11, worst absolute target NLL delta=6.442e-6
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 78.96s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+test native::graph::gpt_segmented_runtime_tests::opt_in_gpt_segmented_real_teacher_forcing_greedy_seed_penalty_reset_and_prefix ... GPT reference resident weights 977 MiB; fixed expert layers 24/24
+GPT-OSS segmented real teacher-forcing + six generations passed cache=16, graphs=0, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=16, graphs=1, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=16, graphs=1, split=1, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=16, graphs=1, split=1, prefix=1
+GPT real worst KL=1.922e-11, worst absolute target NLL delta=2.289e-5
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 346.86s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+test native::graph::gpt_segmented_runtime_tests::opt_in_gpt_segmented_real_teacher_forcing_greedy_seed_penalty_reset_and_prefix ... GPT reference resident weights 5818 MiB; fixed expert layers 12/24
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=0, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=0, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=1, prefix=0
+GPT-OSS segmented real teacher-forcing + six generations passed cache=0, graphs=1, split=1, prefix=1
+GPT real worst KL=1.952e-11, worst absolute target NLL delta=3.463e-6
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 181.95s
