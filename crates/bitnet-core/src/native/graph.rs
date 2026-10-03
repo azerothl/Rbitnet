@@ -18,6 +18,8 @@ use std::time::Instant;
 
 #[path = "gpt_full.rs"]
 mod gpu_full;
+#[path = "state_budget.rs"]
+mod state_budget;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Family {
@@ -476,7 +478,12 @@ impl Runtime {
                 return Err(BitNetError::InvalidGguf(format!("invalid {name} shape")));
             }
         }
-        let weights = Weights::new(archive, kind)?;
+        let state_reserve = if matches!(kind, BackendKind::Cuda | BackendKind::Hybrid) {
+            state_budget::reserve(&archive, &cfg)?
+        } else {
+            0
+        };
+        let weights = Weights::new_with_state_reserve(archive, kind, state_reserve)?;
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer)?;
         let kv = (0..cfg.layers)
             .map(|_| LayerKv {
@@ -623,6 +630,7 @@ impl Runtime {
                 *w /= sum;
             }
         }
+        let ffn_start = Instant::now();
         let gpu_result = if let Some(gpu) = &mut self.gpu_moe[il] {
             let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
             gpu.run(x, &selected, &scaled)?
@@ -653,6 +661,7 @@ impl Runtime {
                 }
             }
         }
+        crate::perf::record_native_moe(!fallback, 1, ffn_start.elapsed().as_nanos() as u64);
         if self
             .weights
             .archive
@@ -1042,11 +1051,12 @@ impl ModelExecutor for NativeExecutor {
     }
     fn offload_metadata(&self) -> Option<String> {
         self.runtime.lock().ok().map(|r| {
-            if let Some(full)=&r.gpu_full {
+            let execution=if let Some(full)=&r.gpu_full {
                 format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: true; fixed expert banks; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
             } else {
                 format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: false; resident output head: {}; resident routed expert layers: {}; attention GPU enabled: {}; remaining operations execute on CPU; context capacity: {}",r.weights.resident_bytes/(1024*1024),r.gpu_head.is_some(),r.gpu_moe.iter().filter(|m|m.is_some()).count(),r.use_gpu_attention,r.cfg.max_seq)
-            }
+            };
+            format!("{execution}; weight budget bytes: {}; native state reservation bytes: {}",r.weights.residency_budget_bytes,r.weights.state_reserve_bytes)
         })
     }
     fn generate_with_timings(

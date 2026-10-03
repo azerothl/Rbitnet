@@ -45,6 +45,10 @@ pub struct PerfSnapshot {
     pub expert_cache_evictions: u64,
     pub expert_cache_upload_bytes: u64,
     pub expert_cache_upload_ns: u64,
+    pub native_moe_resident_layers: u64,
+    pub native_moe_fallback_layers: u64,
+    pub native_moe_resident_ns: u64,
+    pub native_moe_fallback_ns: u64,
     pub gpu_prefill_blocks: u64,
     pub gpu_prefill_tokens: u64,
     pub gpu_quant_gemm_calls: u64,
@@ -100,6 +104,10 @@ struct PerfCounters {
     expert_cache_evictions: AtomicU64,
     expert_cache_upload_bytes: AtomicU64,
     expert_cache_upload_ns: AtomicU64,
+    native_moe_resident_layers: AtomicU64,
+    native_moe_fallback_layers: AtomicU64,
+    native_moe_resident_ns: AtomicU64,
+    native_moe_fallback_ns: AtomicU64,
     gpu_prefill_blocks: AtomicU64,
     gpu_prefill_tokens: AtomicU64,
     gpu_quant_gemm_calls: AtomicU64,
@@ -194,6 +202,22 @@ pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u
     p.gpu_download_bytes
         .fetch_add(download_bytes, Ordering::Relaxed);
     p.gpu_gemv_calls.fetch_add(gemv_calls, Ordering::Relaxed);
+}
+
+/// Routed FFN stages only. Fallback can retain individual GPU projections;
+/// resident timing includes cache fills. Full token graphs count layers but
+/// cannot provide independent per-FFN host wall times (ns=0 there).
+pub fn record_native_moe(resident: bool, layers: u64, ns: u64) {
+    let p = perf();
+    if resident {
+        p.native_moe_resident_layers
+            .fetch_add(layers, Ordering::Relaxed);
+        p.native_moe_resident_ns.fetch_add(ns, Ordering::Relaxed);
+    } else {
+        p.native_moe_fallback_layers
+            .fetch_add(layers, Ordering::Relaxed);
+        p.native_moe_fallback_ns.fetch_add(ns, Ordering::Relaxed);
+    }
 }
 
 pub(crate) fn record_gpu_verification(tokens: usize, gemm_calls: u64) {
@@ -388,6 +412,10 @@ pub fn snapshot() -> PerfSnapshot {
         expert_cache_evictions: p.expert_cache_evictions.load(Ordering::Relaxed),
         expert_cache_upload_bytes: p.expert_cache_upload_bytes.load(Ordering::Relaxed),
         expert_cache_upload_ns: p.expert_cache_upload_ns.load(Ordering::Relaxed),
+        native_moe_resident_layers: p.native_moe_resident_layers.load(Ordering::Relaxed),
+        native_moe_fallback_layers: p.native_moe_fallback_layers.load(Ordering::Relaxed),
+        native_moe_resident_ns: p.native_moe_resident_ns.load(Ordering::Relaxed),
+        native_moe_fallback_ns: p.native_moe_fallback_ns.load(Ordering::Relaxed),
         gpu_prefill_blocks: p.gpu_prefill_blocks.load(Ordering::Relaxed),
         gpu_prefill_tokens: p.gpu_prefill_tokens.load(Ordering::Relaxed),
         gpu_quant_gemm_calls: p.gpu_quant_gemm_calls.load(Ordering::Relaxed),
@@ -412,6 +440,42 @@ pub fn prometheus_text() -> String {
             writeln!(s, "# TYPE {} counter", $name).unwrap();
             writeln!(s, "{} {}", $name, $value).unwrap();
         }};
+    }
+    let managed = crate::backend::cuda_managed_memory_stats();
+    writeln!(s,"# TYPE rbitnet_core_cuda_managed_memory_available gauge\nrbitnet_core_cuda_managed_memory_available {}",u8::from(managed.is_some())).unwrap();
+    if let Some(m) = managed {
+        for (name, value) in [("limit", m.limit), ("live", m.live), ("peak", m.peak)] {
+            writeln!(s,"# TYPE rbitnet_core_cuda_managed_{name}_bytes gauge\nrbitnet_core_cuda_managed_{name}_bytes {value}").unwrap();
+        }
+        counter!(
+            "rbitnet_core_cuda_managed_allocations_total",
+            "Successful model-managed CUDA allocations",
+            m.allocations
+        );
+        counter!(
+            "rbitnet_core_cuda_managed_refusals_total",
+            "Managed cap or CUDA allocation refusals",
+            m.refusals
+        );
+        writeln!(s, "# TYPE rbitnet_core_cuda_managed_category_bytes gauge").unwrap();
+        for (name, value) in [
+            "weights",
+            "kv_state",
+            "activations",
+            "prefix",
+            "experts",
+            "scratch",
+            "other",
+        ]
+        .iter()
+        .zip(m.categories)
+        {
+            writeln!(
+                s,
+                "rbitnet_core_cuda_managed_category_bytes{{category=\"{name}\"}} {value}"
+            )
+            .unwrap();
+        }
     }
     counter!(
         "rbitnet_core_gpu_qwen_full_tokens_total",
@@ -477,6 +541,26 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_expert_cache_hits_total",
         "Expert groups found in this model's device cache",
         snap.expert_cache_hits
+    );
+    counter!(
+        "rbitnet_core_native_moe_resident_layers_total",
+        "Routed FFN stages executed by resident native graphs",
+        snap.native_moe_resident_layers
+    );
+    counter!(
+        "rbitnet_core_native_moe_fallback_layers_total",
+        "Routed FFN stages using individual expert fallback, potentially with GPU projections",
+        snap.native_moe_fallback_layers
+    );
+    counter!(
+        "rbitnet_core_native_moe_resident_ns_total",
+        "Resident FFN wall time including cache fills, excluding whole-token graphs",
+        snap.native_moe_resident_ns
+    );
+    counter!(
+        "rbitnet_core_native_moe_fallback_ns_total",
+        "Fallback routed FFN wall time including any failed native preparation",
+        snap.native_moe_fallback_ns
     );
     counter!(
         "rbitnet_core_expert_cache_misses_total",

@@ -150,6 +150,9 @@ struct ResidentLlama {
         return !host || (cudaMemcpyAsync(ptr,host,count*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess
             && cudaStreamSynchronize(stream)==cudaSuccess);
     }
+    template<typename T> bool alloc_kv(T *&ptr,size_t count) {
+        MemoryCategoryScope category(MemoryKv);return alloc(ptr,count);
+    }
     void matrix(const RbitnetLlamaMatrix &m,const float *input,float *result) {
         QuantKind kind; resident_kind(m.type,kind);
         launch_quant_kernel(kind,m.weights,m.row_bytes,input,m.cols,m.rows,m.rows,result,stream);
@@ -205,7 +208,7 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
     if(!r->alloc(r->x,cfg->embd) || !r->alloc(r->h,cfg->embd) || !r->alloc(r->q,cfg->embd)
         || !r->alloc(r->k,cfg->kv_heads*cfg->head_dim) || !r->alloc(r->v,cfg->kv_heads*cfg->head_dim)
         || !r->alloc(r->attn,cfg->embd) || !r->alloc(r->projection,cfg->embd) || !r->alloc(r->gate,cfg->ffn)
-        || !r->alloc(r->up,cfg->ffn) || !r->alloc(r->logits,cfg->vocab) || !r->alloc(r->kv_k,kv) || !r->alloc(r->kv_v,kv)
+        || !r->alloc(r->up,cfg->ffn) || !r->alloc(r->logits,cfg->vocab) || !r->alloc_kv(r->kv_k,kv) || !r->alloc_kv(r->kv_v,kv)
         || !r->alloc(r->out_norm,cfg->embd,out_norm) || !r->alloc(r->frequency,cfg->rotary/2,frequency)
         || !r->alloc(r->position,1) || !r->alloc(r->maxima,(cfg->vocab+255)/256) || !r->alloc(r->ids,(cfg->vocab+255)/256)
         || !r->alloc(r->maximum,1) || !r->alloc(r->token,1)) {delete r;return nullptr;}
@@ -325,6 +328,7 @@ void *rbitnet_cuda_llama_snapshot(void *context,unsigned length) {
     auto *s=new(std::nothrow) LlamaSnapshot;if(!s)return nullptr;
     s->layers=r->cfg.layers;s->kv_heads=r->cfg.kv_heads;s->head_dim=r->cfg.head_dim;s->length=length;
     size_t stride=size_t(s->kv_heads)*s->head_dim,span=size_t(length)*stride,bytes=span*s->layers*sizeof(float);
+    MemoryCategoryScope category(MemoryPrefix);
     if(cudaMalloc(reinterpret_cast<void**>(&s->k),bytes)!=cudaSuccess
         || cudaMalloc(reinterpret_cast<void**>(&s->v),bytes)!=cudaSuccess) {delete s;return nullptr;}
     for(unsigned i=0;i<s->layers;i++) {
