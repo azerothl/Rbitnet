@@ -28,12 +28,14 @@ def main():
     p.add_argument('--moe-model', choices=['gpt-oss-20b','glm47-flash'], default='gpt-oss-20b')
     p.add_argument('--device-mib', type=int, default=12288)
     p.add_argument('--mla-full', action='store_true', help='Validate compressed MLA segmented graphs, dynamic expert admission and prefix restore')
+    p.add_argument('--expect-cpu-routed', action='store_true', help='Require MLA routed FFNs to fall back to CPU under an explicitly too-small expert cache')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
     if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
     if args.gpt_full and (args.qwen_full or args.tf32x3 or args.speculative): p.error('select only one architecture experiment')
     if args.moe_cache is not None and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative or args.moe_cache<=0): p.error('select a positive MoE cache budget as a separate experiment')
     if args.mla_full and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative):p.error('select only MLA')
+    if args.expect_cpu_routed and (not args.mla_full or args.moe_cache is None):p.error('--expect-cpu-routed requires --mla-full and an explicit cache budget')
     if args.mla_full:args.moe_model='glm47-flash'
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
@@ -131,7 +133,7 @@ def main():
             if args.gpt_full: assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0
             if args.split_kv:
                 used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
-                if model['id']=='llama32-1b' or args.qwen_full or args.gpt_full: assert used > 0
+                if model['id']=='llama32-1b' or args.qwen_full or args.gpt_full or args.mla_full: assert used > 0
                 else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
             if args.tf32x3 or args.qwen_prefill:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
@@ -143,8 +145,13 @@ def main():
             if args.moe_cache is not None:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
                 report['cases'][-1]['all_cases_metrics_delta']=usage;save()
-                assert usage.get('rbitnet_core_expert_cache_evictions_total',0)>0, 'test must exercise actual slot reuse'
-                assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)>0
+                if args.mla_full:assert usage.get('rbitnet_core_gpu_mla_full_tokens_total',0)>0
+                if args.expect_cpu_routed:
+                    assert usage.get('rbitnet_core_native_moe_fallback_layers_total',0)>0, 'CPU routed fallback was not exercised'
+                    assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)==0, 'tiny-cache test must route all FFNs on CPU'
+                else:
+                    assert usage.get('rbitnet_core_expert_cache_evictions_total',0)>0, 'test must exercise actual slot reuse'
+                    assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)>0
                 assert after['rbitnet_core_cuda_managed_live_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
                 assert after['rbitnet_core_cuda_managed_peak_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
             print(label, 'stop and concurrency passed', flush=True)

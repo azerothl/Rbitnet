@@ -239,6 +239,7 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(!r || !embeddings || !count || count>LlamaBlock::capacity || pos>=r->cfg.capacity
         || count>r->cfg.capacity-pos || mode>2 || (mode==1 && !logits) || (mode==2 && !token)
         || (all && (!mode || count>LlamaBlock::verify_capacity)))return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0)r->filled=0;if(pos!=r->filled)return 2;
     const auto &c=r->cfg;unsigned stride=c.kv_heads*c.head_dim;
     if(!r->block) {
@@ -306,7 +307,7 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(mode==1 && cudaMemcpyAsync(logits,all?r->block->verify_logits:r->logits,size_t(all?count:1)*c.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
     if(mode==2 && cudaMemcpyAsync(token,all?r->block->verify_tokens:r->token,size_t(all?count:1)*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
-    r->filled=pos+count;r->tensor_gemm_calls=tensor_calls;return 0;
+    r->filled=pos+count;r->tensor_gemm_calls=tensor_calls;completion.dismiss();return 0;
 }
 int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *token) {
     return llama_prefill_impl(context,embeddings,pos,count,mode,logits,token,false);
@@ -345,6 +346,7 @@ int rbitnet_cuda_llama_restore(void *context,const void *snapshot,unsigned lengt
     auto *r=static_cast<ResidentLlama*>(context);auto *s=static_cast<const LlamaSnapshot*>(snapshot);
     if(!r || !s || !length || length>s->length || length>r->cfg.capacity
         || s->layers!=r->cfg.layers || s->kv_heads!=r->cfg.kv_heads || s->head_dim!=r->cfg.head_dim)return 1;
+    NativeCallCompletion completion(r->stream);
     size_t stride=size_t(s->kv_heads)*s->head_dim,bytes=size_t(length)*stride*sizeof(float);
     for(unsigned i=0;i<s->layers;i++) {
         size_t src=size_t(i)*s->length*stride,dst=size_t(i)*r->cfg.capacity*stride;
@@ -355,11 +357,12 @@ int rbitnet_cuda_llama_restore(void *context,const void *snapshot,unsigned lengt
     }
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
     r->filled=length;
-    return 0;
+    completion.dismiss();return 0;
 }
 int rbitnet_cuda_llama_step(void *context,const float *embedding,unsigned pos,unsigned mode,float *logits,unsigned *token) {
     auto *r=static_cast<ResidentLlama*>(context);
     if(!r || !embedding || pos>=r->cfg.capacity || mode>2 || (mode==1 && !logits) || (mode==2 && !token))return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0)r->filled=0;
     if(pos!=r->filled)return 2;
     if(cudaMemcpyAsync(r->x,embedding,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 3;
@@ -378,6 +381,6 @@ int rbitnet_cuda_llama_step(void *context,const float *embedding,unsigned pos,un
     // Host input lifetimes and cancellation boundaries remain explicit, including prefill.
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 11;
     r->filled=pos+1;
-    return 0;
+    completion.dismiss();return 0;
 }
 }

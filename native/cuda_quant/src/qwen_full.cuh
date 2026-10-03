@@ -185,6 +185,7 @@ void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig *
 void rbitnet_cuda_qwen_full_attention_destroy(void *p) {delete static_cast<ResidentQwenAttention*>(p);}
 int rbitnet_cuda_qwen_full_attention_step(void *p,const float *input,unsigned pos,float *out) {
     auto *r=static_cast<ResidentQwenAttention*>(p);if(!r || !input || !out || pos>=r->cfg.capacity)return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0)r->filled=0;if(pos!=r->filled)return 2;
     if(cudaMemcpyAsync(r->x,input,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 3;
@@ -196,7 +197,7 @@ int rbitnet_cuda_qwen_full_attention_step(void *p,const float *input,unsigned po
         if(cudaGraphLaunch(r->executable,r->stream)!=cudaSuccess)return 6;
     } else r->enqueue();
     if(cudaGetLastError()!=cudaSuccess || cudaMemcpyAsync(out,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
-        || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 7;r->filled=pos+1;return 0;
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 7;r->filled=pos+1;completion.dismiss();return 0;
 }
 void *rbitnet_cuda_qwen_full_attention_snapshot(void *p) {
     auto *r=static_cast<ResidentQwenAttention*>(p);if(!r || !r->filled)return nullptr;
@@ -207,16 +208,17 @@ void *rbitnet_cuda_qwen_full_attention_snapshot(void *p) {
     if(cudaMalloc(reinterpret_cast<void**>(&s->k),bytes)!=cudaSuccess || cudaMalloc(reinterpret_cast<void**>(&s->v),bytes)!=cudaSuccess
         || cudaMemcpyAsync(s->k,r->kv_k,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(s->v,r->kv_v,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
-        || cudaStreamSynchronize(r->stream)!=cudaSuccess) {delete s;return nullptr;}return s;
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess) {cudaStreamSynchronize(r->stream);delete s;return nullptr;}return s;
 }
 void rbitnet_cuda_qwen_full_attention_snapshot_destroy(void *p) {delete static_cast<QwenAttentionSnapshot*>(p);}
 int rbitnet_cuda_qwen_full_attention_restore(void *p,const void *snapshot,unsigned length) {
     auto *r=static_cast<ResidentQwenAttention*>(p);auto *s=static_cast<const QwenAttentionSnapshot*>(snapshot);
     if(!r || !s || !length || length>s->length || length>r->cfg.capacity || s->heads!=r->cfg.kv_heads || s->dim!=r->cfg.head_dim)return 1;
+    NativeCallCompletion completion(r->stream);
     size_t bytes=size_t(length)*s->heads*s->dim*sizeof(float);
     if(cudaMemcpyAsync(r->kv_k,s->k,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->kv_v,s->v,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
-    r->filled=length;return 0;
+    r->filled=length;completion.dismiss();return 0;
 }
 void *rbitnet_cuda_qwen_full_create(unsigned embd,unsigned vocab,unsigned capacity,unsigned layers,unsigned graphs,
     const RbitnetQwenFullLayer *blocks,const RbitnetLlamaMatrix *head,const float *norm,float epsilon) {
@@ -243,6 +245,7 @@ int rbitnet_cuda_qwen_recurrent_prefill_check(void *p,const float *input,unsigne
     if(pos!=0 && pos!=r->filled)return 2;
     QwenPrefill b;std::vector<RbitnetQwenFullLayer> layers={{0,p}};
     if(!b.init(layers,r->cfg.embd))return 3;
+    NativeCallCompletion completion(r->stream);
     if(pos==0) {
         unsigned inner=(2*r->cfg.num_k+r->cfg.num_v)*r->cfg.head;
         if(cudaMemsetAsync(r->history,0,size_t(inner)*r->cfg.conv*sizeof(float),r->stream)!=cudaSuccess
@@ -253,7 +256,7 @@ int rbitnet_cuda_qwen_recurrent_prefill_check(void *p,const float *input,unsigne
     qwen_recurrent_block(r,&b,count,r->stream,false);
     if(cudaGetLastError()!=cudaSuccess || cudaMemcpyAsync(out,b.x,bytes,cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 6;
-    r->filled=pos+count;return 0;
+    r->filled=pos+count;completion.dismiss();return 0;
 }
 int rbitnet_cuda_qwen_attention_prefill_check(void *p,const float *input,unsigned pos,unsigned count,float *out) {
     auto *r=static_cast<ResidentQwenAttention*>(p);
@@ -261,13 +264,14 @@ int rbitnet_cuda_qwen_attention_prefill_check(void *p,const float *input,unsigne
     if(pos!=0 && pos!=r->filled)return 2;
     QwenPrefill b;std::vector<RbitnetQwenFullLayer> layers={{1,p}};
     if(!b.init(layers,r->cfg.embd))return 3;
+    NativeCallCompletion completion(r->stream);
     size_t bytes=size_t(count)*r->cfg.embd*sizeof(float);
     if(cudaMemcpyAsync(b.x,input,bytes,cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 4;
     qwen_attention_block(r,&b,r->position,count,r->stream,false);
     if(cudaGetLastError()!=cudaSuccess || cudaMemcpyAsync(out,b.x,bytes,cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 5;
-    r->filled=pos+count;return 0;
+    r->filled=pos+count;completion.dismiss();return 0;
 }
 int rbitnet_cuda_qwen_configure_prefill(void *p,unsigned enabled,unsigned tensor) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || enabled>1 || tensor>1 || r->filled || r->block)return 1;
@@ -297,6 +301,7 @@ int rbitnet_cuda_qwen_full_restored(void *p,unsigned length) {
 }
 int rbitnet_cuda_qwen_full_step(void *p,const float *input,unsigned pos,unsigned mode,float *logits,unsigned *token) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || !input || pos>=r->capacity || mode>2 || (mode==1 && !logits) || (mode==2 && !token))return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0 && !r->reset())return 2;
     if(pos!=r->filled)return 3;
     if(cudaMemcpyAsync(r->x,input,r->embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
@@ -312,12 +317,13 @@ int rbitnet_cuda_qwen_full_step(void *p,const float *input,unsigned pos,unsigned
     if(mode==1 && cudaMemcpyAsync(logits,r->logits,r->vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 9;
     if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 10;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 11;
-    r->advance(pos+1);r->tensor_gemm_calls=0;return 0;
+    r->advance(pos+1);r->tensor_gemm_calls=0;completion.dismiss();return 0;
 }
 int rbitnet_cuda_qwen_full_prefill(void *p,const float *input,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *token) {
     auto *r=static_cast<ResidentQwenFull*>(p);
     if(!r || !r->block || !input || !count || count>QwenPrefill::capacity || pos>=r->capacity || count>r->capacity-pos
         || mode>2 || (mode==1 && !logits) || (mode==2 && !token))return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0 && !r->reset())return 2;
     if(pos!=r->filled)return 3;
     if(cudaMemcpyAsync(r->block->x,input,size_t(count)*r->embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
@@ -340,6 +346,6 @@ int rbitnet_cuda_qwen_full_prefill(void *p,const float *input,unsigned pos,unsig
     if(mode==1 && cudaMemcpyAsync(logits,r->logits,r->vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 9;
     if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 10;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 11;
-    r->advance(pos+count);r->tensor_gemm_calls=tensor_calls;return 0;
+    r->advance(pos+count);r->tensor_gemm_calls=tensor_calls;completion.dismiss();return 0;
 }
 }

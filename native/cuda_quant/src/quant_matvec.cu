@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include "device_memory.cuh"
+#include "native_completion.cuh"
 
 namespace {
 
@@ -454,6 +455,7 @@ extern "C" int rbitnet_cuda_split_attention_check(const float *k,const float *v,
 #include "qwen_full.cuh"
 #include "gpt_full.cuh"
 #include "mla_full.cuh"
+#include "native_completion_check.cuh"
 
 extern "C" int rbitnet_cuda_quant_gemm_device(unsigned type,const void *weights,size_t row_bytes,
     const float *input,unsigned columns,unsigned rows,unsigned tokens,float *output) {

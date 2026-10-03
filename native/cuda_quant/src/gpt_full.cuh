@@ -160,6 +160,7 @@ struct ResidentGpt {
 };
 int gpt_step(ResidentGpt *r,const float *input,unsigned pos,unsigned mode,float *out,unsigned *id,bool hidden=false) {
     if(!r || !input || mode>2 || pos>=r->cfg.capacity || (mode==1 && !out) || (mode==2 && !id) || (hidden && !out))return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos==0)r->filled=0;if(pos!=r->filled)return 2;
     if(cudaMemcpyAsync(r->x,input,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 3;
@@ -177,7 +178,7 @@ int gpt_step(ResidentGpt *r,const float *input,unsigned pos,unsigned mode,float 
         || (mode==1 && cudaMemcpyAsync(out,r->logits,r->cfg.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)
         || (mode==2 && cudaMemcpyAsync(id,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 7;
-    r->filled=pos+1;return 0;
+    r->filled=pos+1;completion.dismiss();return 0;
 }
 }
 extern "C" {

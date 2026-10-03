@@ -1699,4 +1699,21 @@ mod transfer_tests {
         );
         drop(held);
     }
+    #[test]
+    fn optional_native_completion_guard_finishes_pinned_download_on_early_return() {
+        if std::env::var("RBITNET_CUDA_QUANT_SMOKE").as_deref() != Ok("1") {
+            return;
+        }
+        type Check = unsafe extern "C" fn(u32, *mut f32) -> i32;
+        let lib = crate::ggml::load_cuda_quant_library().expect("native CUDA DLL required");
+        let check = unsafe {
+            *lib.get::<Check>(b"rbitnet_cuda_native_completion_check\0")
+                .unwrap()
+        };
+        for early in [0, 1, 2, 1, 0] {
+            let mut value = -1.;
+            assert_eq!(unsafe { check(early, &mut value) }, 0);
+            assert_eq!(value, 123.25);
+        }
+    }
 }

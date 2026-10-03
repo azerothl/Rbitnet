@@ -46,6 +46,7 @@ void rbitnet_cuda_head_destroy(void *context) {delete static_cast<ResidentHead*>
 int rbitnet_cuda_head_step(void *context,const float *input,unsigned mode,float *logits,unsigned *token) {
     auto *r=static_cast<ResidentHead*>(context);
     if(!r || !input || mode>1 || (!mode && !logits) || (mode && !token))return 1;
+    NativeCallCompletion completion(r->stream);
     if(cudaMemcpyAsync(r->x,input,r->matrix.cols*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 2;
     if(!r->executable[mode]) {
         if(cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 3;
@@ -56,6 +57,6 @@ int rbitnet_cuda_head_step(void *context,const float *input,unsigned mode,float 
     if(!mode && cudaMemcpyAsync(logits,r->logits,r->matrix.rows*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
     if(mode && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
-    return 0;
+    completion.dismiss();return 0;
 }
 }
