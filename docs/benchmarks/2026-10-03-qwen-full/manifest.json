@@ -1,0 +1,41 @@
+{
+  "evidence_files": [
+    "gpu-sequence-eager.log",
+    "cli-build.log",
+    "short.json",
+    "gpu-attention-oracle.log",
+    "legacy-dll.log",
+    "streaming.json",
+    "gpu-sequence-graph.log",
+    "summary.json",
+    "cuda-build.log",
+    "short-manifest.json",
+    "ablation.json",
+    "workspace-cpu.log",
+    "clippy.log"
+  ],
+  "tokenizer_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+  "note": "Source snapshot at publication; release CLI/DLL hashes match long ablation, short comparison and live streaming. Test-only synthetic oracle scale calibrated before tests, after CLI compilation. GPU timing runs isolated from compilation and other tests.",
+  "cuda_quant_library_sha256": "fd9e688e7118f30d0382823704ac2af00c0d97eb9ebbde674311b98819141b29",
+  "source_sha256": {
+    "scripts/validate_cache_streaming.py": "66206cbf19f0dca4c6eb77d8bfebe9beef4d5c5234cf9076254b847046a34882",
+    "scripts/benchmark_engines.py": "269fa8e82857a58e80903d2c9c9506c575432aef64633c519be6f3bb893d1376",
+    "scripts/validate_qwen_full.ps1": "942018bd34236a13b3342cbe86acf21bb75128cfd08502cdcd3f135b4c9918b7",
+    "crates/bitnet-core/src/qwen35/runtime.rs": "17a4a9414eb7b561bf438e9801af2c58b30c4e410107dc66fc999f9e8a9c71cf",
+    "crates/bitnet-core/src/native/mod.rs": "01ffabf33bd79888cc696f7240eb490a9b071f0dc5340b73ff2726ea2b328380",
+    "crates/bitnet-core/src/perf.rs": "4968043156193350952871a1a69b7393de1e9f32da9e01f505aa619e1995044e",
+    "scripts/summarize_cache_benchmark.py": "d2d435c4dd6a91c1ce6ad5380ba4092f48c36d75e4b21e2d14213b0981fd3083",
+    "scripts/benchmark_cache_stack.py": "a5b9451ef6f0a1ec5fc09ae6ce453b282680f3b9577ea0bc2a11808028986cb1",
+    "crates/bitnet-core/src/native/qwen_recurrent.rs": "9d2fa173aac0d705ab59191d16193855e0ac8ab074ec96039342cd38e62cd66d",
+    "crates/bitnet-core/src/qwen35/executor.rs": "b27bd51749e62cc67be7ea0147354dd5d1a2d48980d43079be62593afca5213e",
+    "native/cuda_quant/src/qwen_full.cuh": "e489e970db14669c89ac3952dbf6f11682ff9ae1bbc3e2bca30eeda243bfad06",
+    "native/cuda_quant/src/quant_matvec.cu": "c88af56ad1d29f1f2a722f2e5a91a2e35773bce55f5f36270a8fd5a26a23700e",
+    "crates/bitnet-core/src/native/qwen_full.rs": "04f319afef3d6d2d4a5b380413ac4a78f5fdeca2c7656fcad6ffdd98272e6d39",
+    "crates/bitnet-core/src/qwen35/mod.rs": "2b4cf2889038fb5287e542805c49d0b2f262076f6a8894467de47c0ab49b4c58",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "c178ff6b5fc4b9e0696655b3eabd18ccfa2d761350c033d993fe22b4605f6a92"
+  },
+  "base_commit": "9a7eaf66a749bdf2577894afbc856bc64d52d3e3",
+  "binary_sha256": "a61b961c47df862758e0fa6a0ba35909a35b053dfc1b7444b29c15545a4ee433",
+  "source_dirty": true,
+  "model_sha256": "1b04acba824817554f4ce23639bc8495ff70453b8fcb047900c731521021f2c1"
+}

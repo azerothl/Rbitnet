@@ -65,6 +65,10 @@ pub(crate) struct GpuRecurrent {
     pub extra_weights_bytes: usize,
 }
 impl GpuRecurrent {
+    // Only the exclusive owning runtime may lend this context to a pipeline.
+    pub(crate) fn context_address(&self) -> usize {
+        self.context
+    }
     pub fn new(
         weights: &Weights,
         layer: usize,

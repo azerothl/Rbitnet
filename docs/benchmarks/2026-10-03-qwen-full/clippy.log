@@ -1,0 +1,102 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Checking rbitnet-proxy v0.1.0 (E:\devs\Rbitnet\crates\rbitnet-proxy)
+warning: this `let...else` may be rewritten with the `?` operator
+   --> crates\rbitnet-proxy\src\lib.rs:874:5
+    |
+874 | /     let Some(bytes) = body else {
+875 | |         return None;
+876 | |     };
+    | |______^ help: replace it with: `let bytes = body?;`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#question_mark
+    = note: `#[warn(clippy::question_mark)]` on by default
+
+warning: error finalizing incremental compilation session directory `\\?\E:\devs\Rbitnet\target\debug\incremental\rbitnet_proxy-3iery5fxczjyu\s-hmv5cxe90s-10f3k8k-working`: Accès refusé. (os error 5)
+
+warning: `rbitnet-proxy` (lib) generated 2 warnings
+warning: manual slice size calculation
+    --> crates\bitnet-core\src\backend.rs:1294:23
+     |
+1294 |         let w_bytes = w.len() * std::mem::size_of::<f32>();
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `std::mem::size_of_val(w)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_slice_size_calculation
+     = note: `#[warn(clippy::manual_slice_size_calculation)]` on by default
+
+warning: manual slice size calculation
+    --> crates\bitnet-core\src\backend.rs:1295:23
+     |
+1295 |         let x_bytes = x.len() * std::mem::size_of::<f32>();
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `std::mem::size_of_val(x)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_slice_size_calculation
+
+warning: called `unwrap` on `self.inner.toy` after checking its variant with `is_some`
+   --> crates\bitnet-core\src\inference.rs:565:17
+    |
+563 |           if self.inner.toy.is_some() {
+    |           --------------------------- help: try: `if let Some(<item>) = &self.inner.toy`
+564 |               let text =
+565 | /                 self.inner
+566 | |                     .toy
+567 | |                     .as_ref()
+568 | |                     .unwrap()
+    | |_____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#unnecessary_unwrap
+    = note: `#[warn(clippy::unnecessary_unwrap)]` on by default
+
+warning: manually reimplementing `div_ceil`
+  --> crates\bitnet-core\src\llama\kv_storage.rs:61:29
+   |
+61 |             Self::Q4 => 4 + (len + 1) / 2,
+   |                             ^^^^^^^^^^^^^ help: consider using `.div_ceil()`: `len.div_ceil(2)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_div_ceil
+   = note: `#[warn(clippy::manual_div_ceil)]` on by default
+
+warning: derefed type is same as origin
+   --> crates\bitnet-core\src\native\graph.rs:959:33
+    |
+959 |         if let Some(callback) = events.as_deref_mut() {
+    |                                 ^^^^^^^^^^^^^^^^^^^^^ help: try: `events`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#needless_option_as_deref
+    = note: `#[warn(clippy::needless_option_as_deref)]` on by default
+
+warning: this `repeat().take()` can be written more concisely
+   --> crates\bitnet-core\src\scheduler.rs:671:5
+    |
+671 | /     std::iter::repeat(seed)
+672 | |         .take(max_tokens.max(1))
+    | |________________________________^ help: consider using `repeat_n()` instead: `std::iter::repeat_n(seed, max_tokens.max(1))`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_repeat_n
+    = note: `#[warn(clippy::manual_repeat_n)]` on by default
+
+warning: error finalizing incremental compilation session directory `\\?\E:\devs\Rbitnet\target\debug\incremental\bitnet_core-1q1hlqj0u5v5n\s-hmv5cxe7om-0yfpgyr-working`: Accès refusé. (os error 5)
+
+warning: `bitnet-core` (lib) generated 7 warnings (run `cargo clippy --fix --lib -p bitnet-core` to apply 5 suggestions)
+    Checking bitnet-server v0.1.0 (E:\devs\Rbitnet\crates\bitnet-server)
+warning: error finalizing incremental compilation session directory `\\?\E:\devs\Rbitnet\target\debug\incremental\bitnet_server-2xxamo4wbf9sw\s-hmv5cyratx-0wlazcz-working`: Accès refusé. (os error 5)
+
+warning: `bitnet-server` (lib) generated 1 warning
+    Checking rbitnet-runner v0.1.0 (E:\devs\Rbitnet\crates\rbitnet-runner)
+    Checking rbitnet-cli v0.1.0 (E:\devs\Rbitnet\crates\rbitnet-cli)
+warning: the loop variable `i` is used to index `w`
+   --> crates\rbitnet-cli\src\integrity.rs:158:18
+    |
+158 |         for i in 0..16 {
+    |                  ^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#needless_range_loop
+    = note: `#[warn(clippy::needless_range_loop)]` on by default
+help: consider using an iterator and enumerate()
+    |
+158 -         for i in 0..16 {
+158 +         for (i, <item>) in w.iter_mut().enumerate().take(16) {
+    |
+
+warning: `rbitnet-cli` (bin "rbitnet") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.47s

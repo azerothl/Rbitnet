@@ -421,6 +421,8 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
 
 #include "output_head.cuh"
 
+#include "qwen_full.cuh"
+
 extern "C" int rbitnet_cuda_quant_gemm_device(unsigned type,const void *weights,size_t row_bytes,
     const float *input,unsigned columns,unsigned rows,unsigned tokens,float *output) {
     RbitnetLlamaMatrix m={weights,row_bytes,type,columns,rows};QuantKind kind;
