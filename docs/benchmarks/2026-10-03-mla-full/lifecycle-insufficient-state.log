@@ -1,0 +1,10 @@
+Rbitnet UI: http://127.0.0.1:18119/ui
+2026-10-03T15:56:14.585167Z ERROR bitnet_server::run: LoadFailed at startup — binding HTTP with stub for retry msg=failed to init engine from env: Inference("managed CUDA memory budget cannot reserve 438096304 state bytes with 67108864 remaining") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).
+2026-10-03T15:56:14.916036Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.917651Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.931524Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.947319Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.962933Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.978907Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.980095Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.981132Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
