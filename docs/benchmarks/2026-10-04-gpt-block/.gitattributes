@@ -1,7 +1,7 @@
-profile/** -text
-production/** -text
-performance/** -text
-live/** -text
-prototype-*/** -text
-kernel-validation/** -text
-scripts/*.py -text
+profile/** -text -whitespace
+production/** -text -whitespace
+performance/** -text -whitespace
+live/** -text -whitespace
+prototype-*/** -text -whitespace
+kernel-validation/** -text -whitespace
+scripts/*.py -text -whitespace
