@@ -415,6 +415,33 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
 #include "prefill_quant.cuh"
 #include "llama_resident.cuh"
 
+extern "C" int rbitnet_cuda_split_attention_check(const float *k,const float *v,const float *q,
+    unsigned capacity,unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,
+    unsigned count,const unsigned *positions,unsigned steps,unsigned graphs,float *out) {
+    if(!k || !v || !q || !positions || !out || !capacity || capacity>8192 || !kv_heads
+        || !heads || heads>128 || heads%kv_heads || !dim || dim>512 || !count || count>128 || !steps)return 1;
+    for(unsigned i=0;i<steps;i++)if(positions[i]>=capacity || count>capacity-positions[i])return 1;
+    ResidentLlama buffers;
+    if(cudaStreamCreateWithFlags(&buffers.stream,cudaStreamNonBlocking)!=cudaSuccess)return 2;
+    size_t kv=size_t(capacity)*kv_heads*dim,qs=size_t(count)*heads*dim;
+    float *dk=nullptr,*dv=nullptr,*dq=nullptr,*scratch=nullptr,*dy=nullptr;unsigned *dp=nullptr;
+    if(!buffers.alloc(dk,kv,k) || !buffers.alloc(dv,kv,v) || !buffers.alloc(dq,qs,q)
+        || !buffers.alloc(scratch,size_t(count)*heads*((capacity+attention_tile-1)/attention_tile)*(dim+2))
+        || !buffers.alloc(dy,qs) || !buffers.alloc(dp,1))return 3;
+    if(graphs && cudaStreamBeginCapture(buffers.stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 4;
+    if(graphs)launch_split_attention(dk,dv,dq,dp,kv_heads,heads,dim,window,scale,capacity,count,scratch,dy,buffers.stream);
+    if(graphs && (cudaStreamEndCapture(buffers.stream,&buffers.graphs[0])!=cudaSuccess
+        || cudaGraphInstantiate(&buffers.executable[0],buffers.graphs[0],nullptr,nullptr,0)!=cudaSuccess))return 4;
+    for(unsigned i=0;i<steps;i++) {
+        if(cudaMemcpyAsync(dp,positions+i,sizeof(unsigned),cudaMemcpyHostToDevice,buffers.stream)!=cudaSuccess)return 5;
+        if(graphs) {if(cudaGraphLaunch(buffers.executable[0],buffers.stream)!=cudaSuccess)return 5;}
+        else launch_split_attention(dk,dv,dq,dp,kv_heads,heads,dim,window,scale,capacity,count,scratch,dy,buffers.stream);
+        if(cudaMemcpyAsync(out+size_t(i)*qs,dy,qs*sizeof(float),cudaMemcpyDeviceToHost,buffers.stream)!=cudaSuccess
+            || cudaStreamSynchronize(buffers.stream)!=cudaSuccess)return 5;
+    }
+    return 0;
+}
+
 #include "moe_resident.cuh"
 
 #include "qwen_recurrent.cuh"

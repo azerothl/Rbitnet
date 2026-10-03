@@ -37,6 +37,8 @@ struct ResidentQwenAttention {
     float *attn=nullptr,*projection=nullptr,*gate=nullptr,*up=nullptr,*kv_k=nullptr,*kv_v=nullptr;
     float *attn_norm=nullptr,*ffn_norm=nullptr,*q_norm=nullptr,*k_norm=nullptr,*frequency=nullptr;
     unsigned *position=nullptr,filled=0;
+    float *attention_scratch=nullptr;
+    bool split_kv=false;
     cudaStream_t stream=nullptr;cudaGraph_t graph=nullptr;cudaGraphExec_t executable=nullptr;
     ~ResidentQwenAttention() {
         if(stream)cudaStreamSynchronize(stream);
@@ -60,7 +62,8 @@ struct ResidentQwenAttention {
         qwen_head_norm<<<c.kv_heads,128,0,stream>>>(k_raw,k_norm,c.head_dim,c.head_dim,c.epsilon,k);
         if(c.rotary)qwen_neox_rope<<<((c.heads+c.kv_heads)*(c.rotary/2)+255)/256,256,0,stream>>>(q,k,frequency,position,c.heads,c.kv_heads,c.head_dim,c.rotary);
         qwen_write_kv<<<(ks+255)/256,256,0,stream>>>(k,v,kv_k,kv_v,position,ks);
-        resident_attention<<<c.heads,128,c.capacity*sizeof(float),stream>>>(kv_k,kv_v,q,position,c.kv_heads,c.heads,c.head_dim,0,c.scale,attn);
+        if(split_kv)launch_split_attention(kv_k,kv_v,q,position,c.kv_heads,c.heads,c.head_dim,0,c.scale,c.capacity,1,attention_scratch,attn,stream);
+        else resident_attention<<<c.heads,128,c.capacity*sizeof(float),stream>>>(kv_k,kv_v,q,position,c.kv_heads,c.heads,c.head_dim,0,c.scale,attn);
         qwen_attention_gate<<<(qs+255)/256,256,0,stream>>>(attn,q_full,c.heads,c.head_dim,c.gated);
         matrix(3,attn,projection);
         resident_norm<<<1,256,0,stream>>>(x,ffn_norm,c.epsilon,c.embd,h,projection);
@@ -128,7 +131,7 @@ void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig *
     unsigned cols[]={c->embd,c->embd,c->embd,qs,c->embd,c->embd,c->ffn};
     unsigned rows[]={qs*(1+c->gated),ks,ks,c->embd,c->ffn,c->ffn,c->embd};
     for(unsigned i=0;i<7;i++)if(!qwen_matrix_valid(m[i],cols[i],rows[i]))return nullptr;
-    auto *r=new(std::nothrow) ResidentQwenAttention;if(!r)return nullptr;r->cfg=*c;
+    auto *r=new(std::nothrow) ResidentQwenAttention;if(!r)return nullptr;r->cfg=*c;r->split_kv=split_attention_enabled();
     for(unsigned i=0;i<7;i++)r->matrices[i]=m[i];
     if(cudaStreamCreateWithFlags(&r->stream,cudaStreamNonBlocking)!=cudaSuccess
         || !r->alloc(r->x,c->embd) || !r->alloc(r->h,c->embd) || !r->alloc(r->q_full,qs*(1+c->gated))
@@ -138,6 +141,7 @@ void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig *
         || !r->alloc(r->attn_norm,c->embd,an) || !r->alloc(r->ffn_norm,c->embd,fn)
         || !r->alloc(r->q_norm,c->head_dim,qn) || !r->alloc(r->k_norm,c->head_dim,kn)
         || (c->rotary && !r->alloc(r->frequency,c->rotary/2,freq))) {delete r;return nullptr;}
+    if(r->split_kv && !r->alloc(r->attention_scratch,size_t(c->heads)*((c->capacity+attention_tile-1)/attention_tile)*(size_t(c->head_dim)+2))) {delete r;return nullptr;}
     return r;
 }
 void rbitnet_cuda_qwen_full_attention_destroy(void *p) {delete static_cast<ResidentQwenAttention*>(p);}
@@ -192,6 +196,11 @@ void *rbitnet_cuda_qwen_full_create(unsigned embd,unsigned vocab,unsigned capaci
         || !r->alloc(r->maximum,1) || !r->alloc(r->token,1) || !r->alloc(r->position,1)) {delete r;return nullptr;}return r;
 }
 void rbitnet_cuda_qwen_full_destroy(void *p) {delete static_cast<ResidentQwenFull*>(p);}
+unsigned rbitnet_cuda_qwen_split_attention_layers(void *p) {
+    auto *r=static_cast<ResidentQwenFull*>(p);unsigned count=0;if(!r)return 0;
+    for(auto &layer:r->layers)if(layer.kind==1 && static_cast<ResidentQwenAttention*>(layer.context)->split_kv)count++;
+    return count;
+}
 int rbitnet_cuda_qwen_full_restored(void *p,unsigned length) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || length>r->capacity)return 1;
     for(const auto &layer:r->layers) {

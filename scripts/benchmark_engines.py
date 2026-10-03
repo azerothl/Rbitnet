@@ -288,13 +288,17 @@ class Server:
         return result
 
 
-def prepare_fixtures(server, repeats):
+def prepare_fixtures(server, repeats, long_notes=0):
     cases = [(name, messages, "quality", expected) for name, messages, expected in QUALITY]
     for index in range(repeats + 1):
         cases.append((f"throughput-{index}", [{"role": "user", "content":
             f"Case {index}. Write a detailed story of at least 300 words about a robot exploring a forest. Start the story immediately."}], "throughput", None))
     fixtures = []
     for name, messages, kind, expected in cases:
+        if long_notes and kind == "throughput":
+            notes = 'Tu es un assistant précis. Voici des notes communes à cette conversation.\n' + '\n'.join(
+                f'Note {i}: Les villes ont des bibliothèques, des jardins et des musées.' for i in range(long_notes))
+            messages = [{"role":"system", "content":notes}, *messages]
         if server.model["architecture"] == "llama":
             prompt = "".join("<|start_header_id|>" + m["role"] + "<|end_header_id|>\n\n" + m["content"] + "<|eot_id|>" for m in messages)
             prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
@@ -338,10 +342,12 @@ def main():
     parser.add_argument("--models", nargs="+")
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--tokens", type=int, default=32)
+    parser.add_argument("--long-notes", type=int, default=0, help="Add common system notes to throughput prompts; keep quality probes unchanged")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if args.repeats < 1 or args.tokens < 1:
         parser.error("repeats and tokens must be positive")
+    if not 0 <= args.long_notes <= 500: parser.error("--long-notes must be between 0 and 500")
     config = json.loads(args.manifest.read_text(encoding="utf-8-sig"))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     log_dir = args.output.parent / "logs"
@@ -350,6 +356,7 @@ def main():
         "schema_version": 1, "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "protocol": {"repeats": args.repeats, "max_output_tokens": args.tokens, "quality_max_output_tokens": 256,
                      "stream_probe_tokens": 16, "temperature": 0,
+                     "long_note_lines": args.long_notes,
                      "seed": {"llama.cpp": 0, "ollama": 0, "rbitnet": None}, "threads": config.get("threads", 16),
                      "context_requested": config.get("context", 1024),
                      "kv_dtype": {"rbitnet": "f32", "llama.cpp": "f32", "ollama": "default f16"}, "concurrency": 1,
@@ -357,6 +364,7 @@ def main():
         "environment": config.get("environment", {}), "models": [], "rows": []}
     if report["protocol"]["repeats"] != args.repeats or report["protocol"]["max_output_tokens"] != args.tokens:
         parser.error("Resume requires the original repetitions and output-token limit")
+    if report["protocol"].get("long_note_lines", 0) != args.long_notes: parser.error("Resume requires the original long-note count")
     report["rows"] = [row for row in report["rows"] if row["status"] != "running"]
     for model in config["models"]:
         if args.models and model["id"] not in args.models:
@@ -368,11 +376,14 @@ def main():
         fixture_path = args.output.parent / f"{model['id']}-prompts.json"
         if fixture_path.exists():
             fixtures = json.loads(fixture_path.read_text(encoding="utf-8"))
+            if any(f.get("long_note_lines", 0) != (args.long_notes if f["kind"] == "throughput" else 0) for f in fixtures):
+                parser.error("Fixture directory contains a different long-note protocol; choose a fresh output directory")
         else:
             ref = Server(config, model, "llama.cpp", "cpu", log_dir)
             try:
                 ref.start()
-                fixtures = prepare_fixtures(ref, args.repeats)
+                fixtures = prepare_fixtures(ref, args.repeats, args.long_notes)
+                for fixture in fixtures: fixture["long_note_lines"] = args.long_notes if fixture["kind"] == "throughput" else 0
                 fixture_path.write_text(json.dumps(fixtures, ensure_ascii=False, indent=2), encoding="utf-8")
             except (RuntimeError, requests.RequestException, KeyError, ValueError, OSError) as error:
                 report.setdefault("fixture_errors", []).append({"model": model["id"], "error": str(error)})
