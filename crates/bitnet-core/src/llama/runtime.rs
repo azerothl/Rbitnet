@@ -64,6 +64,7 @@ pub struct LlamaRuntime {
     last_prefix_snap: Option<PrefixKvSnap>,
     cuda_graph: CudaDecodeGraph,
     sidecar: Box<dyn KvSidecarClient>,
+    last_speculative_attempted: bool,
 }
 
 impl LlamaRuntime {
@@ -115,6 +116,7 @@ impl LlamaRuntime {
             last_prefix_snap: None,
             cuda_graph: CudaDecodeGraph::from_env(),
             sidecar,
+            last_speculative_attempted: false,
         })
     }
 
@@ -155,6 +157,7 @@ impl LlamaRuntime {
         sampling: SamplingOptions,
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
+        self.last_speculative_attempted = false;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
@@ -188,6 +191,20 @@ impl LlamaRuntime {
             ));
         }
 
+        if super::speculative::enabled()
+            && self
+                .resident
+                .as_ref()
+                .is_some_and(|r| r.supports_verification())
+        {
+            return self.generate_resident_speculative(
+                &prompt_ids,
+                max_tokens,
+                sampling,
+                encode_ms,
+                on_event,
+            );
+        }
         if self.resident.is_some() && sampling.device_greedy_eligible() {
             return self.generate_resident_greedy(&prompt_ids, max_tokens, encode_ms, on_event);
         }
@@ -463,6 +480,176 @@ impl LlamaRuntime {
     /// Whether this runtime executes the entire token graph on CUDA.
     pub fn uses_resident_cuda(&self) -> bool {
         self.resident.is_some()
+    }
+    pub fn speculative_attempted(&self) -> bool {
+        self.last_speculative_attempted
+    }
+
+    fn generate_resident_speculative(
+        &mut self,
+        ids: &[u32],
+        limit: u32,
+        options: SamplingOptions,
+        encode_ms: u64,
+        mut events: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
+    ) -> Result<(String, PhaseTimings)> {
+        let resident = self
+            .resident
+            .as_mut()
+            .expect("verification eligibility checked");
+        let greedy = options.device_greedy_eligible();
+        let pf = Instant::now();
+        let from = resident.restore_prefix(ids)?;
+        let (logits, token) = resident.prefill(&self.model, &ids[from..], from, greedy)?;
+        resident.save_prefix(ids);
+        let prefill_ms = pf.elapsed().as_millis() as u64;
+        if let Some(cb) = events.as_deref_mut() {
+            cb(StreamEvent::FirstToken {
+                stats: crate::scheduler::InferenceStats::from_phases(
+                    PhaseTimings {
+                        encode_ms,
+                        prefill_ms,
+                        prompt_tokens: ids.len() as u32,
+                        ..Default::default()
+                    },
+                    false,
+                ),
+            })?;
+        }
+        let decode = Instant::now();
+        let mut rng = seeded_rng(options.seed);
+        let mut next = if greedy {
+            token
+        } else {
+            sample_token(&logits, &options, &[], &mut rng)
+        };
+        let eos = self.tokenizer.eos_token_ids();
+        let mut generated = Vec::new();
+        let mut history = ids.to_vec();
+        let mut emitted = String::new();
+        let mut text = String::new();
+        let mut position = ids.len();
+        let mut cost_guard = super::speculative::CostGuard::default();
+        let width = std::env::var("RBITNET_SPECULATIVE_TOKENS")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(8)
+            .clamp(1, 15);
+        while generated.len() < limit as usize {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            if eos.contains(&next) {
+                break;
+            }
+            generated.push(next);
+            history.push(next);
+            text = self
+                .tokenizer
+                .decode_ids(&generated, llama_decode_skip_special_tokens())?;
+            if let Some(cb) = events.as_deref_mut() {
+                emit_text_delta(&text, &mut emitted, false, cb)?;
+            }
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let remaining = limit as usize - generated.len();
+            if remaining == 0 {
+                break;
+            }
+            let draft_start = Instant::now();
+            let proposals = if cost_guard.permits() {
+                super::speculative::propose(
+                    &history,
+                    width
+                        .min(remaining)
+                        .min(resident.remaining_capacity(position).saturating_sub(1)),
+                )
+            } else {
+                Vec::new()
+            };
+            let draft_ns = draft_start.elapsed().as_nanos() as u64;
+            if proposals.is_empty() {
+                let serial_start = Instant::now();
+                next = if greedy {
+                    resident.greedy(&self.model, next, position, true)?
+                } else {
+                    sample_token(
+                        &resident.forward(&self.model, next, position, true)?,
+                        &options,
+                        &generated,
+                        &mut rng,
+                    )
+                };
+                position += 1;
+                cost_guard.serial(serial_start.elapsed().as_nanos() as u64);
+                crate::perf::record_speculative_cost(draft_ns, 0, false);
+                continue;
+            }
+            let mut inputs = Vec::with_capacity(proposals.len() + 1);
+            inputs.push(next);
+            inputs.extend_from_slice(&proposals);
+            let verify_start = Instant::now();
+            let verified = resident.verify(&self.model, &inputs, position, greedy)?;
+            let verify_ns = verify_start.elapsed().as_nanos() as u64;
+            self.last_speculative_attempted = true;
+            let decision =
+                super::speculative::decide(&proposals, remaining, &eos, &generated, |i, prior| {
+                    verified.sample(i, &options, prior, &mut rng)
+                });
+            let kept = 1 + decision.accepted;
+            cost_guard.verification(verify_ns, kept);
+            let rollback = kept < inputs.len();
+            if rollback {
+                resident.truncate(position + kept)?;
+            }
+            position += kept;
+            crate::perf::record_speculative(
+                proposals.len() as u32,
+                proposals.len() as u32,
+                decision.accepted as u32,
+            );
+            crate::perf::record_speculative_cost(draft_ns, verify_ns, rollback);
+            // All confirmed IDs are target decisions. Never publish the discarded tail.
+            for token in decision.confirmed {
+                if inference_cancelled() {
+                    return Err(BitNetError::Inference("inference cancelled".into()));
+                }
+                generated.push(token);
+                history.push(token);
+                text = self
+                    .tokenizer
+                    .decode_ids(&generated, llama_decode_skip_special_tokens())?;
+                if let Some(cb) = events.as_deref_mut() {
+                    emit_text_delta(&text, &mut emitted, false, cb)?;
+                }
+            }
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let Some(pending) = decision.pending else {
+                break;
+            };
+            next = pending;
+        }
+        let phases = PhaseTimings {
+            encode_ms,
+            prefill_ms,
+            decode_ms: decode.elapsed().as_millis() as u64,
+            prompt_tokens: ids.len() as u32,
+            completion_tokens: generated.len() as u32,
+        };
+        if let Some(cb) = events {
+            emit_text_delta(&text, &mut emitted, true, cb)?;
+            cb(StreamEvent::Done(crate::scheduler::InferenceOutput {
+                text: text.clone(),
+                stats: crate::scheduler::InferenceStats::from_phases(
+                    phases,
+                    self.last_speculative_attempted,
+                ),
+            }))?;
+        }
+        Ok((text, phases))
     }
 
     fn generate_resident_greedy(

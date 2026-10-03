@@ -87,7 +87,7 @@ fn scheduler_regular_mode_passthrough() {
 }
 
 #[test]
-fn scheduler_speculative_combines_draft_and_verify() {
+fn scheduler_speculative_unsupported_executor_preserves_one_target_generation() {
     let mut scheduler = test_scheduler(true, true, DraftPath::TargetModel, 128, 256);
     scheduler.draft_ratio_num = 1;
     scheduler.draft_ratio_den = 2;
@@ -97,9 +97,10 @@ fn scheduler_speculative_combines_draft_and_verify() {
         sampling: SamplingOptions::from_temperature(0.7),
     };
     let out = scheduler.run(&EchoExecutor, &req).expect("run");
-    assert!(out.text.contains("hi[5]"));
-    assert!(out.text.contains("hi"));
-    assert!(out.stats.speculative_attempted);
+    assert_eq!(out.text, "hi[10]");
+    assert_eq!(out.stats.completion_tokens, 10);
+    assert_eq!(out.stats.prefill_ms, 1);
+    assert!(!out.stats.speculative_attempted);
 }
 
 #[test]

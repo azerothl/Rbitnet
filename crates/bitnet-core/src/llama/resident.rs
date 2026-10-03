@@ -53,6 +53,31 @@ type Prefill =
     unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, u32, *mut f32, *mut u32) -> i32;
 type Snapshot = unsafe extern "C" fn(*mut c_void, u32) -> *mut c_void;
 type Restore = unsafe extern "C" fn(*mut c_void, *const c_void, u32) -> i32;
+type Truncate = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+
+pub(super) enum Verified {
+    Greedy(Vec<u32>),
+    Logits(Vec<f32>, usize),
+}
+impl Verified {
+    pub fn sample(
+        &self,
+        index: usize,
+        options: &crate::sampling::SamplingOptions,
+        history: &[u32],
+        rng: &mut impl rand::Rng,
+    ) -> u32 {
+        match self {
+            Self::Greedy(tokens) => tokens[index],
+            Self::Logits(logits, vocab) => crate::sampling::sample_token(
+                &logits[index * vocab..(index + 1) * vocab],
+                options,
+                history,
+                rng,
+            ),
+        }
+    }
+}
 
 struct SavedPrefix {
     context: usize,
@@ -76,6 +101,8 @@ pub(super) struct Resident {
     context: usize,
     step: Step,
     prefill: Option<Prefill>,
+    verify: Option<Prefill>,
+    truncate: Option<Truncate>,
     prefill_embeddings: Vec<f32>,
     destroy: Destroy,
     _weights: Vec<CudaDeviceQuantMatrix>,
@@ -167,6 +194,16 @@ impl Resident {
         let create = unsafe { lib.get::<Create>(b"rbitnet_cuda_llama_create\0").ok()? };
         let destroy = unsafe { *lib.get::<Destroy>(b"rbitnet_cuda_llama_destroy\0").ok()? };
         let step = unsafe { *lib.get::<Step>(b"rbitnet_cuda_llama_step\0").ok()? };
+        let verify = unsafe {
+            lib.get::<Prefill>(b"rbitnet_cuda_llama_verify\0")
+                .ok()
+                .map(|p| *p)
+        };
+        let truncate = unsafe {
+            lib.get::<Truncate>(b"rbitnet_cuda_llama_truncate\0")
+                .ok()
+                .map(|p| *p)
+        };
         let prefill = if std::env::var("RBITNET_CUDA_PREFILL").as_deref() == Ok("1") {
             unsafe {
                 lib.get::<Prefill>(b"rbitnet_cuda_llama_prefill\0")
@@ -216,6 +253,8 @@ impl Resident {
             context,
             step,
             prefill,
+            verify,
+            truncate,
             prefill_embeddings: Vec::new(),
             destroy,
             _weights: weights,
@@ -232,6 +271,114 @@ impl Resident {
     }
     pub fn supports_prefix_cache(&self) -> bool {
         self.snapshots.is_some()
+    }
+    pub fn supports_verification(&self) -> bool {
+        self.verify.is_some() && self.truncate.is_some()
+    }
+    pub fn remaining_capacity(&self, position: usize) -> usize {
+        self.capacity.saturating_sub(position)
+    }
+    pub fn verify(
+        &mut self,
+        model: &LlamaModel,
+        tokens: &[u32],
+        position: usize,
+        greedy: bool,
+    ) -> Result<Verified> {
+        if tokens.is_empty()
+            || tokens.len() > 16
+            || tokens.len() > self.remaining_capacity(position)
+        {
+            return Err(BitNetError::Inference(
+                "verification block/context out of bounds".into(),
+            ));
+        }
+        let verify = self
+            .verify
+            .ok_or_else(|| BitNetError::Inference("CUDA verification API unavailable".into()))?;
+        self.prefill_embeddings
+            .resize(tokens.len() * model.cfg.n_embd, 0.0);
+        for (&token, row) in tokens
+            .iter()
+            .zip(self.prefill_embeddings.chunks_exact_mut(model.cfg.n_embd))
+        {
+            if token as usize >= self.vocab {
+                return Err(BitNetError::Inference(
+                    "verification token out of bounds".into(),
+                ));
+            }
+            model
+                .token_embd
+                .embed_row(token as usize, model.cfg.n_embd, self.vocab, row)?;
+        }
+        let mut logits = if greedy {
+            Vec::new()
+        } else {
+            vec![0.0; tokens.len() * self.vocab]
+        };
+        let mut next = if greedy {
+            vec![0; tokens.len()]
+        } else {
+            Vec::new()
+        };
+        let status = unsafe {
+            verify(
+                self.context as *mut c_void,
+                self.prefill_embeddings.as_ptr(),
+                position as u32,
+                tokens.len() as u32,
+                if greedy { 2 } else { 1 },
+                logits.as_mut_ptr(),
+                next.as_mut_ptr(),
+            )
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "CUDA verification failed: {status}"
+            )));
+        }
+        crate::perf::record_gpu_verification(
+            tokens.len(),
+            if tokens.len() > 1 {
+                self.matrix_count + 1
+            } else {
+                0
+            },
+        );
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        crate::perf::record_gpu_transfer(
+            (self.prefill_embeddings.len() * 4 + 4) as u64,
+            (tokens.len() * if greedy { 4 } else { self.vocab * 4 }) as u64,
+            if tokens.len() == 1 {
+                self.matrix_count + 1
+            } else {
+                0
+            },
+        );
+        for _ in 0..self.layers {
+            crate::perf::record_gpu_attention();
+        }
+        Ok(if greedy {
+            Verified::Greedy(next)
+        } else {
+            Verified::Logits(logits, self.vocab)
+        })
+    }
+    pub fn truncate(&mut self, length: usize) -> Result<()> {
+        let truncate = self
+            .truncate
+            .ok_or_else(|| BitNetError::Inference("CUDA truncate API unavailable".into()))?;
+        let length = u32::try_from(length)
+            .map_err(|_| BitNetError::Inference("CUDA truncate length overflow".into()))?;
+        let status = unsafe { truncate(self.context as *mut c_void, length) };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "CUDA truncate failed: {status}"
+            )));
+        }
+        Ok(())
     }
     pub fn prefill(
         &mut self,
@@ -502,5 +649,123 @@ impl Drop for Resident {
         unsafe {
             (self.destroy)(self.context as *mut c_void);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn optional_real_verification_logits_argmax_and_rollback_match_serial() {
+        if std::env::var("RBITNET_CUDA_VERIFY_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let gguf = std::env::var("RBITNET_TEST_GGUF").expect("real model required");
+        let archive = std::sync::Arc::new(
+            crate::gguf::GgufArchive::mmap_path(std::path::Path::new(&gguf)).unwrap(),
+        );
+        let model =
+            LlamaModel::from_gguf_arc_for_backend(archive, crate::backend::BackendKind::Cuda)
+                .unwrap();
+        let mut block = Resident::new(&model).expect("resident required");
+        let mut serial = Resident::new(&model).expect("resident required");
+        assert!(block.supports_verification());
+        let prefix = [128000, 791, 2735, 374, 264, 1296];
+        let inputs = [
+            13, 791, 649, 1296, 2735, 596, 128, 42, 293, 10, 31, 400, 128, 81, 237, 13,
+        ];
+        let close = |actual: &[f32], expected: &[f32]| {
+            assert_eq!(actual.len(), expected.len());
+            for (&a, &e) in actual.iter().zip(expected) {
+                assert!(
+                    a.is_finite() && e.is_finite() && (a - e).abs() <= 0.003 * (1.0 + e.abs()),
+                    "logits diverged: {a} vs {e}"
+                );
+            }
+            let max = |x: &[f32]| {
+                x.iter()
+                    .enumerate()
+                    .max_by(|a, b| a.1.total_cmp(b.1))
+                    .unwrap()
+                    .0
+            };
+            assert_eq!(max(actual), max(expected));
+        };
+        for count in [1, 2, 7, 15, 16] {
+            block.prefill(&model, &prefix, 0, false).unwrap();
+            serial.prefill(&model, &prefix, 0, false).unwrap();
+            let Verified::Logits(logits, vocab) = block
+                .verify(&model, &inputs[..count], prefix.len(), false)
+                .unwrap()
+            else {
+                panic!()
+            };
+            let mut expected_ids = Vec::new();
+            for (i, &token) in inputs[..count].iter().enumerate() {
+                let expected = serial
+                    .forward(&model, token, prefix.len() + i, true)
+                    .unwrap();
+                close(&logits[i * vocab..(i + 1) * vocab], &expected);
+                expected_ids.push(
+                    expected
+                        .iter()
+                        .enumerate()
+                        .max_by(|a, b| a.1.total_cmp(b.1))
+                        .unwrap()
+                        .0 as u32,
+                );
+            }
+            block.prefill(&model, &prefix, 0, true).unwrap();
+            let Verified::Greedy(ids) = block
+                .verify(&model, &inputs[..count], prefix.len(), true)
+                .unwrap()
+            else {
+                panic!()
+            };
+            assert_eq!(ids, expected_ids);
+            // The rejected half remains physically allocated but must not affect a new tail.
+            let kept = count / 2;
+            block.truncate(prefix.len() + kept).unwrap();
+            serial.prefill(&model, &prefix, 0, false).unwrap();
+            for (i, &token) in inputs[..kept].iter().enumerate() {
+                serial
+                    .forward(&model, token, prefix.len() + i, false)
+                    .unwrap();
+            }
+            // Replay the same logits graph at a different position and state.
+            let Verified::Logits(replayed, vocab) = block
+                .verify(&model, &inputs[..count], prefix.len() + kept, false)
+                .unwrap()
+            else {
+                panic!()
+            };
+            for (i, &token) in inputs[..count].iter().enumerate() {
+                close(
+                    &replayed[i * vocab..(i + 1) * vocab],
+                    &serial
+                        .forward(&model, token, prefix.len() + kept + i, true)
+                        .unwrap(),
+                );
+            }
+            block.truncate(prefix.len() + kept).unwrap();
+            serial.prefill(&model, &prefix, 0, false).unwrap();
+            for (i, &token) in inputs[..kept].iter().enumerate() {
+                serial
+                    .forward(&model, token, prefix.len() + i, false)
+                    .unwrap();
+            }
+            for (i, token) in [400, 2735, 791].into_iter().enumerate() {
+                close(
+                    &block
+                        .forward(&model, token, prefix.len() + kept + i, true)
+                        .unwrap(),
+                    &serial
+                        .forward(&model, token, prefix.len() + kept + i, true)
+                        .unwrap(),
+                );
+            }
+        }
+        assert!(block.truncate(model.cfg.max_seq + 1).is_err());
+        assert!(block.verify(&model, &[], 0, true).is_err());
     }
 }
