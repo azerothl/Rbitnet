@@ -1,0 +1,11 @@
+Rbitnet UI: http://127.0.0.1:18108/ui
+2026-10-03T11:11:39.724910Z ERROR bitnet_server::run: LoadFailed at startup — binding HTTP with stub for retry msg=failed to init engine from env: Inference("GGUF `qwen35`: metal GPU inference is not implemented; use cpu or an implemented CUDA/ROCm backend") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).
+2026-10-03T11:11:40.188282Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.202821Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.234865Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.264974Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.280179Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.296187Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.311181Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.327203Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:40.328358Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms

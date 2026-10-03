@@ -30,5 +30,5 @@ pub fn build_mixtral_executor(
         gguf,
         backend,
         tokenizer_path,
-    )))
+    )?))
 }

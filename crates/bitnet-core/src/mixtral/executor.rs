@@ -27,14 +27,21 @@ impl MixtralExecutor {
         gguf: Arc<GgufArchive>,
         backend: Box<dyn ComputeBackend>,
         tokenizer_path: PathBuf,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        if !matches!(backend_kind, BackendKind::Cpu | BackendKind::Hybrid) {
+            return Err(BitNetError::Inference(format!(
+                "Mixtral GPU backend `{}` is unsupported; use cpu or hybrid (CPU fallback)",
+                backend_kind.as_str()
+            )));
+        }
+        let runtime = MixtralRuntime::load(Arc::clone(&gguf), &tokenizer_path)?;
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
-            runtime: Mutex::new(None),
-        }
+            runtime: Mutex::new(Some(runtime)),
+        })
     }
 }
 
@@ -48,7 +55,7 @@ impl crate::model::ModelExecutor for MixtralExecutor {
     }
 
     fn backend_accelerated(&self) -> bool {
-        self.backend_impl.is_native_accelerated()
+        false
     }
 
     fn is_ready(&self) -> bool {
@@ -76,11 +83,6 @@ impl crate::model::ModelExecutor for MixtralExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
-        if self.backend_kind == BackendKind::Cuda {
-            return Err(BitNetError::Inference(
-                "mixtral MoE MVP currently supports CPU backend only (set RBITNET_BACKEND=cpu or hybrid)".into(),
-            ));
-        }
         if self.backend_kind == BackendKind::Hybrid {
             tracing::info!(
                 "mixtral hybrid selected; using CPU MoE runtime until Mixtral offload is wired"

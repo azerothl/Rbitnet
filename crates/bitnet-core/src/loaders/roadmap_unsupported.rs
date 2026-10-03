@@ -5,10 +5,10 @@ use crate::error::BitNetError;
 /// Explains that MoE-only / non-Llama topology is rejected at load time (no silent stub).
 ///
 /// Spike clarity for [#25](https://github.com/azerothl/Rbitnet/issues/25): refuse early with a
-/// support-table pointer; do not pretend DeepSeek MoE / MLA or Mixtral-class graphs run yet.
+/// support-table pointer without overstating the coverage of other native layouts.
 pub(crate) fn roadmap_architecture_not_supported(architecture_key: &str) -> BitNetError {
     BitNetError::Inference(format!(
-        "GGUF architecture `{architecture_key}` is refused: tensors are not Llama-shaped (need token_embd + blk.N.* in the built-in Llama layout). DeepSeek-style MLA attention and non-Mixtral MoE graphs are not implemented in Rbitnet yet (see docs/ARCHITECTURE_GGUF_MATRIX.md and docs/LIMITATIONS.md — issue #25). Supported today: Llama/Mistral-shaped GGUF, dense `qwen3` (CPU), Mixtral MoE (`mixtral`, CPU top-k experts), and experimental `qwen35moe` only with RBITNET_BACKEND=cuda|hybrid. If this file is mis-tagged but actually Llama-shaped, set RBITNET_ARCHITECTURE=llama; otherwise use a Llama-compatible dense export (not a full DeepSeek MoE GGUF)."
+        "GGUF architecture `{architecture_key}` is refused by the Llama-shaped dispatcher: required token_embd + blk.N.* tensors are missing or incompatible. Native MoE/MLA support is layout-specific: GPT-OSS, Qwen3.5 and split-MLA deepseek2 have separate loaders; this error does not imply every DeepSeek export is supported. See docs/ARCHITECTURE_GGUF_MATRIX.md and docs/LIMITATIONS.md. Dense qwen3 and mixtral use CPU runtimes. If this file is mis-tagged but actually Llama-shaped, set RBITNET_ARCHITECTURE=llama; otherwise use the matching native architecture and a supported tensor layout."
     ))
 }
 

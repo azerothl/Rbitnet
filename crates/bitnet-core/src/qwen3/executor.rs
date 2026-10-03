@@ -27,14 +27,21 @@ impl Qwen3Executor {
         gguf: Arc<GgufArchive>,
         backend: Box<dyn ComputeBackend>,
         tokenizer_path: PathBuf,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        if !matches!(backend_kind, BackendKind::Cpu | BackendKind::Hybrid) {
+            return Err(BitNetError::Inference(format!(
+                "dense Qwen3 GPU backend `{}` is unsupported; use cpu or hybrid (CPU fallback)",
+                backend_kind.as_str()
+            )));
+        }
+        let runtime = Qwen3Runtime::load(Arc::clone(&gguf), &tokenizer_path)?;
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
-            runtime: Mutex::new(None),
-        }
+            runtime: Mutex::new(Some(runtime)),
+        })
     }
 }
 
@@ -48,7 +55,7 @@ impl crate::model::ModelExecutor for Qwen3Executor {
     }
 
     fn backend_accelerated(&self) -> bool {
-        self.backend_impl.is_native_accelerated()
+        false
     }
 
     fn is_ready(&self) -> bool {
@@ -76,11 +83,6 @@ impl crate::model::ModelExecutor for Qwen3Executor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
-        if self.backend_kind == BackendKind::Cuda {
-            return Err(BitNetError::Inference(
-                "dense qwen3 MVP currently supports CPU backend only".into(),
-            ));
-        }
         if self.backend_kind == BackendKind::Hybrid {
             tracing::info!(
                 "dense qwen3 hybrid selected; using CPU runtime until Qwen3 offload is wired"

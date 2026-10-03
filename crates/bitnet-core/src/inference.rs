@@ -144,11 +144,15 @@ impl Engine {
             None
         };
         let stub = stub_mode_enabled();
-        let backend_kind = BackendKind::from_env();
         let model_family = gguf
             .as_deref()
             .map(resolve_architecture_key)
             .unwrap_or_else(model_family_when_no_gguf);
+        let backend_kind = if stub || toy.is_some() {
+            BackendKind::Cpu
+        } else {
+            BackendKind::from_env_for_architecture(&model_family)
+        };
         let scheduler = ContinuousBatchScheduler::from_env();
         let prefix_cache_enabled = matches!(
             std::env::var("RBITNET_PREFIX_CACHE").as_deref(),
@@ -195,8 +199,8 @@ impl Engine {
         let load_start = Instant::now();
         let gguf = Arc::new(GgufArchive::mmap_path(path)?);
         check_load_memory_budget(gguf.as_ref())?;
-        let backend_kind = BackendKind::from_env();
         let model_family = resolve_architecture_key(&gguf);
+        let backend_kind = BackendKind::from_env_for_architecture(&model_family);
         let model_path = Some(path.to_path_buf());
         let tokenizer_dir = tokenizer_dir_for_load(Some(path), None);
         let executor = build_executor(
@@ -245,8 +249,8 @@ impl Engine {
         }
         let gguf = Arc::new(GgufArchive::mmap_path(path)?);
         check_load_memory_budget(gguf.as_ref())?;
-        let backend_kind = BackendKind::from_env();
         let model_family = resolve_architecture_key_for_load(&gguf, architecture_override);
+        let backend_kind = BackendKind::from_env_for_architecture(&model_family);
         let model_path = Some(path.to_path_buf());
         let tokenizer_dir = tokenizer_dir_for_load(Some(path), tokenizer_override);
         let executor = build_executor_for_load(

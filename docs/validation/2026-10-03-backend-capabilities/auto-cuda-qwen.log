@@ -1,0 +1,9 @@
+Rbitnet UI: http://127.0.0.1:18108/ui
+2026-10-03T11:11:36.864367Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 500 Internal Server Error latency=0 ms
+2026-10-03T11:11:37.016660Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.032134Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.033136Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.047092Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.048132Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.063631Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T11:11:37.064776Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms

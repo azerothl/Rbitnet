@@ -39,7 +39,7 @@ Use this when validating a CUDA box (not CI):
 ## Etat actuel
 
 - `bitnet-core::backend::CudaRuntime` charge dynamiquement CUDA Runtime et cuBLAS (11/12/**13**) depuis les bibliotheques systeme / `CUDA_PATH`.
-- **`RBITNET_BACKEND=auto`** selectionne CUDA → ROCm → Metal → Vulkan → CPU selon les probes.
+- **`RBITNET_BACKEND=auto`** sélectionne CUDA → ROCm → CPU ; Qwen3 dense et Mixtral restent CPU. Les probes Metal/Vulkan ne participent plus à la sélection, leur chargement GGUF explicite est refusé et leur métadonnée d'accélération reste fausse.
 - Le chemin CUDA general sait executer un GEMV `f32` natif via cuBLAS quand les symboles sont disponibles, puis retombe sur le CPU si CUDA/cuBLAS est absent.
 - **`native/cuda_quant`** fournit `rbitnet_cuda_*_matvec` et `*_matvec_device` pour Q4_0 / Q8_0 / Q4_K / Q6_K (build opt-in, hors CI).
 - **Llama `cuda` / `hybrid` offload** prefers `CudaDeviceQuantMatrix` for Q4_0 / Q8_0 / Q4_K / Q6_K when staging layers; unsupported types still densify to `CudaDeviceMatrix`. Without CUDA or without `*_matvec_device` symbols, matvec falls back to host quant CPU (correctness first).
