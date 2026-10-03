@@ -1,8 +1,8 @@
-//! GPT-OSS fixed-bank token pipeline; the parent drops it before borrowed MoE contexts.
+//! GPT-OSS whole-token graph or segmented expert admission; dropped before borrowed MoE contexts.
 use super::{Config, Family};
 use crate::backend::{BackendKind, CudaDeviceQuantMatrix, CudaRuntime};
 use crate::error::{BitNetError, Result};
-use crate::native::{moe::GpuMoe, weights::Weights};
+use crate::native::{moe::GpuMoe, prefix::PrefixStore, weights::Weights};
 use std::ffi::c_void;
 
 #[repr(C)]
@@ -73,10 +73,43 @@ type Create = unsafe extern "C" fn(
 type Destroy = unsafe extern "C" fn(*mut c_void);
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32, *mut u32) -> i32;
 
+type Begin = unsafe extern "C" fn(*mut c_void, *const f32, u32) -> i32;
+type Prepare = unsafe extern "C" fn(*mut c_void, u32, *mut u32, *mut f32) -> i32;
+type FfnInput = unsafe extern "C" fn(*mut c_void, *mut f32) -> i32;
+type Finish = unsafe extern "C" fn(*mut c_void, u32, *const *const c_void, *const f32) -> i32;
+type End = unsafe extern "C" fn(*mut c_void, u32, *mut f32, *mut u32) -> i32;
+type Snapshot = unsafe extern "C" fn(*mut c_void, u32) -> *mut c_void;
+type Restore = unsafe extern "C" fn(*mut c_void, *const c_void, u32) -> i32;
+struct Checkpoint {
+    context: usize,
+    destroy: Destroy,
+}
+impl Drop for Checkpoint {
+    fn drop(&mut self) {
+        unsafe { (self.destroy)(self.context as *mut c_void) }
+    }
+}
+
+struct Segmented {
+    begin: Begin,
+    prepare: Prepare,
+    input: FfnInput,
+    finish: Finish,
+    end: End,
+}
+struct PrefixApi {
+    snapshot: Snapshot,
+    destroy: Destroy,
+    restore: Restore,
+}
 pub(super) struct GpuFull {
     context: usize,
     destroy: Destroy,
     step: Step,
+    segmented: Option<Segmented>,
+    prefix_api: Option<PrefixApi>,
+    prefix: PrefixStore<Checkpoint>,
+    used: usize,
     _weights: Vec<CudaDeviceQuantMatrix>,
     pub extra_weights_bytes: usize,
     pub graphs: bool,
@@ -123,12 +156,11 @@ impl GpuFull {
         backend: BackendKind,
     ) -> Option<Self> {
         if std::env::var("RBITNET_CUDA_GPT_FULL").as_deref() != Ok("1")
-            || backend != BackendKind::Cuda
+            || !matches!(backend, BackendKind::Cuda | BackendKind::Hybrid)
             || cfg.family != Family::GptOss
             || cfg.dense_layers != 0
             || cfg.groups != 1
             || cfg.head != cfg.value
-            || weights.expert_cache.is_some()
             || cfg.max_seq > 8192
             || matches!(
                 std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
@@ -139,13 +171,69 @@ impl GpuFull {
         }
         let lib = crate::ggml::load_cuda_quant_library()?;
         let router_lanes = crate::ggml::f32_accumulator_lanes()?;
-        let create = unsafe { *lib.get::<Create>(b"rbitnet_cuda_gpt_full_create\0").ok()? };
+        let segmented = weights.expert_cache.is_some()
+            || moe
+                .iter()
+                .any(|m| m.as_ref().and_then(GpuMoe::fixed_context_address).is_none())
+            || std::env::var("RBITNET_CUDA_GPT_SEGMENTED").as_deref() == Ok("1");
+        let create = unsafe {
+            *lib.get::<Create>(if segmented {
+                b"rbitnet_cuda_gpt_segmented_create\0"
+            } else {
+                b"rbitnet_cuda_gpt_full_create\0"
+            })
+            .ok()?
+        };
+        let segment_api = if segmented {
+            Some(Segmented {
+                begin: unsafe {
+                    *lib.get::<Begin>(b"rbitnet_cuda_gpt_segmented_begin\0")
+                        .ok()?
+                },
+                prepare: unsafe {
+                    *lib.get::<Prepare>(b"rbitnet_cuda_gpt_segmented_prepare\0")
+                        .ok()?
+                },
+                input: unsafe {
+                    *lib.get::<FfnInput>(b"rbitnet_cuda_gpt_segmented_ffn_input\0")
+                        .ok()?
+                },
+                finish: unsafe {
+                    *lib.get::<Finish>(b"rbitnet_cuda_gpt_segmented_finish\0")
+                        .ok()?
+                },
+                end: unsafe { *lib.get::<End>(b"rbitnet_cuda_gpt_segmented_end\0").ok()? },
+            })
+        } else {
+            None
+        };
+        // Legacy fixed libraries retain their token path; prefixes require the
+        // complete optional snapshot ABI before any checkpoint is allocated.
+        let prefix_api = (|| {
+            Some(PrefixApi {
+                snapshot: unsafe { *lib.get::<Snapshot>(b"rbitnet_cuda_gpt_snapshot\0").ok()? },
+                destroy: unsafe {
+                    *lib.get::<Destroy>(b"rbitnet_cuda_gpt_snapshot_destroy\0")
+                        .ok()?
+                },
+                restore: unsafe { *lib.get::<Restore>(b"rbitnet_cuda_gpt_restore\0").ok()? },
+            })
+        })();
         let destroy = unsafe {
             *lib.get::<Destroy>(b"rbitnet_cuda_gpt_full_destroy\0")
                 .ok()?
         };
         let step = unsafe { *lib.get::<Step>(b"rbitnet_cuda_gpt_full_step\0").ok()? };
         let rt = CudaRuntime::try_load()?;
+        let cache_budget = weights
+            .expert_cache
+            .as_ref()
+            .map(|c| c.lock().ok().map(|c| c.budget_bytes()))
+            .unwrap_or(Some(0))?;
+        let extra_budget = weights
+            .residency_budget_bytes
+            .saturating_sub(weights.resident_bytes)
+            .saturating_sub(cache_budget);
         let mut extra_weights_bytes = 0usize;
         let mut owned = Vec::new();
         let mut layers = Vec::new();
@@ -178,11 +266,7 @@ impl GpuFull {
                     }
                     let payload = weights.archive.tensor_payload(t).ok()?;
                     extra_weights_bytes = extra_weights_bytes.checked_add(payload.len())?;
-                    if extra_weights_bytes
-                        > weights
-                            .residency_budget_bytes
-                            .saturating_sub(weights.resident_bytes)
-                    {
+                    if extra_weights_bytes > extra_budget {
                         return None;
                     }
                     let m = CudaDeviceQuantMatrix::from_payload(
@@ -231,7 +315,11 @@ impl GpuFull {
                 router_bias: dense("ffn_gate_inp.bias", cfg.experts)?,
                 selection_bias,
                 sinks: dense("attn_sinks.weight", cfg.heads)?,
-                moe: moe.get(il)?.as_ref()?.fixed_context_address()? as *mut c_void,
+                moe: if segmented {
+                    moe.get(il)?.as_ref().map_or(0, GpuMoe::context_address)
+                } else {
+                    moe.get(il)?.as_ref()?.fixed_context_address()?
+                } as *mut c_void,
             });
         }
         let output = weights.device_matrix("output.weight")?;
@@ -300,6 +388,10 @@ impl GpuFull {
             context,
             destroy,
             step,
+            segmented: segment_api,
+            prefix_api,
+            prefix: PrefixStore::from_env(),
+            used: cfg.used,
             _weights: owned,
             extra_weights_bytes,
             graphs,
@@ -318,7 +410,7 @@ impl GpuFull {
         output: bool,
         greedy: bool,
     ) -> Result<(Vec<f32>, Option<u32>)> {
-        if input.len() != self.embd || pos >= self.capacity {
+        if self.segmented.is_some() || input.len() != self.embd || pos >= self.capacity {
             return Err(BitNetError::Inference(
                 "GPT resident input/context mismatch".into(),
             ));
@@ -373,6 +465,233 @@ impl GpuFull {
             crate::perf::record_split_attention(self.layers as u64);
         }
         Ok((logits, (mode == 2).then_some(token)))
+    }
+    pub(super) fn is_segmented(&self) -> bool {
+        self.segmented.is_some()
+    }
+    pub(super) fn supports_prefix(&self) -> bool {
+        self.prefix_api.is_some()
+    }
+    fn check(status: i32, operation: &str) -> Result<()> {
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(BitNetError::Inference(format!(
+                "resident GPT {operation} failed (status {status})"
+            )))
+        }
+    }
+    pub(super) fn begin(&mut self, embedding: &[f32], position: usize) -> Result<()> {
+        if embedding.len() != self.embd || position >= self.capacity {
+            return Err(BitNetError::Inference(
+                "resident GPT embedding/context mismatch".into(),
+            ));
+        }
+        Self::check(
+            unsafe {
+                (self
+                    .segmented
+                    .as_ref()
+                    .ok_or_else(|| BitNetError::Inference("GPT segmented unavailable".into()))?
+                    .begin)(
+                    self.context as *mut c_void,
+                    embedding.as_ptr(),
+                    position as u32,
+                )
+            },
+            "begin",
+        )?;
+        crate::perf::record_gpu_transfer((embedding.len() * 4 + 4) as u64, 0, 0);
+        Ok(())
+    }
+    pub(super) fn prepare(&mut self, layer: usize) -> Result<(Vec<usize>, Vec<f32>)> {
+        if layer >= self.layers {
+            return Err(BitNetError::Inference("resident GPT layer index".into()));
+        }
+        let mut ids = vec![0u32; self.used];
+        let mut probabilities = vec![0.0; self.used];
+        Self::check(
+            unsafe {
+                (self
+                    .segmented
+                    .as_ref()
+                    .ok_or_else(|| BitNetError::Inference("GPT segmented unavailable".into()))?
+                    .prepare)(
+                    self.context as *mut c_void,
+                    layer as u32,
+                    ids.as_mut_ptr(),
+                    probabilities.as_mut_ptr(),
+                )
+            },
+            "attention/router",
+        )?;
+        crate::perf::record_gpu_transfer(0, (self.used * 8) as u64, 5);
+        crate::perf::record_kv_write(self.kv_bytes_per_token / self.layers);
+        crate::perf::record_gpu_attention();
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        if self.split {
+            crate::perf::record_split_attention(1);
+        }
+        Ok((ids.into_iter().map(|i| i as usize).collect(), probabilities))
+    }
+    pub(super) fn ffn_input(&mut self) -> Result<Vec<f32>> {
+        let mut input = vec![0.0; self.embd];
+        Self::check(
+            unsafe {
+                (self
+                    .segmented
+                    .as_ref()
+                    .ok_or_else(|| BitNetError::Inference("GPT segmented unavailable".into()))?
+                    .input)(self.context as *mut c_void, input.as_mut_ptr())
+            },
+            "fallback input",
+        )?;
+        crate::perf::record_gpu_transfer(0, (input.len() * 4) as u64, 0);
+        Ok(input)
+    }
+    pub(super) fn finish(
+        &mut self,
+        layer: usize,
+        pointers: Option<&[*const c_void]>,
+        cpu_routed: Option<&[f32]>,
+    ) -> Result<()> {
+        if layer >= self.layers
+            || pointers.is_some_and(|p| p.len() != 3 * self.used)
+            || cpu_routed.is_some_and(|p| p.len() != self.embd)
+        {
+            return Err(BitNetError::Inference(
+                "resident GPT expert shape mismatch".into(),
+            ));
+        }
+        Self::check(
+            unsafe {
+                (self
+                    .segmented
+                    .as_ref()
+                    .ok_or_else(|| BitNetError::Inference("GPT segmented unavailable".into()))?
+                    .finish)(
+                    self.context as *mut c_void,
+                    layer as u32,
+                    pointers.map_or(std::ptr::null(), |p| p.as_ptr()),
+                    cpu_routed.map_or(std::ptr::null(), |p| p.as_ptr()),
+                )
+            },
+            "FFN/residual",
+        )?;
+        crate::perf::record_gpu_transfer(
+            (pointers.map_or(0, std::mem::size_of_val)
+                + cpu_routed.map_or(0, std::mem::size_of_val)) as u64,
+            0,
+            if cpu_routed.is_none() { 3 } else { 0 },
+        );
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        Ok(())
+    }
+    pub(super) fn end(&mut self, logits: bool, greedy: bool) -> Result<(Vec<f32>, Option<u32>)> {
+        let mode = if !logits {
+            0
+        } else if greedy {
+            2
+        } else {
+            1
+        };
+        let mut out = if mode == 1 {
+            vec![0.0; self.vocab]
+        } else {
+            Vec::new()
+        };
+        let mut id = 0;
+        Self::check(
+            unsafe {
+                (self
+                    .segmented
+                    .as_ref()
+                    .ok_or_else(|| BitNetError::Inference("GPT segmented unavailable".into()))?
+                    .end)(
+                    self.context as *mut c_void, mode, out.as_mut_ptr(), &mut id
+                )
+            },
+            "output",
+        )?;
+        if mode == 2 && id as usize >= self.vocab {
+            return Err(BitNetError::Inference(
+                "resident GPT argmax outside vocabulary".into(),
+            ));
+        }
+        crate::perf::record_gpu_transfer(
+            0,
+            if mode == 2 { 4 } else { (out.len() * 4) as u64 },
+            u64::from(logits),
+        );
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        crate::perf::record_gpt_full_token();
+        Ok((out, (mode == 2).then_some(id)))
+    }
+    pub(super) fn restore_prefix(&mut self, tokens: &[u32]) -> Result<usize> {
+        if self.prefix_api.is_none() || !crate::native::prefix::enabled() {
+            return Ok(0);
+        }
+        let reusable = &tokens[..tokens.len().saturating_sub(1)];
+        if let Some((saved, length)) =
+            self.prefix
+                .lookup(reusable, true, crate::native::prefix::minimum_tokens())
+        {
+            Self::check(
+                unsafe {
+                    (self.prefix_api.as_ref().unwrap().restore)(
+                        self.context as *mut c_void,
+                        saved.context as *const c_void,
+                        length as u32,
+                    )
+                },
+                "prefix restore",
+            )?;
+            crate::perf::record_prefix_hit(length * self.kv_bytes_per_token);
+            Ok(length)
+        } else {
+            crate::perf::record_prefix_cache_miss();
+            Ok(0)
+        }
+    }
+    pub(super) fn save_prefix(&mut self, tokens: &[u32]) -> Result<()> {
+        if self.prefix_api.is_none()
+            || !crate::native::prefix::enabled()
+            || tokens.len() < crate::native::prefix::minimum_tokens()
+            || self.prefix.contains(tokens)
+        {
+            return Ok(());
+        }
+        let bytes = tokens
+            .len()
+            .checked_mul(self.kv_bytes_per_token)
+            .ok_or_else(|| BitNetError::Inference("GPT prefix bytes overflow".into()))?;
+        if !self.prefix.reserve(tokens, bytes) {
+            return Ok(());
+        }
+        let context = unsafe {
+            (self.prefix_api.as_ref().unwrap().snapshot)(
+                self.context as *mut c_void,
+                tokens.len() as u32,
+            )
+        } as usize;
+        // Optional snapshots yield to current states/experts under the shared cap.
+        if context != 0 {
+            self.prefix.insert(
+                tokens.to_vec(),
+                Checkpoint {
+                    context,
+                    destroy: self.prefix_api.as_ref().unwrap().destroy,
+                },
+                bytes,
+            );
+        }
+        Ok(())
     }
 }
 impl Drop for GpuFull {
@@ -565,7 +884,7 @@ mod tests {
             window: usize,
             freq: &[f32],
             magnitude: f32,
-        ) {
+        ) -> (Vec<usize>, Vec<f64>, Vec<f64>) {
             const HEADS: usize = 6;
             const KV: usize = 2;
             const DIM: usize = 64;
@@ -676,6 +995,7 @@ mod tests {
                     *x += p * d;
                 }
             }
+            (ids, probs, h)
         }
     }
     #[test]
@@ -925,4 +1245,5 @@ mod tests {
             eprintln!("GPT-OSS full F64 oracle passed format {ty}, graphs/eager, ordinary/split attention");
         }
     }
+    include!("gpt_segmented_tests.rs");
 }
