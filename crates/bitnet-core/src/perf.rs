@@ -44,6 +44,11 @@ pub struct PerfSnapshot {
     pub gpu_prefill_blocks: u64,
     pub gpu_prefill_tokens: u64,
     pub gpu_quant_gemm_calls: u64,
+    pub speculative_verify_blocks: u64,
+    pub speculative_target_tokens: u64,
+    pub speculative_rollbacks: u64,
+    pub speculative_draft_ns: u64,
+    pub speculative_verify_ns: u64,
     pub scheduler_decode_waves: u64,
     pub scheduler_prefill_chunks: u64,
     pub scheduler_stall_free_iters: u64,
@@ -90,6 +95,11 @@ struct PerfCounters {
     gpu_prefill_blocks: AtomicU64,
     gpu_prefill_tokens: AtomicU64,
     gpu_quant_gemm_calls: AtomicU64,
+    speculative_verify_blocks: AtomicU64,
+    speculative_target_tokens: AtomicU64,
+    speculative_rollbacks: AtomicU64,
+    speculative_draft_ns: AtomicU64,
+    speculative_verify_ns: AtomicU64,
     scheduler_decode_waves: AtomicU64,
     scheduler_prefill_chunks: AtomicU64,
     scheduler_stall_free_iters: AtomicU64,
@@ -154,6 +164,24 @@ pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u
     p.gpu_download_bytes
         .fetch_add(download_bytes, Ordering::Relaxed);
     p.gpu_gemv_calls.fetch_add(gemv_calls, Ordering::Relaxed);
+}
+
+pub(crate) fn record_gpu_verification(tokens: usize, gemm_calls: u64) {
+    let p = perf();
+    p.speculative_verify_blocks.fetch_add(1, Ordering::Relaxed);
+    p.speculative_target_tokens
+        .fetch_add(tokens as u64, Ordering::Relaxed);
+    p.gpu_quant_gemm_calls
+        .fetch_add(gemm_calls, Ordering::Relaxed);
+}
+pub(crate) fn record_speculative_cost(draft_ns: u64, verify_ns: u64, rollback: bool) {
+    let p = perf();
+    p.speculative_draft_ns
+        .fetch_add(draft_ns, Ordering::Relaxed);
+    p.speculative_verify_ns
+        .fetch_add(verify_ns, Ordering::Relaxed);
+    p.speculative_rollbacks
+        .fetch_add(u64::from(rollback), Ordering::Relaxed);
 }
 
 pub(crate) fn record_expert_cache(hit: bool, evictions: u64, bytes: u64, ns: u64) {
@@ -329,6 +357,11 @@ pub fn snapshot() -> PerfSnapshot {
         gpu_prefill_blocks: p.gpu_prefill_blocks.load(Ordering::Relaxed),
         gpu_prefill_tokens: p.gpu_prefill_tokens.load(Ordering::Relaxed),
         gpu_quant_gemm_calls: p.gpu_quant_gemm_calls.load(Ordering::Relaxed),
+        speculative_verify_blocks: p.speculative_verify_blocks.load(Ordering::Relaxed),
+        speculative_target_tokens: p.speculative_target_tokens.load(Ordering::Relaxed),
+        speculative_rollbacks: p.speculative_rollbacks.load(Ordering::Relaxed),
+        speculative_draft_ns: p.speculative_draft_ns.load(Ordering::Relaxed),
+        speculative_verify_ns: p.speculative_verify_ns.load(Ordering::Relaxed),
         scheduler_decode_waves: p.scheduler_decode_waves.load(Ordering::Relaxed),
         scheduler_prefill_chunks: p.scheduler_prefill_chunks.load(Ordering::Relaxed),
         scheduler_stall_free_iters: p.scheduler_stall_free_iters.load(Ordering::Relaxed),
@@ -346,6 +379,31 @@ pub fn prometheus_text() -> String {
             writeln!(s, "{} {}", $name, $value).unwrap();
         }};
     }
+    counter!(
+        "rbitnet_core_speculative_verify_blocks_total",
+        "Native target verification blocks",
+        snap.speculative_verify_blocks
+    );
+    counter!(
+        "rbitnet_core_speculative_target_tokens_total",
+        "Target input positions evaluated in verification blocks including discarded tail",
+        snap.speculative_target_tokens
+    );
+    counter!(
+        "rbitnet_core_speculative_rollbacks_total",
+        "Verification tails truncated after rejection or stop",
+        snap.speculative_rollbacks
+    );
+    counter!(
+        "rbitnet_core_speculative_draft_ns_total",
+        "CPU wall nanoseconds proposing token drafts",
+        snap.speculative_draft_ns
+    );
+    counter!(
+        "rbitnet_core_speculative_verify_ns_total",
+        "Wall nanoseconds in native target verification",
+        snap.speculative_verify_ns
+    );
     counter!(
         "rbitnet_core_gpu_prefill_blocks_total",
         "CUDA matrix prefill blocks",

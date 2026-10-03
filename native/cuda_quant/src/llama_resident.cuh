@@ -82,6 +82,8 @@ __device__ bool resident_better(float value,unsigned id,float previous,unsigned 
     return key>old_key || (key==old_key && id>previous_id);
 }
 __global__ void resident_argmax(const float *values,const unsigned *indices,unsigned n,float *maxima,unsigned *ids) {
+    values+=size_t(blockIdx.y)*n;if(indices)indices+=size_t(blockIdx.y)*n;
+    maxima+=size_t(blockIdx.y)*gridDim.x;ids+=size_t(blockIdx.y)*gridDim.x;
     __shared__ float scores[256];
     __shared__ unsigned tokens[256];
     unsigned tid=threadIdx.x,i=blockIdx.x*blockDim.x+tid;
@@ -121,10 +123,14 @@ struct ResidentLlama {
     cudaStream_t stream=nullptr;
     cudaGraph_t graphs[3]={};
     cudaGraphExec_t executable[3]={};
+    cudaGraph_t verify_graphs[2][LlamaBlock::verify_capacity+1]={};
+    cudaGraphExec_t verify_executable[2][LlamaBlock::verify_capacity+1]={};
     bool use_graphs=true;
     ~ResidentLlama() {
         if(stream)cudaStreamSynchronize(stream);
         delete block;
+        for(auto &modes:verify_executable)for(auto exec:modes)if(exec)cudaGraphExecDestroy(exec);
+        for(auto &modes:verify_graphs)for(auto graph:modes)if(graph)cudaGraphDestroy(graph);
         for(auto exec:executable)if(exec)cudaGraphExecDestroy(exec);
         for(auto graph:graphs)if(graph)cudaGraphDestroy(graph);
         for(auto p:allocations)cudaFree(p);
@@ -201,11 +207,12 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
     return r;
 }
 void rbitnet_cuda_llama_destroy(void *context) {delete static_cast<ResidentLlama*>(context);}
-int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned pos,unsigned count,
-    unsigned mode,float *logits,unsigned *token) {
+static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos,unsigned count,
+    unsigned mode,float *logits,unsigned *token,bool all) {
     auto *r=static_cast<ResidentLlama*>(context);
     if(!r || !embeddings || !count || count>LlamaBlock::capacity || pos>=r->cfg.capacity
-        || count>r->cfg.capacity-pos || mode>2 || (mode==1 && !logits) || (mode==2 && !token))return 1;
+        || count>r->cfg.capacity-pos || mode>2 || (mode==1 && !logits) || (mode==2 && !token)
+        || (all && (!mode || count>LlamaBlock::verify_capacity)))return 1;
     if(pos==0)r->filled=0;if(pos!=r->filled)return 2;
     const auto &c=r->cfg;unsigned stride=c.kv_heads*c.head_dim;
     if(!r->block) {
@@ -213,8 +220,12 @@ int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned po
         if(!b->init(c.embd,c.ffn,stride)) {delete b;return 3;}r->block=b;
     }
     auto &p=r->block->p;
+    if(all && !r->block->init_verify(c.vocab))return 3;
     if(cudaMemcpyAsync(p[0],embeddings,size_t(count)*c.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 4;
+    bool use_graph=all && r->use_graphs;
+    if(!use_graph || !r->verify_executable[mode-1][count]) {
+    if(use_graph && cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 9;
     auto matrix=[&](const RbitnetLlamaMatrix &m,const float *x,float *y) {
         QuantKind kind;resident_kind(m.type,kind);
         launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,r->stream);
@@ -235,19 +246,48 @@ int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned po
         else resident_add<<<(count*c.embd+255)/256,256,0,r->stream>>>(p[0],p[6],count*c.embd);
     }
     if(mode) {
-        resident_norm<<<1,256,0,r->stream>>>(p[0]+size_t(count-1)*c.embd,r->out_norm,c.epsilon,c.embd,r->h);
-        r->matrix(r->output,r->h,r->logits);
+        if(all) {
+            resident_norm<<<count,256,0,r->stream>>>(p[0],r->out_norm,c.epsilon,c.embd,p[1]);
+            matrix(r->output,p[1],r->block->verify_logits);
+        } else {
+            resident_norm<<<1,256,0,r->stream>>>(p[0]+size_t(count-1)*c.embd,r->out_norm,c.epsilon,c.embd,r->h);
+            r->matrix(r->output,r->h,r->logits);
+        }
     }
     if(mode==2) {
         unsigned blocks=(c.vocab+255)/256;
-        resident_argmax<<<blocks,256,0,r->stream>>>(r->logits,nullptr,c.vocab,r->maxima,r->ids);
-        resident_argmax<<<1,256,0,r->stream>>>(r->maxima,r->ids,blocks,r->maximum,r->token);
+        if(all) {
+            resident_argmax<<<dim3(blocks,count),256,0,r->stream>>>(r->block->verify_logits,nullptr,c.vocab,r->block->verify_maxima,r->block->verify_ids);
+            resident_argmax<<<dim3(1,count),256,0,r->stream>>>(r->block->verify_maxima,r->block->verify_ids,blocks,p[1],r->block->verify_tokens);
+        } else {
+            resident_argmax<<<blocks,256,0,r->stream>>>(r->logits,nullptr,c.vocab,r->maxima,r->ids);
+            resident_argmax<<<1,256,0,r->stream>>>(r->maxima,r->ids,blocks,r->maximum,r->token);
+        }
     }
+    if(use_graph) {
+        if(cudaStreamEndCapture(r->stream,&r->verify_graphs[mode-1][count])!=cudaSuccess)return 10;
+        if(cudaGraphInstantiate(&r->verify_executable[mode-1][count],r->verify_graphs[mode-1][count],0)!=cudaSuccess)return 11;
+    }
+    }
+    if(use_graph && cudaGraphLaunch(r->verify_executable[mode-1][count],r->stream)!=cudaSuccess)return 12;
     if(cudaGetLastError()!=cudaSuccess)return 5;
-    if(mode==1 && cudaMemcpyAsync(logits,r->logits,c.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
-    if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
+    if(mode==1 && cudaMemcpyAsync(logits,all?r->block->verify_logits:r->logits,size_t(all?count:1)*c.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
+    if(mode==2 && cudaMemcpyAsync(token,all?r->block->verify_tokens:r->token,size_t(all?count:1)*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
     r->filled=pos+count;return 0;
+}
+int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *token) {
+    return llama_prefill_impl(context,embeddings,pos,count,mode,logits,token,false);
+}
+int rbitnet_cuda_llama_verify(void *context,const float *embeddings,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *tokens) {
+    return llama_prefill_impl(context,embeddings,pos,count,mode,logits,tokens,true);
+}
+int rbitnet_cuda_llama_truncate(void *context,unsigned length) {
+    auto *r=static_cast<ResidentLlama*>(context);
+    if(!r || length>r->filled)return 1;
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
+    // Dense causal attention never reads the discarded tail. Later writes replace it.
+    r->filled=length;return 0;
 }
 void rbitnet_cuda_llama_snapshot_destroy(void *snapshot) {delete static_cast<LlamaSnapshot*>(snapshot);}
 void *rbitnet_cuda_llama_snapshot(void *context,unsigned length) {
