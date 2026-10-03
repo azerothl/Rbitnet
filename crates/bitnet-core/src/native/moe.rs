@@ -1,9 +1,10 @@
 //! Keep routed expert activations on CUDA; one synchronization per FFN layer.
-use super::expert_cache::SharedCache;
+use super::expert_cache::{ExpertGroup, SharedCache};
 use super::weights::Weights;
 use crate::backend::CudaDeviceQuantMatrix;
 use crate::error::{BitNetError, Result};
 use std::ffi::c_void;
+use std::sync::Arc;
 
 #[repr(C)]
 struct Matrix {
@@ -53,6 +54,16 @@ enum Storage {
     },
 }
 
+/// Active/pending native FFN reads must finish before these lease owners drop.
+pub(super) struct SelectedExperts {
+    _leases: Vec<Arc<ExpertGroup>>,
+    pointers: Vec<*const c_void>,
+}
+impl SelectedExperts {
+    pub(super) fn pointers(&self) -> Option<&[*const c_void]> {
+        (!self.pointers.is_empty()).then_some(self.pointers.as_slice())
+    }
+}
 pub(super) struct GpuMoe {
     context: usize,
     destroy: Destroy,
@@ -63,6 +74,49 @@ pub(super) struct GpuMoe {
     experts: usize,
 }
 impl GpuMoe {
+    pub(super) fn context_address(&self) -> usize {
+        self.context
+    }
+    pub(super) fn lease_selected(&self, selected: &[usize]) -> Result<Option<SelectedExperts>> {
+        if selected.len() != self.used || selected.iter().any(|&e| e >= self.experts) {
+            return Err(BitNetError::Inference(
+                "CUDA expert selection shape mismatch".into(),
+            ));
+        }
+        let mut leases = Vec::new();
+        let mut pointers = Vec::new();
+        if let Storage::Cached {
+            cache,
+            layer,
+            selected_bytes,
+            ..
+        } = &self.storage
+        {
+            let mut cache = cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?;
+            cache.trace_route(*layer, selected, *selected_bytes / self.used);
+            if !cache.fits(*selected_bytes) {
+                return Ok(None);
+            }
+            let Some(selected_leases) = cache.acquire_selected(*layer, selected)? else {
+                return Ok(None);
+            };
+            leases = selected_leases;
+            drop(cache);
+            for projection in 0..3 {
+                for group in &leases {
+                    pointers.push(group.matrices[projection].device_address().ok_or_else(|| {
+                        BitNetError::Inference("cached expert missing device buffer".into())
+                    })? as *const c_void);
+                }
+            }
+        }
+        Ok(Some(SelectedExperts {
+            _leases: leases,
+            pointers,
+        }))
+    }
     // The whole-token graph borrows only immutable, fully resident expert banks.
     // Cached banks require lease acquisition between router and expert execution.
     pub(super) fn fixed_context_address(&self) -> Option<usize> {
@@ -209,36 +263,10 @@ impl GpuMoe {
         }
         let indices: Vec<u32> = selected.iter().map(|&i| i as u32).collect();
         let mut output = vec![0.0; self.embd];
-        let status = if let Storage::Cached {
-            cache,
-            layer,
-            step,
-            selected_bytes,
-        } = &self.storage
-        {
-            let mut cache = cache
-                .lock()
-                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?;
-            cache.trace_route(*layer, selected, *selected_bytes / self.used);
-            if !cache.fits(*selected_bytes) {
-                return Ok(None);
-            }
-            let mut leases = Vec::with_capacity(self.used);
-            for &expert in selected {
-                let Some(group) = cache.acquire(*layer, expert)? else {
-                    return Ok(None);
-                };
-                leases.push(group);
-            }
-            drop(cache);
-            let mut pointers = Vec::with_capacity(3 * self.used);
-            for projection in 0..3 {
-                for group in &leases {
-                    pointers.push(group.matrices[projection].device_address().ok_or_else(|| {
-                        BitNetError::Inference("cached expert missing device buffer".into())
-                    })? as *const c_void);
-                }
-            }
+        let Some(leased) = self.lease_selected(selected)? else {
+            return Ok(None);
+        };
+        let status = if let Storage::Cached { step, .. } = &self.storage {
             unsafe {
                 step(
                     self.context as *mut c_void,
@@ -246,7 +274,7 @@ impl GpuMoe {
                     indices.as_ptr(),
                     probabilities.as_ptr(),
                     output.as_mut_ptr(),
-                    pointers.as_ptr(),
+                    leased.pointers.as_ptr(),
                 )
             }
         } else {
