@@ -42,12 +42,14 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 |----------|---------|--------|
 | `RBITNET_MODEL` | (none) | Path to one `.gguf` file. |
 | `RBITNET_TOKENIZER` | (auto beside GGUF) | `tokenizer.json` or `tokenizer.model`. |
-| `RBITNET_CHAT_FORMAT` | `raw` | Server prompt rendering for chat messages: `raw`, `llama3`, or `chatml`; if unset and no custom template exists, `tokenizer_config.json` `chat_template` is used for common Llama 3 / ChatML templates. |
-| `RBITNET_CHAT_TEMPLATE` | (none) | Simple custom prompt template; supports `{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}` and overrides `RBITNET_CHAT_FORMAT` / tokenizer config discovery. |
+| `RBITNET_CHAT_FORMAT` | auto template / `raw` fallback | Explicit `raw`, `llama3`, or `chatml`; when unset, render the discovered GGUF/tokenizer Jinja chat template. Thinking is disabled where the template supports it; GPT-OSS reasoning effort is low. |
+| `RBITNET_CHAT_TEMPLATE` | (none) | Custom Jinja or simple placeholder template (`{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}`); overrides format and discovered template. Invalid Jinja is an HTTP 400. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
 | `RBITNET_BACKEND` | `auto` | Default **`auto`**: detect CUDA→ROCm→Metal→Vulkan→CPU. Explicit: `cpu`, `cuda`, `hybrid`, `rocm`, `vulkan` (aliases: `intel`, `oneapi`, `level-zero`), `metal`. See [USAGE.md](USAGE.md), [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). |
 | `RBITNET_CUDA_QUANT_LIB` | unset | Absolute path to `rbitnet_cuda_quant64.dll` / `librbitnet_cuda_quant.so` for Gate E device kernels (`native/cuda_quant`). |
+| `RBITNET_CUDA_ATTENTION` | on for native CUDA/hybrid dense KV | `0`/`false`/`no` forces CPU attention. Fused all-head GQA/MQA, sliding window and sinks; resident F32 KV, maximum CUDA capacity 8192. Missing symbols/unsupported cache fall back to CPU. |
+| `RBITNET_MAX_SEQ` | `8192` for native Qwen/GPT/MLA | Positive context capacity, capped by the model's metadata; CUDA attention above 8192 falls back to CPU. Does not change the existing Llama configuration. |
 | `RBITNET_ARCHITECTURE` | (from GGUF) | Override `general.architecture`. |
 | `RBITNET_MODEL_FAMILY` | `auto` | Architecture hint when no GGUF (stub/toy). |
 | `RBITNET_PREFIX_CACHE` | off | Cache full duplicate completions (not KV). |
@@ -76,7 +78,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_DRAFT_MODEL` | (none) | Path reserved for a small GGUF draft model. Current builds recognize the path and fall back to the lightweight n-gram draft until separate draft-model verification is wired. |
 | `RBITNET_STRUCTURED_OUTPUT` | `off` | Optional sampler mask: `json` / `tool` enables the ASCII/byte-token JSON FSM mask before sampling. Prefer request `response_format` (`json_object` / `json_schema`) when available. |
 | `RBITNET_LLAMA_WEIGHT_MODE` | `auto` | Llama-lineage matrices: **`dense`** (legacy: full `tensor_to_f32` at load, high RAM), **`mmap_quant`** (quantized weights stay in the GGUF mmap; row-wise GEMV), **`auto`** (mmap when every weight tensor uses a supported GGML type for mmap GEMV; otherwise dense). |
-| `RBITNET_QUANT_KERNEL` | `auto` | Quantized matvec backend: `auto`/CPU parallel, `scalar`, or `cuda` to use optional native `rbitnet_cuda_quant*` symbols for `Q4_K`, `Q6_K`, `Q4_0`, `Q8_0` with CPU fallback. |
+| `RBITNET_QUANT_KERNEL` | `auto` | Quantized matvec backend: `auto`/CPU parallel, `scalar`, or `cuda` to use optional native symbols for F32, Q4_0, Q5_0, Q8_0, Q4_K, Q5_K, Q6_K and MXFP4 with CPU fallback. Resident CUDA matrices use their device kernel directly. |
 | `RBITNET_QUANT_PAR_MIN_ROWS` | `128` | Minimum output rows before the CPU quantized matvec path splits work across a reusable thread pool (`rayon`). |
 | `RBITNET_BLAS` | off | If `1`/`true`/`yes`, loads **OpenBLAS** dynamically (`cblas_sgemv`) for Llama **CPU/hybrid** attention score GEMV and **dense** `f32` matvec helpers when the library is found on `PATH` / `LD_LIBRARY_PATH` / default search. See [USAGE.md](USAGE.md). |
 | `RBITNET_SLIM_ATTENTION` | off | If `1`/`true`/`yes`/`on`, Llama CPU/hybrid decode uses SlimAttention 1D tiled online-softmax (`llama::slim_attention`) instead of contiguous scores→softmax→V. Default off. |
@@ -84,9 +86,9 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_LLAMA_MATMUL` | (unset) | Reserved hook: `ggml` requests a future native ggml bridge (still Rust kernels today). Meaningful only when `bitnet-core` is built with `--features experimental-ggml-kernels`; see [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
 | `RBITNET_HYBRID_POLICY` | `layers` | Hybrid layer-selection policy: `layers` keeps explicit/early-layer behavior, `hotcold` selects deeper hot decode layers first, `auto` uses explicit `RBITNET_HYBRID_LAYERS` when present then hot/cold selection. |
 | `RBITNET_HYBRID_LAYERS` | `auto` | With `RBITNET_BACKEND=hybrid`, comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, the loader selects early layers within `RBITNET_HYBRID_MAX_VRAM_MB`. |
-| `RBITNET_HYBRID_MAX_VRAM_MB` | `512` | Approximate f32 weight upload budget for automatic Llama hybrid offload. This is a soft planning budget, not a hard CUDA allocator limit. |
+| `RBITNET_HYBRID_MAX_VRAM_MB` | hybrid `512`; CUDA Llama `4096`, native Qwen/GPT/MLA `12288` | Soft weight placement budget. Llama plans with F32 sizes; native Qwen/GPT/MLA count actual quantized payload bytes and prefer output + attention/shared projections before routed experts. KV, allocator and driver overhead are additional. |
 | `RBITNET_HYBRID_MIN_ROWS` | `512` | Minimum matrix output rows for Llama hybrid upload; smaller matrices stay on CPU. |
-| `RBITNET_HYBRID_OUTPUT` | off | If enabled, also attempts to offload the Llama output head. This can use substantial VRAM. |
+| `RBITNET_HYBRID_OUTPUT` | CUDA on, hybrid off | Llama output head placement; `0`/`false`/`no` disables it. Automatic placement reserves its budget before selecting layers. |
 | `RBITNET_HYBRID_LOG` | off | Reserved flag for verbose hybrid diagnostics; current builds always log the selected offload plan at runtime creation. |
 | `RBITNET_LLAMA_PAGED_KV` | off | **`1`** enables paged KV storage for **Llama** GGUF (see [USAGE.md](USAGE.md)). |
 | `RBITNET_KV_BACKEND` | `cpu` | KV backend hint. `gpu`/`cuda` marks paged KV as GPU-planned and keeps CPU fallback until native KV device storage is available. |

@@ -10,6 +10,8 @@ Local one-off model performance notes for the current Windows developer machine 
 
 ## Real-model comparison: Rbitnet, Ollama and llama.cpp
 
+The [corrected native inference rerun](benchmarks/2026-10-03-optimized/README.md) measures all four Rbitnet models on CPU/CUDA after SIMD, resident quantized weights, fused attention, native GPT-OSS/MLA graphs and conversation-template fixes. The original report remains frozen; the rerun explicitly identifies reused Ollama/llama.cpp measurements and current Rbitnet measurements.
+
 The [performance diagnosis of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/profiling/2026-10-03/README.md) traces the failed architectures and measures Llama operator costs plus six CPU/CUDA ablations on the same GGUF.
 
 The [Windows CPU/GPU comparison of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/benchmarks/2026-10-03/README.md) uses four actual checkpoints: Llama 3.2 1B, Qwen3.5 2B, GPT-OSS 20B and GLM 4.7 Flash (MoE). Failed configurations are retained as failures, without substituted speeds. Raw token counts, generated answers, timings, weights SHA-256 and offload evidence accompany the report.

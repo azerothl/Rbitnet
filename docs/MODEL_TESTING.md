@@ -18,7 +18,7 @@ Use any GGUF produced by **any** toolchain, as long as it is compatible with Rbi
 
 Then skip straight to **[Validate with Rbitnet](#validate-with-rbitnet)** below. No Python, no BitNet.
 
-**Roadmap GGUF (`glm4moe`, `gptoss`, `deepseek2`):** only GGUF files whose tensors match [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) load; others fail at startup ([ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)).
+**Native GGUF graphs:** `qwen35` / `qwen35moe`, `gpt-oss` / `gptoss`, and split-MLA `deepseek2` load native graphs on CPU/CUDA/hybrid. The measured exports are Qwen3.5-2B, GPT-OSS-20B and GLM-4.7-Flash. `glm4moe` remains a separate Llama-shaped roadmap path. See [architecture matrix](ARCHITECTURE_GGUF_MATRIX.md) and [real model results](benchmarks/2026-10-03-optimized/README.md).
 
 ---
 
@@ -129,7 +129,7 @@ cargo run -p bitnet-core --example inspect_gguf -- /path/to/model.gguf
 
 You should see GGUF version, architecture, tensor count, first tensors, and `llama.*` hyperparameters when present.
 
-For `qwen35moe`, **loader dispatch** succeeds when `RBITNET_BACKEND=cuda` and bundles the native Qwen3 MoE executor; on CPU backend you get an immediate error asking for CUDA. Missing tokenizer or incomplete GGUF manifests still fail at load time with a clear message (`TokenizerMissing` / missing tensor), not obscure `llama.*` key errors. See **[USAGE.md — GGUF general.architecture dispatch](USAGE.md#gguf-generalarchitecture-dispatch)** for `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY` and hooks in [`crates/bitnet-core/src/loaders/`](../crates/bitnet-core/src/loaders/).
+`qwen35` and `qwen35moe` dispatch to the GDN/attention runtime on CPU as well as CUDA/hybrid. Missing tokenizers or required tensors fail before readiness. The real dense 2B export is measured; MoE exports still need model-specific validation. See [USAGE.md](USAGE.md#gguf-generalarchitecture-dispatch) for architecture overrides.
 
 **VRAM / CUDA:** Hybrid Qwen3 MoE checkpoints are large even when quantized. Treat the CUDA path as needing a discrete NVIDIA GPU with a recent driver; start with modest `max_tokens` and bump `RBITNET_INFERENCE_TIMEOUT_SECS` if completions time out (`USAGE.md`).
 
@@ -173,12 +173,12 @@ If `RBITNET_TEST_GGUF` is unset, the test **passes without doing I/O** (skipped 
 
 ## Roadmap architectures — GLM (Z.ai), gpt-oss, DeepSeek MoE
 
-GGUF families **`glm4moe`**, **`gptoss`**, and **`deepseek2`** use a **CUDA-only** executor shell: tokenizer resolution works; **`generate` returns an explicit “not implemented yet”** until the transformer graph is ported from llama.cpp.
+GPT-OSS uses a native biased MoE graph and GLM-4.7-Flash uses the native split-MLA `deepseek2` graph. Both run on CPU and CUDA/hybrid, validate tensors before readiness, and generate real text over HTTP. A `deepseek2` slug with fused/alternate projections is not enough to establish compatibility. The distinct `glm4moe` path retains its Llama-shaped limitation.
 
 - Matrix and slug notes: [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md)
 - DeepSeek dense vs MoE: [DEEPSEEK_GGUF_NOTES.md](DEEPSEEK_GGUF_NOTES.md)
 
-**Smoke checklist:** `RBITNET_BACKEND=cuda`, valid `tokenizer.json` beside the GGUF, then call chat — expect **503/500 with roadmap message**, not a tokenizer crash. Prefer **Flash / Lite** GGUF for iteration when the architecture matches the full model.
+**Smoke:** set a matching tokenizer, select `cpu` or build the optional CUDA library and select `cuda`, then check `/ready`, `/v1/models`, a real multi-turn completion and streaming. Keep the model's GGUF Jinja template enabled for normal HTTP use. The reproducible [benchmark and validation report](benchmarks/2026-10-03-optimized/README.md) records actual outputs and hardware limits.
 
 ## Model card summary (`bitnet_b1_58-large`)
 

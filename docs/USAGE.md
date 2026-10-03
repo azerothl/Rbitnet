@@ -2,6 +2,10 @@
 
 Consolidated variable index: **[ENV_REFERENCE.md](ENV_REFERENCE.md)**.
 
+The [native inference validation](benchmarks/2026-10-03-optimized/README.md) covers Llama 3.2 1B, Qwen3.5 2B, GPT-OSS 20B and GLM-4.7-Flash on CPU and NVIDIA CUDA. Select the actual GGUF architecture; do not force these models through Llama. For normal `/v1/chat/completions` requests, leave `RBITNET_CHAT_TEMPLATE` and `RBITNET_CHAT_FORMAT` unset so the GGUF Jinja conversation template is rendered. The benchmark overrides them only to send identical, already formatted prompts to all engines.
+
+For native CUDA quantized weights and fused attention, build `scripts/build_cuda_quant.ps1` and set `RBITNET_CUDA_QUANT_LIB` to the resulting library. `RBITNET_CUDA_ATTENTION=0` enables the CPU attention fallback for comparison. Llama CUDA now places its output projection on GPU by default; `RBITNET_HYBRID_OUTPUT=0` disables it. The new native MoE/Qwen graphs default to a 12288 MiB CUDA weight budget (512 MiB in hybrid), adjustable with `RBITNET_HYBRID_MAX_VRAM_MB`; GLM's 17.05 GiB GGUF needs partial CPU placement on a 16 GiB card.
+
 ## Akasha `llm_router.yaml` (BitNet / local)
 
 Point a **BitNet** or OpenAI-compatible route at `http://127.0.0.1:<port>/v1` (see `rbitnet serve` / `rbitnet-server` and `RBITNET_*` env vars in this repo). In [Akasha](https://github.com/azerothl/Akasha), add a provider entry in `llm_router.yaml` with that base URL and a small model id matching `RBITNET_MODEL`. Use **`akasha services doctor`** (akasha-models compose) plus **`GET /api/router/metrics`** after traffic to validate latency and errors.
@@ -147,7 +151,7 @@ cargo build -p rbitnet-cli --release
 **Tokenizers on the Hub:** Many BitNet / Transformers repos document `AutoTokenizer.from_pretrained(...)` without publishing a `tokenizer.json` or `tokenizer.model` in the same repo as the GGUF (e.g., tokenizer loaded from a different repo, or only Safetensors weights). Rbitnet requires a **file** `tokenizer.json` or `tokenizer.model` alongside the GGUF, or **`RBITNET_TOKENIZER`** pointing to one of those files. The `models search` command can only list what the `siblings` API exposes; if the model card points to a different Hugging Face id for the tokenizer, download that file from that repo or set `RBITNET_TOKENIZER` accordingly.
 ## Requirements to run a real model
 
-1. A **`.gguf`** file with **Llama-compatible** layout (see [BITNET_SPEC.md](BITNET_SPEC.md) and [TRAINING_AND_COMPATIBILITY.md](TRAINING_AND_COMPATIBILITY.md)), **or** a roadmap-tagged GGUF (`glm4moe`, `gptoss`, `deepseek2`) with **`RBITNET_BACKEND=cuda`** whose tensors still match the Llama loader. If not, the server fails at **load** with an explicit error — see [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md).
+1. A **`.gguf`** file with a supported native layout: Llama/BitNet, Qwen3, Mixtral, Qwen3.5, GPT-OSS or split MLA/MoE. CPU/CUDA availability and measured variants are listed in [ARCHITECTURE_GGUF_MATRIX.md](ARCHITECTURE_GGUF_MATRIX.md). The distinct `glm4moe` roadmap path still requires Llama-shaped tensors. Incompatible native projections fail at load.
 2. A **tokenizer** file that the Hugging Face `tokenizers` crate can load:
    - Prefer **`tokenizer.json`** next to the GGUF, **or**
    - **`tokenizer.model`** (SentencePiece) in the same directory, **or**
@@ -405,7 +409,7 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_TOY` | `1` — toy LM instead of GGUF. |
 | `RBITNET_TOY_SEED` | Integer seed for the toy LM (default `42`). |
 | `RBITNET_TEST_GGUF` | Used only by the `optional_gguf_from_env_smoke` test in `bitnet-core`. |
-| `RBITNET_CACHE_OUTPUT_F32` | **Default on** for the experimental **`qwen35moe`** CUDA path: load `output.weight` / `lm_head` as F32 once and reuse for logits (much lower per-token dequant overhead). Costs extra **host RAM** on the order of `vocab × hidden × 4` bytes. Set to `0`, `false`, or `no` to keep weights quantized in memory during logits (slower logits, less RAM). |
+| `RBITNET_CACHE_OUTPUT_F32` | Retired from the Qwen3.5 path: logits now use mmap or resident quantized output weights, including tied embeddings, without a full F32 host cache. |
 | `RBITNET_BACKEND=hybrid` | CPU/GPU hybrid mode for Llama-lineage GGUFs. The CPU keeps orchestration and fallback while selected f32-dequantized layer weights are uploaded once to CUDA device buffers. |
 | `RBITNET_QUANT_KERNEL` | Quantized matvec backend: `auto` (CPU parallel), `scalar`, or `cuda` to call optional `rbitnet_cuda_quant*` native symbols for `Q4_K`, `Q6_K`, `Q4_0`, and `Q8_0` with CPU fallback. |
 | `RBITNET_QUANT_PAR_MIN_ROWS` | Output-row threshold for CPU parallel quant matvec (default `256`). |
@@ -455,7 +459,9 @@ Rbitnet resolves a **normalized architecture key** from the environment and from
 |----------------------------------|------------------|
 | `llama`, `mistral`, (typical Llama-shaped family) | Llama GGUF stack (`LlamaExecutor`) |
 | `bitnet` | Error: BitNet weights forward not implemented yet (same message as before). |
-| `qwen35moe` | **Experimental** native text path when `RBITNET_BACKEND=cuda` (NVIDIA CUDA runtime + cuBLAS must load). CPU dispatch returns an explicit error. Expect high VRAM usage and slow first-token latency: weights are dequantized on the host per matmul; logits use `cuBLAS` GEMV in chunks by default after a one-shot F32 **`output.weight`** cache (`RBITNET_CACHE_OUTPUT_F32`, on unless disabled). Pair the GGUF with a Hugging Face tokenizer (`tokenizer.json` next to the checkpoint or `RBITNET_TOKENIZER`). Vision and MTP are out of scope for this first path. To force the Llama loader instead, set `RBITNET_ARCHITECTURE=llama` (likely to fail on tensor layout). |
+| `qwen35`, `qwen35moe` | Native GDN + gated GQA graph on CPU/CUDA/hybrid. Quantized projections and tied logits use mmap or resident GPU weights; GDN state updates remain CPU. Qwen3.5-2B dense is validated on real hardware; MoE variants remain unvalidated. Matching tokenizer required; vision and MTP are out of scope. |
+| `gpt-oss`, `gptoss` | Native biased MoE graph on CPU/CUDA/hybrid, with MXFP4 experts, alternating windows, attention sinks and YaRN. Harmony turn ends stop generation; analysis is hidden until the final channel. Tested export: GPT-OSS-20B Q4_K_M. |
+| `deepseek2` | Native split MLA + routed/shared experts on CPU/CUDA/hybrid. Tested export: GLM-4.7-Flash Q4_K_M. Other DeepSeek tensor variants require separate validation; incompatible projections fail eagerly. |
 
 Extend the match table in [`registry.rs`](../crates/bitnet-core/src/loaders/registry.rs) when adding a new family.
 
