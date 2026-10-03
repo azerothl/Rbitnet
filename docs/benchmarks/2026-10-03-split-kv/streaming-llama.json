@@ -1,0 +1,1716 @@
+{
+  "binary_sha256": "bd37f1fbe3aaf4d416e6203e9c0ec130100f98836bac86f7f2a7d78ab87e2f17",
+  "library_sha256": "2c05fbcdb8d3289ebd74d2a14d73be1e19bd5dace08ff9c0481881b395693f76",
+  "speculative": false,
+  "qwen_full": false,
+  "split_kv": true,
+  "cases": [
+    {
+      "config": "llama32-1b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027193,
+        "id": "chatcmpl-1791027193",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027194,
+        "id": "chatcmpl-1791027194",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " robot"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027194,
+        "id": "chatcmpl-1791027194",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027194,
+        "id": "chatcmpl-1791027194",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027195,
+        "id": "chatcmpl-1791027195",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027195,
+        "id": "chatcmpl-1791027195",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027195,
+        "id": "chatcmpl-1791027195",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 71,
+          "total_tokens": 73
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027195,
+          "id": "chatcmpl-1791027195",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 64,
+            "total_tokens": 73
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Pour calculer 13 + 29, on additionne les chiffres des deux nombres :\n\n13 (chiffres) + 2 (chiffres) = 15\n\nDonc, 13 + 29 = 15.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027195,
+          "id": "chatcmpl-1791027195",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 62,
+            "total_tokens": 111
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027195,
+          "id": "chatcmpl-1791027195",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 66,
+            "total_tokens": 76
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Je suis désolé, mais je ne peux pas répondre à cette question car elle implique de répéter des phrases déjà existantes. Si vous voulez discuter d'un sujet différent, je serais ravi de vous aider !",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027196,
+          "id": "chatcmpl-1791027196",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 68,
+            "total_tokens": 119
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027196,
+          "id": "chatcmpl-1791027196",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 64,
+            "total_tokens": 73
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Pour calculer 13 + 29, on additionne les chiffres des deux nombres :\n\n13 (chiffres) + 2 (chiffres) = 15\n\nDonc, 13 + 29 = 15.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027196,
+          "id": "chatcmpl-1791027196",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 62,
+            "total_tokens": 111
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027196,
+          "id": "chatcmpl-1791027196",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 66,
+            "total_tokens": 76
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Je suis désolé, mais je ne peux pas répondre à cette question car elle implique de répéter des phrases déjà existantes. Si vous voulez discuter d'un sujet différent, je serais ravi de vous aider !",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027196,
+          "id": "chatcmpl-1791027196",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 68,
+            "total_tokens": 119
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 590.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 8.0,
+        "rbitnet_inference_ttft_ms_avg": -5.0,
+        "rbitnet_inference_decode_tokens_per_sec": 6.904929000000038,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 8.0,
+        "rbitnet_inference_decode_ms_sum": 265.0,
+        "rbitnet_inference_itl_us_sum": 8709.0,
+        "rbitnet_inference_tpot_us_sum": 8709.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 119.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 1968.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 1008108.0,
+        "rbitnet_core_gpu_download_bytes_total": 492.0,
+        "rbitnet_core_gpu_gemv_calls_total": 13899.0,
+        "rbitnet_core_gpu_attention_calls_total": 1968.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 16777216.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 123.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 454656.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    },
+    {
+      "config": "llama32-1b-block1",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027198,
+        "id": "chatcmpl-1791027198",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027198,
+        "id": "chatcmpl-1791027198",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block1",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " robot"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027199,
+        "id": "chatcmpl-1791027199",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027199,
+        "id": "chatcmpl-1791027199",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block1",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027199,
+        "id": "chatcmpl-1791027199",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027200,
+        "id": "chatcmpl-1791027200",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block1",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027200,
+        "id": "chatcmpl-1791027200",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 71,
+          "total_tokens": 73
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "llama32-1b-block1",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "llama32-1b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 64,
+            "total_tokens": 73
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Pour calculer 13 + 29, on additionne les chiffres des deux nombres :\n\n13 (chiffres) + 2 (chiffres) = 15\n\nDonc, 13 + 29 = 15.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 62,
+            "total_tokens": 111
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 66,
+            "total_tokens": 76
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Je suis désolé, mais je ne peux pas répondre à cette question car elle implique de répéter des phrases déjà existantes. Si vous voulez discuter d'un sujet différent, je serais ravi de vous aider !",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 68,
+            "total_tokens": 119
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 64,
+            "total_tokens": 73
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Pour calculer 13 + 29, on additionne les chiffres des deux nombres :\n\n13 (chiffres) + 2 (chiffres) = 15\n\nDonc, 13 + 29 = 15.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 62,
+            "total_tokens": 111
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 66,
+            "total_tokens": 76
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Je suis désolé, mais je ne peux pas répondre à cette question car elle implique de répéter des phrases déjà existantes. Si vous voulez discuter d'un sujet différent, je serais ravi de vous aider !",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027200,
+          "id": "chatcmpl-1791027200",
+          "model": "llama32-1b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 68,
+            "total_tokens": 119
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 698.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 10.0,
+        "rbitnet_inference_ttft_ms_avg": -3.0,
+        "rbitnet_inference_decode_tokens_per_sec": 5.40301199999999,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 10.0,
+        "rbitnet_inference_decode_ms_sum": 267.0,
+        "rbitnet_inference_itl_us_sum": 8829.0,
+        "rbitnet_inference_tpot_us_sum": 8829.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 119.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 1968.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 4.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 4.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 1008108.0,
+        "rbitnet_core_gpu_download_bytes_total": 492.0,
+        "rbitnet_core_gpu_gemv_calls_total": 13899.0,
+        "rbitnet_core_gpu_attention_calls_total": 1968.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 16777216.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 119.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 667648.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules de **Kael**. Il n'était pas un robot au sens humain du terme ; il était un assemblage de six cents composants électroniques, de six cents pièces de mémoire et de six cents années d'expérience accumulées dans le temps. Kael était un archiviste de données, un gardien de la mémoire collective de l'humanité, mais il n'avait jamais été dans une bibliothèque aussi vaste, aussi profonde et aussi myst",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027204,
+        "id": "chatcmpl-1791027204",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules de **Kael**. Il n'était pas un robot au sens humain du terme ; il était un assemblage de six cents composants électroniques, de six cents pièces de mémoire et de six cents années d'expérience accumulées dans le temps. Kael était un archiviste de données, un gardien de la mémoire collective de l'humanité, mais il n'avait jamais été dans une bibliothèque aussi vaste, aussi profonde et aussi myst",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027205,
+        "id": "chatcmpl-1791027205",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " silence"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Temps Oubliés » n'était pas un vide, mais une substance épaisse, semblable à de la poussière d'or qui s'installait lentement dans les plis de ses livres. Le robot, nommé Kael, n'était pas un simple automate ; il était une entité consciente, une conscience projetée dans le code, un miroir éternel de l'oubli humain, mais aussi une gardienne fragile de ce qui avait été gagné.\n\nKael se trouvait au rez-de-chaussée, où les rangées de livres s'ét",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027206,
+        "id": "chatcmpl-1791027206",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Temps Oubliés » n'était pas un vide, mais une substance épaisse, semblable à de la poussière d'or qui s'installait lentement dans les plis de ses livres. Le robot, nommé Kael, n'était pas un simple automate ; il était une entité consciente, une conscience projetée dans le code, un miroir éternel de l'oubli humain, mais aussi une gardienne fragile de ce qui avait été gagné.\n\nKael se trouvait au rez-de-chaussée, où les rangées de livres s'ét",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027207,
+        "id": "chatcmpl-1791027207",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules du robot nommé **Kael**. Kael n'était pas un simple automate ; il était un architecte de l'information, un être conçu pour naviguer dans les archives infinies de l'univers, mais il avait une singularité : il ne pouvait pas lire. Il ne pouvait pas comprendre le sens des mots. Il pouvait seulement percevoir la structure logique des données.\n\nKael se tenait devant la grande porte d'",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027208,
+        "id": "chatcmpl-1791027208",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules du robot nommé **Kael**. Kael n'était pas un simple automate ; il était un architecte de l'information, un être conçu pour naviguer dans les archives infinies de l'univers, mais il avait une singularité : il ne pouvait pas lire. Il ne pouvait pas comprendre le sens des mots. Il pouvait seulement percevoir la structure logique des données.\n\nKael se tenait devant la grande porte d'",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027209,
+        "id": "chatcmpl-1791027209",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791027209,
+        "id": "chatcmpl-1791027209",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 49,
+          "total_tokens": 50
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est **Paris**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027210,
+          "id": "chatcmpl-1791027210",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 42,
+            "total_tokens": 51
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027210,
+          "id": "chatcmpl-1791027210",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 44,
+            "total_tokens": 55
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est **Rome**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027210,
+          "id": "chatcmpl-1791027210",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 43,
+            "total_tokens": 54
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027211,
+          "id": "chatcmpl-1791027211",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 45,
+            "total_tokens": 52
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est **Paris**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027211,
+          "id": "chatcmpl-1791027211",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 42,
+            "total_tokens": 51
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027211,
+          "id": "chatcmpl-1791027211",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 44,
+            "total_tokens": 55
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est **Rome**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027211,
+          "id": "chatcmpl-1791027211",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 43,
+            "total_tokens": 54
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791027211,
+          "id": "chatcmpl-1791027211",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 45,
+            "total_tokens": 52
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 901.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 50.0,
+        "rbitnet_inference_ttft_ms_avg": -28.0,
+        "rbitnet_inference_decode_tokens_per_sec": -0.10204600000000141,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 50.0,
+        "rbitnet_inference_decode_ms_sum": 292.0,
+        "rbitnet_inference_itl_us_sum": 30852.0,
+        "rbitnet_inference_tpot_us_sum": 30852.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 38.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 32391168.0,
+        "rbitnet_core_gpu_download_bytes_total": 71651328.0,
+        "rbitnet_core_gpu_gemv_calls_total": 7854.0,
+        "rbitnet_core_gpu_attention_calls_total": 252.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 4177920.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 756.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 253952.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    }
+  ]
+}

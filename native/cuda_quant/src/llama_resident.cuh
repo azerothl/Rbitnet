@@ -2,6 +2,7 @@
 // Private streams and state per runtime: no mutable model state is process-global.
 #include <vector>
 #include <new>
+#include "split_attention.cuh"
 
 namespace {
 __global__ void resident_norm(float *x,const float *weights,float epsilon,unsigned n,float *y,const float *residual=nullptr) {
@@ -119,6 +120,9 @@ struct ResidentLlama {
     std::vector<void*> allocations;
     float *x=nullptr,*h=nullptr,*q=nullptr,*k=nullptr,*v=nullptr,*attn=nullptr,*projection=nullptr,*gate=nullptr,*up=nullptr,*logits=nullptr,*kv_k=nullptr,*kv_v=nullptr,*out_norm=nullptr,*frequency=nullptr,*maxima=nullptr,*maximum=nullptr;
     unsigned *position=nullptr,*ids=nullptr,*token=nullptr;
+    float *attention_scratch=nullptr,*block_attention_scratch=nullptr;
+    size_t attention_scratch_size=0;
+    bool split_kv=false;
     unsigned filled=0;
     cudaStream_t stream=nullptr;
     cudaGraph_t graphs[3]={};
@@ -153,7 +157,8 @@ struct ResidentLlama {
             const auto &layer=layers[il];
             matrix(layer.q,h,q);matrix(layer.k,h,k);matrix(layer.v,h,v);
             resident_rope_kv<<<((cfg.heads+cfg.kv_heads)*(cfg.head_dim/2)+255)/256,256,0,stream>>>(q,k,v,kv_k+il*layer_stride,kv_v+il*layer_stride,frequency,position,cfg.heads,cfg.kv_heads,cfg.head_dim,cfg.rotary);
-            resident_attention<<<cfg.heads,128,cfg.capacity*sizeof(float),stream>>>(kv_k+il*layer_stride,kv_v+il*layer_stride,q,position,cfg.kv_heads,cfg.heads,cfg.head_dim,cfg.window,1.0f/sqrtf(float(cfg.head_dim)),attn);
+            if(split_kv)launch_split_attention(kv_k+il*layer_stride,kv_v+il*layer_stride,q,position,cfg.kv_heads,cfg.heads,cfg.head_dim,cfg.window,1.0f/sqrtf(float(cfg.head_dim)),cfg.capacity,1,attention_scratch,attn,stream);
+            else resident_attention<<<cfg.heads,128,cfg.capacity*sizeof(float),stream>>>(kv_k+il*layer_stride,kv_v+il*layer_stride,q,position,cfg.kv_heads,cfg.heads,cfg.head_dim,cfg.window,1.0f/sqrtf(float(cfg.head_dim)),attn);
             matrix(layer.out,attn,projection);
             resident_norm<<<1,256,0,stream>>>(x,layer.ffn_norm,cfg.epsilon,cfg.embd,h,projection);
             matrix(layer.gate,h,gate);matrix(layer.up,h,up);
@@ -185,6 +190,8 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
     auto *r=new(std::nothrow) ResidentLlama;
     if(!r)return nullptr;
     r->cfg=*cfg;r->output=*output;r->layers.assign(layers,layers+cfg->layers);r->use_graphs=cfg->graphs!=0;
+    r->split_kv=split_attention_enabled();
+    r->attention_scratch_size=size_t(cfg->heads)*((cfg->capacity+attention_tile-1)/attention_tile)*(size_t(cfg->head_dim)+2);
     QuantKind kind;
     if(!resident_kind(output->type,kind)) {delete r;return nullptr;}
     for(auto &l:r->layers)for(auto m:{l.q,l.k,l.v,l.out,l.gate,l.up,l.down})if(!m.weights || !resident_kind(m.type,kind)) {delete r;return nullptr;}
@@ -197,6 +204,7 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
         || !r->alloc(r->out_norm,cfg->embd,out_norm) || !r->alloc(r->frequency,cfg->rotary/2,frequency)
         || !r->alloc(r->position,1) || !r->alloc(r->maxima,(cfg->vocab+255)/256) || !r->alloc(r->ids,(cfg->vocab+255)/256)
         || !r->alloc(r->maximum,1) || !r->alloc(r->token,1)) {delete r;return nullptr;}
+    if(r->split_kv && !r->alloc(r->attention_scratch,r->attention_scratch_size)) {delete r;return nullptr;}
     for(auto &layer:r->layers) {
         float *norm=nullptr;
         if(!r->alloc(norm,cfg->embd,layer.attn_norm)) {delete r;return nullptr;}
@@ -207,6 +215,9 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
     return r;
 }
 void rbitnet_cuda_llama_destroy(void *context) {delete static_cast<ResidentLlama*>(context);}
+unsigned rbitnet_cuda_llama_split_attention_layers(void *p) {
+    auto *r=static_cast<ResidentLlama*>(p);return r && r->split_kv?r->cfg.layers:0;
+}
 static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos,unsigned count,
     unsigned mode,float *logits,unsigned *token,bool all) {
     auto *r=static_cast<ResidentLlama*>(context);
@@ -220,6 +231,7 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
         if(!b->init(c.embd,c.ffn,stride)) {delete b;return 3;}r->block=b;
     }
     auto &p=r->block->p;
+    if(r->split_kv && !r->block_attention_scratch && !r->alloc(r->block_attention_scratch,r->attention_scratch_size*LlamaBlock::capacity))return 3;
     if(all && !r->block->init_verify(c.vocab))return 3;
     if(cudaMemcpyAsync(p[0],embeddings,size_t(count)*c.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 4;
@@ -236,7 +248,8 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
         const auto &l=r->layers[il];matrix(l.q,p[1],p[2]);matrix(l.k,p[1],p[3]);matrix(l.v,p[1],p[4]);
         dim3 rope(((c.heads+c.kv_heads)*(c.head_dim/2)+255)/256,count);
         resident_rope_kv<<<rope,256,0,r->stream>>>(p[2],p[3],p[4],r->kv_k+il*layer_stride,r->kv_v+il*layer_stride,r->frequency,r->position,c.heads,c.kv_heads,c.head_dim,c.rotary);
-        resident_attention<<<dim3(c.heads,count),128,c.capacity*sizeof(float),r->stream>>>(r->kv_k+il*layer_stride,r->kv_v+il*layer_stride,p[2],r->position,c.kv_heads,c.heads,c.head_dim,c.window,1.0f/sqrtf(float(c.head_dim)),p[5]);
+        if(r->split_kv)launch_split_attention(r->kv_k+il*layer_stride,r->kv_v+il*layer_stride,p[2],r->position,c.kv_heads,c.heads,c.head_dim,c.window,1.0f/sqrtf(float(c.head_dim)),c.capacity,count,r->block_attention_scratch,p[5],r->stream);
+        else resident_attention<<<dim3(c.heads,count),128,c.capacity*sizeof(float),r->stream>>>(r->kv_k+il*layer_stride,r->kv_v+il*layer_stride,p[2],r->position,c.kv_heads,c.heads,c.head_dim,c.window,1.0f/sqrtf(float(c.head_dim)),p[5]);
         matrix(l.out,p[5],p[6]);
         resident_norm<<<count,256,0,r->stream>>>(p[0],l.ffn_norm,c.epsilon,c.embd,p[1],p[6]);
         matrix(l.gate,p[1],p[7]);matrix(l.up,p[1],p[8]);

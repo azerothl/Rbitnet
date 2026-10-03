@@ -163,6 +163,16 @@ RBITNET_CUDA_API void rbitnet_cuda_qwen_full_destroy(void*);
 /* mode=0 no output; 1 logits; 2 argmax. One synchronization per token. */
 RBITNET_CUDA_API int rbitnet_cuda_qwen_full_step(void*,const float*,unsigned,unsigned,float*,unsigned*);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_full_restored(void*,unsigned length);
+/* Number of layers actually configured with the optional split-KV kernels. */
+RBITNET_CUDA_API unsigned rbitnet_cuda_llama_split_attention_layers(void*);
+RBITNET_CUDA_API unsigned rbitnet_cuda_qwen_split_attention_layers(void*);
+
+/* Diagnostic split-KV oracle runner, using host arrays. The same captured
+ * kernels replay each device position; outputs are [step, token, head, dim].
+ * Hot model paths use resident scratch and never call this helper. */
+RBITNET_CUDA_API int rbitnet_cuda_split_attention_check(const float *k,const float *v,const float *q,
+    unsigned capacity,unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,
+    unsigned count,const unsigned *positions,unsigned steps,unsigned graphs,float *out);
 
 /* Shared resident output RMSNorm, quantized head and optional greedy reduction.
  * mode=0 downloads logits, mode=1 downloads only the chosen token. */
