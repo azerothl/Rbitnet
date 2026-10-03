@@ -1,0 +1,662 @@
+{
+  "binary_sha256": "97b32dd73795d053769f94491086a0c7945dd982c7d6313a046e14bcca91068b",
+  "library_sha256": "75374f163228377393ce8392c7f37bb1538c803e5d87ca420373e48234cb1b26",
+  "speculative": false,
+  "qwen_full": true,
+  "split_kv": true,
+  "tf32x3": true,
+  "cases": [
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la ville de Kaelis, où la lumière du soleil filtrait à travers des vitres de verre teinté de vert, la bibliothèque centrale ressemblait à un véritable monde suspendu dans le ciel. Ce n'était pas seulement un lieu de stockage, mais un écosystème vivant où les livres, les plantes et les artefacts historiques coexistaient en harmonie.\n\nLe robot, nommé **Aethelgard**, était un être de métal poli et de circuits brillants, conçu pour naviguer dans cet univers. Ses yeux, deux lentilles holographiques, scintillaient d'une douce lueur",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031746,
+        "id": "chatcmpl-1791031746",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la ville de Kaelis, où la lumière du soleil filtrait à travers des vitres de verre teinté de vert, la bibliothèque centrale ressemblait à un véritable monde suspendu dans le ciel. Ce n'était pas seulement un lieu de stockage, mais un écosystème vivant où les livres, les plantes et les artefacts historiques coexistaient en harmonie.\n\nLe robot, nommé **Aethelgard**, était un être de métal poli et de circuits brillants, conçu pour naviguer dans cet univers. Ses yeux, deux lentilles holographiques, scintillaient d'une douce lueur",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031746,
+        "id": "chatcmpl-1791031746",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " silence"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Lumières » n'était pas bellica, mais dense, comme une eau profonde qui attendait de se briser. Pour Aethelgard, un robot de six mètres de hauteur et de six ans d'expérience, ce silence n'était pas un manque de vie, mais une propriété fondamentale de la structure : un champ de force magnétique et un champ d'inertie sonore qui rendait chaque page un objet d'immortalité. Aethelgard était une archiviste architecturale ; il naviguait par ses antennes sensorielles dans les coulisses des étagères",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031747,
+        "id": "chatcmpl-1791031747",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Lumières » n'était pas bellica, mais dense, comme une eau profonde qui attendait de se briser. Pour Aethelgard, un robot de six mètres de hauteur et de six ans d'expérience, ce silence n'était pas un manque de vie, mais une propriété fondamentale de la structure : un champ de force magnétique et un champ d'inertie sonore qui rendait chaque page un objet d'immortalité. Aethelgard était une archiviste architecturale ; il naviguait par ses antennes sensorielles dans les coulisses des étagères",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031748,
+        "id": "chatcmpl-1791031748",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la ville de Kaelis, où le ciel était souvent teinté d'un violet électrique et où les nuages formaient des sculptures géantes, se trouvait la bibliothèque centrale, un lieu de mémoire et de savoir qui dépassait de toute proportion. Ce n'était pas simplement un bâtiment en pierre blanche et grise, mais une véritable écosystème vivant où les bibliothèques, les jardins et les musées s'entrelaçaient dans une harmonie parfaite.\n\nLe robot nommé **Aethelgard** avait été conçu pour explorer ces trois mondes. Ses six bras articulés, dotés de capteurs",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031748,
+        "id": "chatcmpl-1791031748",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la ville de Kaelis, où le ciel était souvent teinté d'un violet électrique et où les nuages formaient des sculptures géantes, se trouvait la bibliothèque centrale, un lieu de mémoire et de savoir qui dépassait de toute proportion. Ce n'était pas simplement un bâtiment en pierre blanche et grise, mais une véritable écosystème vivant où les bibliothèques, les jardins et les musées s'entrelaçaient dans une harmonie parfaite.\n\nLe robot nommé **Aethelgard** avait été conçu pour explorer ces trois mondes. Ses six bras articulés, dotés de capteurs",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031749,
+        "id": "chatcmpl-1791031749",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 278,
+          "total_tokens": 406
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791031749,
+        "id": "chatcmpl-1791031749",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 279,
+          "total_tokens": 280
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse.\nNote 0: Les villes ont des bibliothèques, des jardins et des musées.\nNote 1: Les villes ont des bibliothèques, des jardins et des musées.\nNote 2: Les villes ont des bibliothèques, des jardins et des musées.\nNote 3: Les villes ont des bibliothèques, des jardins et des musées.\nNote 4: Les villes ont des bibliothèques, des jardins et des musées.\nNote 5: Les villes ont des bibliothèques, des jardins et des musées.\nNote 6: Les villes ont des bibliothèques, des jardins et des musées.\nNote 7: Les villes ont des bibliothèques, des jardins et des musées.\nNote 8: Les villes ont des bibliothèques, des jardins et des musées.\nNote 9: Les villes ont des bibliothèques, des jardins et des musées.\nNote 10: Les villes ont des bibliothèques, des jardins et des musées.\nNote 11: Les villes ont des bibliothèques, des jardins et des musées."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031749,
+          "id": "chatcmpl-1791031749",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 8,
+            "prompt_tokens": 272,
+            "total_tokens": 280
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031749,
+          "id": "chatcmpl-1791031749",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 274,
+            "total_tokens": 284
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 273,
+            "total_tokens": 282
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 275,
+            "total_tokens": 282
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 8,
+            "prompt_tokens": 272,
+            "total_tokens": 280
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 274,
+            "total_tokens": 284
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 273,
+            "total_tokens": 282
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791031750,
+          "id": "chatcmpl-1791031750",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 275,
+            "total_tokens": 282
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 435.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 19.0,
+        "rbitnet_inference_ttft_ms_avg": -14.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.8516119999999887,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 19.0,
+        "rbitnet_inference_decode_ms_sum": 148.0,
+        "rbitnet_inference_itl_us_sum": 17393.0,
+        "rbitnet_inference_tpot_us_sum": 17393.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 34.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 38.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 228.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 311448.0,
+        "rbitnet_core_gpu_download_bytes_total": 152.0,
+        "rbitnet_core_gpu_gemv_calls_total": 7106.0,
+        "rbitnet_core_gpu_attention_calls_total": 228.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 26787840.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 38.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 724992.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "all_cases_metrics_delta": {
+        "rbitnet_chat_requests_total": 19.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 5069.0,
+        "rbitnet_inference_calls_total": 16.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 739.0,
+        "rbitnet_inference_ttft_ms_avg": 46.0,
+        "rbitnet_inference_decode_tokens_per_sec": 207.323107,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 734.0,
+        "rbitnet_inference_decode_ms_sum": 4042.0,
+        "rbitnet_inference_itl_us_sum": 68256.0,
+        "rbitnet_inference_tpot_us_sum": 68256.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 838.0,
+        "rbitnet_native_accelerated_calls_total": 16.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 1606.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 9636.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 690.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 11.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 749.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 2046.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 13159824.0,
+        "rbitnet_core_gpu_download_bytes_total": 514520396.0,
+        "rbitnet_core_gpu_gemv_calls_total": 160259.0,
+        "rbitnet_core_gpu_attention_calls_total": 9636.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 18.0,
+        "rbitnet_core_prefix_hit": 18.0,
+        "rbitnet_core_prefix_cache_misses_total": 1.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 110100480.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 868.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 33280000.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    }
+  ]
+}

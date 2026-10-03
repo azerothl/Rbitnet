@@ -9,6 +9,10 @@ use bitnet_core::backend::{
     MetalBackend, RocmBackend, VulkanBackend,
 };
 
+// These two tests mutate the same process-wide environment key. Parallel
+// execution must not let one remove the alias while the other resolves it.
+static BACKEND_ENV: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Fixed 3×4 f32 golden used as the CPU reference for stub / CUDA-fallback parity (#22).
 fn golden_matvec_fixture() -> (Vec<f32>, Vec<f32>, [f32; 3]) {
     let w = vec![
@@ -102,20 +106,30 @@ fn backend_auto_detect_resolves_without_panic() {
 
 #[test]
 fn backend_intel_alias_maps_to_vulkan() {
+    let _guard = BACKEND_ENV.lock().unwrap();
+    let previous = std::env::var_os("RBITNET_BACKEND");
     // Safety: process-local env for this unit test only.
     std::env::set_var("RBITNET_BACKEND", "intel");
     assert_eq!(BackendKind::from_env(), BackendKind::Vulkan);
     std::env::set_var("RBITNET_BACKEND", "cpu");
     assert_eq!(BackendKind::from_env(), BackendKind::Cpu);
-    std::env::remove_var("RBITNET_BACKEND");
+    match previous {
+        Some(value) => std::env::set_var("RBITNET_BACKEND", value),
+        None => std::env::remove_var("RBITNET_BACKEND"),
+    }
 }
 
 #[test]
 fn backend_default_is_auto_detect() {
+    let _guard = BACKEND_ENV.lock().unwrap();
+    let previous = std::env::var_os("RBITNET_BACKEND");
     // Safety: process-local env for this unit test only.
     std::env::remove_var("RBITNET_BACKEND");
     assert_eq!(BackendKind::from_env(), BackendKind::detect_best());
     std::env::set_var("RBITNET_BACKEND", "auto");
     assert_eq!(BackendKind::from_env(), BackendKind::detect_best());
-    std::env::remove_var("RBITNET_BACKEND");
+    match previous {
+        Some(value) => std::env::set_var("RBITNET_BACKEND", value),
+        None => std::env::remove_var("RBITNET_BACKEND"),
+    }
 }

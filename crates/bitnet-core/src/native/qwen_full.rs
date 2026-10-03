@@ -66,6 +66,14 @@ type Create = unsafe extern "C" fn(
     f32,
 ) -> *mut c_void;
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32, *mut u32) -> i32;
+type Prefill =
+    unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, u32, *mut f32, *mut u32) -> i32;
+type Counter = unsafe extern "C" fn(*mut c_void) -> u32;
+struct PrefillApi {
+    run: Prefill,
+    tensor_calls: Counter,
+    capacity: usize,
+}
 type Snapshot = unsafe extern "C" fn(*mut c_void) -> *mut c_void;
 type Restore = unsafe extern "C" fn(*mut c_void, *const c_void, u32) -> i32;
 type Restored = unsafe extern "C" fn(*mut c_void, u32) -> i32;
@@ -105,6 +113,7 @@ pub(crate) struct GpuFull {
     matrices: u64,
     graphs: bool,
     split_layers: u64,
+    prefill: Option<PrefillApi>,
 }
 impl GpuFull {
     pub fn new(
@@ -271,6 +280,44 @@ impl GpuFull {
             lib.get::<SplitLayers>(b"rbitnet_cuda_qwen_split_attention_layers\0")
                 .map_or(0, |query| query(context as *mut c_void) as u64)
         };
+        let prefill = if std::env::var("RBITNET_CUDA_QWEN_PREFILL").as_deref() == Ok("1") {
+            type Configure = unsafe extern "C" fn(*mut c_void, u32, u32) -> i32;
+            unsafe {
+                (|| {
+                    let configure = lib
+                        .get::<Configure>(b"rbitnet_cuda_qwen_configure_prefill\0")
+                        .ok()?;
+                    let capacity = lib
+                        .get::<Counter>(b"rbitnet_cuda_qwen_prefill_capacity\0")
+                        .ok()?;
+                    let tensor_calls = *lib
+                        .get::<Counter>(b"rbitnet_cuda_qwen_tensor_gemm_calls\0")
+                        .ok()?;
+                    let run = *lib
+                        .get::<Prefill>(b"rbitnet_cuda_qwen_full_prefill\0")
+                        .ok()?;
+                    let tensor = u32::from(
+                        std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1"),
+                    );
+                    let status = configure(context as *mut c_void, 1, tensor);
+                    if status != 0 {
+                        tracing::warn!(
+                            status,
+                            "Qwen block workspace unavailable; using serial GPU pipeline"
+                        );
+                        return None;
+                    }
+                    let capacity = capacity(context as *mut c_void) as usize;
+                    (capacity > 0 && capacity <= 128).then_some(PrefillApi {
+                        run,
+                        tensor_calls,
+                        capacity,
+                    })
+                })()
+            }
+        } else {
+            None
+        };
         Some(Self {
             context,
             destroy,
@@ -288,7 +335,89 @@ impl GpuFull {
             matrices,
             graphs,
             split_layers,
+            prefill,
         })
+    }
+    pub fn prefill_capacity(&self) -> usize {
+        self.prefill.as_ref().map_or(1, |p| p.capacity)
+    }
+    pub fn prefill(
+        &mut self,
+        input: &[f32],
+        position: usize,
+        count: usize,
+        output: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
+        let api = self
+            .prefill
+            .as_ref()
+            .ok_or_else(|| BitNetError::Inference("Qwen GPU block prefill unavailable".into()))?;
+        if count == 0
+            || count > api.capacity
+            || position >= self.capacity
+            || count > self.capacity - position
+            || input.len() != count * self.embd
+        {
+            return Err(BitNetError::Inference(
+                "Qwen prefill shape/position mismatch".into(),
+            ));
+        }
+        let mode = if !output {
+            0
+        } else if greedy {
+            2
+        } else {
+            1
+        };
+        let mut logits = if mode == 1 {
+            vec![0.0; self.vocab]
+        } else {
+            Vec::new()
+        };
+        let mut token = 0;
+        let status = unsafe {
+            (api.run)(
+                self.context as *mut c_void,
+                input.as_ptr(),
+                position as u32,
+                count as u32,
+                mode,
+                logits.as_mut_ptr(),
+                &mut token,
+            )
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen GPU block prefill failed: {status}"
+            )));
+        }
+        crate::perf::record_gpu_transfer(
+            (input.len() * 4 + 4) as u64,
+            if mode == 1 {
+                (self.vocab * 4) as u64
+            } else if mode == 2 {
+                4
+            } else {
+                0
+            },
+            u64::from(output) + if count == 1 { self.matrices } else { 0 },
+        );
+        crate::perf::record_gpu_prefill(count, if count > 1 { self.matrices } else { 0 });
+        crate::perf::record_qwen_full_tokens(count);
+        crate::perf::record_split_attention(self.split_layers * count as u64);
+        crate::perf::record_gpu_tensor_gemm(unsafe {
+            (api.tensor_calls)(self.context as *mut c_void)
+        } as u64);
+        for _ in 0..count {
+            for _ in self.attention.iter().flatten() {
+                crate::perf::record_gpu_attention();
+            }
+        }
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        Ok((logits, (mode == 2).then_some(token)))
     }
     pub fn prefix_bytes(&self, length: usize) -> usize {
         self.attention
@@ -577,6 +706,11 @@ mod tests {
             *lib.get::<Destroy>(b"rbitnet_cuda_qwen_full_attention_snapshot_destroy\0")
                 .unwrap()
         };
+        type Block = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32) -> i32;
+        let block = unsafe {
+            *lib.get::<Block>(b"rbitnet_cuda_qwen_attention_prefill_check\0")
+                .unwrap()
+        };
         for graphs in [0, 1] {
             for (case, &ty) in [0, 2, 6, 8, 12, 13, 14, 39].iter().enumerate() {
                 let embd = 256;
@@ -631,13 +765,13 @@ mod tests {
                                     // keep the synthetic layer well conditioned so
                                     // the F64 oracle measures the implementation,
                                     // rather than amplified FP32 rounding in the FFN.
-                                    &half::f16::from_f32(if ty == 14 { 0.00003 } else { 0.0007 })
+                                    &half::f16::from_f32(if ty == 14 { 0.00003 } else { 0.00007 })
                                         .to_bits()
                                         .to_le_bytes(),
                                 );
                                 if ty == 12 || ty == 13 {
                                     b[2..4].copy_from_slice(
-                                        &half::f16::from_f32(0.0003).to_bits().to_le_bytes(),
+                                        &half::f16::from_f32(0.00003).to_bits().to_le_bytes(),
                                     );
                                 }
                             }
@@ -690,7 +824,7 @@ mod tests {
                     kv_heads: kh as u32,
                     head_dim: dim as u32,
                     rotary: rotary as u32,
-                    capacity: 32,
+                    capacity: 512,
                     gated: u32::from(gated),
                     graphs,
                     epsilon: 1e-5,
@@ -759,6 +893,34 @@ mod tests {
                             context,
                             destroy: sd,
                         });
+                    }
+                }
+                for (pos, count) in [(0, 7), (7, 16), (23, 33), (56, 64), (120, 128), (0, 17)] {
+                    let input: Vec<_> = (0..embd * count)
+                        .map(|i| (i as f32 * 0.037 + pos as f32 * 0.21).sin() * 1.7)
+                        .collect();
+                    let mut output = vec![0.0; input.len()];
+                    assert_eq!(
+                        unsafe {
+                            block(
+                                a.context as *mut c_void,
+                                input.as_ptr(),
+                                pos as u32,
+                                count as u32,
+                                output.as_mut_ptr(),
+                            )
+                        },
+                        0
+                    );
+                    for (t, (input, output)) in input
+                        .chunks_exact(embd)
+                        .zip(output.chunks_exact(embd))
+                        .enumerate()
+                    {
+                        let expected = oracle.layer(input, pos + t);
+                        for (i, (&got, &e)) in output.iter().zip(&expected).enumerate() {
+                            assert!((got as f64-e).abs()<5e-5*(1.0+e.abs()),"type={ty} graphs={graphs} block={count} pos={} element={i}: {got} vs {e}",pos+t);
+                        }
                     }
                 }
             }

@@ -150,3 +150,25 @@ kernel launches, including graph replays; Rust publishes
 `rbitnet_core_gpu_tensor_gemm_calls_total`. Missing symbols keep the legacy
 path and report zero. `quant_gemm_check` is a diagnostic host-array oracle/
 CUDA-event timer for the same hot kernels, not a production transfer path.
+
+`RBITNET_CUDA_QWEN_PREFILL=1` enables dense Qwen prefill blocks in the full
+pipeline. An explicit Rust/native configuration allocates one workspace for
+up to 128 tokens before inference. It sizes query heads independently of the
+embedding width, shares the workspace across layers, and retains stable
+addresses for graphs indexed by block length and output mode. Missing optional
+symbols or failed allocation preserve the serial GPU pipeline.
+
+Each layer performs batched GGUF projections, followed by its causal GDN scan
+or full attention, then its FFN. A GDN warp owns one value row and keeps the
+state in registers across the block; convolution history is also retained until
+the end. All intermediate outputs are materialized, while state/history write
+back only once. Attention softmax excludes future block keys. The last token
+alone produces logits/argmax, with one input upload and synchronization per
+block. `RBITNET_CUDA_PREFILL_TF32X3` optionally selects the same compensated
+large-matrix kernels as Llama; smaller projections remain SIMT.
+
+The runtime stops blocks at each exact recurrent checkpoint, checks cancellation
+between blocks, and advances valid lengths only after successful synchronization.
+State cannot be truncated like dense KV. Diagnostic `*_prefill_check` entrypoints
+share these production layer functions for independent FP64 oracles; their
+temporary host transfers/allocations are excluded from performance measurements.

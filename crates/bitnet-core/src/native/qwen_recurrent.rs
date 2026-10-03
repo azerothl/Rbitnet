@@ -463,157 +463,250 @@ mod tests {
             *lib.get::<Step>(b"rbitnet_cuda_qwen_recurrent_step\0")
                 .unwrap()
         };
+        type Block = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32) -> i32;
+        let block = unsafe {
+            *lib.get::<Block>(b"rbitnet_cuda_qwen_recurrent_prefill_check\0")
+                .unwrap()
+        };
         for graphs in [0, 1] {
-            for (head, nk, nv, taps) in [(32, 1, 2, 1), (128, 2, 4, 4)] {
-                let embd = 256;
-                let ffn = 512;
-                let inner = (2 * nk + nv) * head;
-                let value = nv * head;
-                let cols = vec![embd, embd, embd, embd, value, embd, embd, ffn];
-                let rows = [inner, value, nv, nv, embd, ffn, ffn, embd];
-                let mut owned = Vec::new();
-                let mut dense = Vec::new();
-                let mut matrices = Vec::new();
-                for p in 0..8 {
-                    let ty = if p % 3 == 2 && cols[p] % 256 == 0 {
-                        12
-                    } else if p % 3 == 1 {
-                        8
-                    } else {
-                        0
-                    };
-                    let rb = crate::ggml::ggml_row_size(ty, cols[p] as u64).unwrap();
-                    let mut payload: Vec<u8> = (0..rb * rows[p])
-                        .map(|i| (i * 37 + p * 71 + 3) as u8)
-                        .collect();
-                    if ty == 0 {
-                        for (i, v) in payload.chunks_exact_mut(4).enumerate() {
-                            v.copy_from_slice(
-                                &((i as f32 * 0.017 + p as f32 * 0.7).sin() * 0.045).to_le_bytes(),
-                            );
-                        }
-                    } else {
-                        for block in payload.chunks_exact_mut(if ty == 8 { 34 } else { 144 }) {
-                            block[..2].copy_from_slice(
-                                &half::f16::from_f32(0.0008).to_bits().to_le_bytes(),
-                            );
-                            if ty == 12 {
-                                block[2..4].copy_from_slice(
-                                    &half::f16::from_f32(0.0002).to_bits().to_le_bytes(),
+            for format in [0, 2, 6, 8, 12, 13, 14, 39] {
+                for (head, nk, nv, taps) in [(32, 1, 2, 1), (128, 2, 4, 4), (256, 1, 2, 16)] {
+                    let embd = 256;
+                    let ffn = 512;
+                    let inner = (2 * nk + nv) * head;
+                    let value = nv * head;
+                    let cols = vec![embd, embd, embd, embd, value, embd, embd, ffn];
+                    let rows = [inner, value, nv, nv, embd, ffn, ffn, embd];
+                    let mut owned = Vec::new();
+                    let mut dense = Vec::new();
+                    let mut matrices = Vec::new();
+                    for p in 0..8 {
+                        let ty = if [12, 13, 14].contains(&format) && cols[p] % 256 != 0 {
+                            0
+                        } else {
+                            format
+                        };
+                        let rb = crate::ggml::ggml_row_size(ty, cols[p] as u64).unwrap();
+                        let mut payload: Vec<u8> = (0..rb * rows[p])
+                            .map(|i| (i * 37 + p * 71 + 3) as u8)
+                            .collect();
+                        if ty == 0 {
+                            for (i, v) in payload.chunks_exact_mut(4).enumerate() {
+                                v.copy_from_slice(
+                                    &((i as f32 * 0.017 + p as f32 * 0.7).sin() * 0.045)
+                                        .to_le_bytes(),
                                 );
                             }
+                        } else {
+                            let bytes = match ty {
+                                2 => 18,
+                                6 => 22,
+                                8 => 34,
+                                12 => 144,
+                                13 => 176,
+                                14 => 210,
+                                39 => 17,
+                                _ => unreachable!(),
+                            };
+                            for block in payload.chunks_exact_mut(bytes) {
+                                if ty == 39 {
+                                    block[0] = 119;
+                                    continue;
+                                }
+                                let offset = if ty == 14 { 208 } else { 0 };
+                                block[offset..offset + 2].copy_from_slice(
+                                    &half::f16::from_f32(if ty == 14 {
+                                        0.000002
+                                    } else {
+                                        0.000007
+                                    })
+                                    .to_bits()
+                                    .to_le_bytes(),
+                                );
+                                if ty == 12 || ty == 13 {
+                                    block[2..4].copy_from_slice(
+                                        &half::f16::from_f32(0.000003).to_bits().to_le_bytes(),
+                                    );
+                                }
+                            }
+                        }
+                        dense.push(
+                            crate::ggml::tensor_to_f32(
+                                &payload,
+                                ty,
+                                &[cols[p] as u64, rows[p] as u64],
+                            )
+                            .unwrap(),
+                        );
+                        let m = CudaDeviceQuantMatrix::from_payload(
+                            Some(&rt),
+                            ty,
+                            payload,
+                            rows[p],
+                            cols[p],
+                        )
+                        .unwrap();
+                        matrices.push(Matrix {
+                            weights: m.device_address().unwrap() as *const c_void,
+                            row_bytes: rb,
+                            ty,
+                            cols: cols[p] as u32,
+                            rows: rows[p] as u32,
+                        });
+                        owned.push(m);
+                    }
+                    let norm = |n| {
+                        (0..n)
+                            .map(|i| 1.0 + (i as f32 * 0.13).sin() * 0.08)
+                            .collect::<Vec<_>>()
+                    };
+                    let mut oracle = Oracle {
+                        head,
+                        nk,
+                        nv,
+                        taps,
+                        weights: dense,
+                        cols,
+                        an: norm(embd),
+                        fnorm: norm(embd),
+                        conv: (0..taps * inner)
+                            .map(|i| (i as f32 * 0.11).cos() * 0.4)
+                            .collect(),
+                        dt: (0..nv)
+                            .map(|i| {
+                                if i == 0 {
+                                    40.0
+                                } else if i == 1 {
+                                    -40.0
+                                } else {
+                                    i as f32 * 0.17
+                                }
+                            })
+                            .collect(),
+                        a: (0..nv).map(|i| -0.02 - i as f32 * 0.01).collect(),
+                        sn: norm(value),
+                        history: vec![0.0; (taps - 1) * inner],
+                        state: vec![0.0; value * head],
+                    };
+                    let cfg = Config {
+                        embd: embd as u32,
+                        ffn: ffn as u32,
+                        head: head as u32,
+                        num_k: nk as u32,
+                        num_v: nv as u32,
+                        conv: taps as u32,
+                        graphs,
+                        epsilon: 1e-5,
+                    };
+                    let context = unsafe {
+                        create(
+                            &cfg,
+                            matrices.as_ptr(),
+                            oracle.an.as_ptr(),
+                            oracle.fnorm.as_ptr(),
+                            oracle.conv.as_ptr(),
+                            oracle.dt.as_ptr(),
+                            oracle.a.as_ptr(),
+                            oracle.sn.as_ptr(),
+                        )
+                    };
+                    assert!(!context.is_null(), "resident Qwen block required");
+                    let serial = unsafe {
+                        create(
+                            &cfg,
+                            matrices.as_ptr(),
+                            oracle.an.as_ptr(),
+                            oracle.fnorm.as_ptr(),
+                            oracle.conv.as_ptr(),
+                            oracle.dt.as_ptr(),
+                            oracle.a.as_ptr(),
+                            oracle.sn.as_ptr(),
+                        )
+                    };
+                    assert!(!serial.is_null());
+                    let mut output = vec![0.0; embd];
+                    let mut maximum = 0.0f64;
+                    for sequence in 0..2 {
+                        oracle.reset();
+                        for pos in 0..17 {
+                            let input: Vec<_> = (0..embd)
+                                .map(|i| {
+                                    (i as f32 * 0.73 + pos as f32 * 0.31 + sequence as f32 * 1.17)
+                                        .sin()
+                                        * 2.0
+                                })
+                                .collect();
+                            if pos == 0 {
+                                assert_eq!(
+                                    unsafe {
+                                        step(context, input.as_ptr(), 7, output.as_mut_ptr())
+                                    },
+                                    2
+                                );
+                            }
+                            assert_eq!(
+                                unsafe { step(context, input.as_ptr(), pos, output.as_mut_ptr()) },
+                                0
+                            );
+                            let expected = oracle.layer(&input);
+                            for (i, (&got, &expected)) in output.iter().zip(&expected).enumerate() {
+                                let error = (got as f64 - expected).abs();
+                                maximum = maximum.max(error);
+                                assert!(error<2e-5*(1.0+expected.abs()),"head={head} graphs={graphs} sequence={sequence} pos={pos} element={i} got={got} expected={expected}");
+                            }
                         }
                     }
-                    dense.push(
-                        crate::ggml::tensor_to_f32(&payload, ty, &[cols[p] as u64, rows[p] as u64])
-                            .unwrap(),
-                    );
-                    let m = CudaDeviceQuantMatrix::from_payload(
-                        Some(&rt),
-                        ty,
-                        payload,
-                        rows[p],
-                        cols[p],
-                    )
-                    .unwrap();
-                    matrices.push(Matrix {
-                        weights: m.device_address().unwrap() as *const c_void,
-                        row_bytes: rb,
-                        ty,
-                        cols: cols[p] as u32,
-                        rows: rows[p] as u32,
-                    });
-                    owned.push(m);
-                }
-                let norm = |n| {
-                    (0..n)
-                        .map(|i| 1.0 + (i as f32 * 0.13).sin() * 0.08)
-                        .collect::<Vec<_>>()
-                };
-                let mut oracle = Oracle {
-                    head,
-                    nk,
-                    nv,
-                    taps,
-                    weights: dense,
-                    cols,
-                    an: norm(embd),
-                    fnorm: norm(embd),
-                    conv: (0..taps * inner)
-                        .map(|i| (i as f32 * 0.11).cos() * 0.4)
-                        .collect(),
-                    dt: (0..nv)
-                        .map(|i| {
-                            if i == 0 {
-                                40.0
-                            } else if i == 1 {
-                                -40.0
-                            } else {
-                                i as f32 * 0.17
-                            }
-                        })
-                        .collect(),
-                    a: (0..nv).map(|i| -0.02 - i as f32 * 0.01).collect(),
-                    sn: norm(value),
-                    history: vec![0.0; (taps - 1) * inner],
-                    state: vec![0.0; value * head],
-                };
-                let cfg = Config {
-                    embd: embd as u32,
-                    ffn: ffn as u32,
-                    head: head as u32,
-                    num_k: nk as u32,
-                    num_v: nv as u32,
-                    conv: taps as u32,
-                    graphs,
-                    epsilon: 1e-5,
-                };
-                let context = unsafe {
-                    create(
-                        &cfg,
-                        matrices.as_ptr(),
-                        oracle.an.as_ptr(),
-                        oracle.fnorm.as_ptr(),
-                        oracle.conv.as_ptr(),
-                        oracle.dt.as_ptr(),
-                        oracle.a.as_ptr(),
-                        oracle.sn.as_ptr(),
-                    )
-                };
-                assert!(!context.is_null(), "resident Qwen block required");
-                let mut output = vec![0.0; embd];
-                let mut maximum = 0.0f64;
-                for sequence in 0..2 {
                     oracle.reset();
-                    for pos in 0..17 {
-                        let input: Vec<_> = (0..embd)
-                            .map(|i| {
-                                (i as f32 * 0.73 + pos as f32 * 0.31 + sequence as f32 * 1.17).sin()
-                                    * 2.0
-                            })
-                            .collect();
+                    for (pos, count) in [(0, 7), (7, 16), (23, 33), (56, 64), (120, 128), (0, 17)] {
                         if pos == 0 {
-                            assert_eq!(
-                                unsafe { step(context, input.as_ptr(), 7, output.as_mut_ptr()) },
-                                2
-                            );
+                            oracle.reset();
                         }
+                        let input: Vec<_> = (0..embd * count)
+                            .map(|i| (i as f32 * 0.037 + pos as f32 * 0.21).sin() * 1.7)
+                            .collect();
+                        let mut output = vec![0.0; input.len()];
                         assert_eq!(
-                            unsafe { step(context, input.as_ptr(), pos, output.as_mut_ptr()) },
+                            unsafe {
+                                block(
+                                    context,
+                                    input.as_ptr(),
+                                    pos as u32,
+                                    count as u32,
+                                    output.as_mut_ptr(),
+                                )
+                            },
                             0
                         );
-                        let expected = oracle.layer(&input);
-                        for (i, (&got, &expected)) in output.iter().zip(&expected).enumerate() {
-                            let error = (got as f64 - expected).abs();
-                            maximum = maximum.max(error);
-                            assert!(error<2e-5*(1.0+expected.abs()),"head={head} graphs={graphs} sequence={sequence} pos={pos} element={i} got={got} expected={expected}");
+                        for (t, (input, output)) in input
+                            .chunks_exact(embd)
+                            .zip(output.chunks_exact(embd))
+                            .enumerate()
+                        {
+                            let expected = oracle.layer(input);
+                            let mut scalar = vec![0.0; embd];
+                            assert_eq!(
+                                unsafe {
+                                    step(
+                                        serial,
+                                        input.as_ptr(),
+                                        (pos + t) as u32,
+                                        scalar.as_mut_ptr(),
+                                    )
+                                },
+                                0
+                            );
+                            for (i, (&got, &e)) in output.iter().zip(&expected).enumerate() {
+                                assert!((got as f64-e).abs()<5e-5*(1.0+e.abs()),"format={format} head={head} graphs={graphs} block={count} pos={} element={i}: block={got}, scalar={}, F64={e}",pos+t,scalar[i]);
+                                assert!((got-scalar[i]).abs()<5e-5*(1.0+scalar[i].abs()),"block/scalar differ format={format} head={head} pos={} element={i}",pos+t);
+                            }
                         }
                     }
+                    unsafe {
+                        destroy(context);
+                        destroy(serial);
+                    }
+                    println!("Qwen block format={format} head={head} graphs={graphs}: serial and blocks 7/16/33/64/128/reset passed, serial max abs error={maximum}");
                 }
-                unsafe {
-                    destroy(context);
-                }
-                println!("Qwen block head={head} graphs={graphs}: 34 F64 timesteps/reset passed, max abs error={maximum}");
             }
         }
     }

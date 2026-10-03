@@ -1,0 +1,69 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.21s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+test native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore ... ok
+test native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence ... Qwen block format=0 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021730772470363036
+Qwen block format=0 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000001888508740499617
+Qwen block format=0 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019932534423006132
+Qwen block format=2 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000000016286777482221737
+Qwen block format=2 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000004540345877046548
+Qwen block format=2 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000010924805504686219
+Qwen block format=6 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000008869132095412624
+Qwen block format=6 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000003212573762567672
+Qwen block format=6 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000023453955166896634
+Qwen block format=8 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011519856091268821
+Qwen block format=8 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002076552769736395
+Qwen block format=8 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011577067948742581
+Qwen block format=12 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020975785597343588
+Qwen block format=12 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013694864264834905
+Qwen block format=12 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013853661329221723
+Qwen block format=13 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020526972832612955
+Qwen block format=13 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019005068008226544
+Qwen block format=13 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021464891686306942
+Qwen block format=14 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021953019890830205
+Qwen block format=14 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002090942072818791
+Qwen block format=14 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020682061174781552
+Qwen block format=39 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023046958919081817
+Qwen block format=39 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023308976215830057
+Qwen block format=39 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002130988612236706
+Qwen block format=0 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021730772470363036
+Qwen block format=0 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000001888508740499617
+Qwen block format=0 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019932534423006132
+Qwen block format=2 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000000016286777482221737
+Qwen block format=2 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000004540345877046548
+Qwen block format=2 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000010924805504686219
+Qwen block format=6 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000008869132095412624
+Qwen block format=6 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000003212573762567672
+Qwen block format=6 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000023453955166896634
+Qwen block format=8 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011519856091268821
+Qwen block format=8 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002076552769736395
+Qwen block format=8 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011577067948742581
+Qwen block format=12 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020975785597343588
+Qwen block format=12 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013694864264834905
+Qwen block format=12 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013853661329221723
+Qwen block format=13 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020526972832612955
+Qwen block format=13 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019005068008226544
+Qwen block format=13 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021464891686306942
+Qwen block format=14 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021953019890830205
+Qwen block format=14 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002090942072818791
+Qwen block format=14 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020682061174781552
+Qwen block format=39 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023046958919081817
+Qwen block format=39 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023308976215830057
+Qwen block format=39 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002130988612236706
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 9.37s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 3 tests
+test qwen35::runtime::sequence_tests::optional_qwen_greedy_ids_text_and_sequence_reset_match_reference ... ok
+test qwen35::runtime::sequence_tests::optional_qwen_prefix_checkpoints_restore_kv_gdn_and_convolution_after_divergence ... ok
+Qwen teacher-forced positions=384, worst KL=8.334e-12, worst abs NLL delta=3.917e-6; eager/graph SIMT/TF32 argmax and state continuation passed
+test qwen35::runtime::sequence_tests::optional_real_block_prefill_teacher_forcing_matches_serial_logits_and_state ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 99 filtered out; finished in 62.70s

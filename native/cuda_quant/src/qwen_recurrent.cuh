@@ -2,6 +2,7 @@
 // Qwen3.5 dense recurrent block. Private state, allocations and stream per layer.
 // Follow Rbitnet's GGUF/F32 equations; Q/K L2 uses max(sum, epsilon), not sum+eps.
 namespace {
+// Keep the single-token kernels unchanged; block loops have separate code.
 __global__ void qwen_conv(const float *input,float *history,const float *weights,
     unsigned taps,unsigned width,float *activated) {
     unsigned i=blockIdx.x*blockDim.x+threadIdx.x;if(i>=width)return;
@@ -13,18 +14,6 @@ __global__ void qwen_conv(const float *input,float *history,const float *weights
     }
     sum=__fadd_rn(sum,__fmul_rn(input[i],weights[size_t(i)*taps+taps-1]));
     activated[i]=sum/(1.0f+expf(-sum));
-}
-__global__ void qwen_l2(float *qkv,unsigned head,float epsilon) {
-    float *x=qkv+size_t(blockIdx.x)*head;
-    unsigned lane=threadIdx.x&31,warp=threadIdx.x/32;
-    __shared__ float sums[4];
-    float sum=0;
-    for(unsigned i=threadIdx.x;i<head;i+=128)sum+=x[i]*x[i];
-    for(int s=16;s;s/=2)sum+=__shfl_down_sync(0xffffffff,sum,s);
-    if(!lane)sums[warp]=sum;
-    __syncthreads();
-    float inv=1.0f/sqrtf(fmaxf(sums[0]+sums[1]+sums[2]+sums[3],epsilon));
-    for(unsigned i=threadIdx.x;i<head;i+=128)x[i]*=inv;
 }
 __global__ void qwen_delta(float *state,const float *qkv,const float *alpha,const float *beta,
     const float *dt,const float *a,unsigned head,unsigned num_k,unsigned num_v,float *out) {
@@ -62,8 +51,83 @@ __global__ void qwen_delta(float *state,const float *qkv,const float *alpha,cons
     for(int s=16;s;s/=2)output+=__shfl_down_sync(0xffffffff,output,s);
     if(!lane)out[row]=output/sqrtf(float(head));
 }
+__global__ void qwen_conv_block(const float *input,float *history,const float *weights,
+    unsigned taps,unsigned width,float *activated,unsigned count) {
+    unsigned i=blockIdx.x*blockDim.x+threadIdx.x;if(i>=width)return;
+    float previous[16];
+    for(unsigned t=0;t+1<taps;t++)previous[t]=history[size_t(t)*width+i];
+    for(unsigned token=0;token<count;token++) {
+        float value=input[size_t(token)*width+i],sum=0;
+        for(unsigned t=0;t+1<taps;t++) {
+            sum=__fadd_rn(sum,__fmul_rn(previous[t],weights[size_t(i)*taps+t]));
+            previous[t]=(t+2<taps)?previous[t+1]:value;
+        }
+        sum=__fadd_rn(sum,__fmul_rn(value,weights[size_t(i)*taps+taps-1]));
+        activated[size_t(token)*width+i]=sum/(1.0f+expf(-sum));
+    }
+    for(unsigned t=0;t+1<taps;t++)history[size_t(t)*width+i]=previous[t];
+}
+__global__ void qwen_l2(float *qkv,unsigned head,float epsilon,unsigned stride=0) {
+    float *x=qkv+size_t(blockIdx.y)*stride+size_t(blockIdx.x)*head;
+    unsigned lane=threadIdx.x&31,warp=threadIdx.x/32;
+    __shared__ float sums[4];
+    float sum=0;
+    for(unsigned i=threadIdx.x;i<head;i+=128)sum+=x[i]*x[i];
+    for(int s=16;s;s/=2)sum+=__shfl_down_sync(0xffffffff,sum,s);
+    if(!lane)sums[warp]=sum;
+    __syncthreads();
+    float inv=1.0f/sqrtf(fmaxf(sums[0]+sums[1]+sums[2]+sums[3],epsilon));
+    for(unsigned i=threadIdx.x;i<head;i+=128)x[i]*=inv;
+}
+__global__ void qwen_delta_block(float *state,const float *qkv,const float *alpha,const float *beta,
+    const float *dt,const float *a,unsigned head,unsigned num_k,unsigned num_v,float *out,unsigned count) {
+    unsigned row=(blockIdx.x*blockDim.x+threadIdx.x)/32,lane=threadIdx.x&31;
+    if(row>=num_v*head)return;
+    unsigned vh=row/head,kh=vh%num_k;
+    float cells[8];
+    #pragma unroll
+    for(unsigned j=0;j<8;j++)if(lane+j*32<head)cells[j]=state[size_t(row)*head+lane+j*32];
+    // One warp retains its value row across a causal block. Only the final
+    // state is written to device memory; each intermediate output is retained.
+    for(unsigned token=0;token<count;token++) {
+    const float *current=qkv+size_t(token)*(2*num_k+num_v)*head;
+    const float *al=alpha+size_t(token)*num_v,*be=beta+size_t(token)*num_v;
+    float t=al[vh]+dt[vh];
+    float sp=t>35.0f?t:(t<-35.0f?0.0f:log1pf(expf(t)));
+    float decay=expf(sp*a[vh]),b=1.0f/(1.0f+expf(-be[vh]));
+    float keys[8],queries[8],dot=0;
+    // At most 256 keys per row: one warp owns each value row. No state copy.
+    #pragma unroll
+    for(unsigned j=0;j<8;j++) {
+        unsigned col=lane+j*32;
+        if(col<head) {
+            cells[j]=__fmul_rn(cells[j],decay);
+            keys[j]=current[size_t(num_k+kh)*head+col];
+            queries[j]=current[size_t(kh)*head+col];
+            dot=fmaf(cells[j],keys[j],dot);
+        }
+    }
+    for(int s=16;s;s/=2)dot+=__shfl_down_sync(0xffffffff,dot,s);
+    dot=__shfl_sync(0xffffffff,dot,0);
+    float delta=(current[size_t(2*num_k)*head+row]-dot)*b,output=0;
+    #pragma unroll
+    for(unsigned j=0;j<8;j++) {
+        unsigned col=lane+j*32;
+        if(col<head) {
+            float value=__fadd_rn(cells[j],__fmul_rn(keys[j],delta));
+            cells[j]=value;
+            output=fmaf(value,queries[j],output);
+        }
+    }
+    for(int s=16;s;s/=2)output+=__shfl_down_sync(0xffffffff,output,s);
+    if(!lane)out[size_t(token)*num_v*head+row]=output/sqrtf(float(head));
+    }
+    #pragma unroll
+    for(unsigned j=0;j<8;j++)if(lane+j*32<head)state[size_t(row)*head+lane+j*32]=cells[j];
+}
 __global__ void qwen_norm_gate(const float *x,const float *z,const float *weights,
-    unsigned head,float epsilon,float *out) {
+    unsigned head,float epsilon,float *out,unsigned stride=0) {
+    x+=size_t(blockIdx.y)*stride;z+=size_t(blockIdx.y)*stride;out+=size_t(blockIdx.y)*stride;
     unsigned offset=blockIdx.x*head,tid=threadIdx.x,lane=tid&31,warp=tid/32;
     __shared__ float sums[4];float sum=0;
     for(unsigned i=tid;i<head;i+=128)sum+=x[offset+i]*x[offset+i];
