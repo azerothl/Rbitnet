@@ -234,6 +234,7 @@ void rbitnet_cuda_qwen_recurrent_destroy(void *context) {delete static_cast<Resi
 int rbitnet_cuda_qwen_recurrent_step(void *context,const float *input,unsigned pos,float *output) {
     auto *r=static_cast<ResidentQwenRecurrent*>(context);
     if(!r || !input || !output || pos>=1048576)return 1;
+    NativeCallCompletion completion(r->stream);
     if(pos!=0 && pos!=r->filled)return 2;
     if(pos==0) {
         unsigned inner=(2*r->cfg.num_k+r->cfg.num_v)*r->cfg.head;
@@ -252,7 +253,7 @@ int rbitnet_cuda_qwen_recurrent_step(void *context,const float *input,unsigned p
     } else r->enqueue();
     if(cudaGetLastError()!=cudaSuccess || cudaMemcpyAsync(output,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
-    r->filled=pos+1;return 0;
+    r->filled=pos+1;completion.dismiss();return 0;
 }
 void *rbitnet_cuda_qwen_recurrent_snapshot(void *context) {
     auto *r=static_cast<ResidentQwenRecurrent*>(context);
@@ -266,7 +267,7 @@ void *rbitnet_cuda_qwen_recurrent_snapshot(void *context) {
         || cudaMalloc(reinterpret_cast<void**>(&s->history),history)!=cudaSuccess
         || cudaMemcpyAsync(s->state,r->state,state,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(s->history,r->history,history,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
-        || cudaStreamSynchronize(r->stream)!=cudaSuccess) {delete s;return nullptr;}
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess) {cudaStreamSynchronize(r->stream);delete s;return nullptr;}
     return s;
 }
 void rbitnet_cuda_qwen_recurrent_snapshot_destroy(void *snapshot) {delete static_cast<QwenRecurrentSnapshot*>(snapshot);}
@@ -275,11 +276,12 @@ int rbitnet_cuda_qwen_recurrent_restore(void *context,const void *snapshot,unsig
     // Recurrent state is a checkpoint, never a truncatable KV prefix.
     if(!r || !s || !length || length!=s->length || s->head!=r->cfg.head
         || s->num_k!=r->cfg.num_k || s->num_v!=r->cfg.num_v || s->conv!=r->cfg.conv)return 1;
+    NativeCallCompletion completion(r->stream);
     size_t state=size_t(s->num_v)*s->head*s->head*sizeof(float);
     size_t history=size_t(2*s->num_k+s->num_v)*s->head*s->conv*sizeof(float);
     if(cudaMemcpyAsync(r->state,s->state,state,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->history,s->history,history,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
-    r->filled=length;return 0;
+    r->filled=length;completion.dismiss();return 0;
 }
 }

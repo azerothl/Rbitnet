@@ -240,6 +240,37 @@ RBITNET_CUDA_API int rbitnet_cuda_quant_gemm_check(unsigned type,const void *wei
 RBITNET_CUDA_API void *rbitnet_cuda_head_create(const RbitnetLlamaMatrix*,const float *norm,float epsilon);
 RBITNET_CUDA_API void rbitnet_cuda_head_destroy(void *context);
 RBITNET_CUDA_API int rbitnet_cuda_head_step(void *context,const float *input,unsigned mode,float *logits,unsigned *token);
+/* Segmented compressed MLA. All host norm/phase arrays are copied at create;
+ * weights and MoE contexts remain borrowed until after destruction. Expert
+ * buffers in selected must remain leased through synchronous finish. */
+typedef struct {
+    unsigned embd,vocab,layers,heads,head_dim,value_dim,rotary,rank,capacity;
+    unsigned experts,used,groups,groups_used,sigmoid,weight_norm,ordered,graphs,split,dense_layers;
+    float epsilon,rope_magnitude,weight_scale;
+} RbitnetMlaConfig;
+typedef struct {
+    RbitnetLlamaMatrix qa,qb,kva,kb,vb,out,router,shared_gate,shared_up,shared_down;
+    const float *attn_norm,*qa_norm,*kv_norm,*ffn_norm,*selection_bias;
+    void *moe;
+} RbitnetMlaLayer;
+
+RBITNET_CUDA_API void *rbitnet_cuda_mla_full_create(const RbitnetMlaConfig*,const RbitnetMlaLayer*,const RbitnetLlamaMatrix*,const float*,const float*);
+RBITNET_CUDA_API void rbitnet_cuda_mla_full_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_begin(void*,const float*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_prepare(void*,unsigned,unsigned*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_ffn_input(void*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_finish(void*,unsigned,const void *const*,const float*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_end(void*,unsigned,float*,unsigned*);
+RBITNET_CUDA_API void *rbitnet_cuda_mla_snapshot(void*,unsigned);
+RBITNET_CUDA_API void rbitnet_cuda_mla_snapshot_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_restore(void*,const void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_mla_hidden_check(void*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_router_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,float,unsigned*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_attention_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,float,unsigned,unsigned,float*);
+
+/* Diagnostic completion guard; mode1 returns after queueing device work and
+ * mode2 abandons a capture. Cleanup waits without inducing a hardware fault. */
+RBITNET_CUDA_API int rbitnet_cuda_native_completion_check(unsigned,float*);
 #ifdef __cplusplus
 }
 #endif

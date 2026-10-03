@@ -1,0 +1,11 @@
+glm47-flash-block0 greedy disconnect/resume passed
+glm47-flash-block0 sampling disconnect/resume passed
+glm47-flash-block0 penalties disconnect/resume passed
+Traceback (most recent call last):
+  File "E:\devs\Rbitnet\scripts\validate_cache_streaming.py", line 154, in <module>
+    if __name__ == '__main__': main()
+                               ^^^^^^
+  File "E:\devs\Rbitnet\scripts\validate_cache_streaming.py", line 135, in main
+    else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
+                 ^^^^^^^^^
+AssertionError: partial Qwen must not claim the full-attention split kernels

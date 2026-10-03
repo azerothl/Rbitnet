@@ -89,6 +89,29 @@ mod tests {
             assert!(cache.acquire(0, expert).unwrap().is_some());
             assert!(cache.bytes <= cache.budget);
         }
+        // A miss earlier in router order must not evict a selected hit that
+        // appears later. Weak ownership proves it was not externally leased.
+        let mut pending =
+            ExpertCache::new(Arc::clone(&cache.archive), Arc::clone(&cache.rt), 2 * bytes);
+        pending.policy = Policy::Lru;
+        drop(pending.acquire(0, 0).unwrap().unwrap());
+        let original = Arc::downgrade(&pending.entries[&(0, 0)].group);
+        drop(pending.acquire(0, 1).unwrap().unwrap());
+        let before = crate::perf::snapshot();
+        let selection = pending.acquire_selected(0, &[2, 0]).unwrap().unwrap();
+        let after = crate::perf::snapshot();
+        assert!(Arc::ptr_eq(&selection[1], &original.upgrade().unwrap()));
+        assert!(pending.entries.contains_key(&(0, 0)));
+        assert!(!pending.entries.contains_key(&(0, 1)));
+        assert_eq!(after.expert_cache_misses - before.expert_cache_misses, 1);
+        assert_eq!(after.expert_cache_hits - before.expert_cache_hits, 1);
+        assert_eq!(
+            after.expert_cache_upload_bytes - before.expert_cache_upload_bytes,
+            bytes as u64
+        );
+        assert_eq!(pending.bytes, 2 * bytes);
+        drop(selection);
+        drop(pending);
         let mut tiny =
             ExpertCache::new(Arc::clone(&cache.archive), Arc::clone(&cache.rt), bytes - 1);
         assert!(tiny.acquire(0, 0).unwrap().is_none());
@@ -113,6 +136,9 @@ pub(super) struct ExpertCache {
     position: usize,
 }
 impl ExpertCache {
+    pub(super) fn budget_bytes(&self) -> usize {
+        self.budget
+    }
     pub fn flush_trace(&mut self) {
         if let Some(trace) = &mut self.trace {
             if let Err(error) = trace.flush() {
@@ -183,6 +209,31 @@ impl ExpertCache {
             .filter(|(_, e)| Arc::strong_count(&e.group) == 1)
             .min_by_key(|(key, e)| self.policy.rank(**key, e.access, self.pass))
             .map(|(&key, _)| key)
+    }
+    /// Protect every ready selected group before admitting any miss. Return
+    /// leases in router order; allocation policy never changes that order.
+    pub fn acquire_selected(
+        &mut self,
+        layer: usize,
+        selected: &[usize],
+    ) -> Result<Option<Vec<Arc<ExpertGroup>>>> {
+        let pins: Vec<_> = selected
+            .iter()
+            .filter_map(|&expert| {
+                self.entries
+                    .get(&(layer, expert))
+                    .map(|e| Arc::clone(&e.group))
+            })
+            .collect();
+        let mut leases = Vec::with_capacity(selected.len());
+        for &expert in selected {
+            let Some(group) = self.acquire(layer, expert)? else {
+                return Ok(None);
+            };
+            leases.push(group);
+        }
+        drop(pins);
+        Ok(Some(leases))
     }
     /// Holds all selected experts through the synchronous FFN. If one misses
     /// and cannot fit, the caller executes the whole FFN on CPU in router order.

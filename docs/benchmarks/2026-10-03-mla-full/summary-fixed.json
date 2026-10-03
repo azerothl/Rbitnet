@@ -1,0 +1,334 @@
+{
+  "warmup_cycle": 0,
+  "measured_long_samples_per_mode": 4,
+  "modes": {
+    "baseline": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 164426.0,
+        "min": 163384.0,
+        "max": 166403.0
+      },
+      "decode_ms": {
+        "median": 19571.5,
+        "min": 19430.0,
+        "max": 19910.0
+      },
+      "decode_tokens_per_second": {
+        "median": 6.54036594774418,
+        "min": 6.428930185836263,
+        "max": 6.587750900669069
+      },
+      "http_ms": {
+        "median": 183877.79565001256,
+        "min": 183078.4191999992,
+        "max": 186316.72329999856
+      },
+      "upload_bytes": {
+        "median": 13944100384.0,
+        "min": 13939954368.0,
+        "max": 13948246400.0
+      },
+      "download_bytes": {
+        "median": 13108152448.0,
+        "min": 13104278272.0,
+        "max": 13112026624.0
+      },
+      "expert_upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "expert_upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "cache_hit_rate": 0.0,
+      "resident_ffns": {
+        "median": 50445.0,
+        "min": 50430.0,
+        "max": 50460.0
+      },
+      "fallback_ffns": {
+        "median": 26904.0,
+        "min": 26896.0,
+        "max": 26912.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "split_queries": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 12849439344.0,
+      "managed_peak_bytes": 12849439344.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 31113281536,
+        "gpu_global_baseline_mib": 2215.0,
+        "gpu_global_peak_mib": 15412.0,
+        "gpu_global_peak_delta_mib": 13197.0
+      }
+    },
+    "mla": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 104999.0,
+        "min": 103996.0,
+        "max": 105643.0
+      },
+      "decode_ms": {
+        "median": 13197.5,
+        "min": 12919.0,
+        "max": 13519.0
+      },
+      "decode_tokens_per_second": {
+        "median": 9.698827766265829,
+        "min": 9.468155928692951,
+        "max": 9.907887607399953
+      },
+      "http_ms": {
+        "median": 118280.58750000491,
+        "min": 116918.20000001462,
+        "max": 119019.83910001582
+      },
+      "upload_bytes": {
+        "median": 275503686.0,
+        "min": 275421764.0,
+        "max": 275585608.0
+      },
+      "download_bytes": {
+        "median": 277972640.0,
+        "min": 277889984.0,
+        "max": 278055296.0
+      },
+      "expert_upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "expert_upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "cache_hit_rate": 0.0,
+      "resident_ffns": {
+        "median": 50445.0,
+        "min": 50430.0,
+        "max": 50460.0
+      },
+      "fallback_ffns": {
+        "median": 26904.0,
+        "min": 26896.0,
+        "max": 26912.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 1681.5,
+        "min": 1681.0,
+        "max": 1682.0
+      },
+      "split_queries": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 12560870084.0,
+      "managed_peak_bytes": 12560870084.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 30684770304,
+        "gpu_global_baseline_mib": 2252.0,
+        "gpu_global_peak_mib": 15174.0,
+        "gpu_global_peak_delta_mib": 12922.0
+      }
+    },
+    "mla-split": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 69554.5,
+        "min": 68596.0,
+        "max": 71312.0
+      },
+      "decode_ms": {
+        "median": 5761.5,
+        "min": 5671.0,
+        "max": 6318.0
+      },
+      "decode_tokens_per_second": {
+        "median": 22.217534521032924,
+        "min": 20.25957581513137,
+        "max": 22.570975136660202
+      },
+      "http_ms": {
+        "median": 75627.64044999494,
+        "min": 74270.8166000084,
+        "max": 77037.33039999497
+      },
+      "upload_bytes": {
+        "median": 275503686.0,
+        "min": 275421764.0,
+        "max": 275585608.0
+      },
+      "download_bytes": {
+        "median": 277972640.0,
+        "min": 277889984.0,
+        "max": 278055296.0
+      },
+      "expert_upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "expert_upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "cache_hit_rate": 0.0,
+      "resident_ffns": {
+        "median": 50445.0,
+        "min": 50430.0,
+        "max": 50460.0
+      },
+      "fallback_ffns": {
+        "median": 26904.0,
+        "min": 26896.0,
+        "max": 26912.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 1681.5,
+        "min": 1681.0,
+        "max": 1682.0
+      },
+      "split_queries": {
+        "median": 79030.5,
+        "min": 79007.0,
+        "max": 79054.0
+      },
+      "managed_live_bytes": 12561199044.0,
+      "managed_peak_bytes": 12561199044.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 30685372416,
+        "gpu_global_baseline_mib": 2225.0,
+        "gpu_global_peak_mib": 15197.0,
+        "gpu_global_peak_delta_mib": 12972.0
+      }
+    },
+    "mla-split-prefix": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 313.5,
+        "min": 264.0,
+        "max": 321.0
+      },
+      "decode_ms": {
+        "median": 5837.5,
+        "min": 5685.0,
+        "max": 6010.0
+      },
+      "decode_tokens_per_second": {
+        "median": 21.941203330529017,
+        "min": 21.29783693843594,
+        "max": 22.51539138082674
+      },
+      "http_ms": {
+        "median": 6166.2062000104925,
+        "min": 5968.111000023782,
+        "max": 6341.8116999964695
+      },
+      "upload_bytes": {
+        "median": 21873174.0,
+        "min": 21791252.0,
+        "max": 21955096.0
+      },
+      "download_bytes": {
+        "median": 22069664.0,
+        "min": 21987008.0,
+        "max": 22152320.0
+      },
+      "expert_upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "expert_upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "cache_hit_rate": 0.0,
+      "resident_ffns": {
+        "median": 4005.0,
+        "min": 3990.0,
+        "max": 4020.0
+      },
+      "fallback_ffns": {
+        "median": 2136.0,
+        "min": 2128.0,
+        "max": 2144.0
+      },
+      "prefix_hits": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "mla_tokens": {
+        "median": 133.5,
+        "min": 133.0,
+        "max": 134.0
+      },
+      "split_queries": {
+        "median": 6274.5,
+        "min": 6251.0,
+        "max": 6298.0
+      },
+      "managed_live_bytes": 12729586884.0,
+      "managed_peak_bytes": 12731752644.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 30684835840,
+        "gpu_global_baseline_mib": 2196.0,
+        "gpu_global_peak_mib": 15219.0,
+        "gpu_global_peak_delta_mib": 13023.0
+      }
+    }
+  }
+}
