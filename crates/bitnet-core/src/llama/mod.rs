@@ -10,6 +10,7 @@ mod model;
 #[cfg(feature = "profile-llama")]
 pub mod profile;
 mod resident;
+mod speculative;
 mod runtime;
 pub mod slim_attention;
 

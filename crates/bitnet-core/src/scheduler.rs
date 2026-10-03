@@ -54,9 +54,7 @@ pub struct InferenceRequest {
 #[derive(Debug, Clone)]
 pub struct InferenceStats {
     /// Time from request start until first output token is ready (encode + prefill), milliseconds.
-    ///
-    /// For speculative decoding this reflects the draft phase only, which is the true
-    /// wall-clock time until the first generated token is available.
+    /// Draft tokens are never output tokens until the target has verified them.
     pub ttft_ms: u64,
     pub encode_ms: u64,
     pub prefill_ms: u64,
@@ -97,24 +95,20 @@ impl InferenceStats {
         }
     }
 
-    /// Build stats for a completed speculative-decode request.
-    ///
-    /// `draft` covers the draft generation pass and `verify` covers the
-    /// verification pass.  TTFT is taken from the draft phase only, because
-    /// that is the moment the first output token becomes available.
-    /// `total_wall_ms` accumulates both passes and reflects true end-to-end
-    /// latency.
+    /// Legacy two-phase combiner. Without a timestamp of the first verified
+    /// target token, the complete phase sum is a conservative TTFT bound.
+    /// Only target completion tokens count as output. Native speculation uses
+    /// `from_phases` with actual target prefill/decode timings instead.
+    #[deprecated(note = "Use actual target timings with from_phases; draft output is unverified")]
     pub fn from_speculative_phases(draft: PhaseTimings, verify: PhaseTimings) -> Self {
-        let ttft_ms = draft.ttft_ms();
         let encode_ms = draft.encode_ms.saturating_add(verify.encode_ms);
         let prefill_ms = draft.prefill_ms.saturating_add(verify.prefill_ms);
         let decode_ms = draft.decode_ms.saturating_add(verify.decode_ms);
         let total_wall_ms = encode_ms
             .saturating_add(prefill_ms)
             .saturating_add(decode_ms);
-        let completion_tokens = draft
-            .completion_tokens
-            .saturating_add(verify.completion_tokens);
+        let ttft_ms = total_wall_ms;
+        let completion_tokens = verify.completion_tokens;
         let decode_us = decode_ms.saturating_mul(1000);
         let itl = if completion_tokens == 0 {
             0
@@ -232,12 +226,7 @@ impl ContinuousBatchScheduler {
         } else if self.mtp_k > 1 {
             self.run_mtp_burst(executor, req)
         } else {
-            let (text, phases) =
-                executor.generate_with_timings(&req.prompt, req.max_tokens, req.sampling)?;
-            Ok(InferenceOutput {
-                text,
-                stats: InferenceStats::from_phases(phases, false),
-            })
+            executor.generate_output(&req.prompt, req.max_tokens, req.sampling)
         }
     }
 
@@ -281,16 +270,6 @@ impl ContinuousBatchScheduler {
         req: &InferenceRequest,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
-        if self.speculative_enabled {
-            let output = self.run_speculative(executor, req)?;
-            if !output.text.is_empty() {
-                on_event(StreamEvent::Delta {
-                    text: output.text.clone(),
-                })?;
-            }
-            on_event(StreamEvent::Done(output))?;
-            return Ok(());
-        }
         executor.generate_streaming(
             &req.prompt,
             req.max_tokens,
@@ -600,62 +579,11 @@ impl ContinuousBatchScheduler {
         executor: &dyn ModelExecutor,
         req: &InferenceRequest,
     ) -> Result<InferenceOutput> {
-        let mut draft_tokens =
-            req.max_tokens.saturating_mul(self.draft_ratio_num) / self.draft_ratio_den;
-        if draft_tokens == 0 {
-            draft_tokens = 1;
-        }
-        draft_tokens = draft_tokens.min(req.max_tokens).max(1);
-
-        let (draft, draft_phases) = self
-            .draft_path
-            .generate(&req.prompt, draft_tokens, req.sampling)
-            .unwrap_or_else(|| {
-                executor.generate_with_timings(&req.prompt, draft_tokens, req.sampling)
-            })?;
-
-        // Verify: generate the same budget from the target and accept the common prefix
-        // (lossless frame [2211.17192]; PLD/n-gram drafts need no extra weights).
-        let greedy = SamplingOptions {
-            temperature: 0.0,
-            ..req.sampling
-        };
-        let (verify_text, verify_phases) =
-            executor.generate_with_timings(&req.prompt, draft_tokens, greedy)?;
-        let (accepted, accepted_n) = accept_draft_prefix(&draft, &verify_text);
-        let accepted_tokens = accepted_n.min(draft_phases.completion_tokens);
-
-        let remaining = req.max_tokens.saturating_sub(accepted_tokens);
-        // Continue from accepted prefix when draft was partial.
-        let (tail, tail_phases) = if remaining > 0 {
-            let continue_prompt = format!("{}{}", req.prompt, accepted);
-            let (t, p) =
-                executor.generate_with_timings(&continue_prompt, remaining, req.sampling)?;
-            (t, p)
-        } else {
-            (String::new(), PhaseTimings::default())
-        };
-
-        let text = format!("{accepted}{tail}");
-        let mut verify_acc = verify_phases.clone();
-        verify_acc.completion_tokens = verify_acc
-            .completion_tokens
-            .saturating_add(tail_phases.completion_tokens);
-        verify_acc.encode_ms = verify_acc.encode_ms.saturating_add(tail_phases.encode_ms);
-        verify_acc.prefill_ms = verify_acc
-            .prefill_ms
-            .saturating_add(tail_phases.prefill_ms);
-        verify_acc.decode_ms = verify_acc.decode_ms.saturating_add(tail_phases.decode_ms);
-
-        crate::perf::record_speculative(
-            draft_phases.completion_tokens,
-            verify_phases.completion_tokens,
-            accepted_tokens,
-        );
-        Ok(InferenceOutput {
-            text,
-            stats: InferenceStats::from_speculative_phases(draft_phases, verify_acc),
-        })
+        // The model runtime owns token IDs, target logits and rollback state.
+        // Comparing decoded words from independent generations is neither exact
+        // verification nor a valid sampled distribution. Unsupported runtimes
+        // execute one ordinary generation and report speculative_attempted=false.
+        executor.generate_output(&req.prompt, req.max_tokens, req.sampling)
     }
 }
 
@@ -697,60 +625,11 @@ impl DraftPath {
         }
     }
 
-    fn generate(
-        &self,
-        prompt: &str,
-        max_tokens: u32,
-        _sampling: SamplingOptions,
-    ) -> Option<Result<(String, PhaseTimings)>> {
-        match self {
-            Self::TargetModel => None,
-            Self::ExternalGguf(path) => {
-                match crate::gguf::GgufArchive::mmap_path(path) {
-                    Ok(gguf) => {
-                        let g = std::sync::Arc::new(gguf);
-                        if let Ok(ex) = crate::loaders::dispatch_gguf_executor(
-                            crate::backend::BackendKind::Cpu,
-                            g,
-                            path,
-                        ) {
-                            return Some(
-                                ex.generate_with_timings(prompt, max_tokens, _sampling),
-                            );
-                        }
-                    }
-                    Err(e) => tracing::warn!(draft_model = %path.display(), error = %e, "draft GGUF mmap failed"),
-                }
-                tracing::warn!(
-                    draft_model = %path.display(),
-                    "RBITNET_DRAFT_MODEL falling back to n-gram draft"
-                );
-                Some(Ok(ngram_draft(prompt, max_tokens)))
-            }
-            Self::Ngram => Some(Ok(ngram_draft(prompt, max_tokens))),
-            Self::Toy => Some(Ok(toy_draft(max_tokens))),
-        }
-    }
-}
-
-fn ngram_draft(prompt: &str, max_tokens: u32) -> (String, PhaseTimings) {
-    let draft = prompt_lookup_draft(prompt, max_tokens as usize);
-    let completion_tokens = draft.split_whitespace().count().max(1) as u32;
-    (
-        draft,
-        PhaseTimings {
-            // PLD is CPU string work — attribute to encode for TTFT accounting.
-            encode_ms: 0,
-            prefill_ms: 0,
-            decode_ms: 0,
-            completion_tokens: completion_tokens.min(max_tokens.max(1)),
-            ..Default::default()
-        },
-    )
 }
 
 /// Prompt Lookup Decoding (Saxena): copy the continuation after the longest n-gram
 /// match of the prompt suffix against earlier prompt windows. No draft model weights.
+/// Text-only tooling helper; inference verification uses tokenizer IDs instead.
 pub fn prompt_lookup_draft(prompt: &str, max_tokens: usize) -> String {
     let words: Vec<&str> = prompt.split_whitespace().collect();
     if words.is_empty() || max_tokens == 0 {
@@ -795,31 +674,6 @@ pub fn prompt_lookup_draft(prompt: &str, max_tokens: usize) -> String {
         .join(" ")
 }
 
-/// Accept the longest whitespace-token prefix shared by draft and target verify text.
-fn accept_draft_prefix(draft: &str, verify: &str) -> (String, u32) {
-    let d: Vec<&str> = draft.split_whitespace().collect();
-    let v: Vec<&str> = verify.split_whitespace().collect();
-    let mut n = 0usize;
-    while n < d.len() && n < v.len() && d[n] == v[n] {
-        n += 1;
-    }
-    if n == 0 {
-        // No agreement — fall back to verify text (target is source of truth).
-        return (verify.to_string(), v.len() as u32);
-    }
-    (d[..n].join(" "), n as u32)
-}
-
-fn toy_draft(max_tokens: u32) -> (String, PhaseTimings) {
-    (
-        " ok".repeat(max_tokens as usize),
-        PhaseTimings {
-            completion_tokens: max_tokens,
-            ..Default::default()
-        },
-    )
-}
-
 /// Fallback prompt length when the executor cannot count tokens (whitespace heuristic).
 fn estimate_prompt_tokens(prompt: &str) -> u32 {
     let n = prompt.split_whitespace().count();
@@ -828,7 +682,7 @@ fn estimate_prompt_tokens(prompt: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{accept_draft_prefix, prompt_lookup_draft};
+    use super::prompt_lookup_draft;
 
     #[test]
     fn pld_copies_continuation_after_suffix_ngram() {
@@ -838,17 +692,4 @@ mod tests {
         assert_eq!(draft, "on the mat");
     }
 
-    #[test]
-    fn draft_accept_counts_common_prefix() {
-        let (text, n) = accept_draft_prefix("hello world foo", "hello world bar");
-        assert_eq!(text, "hello world");
-        assert_eq!(n, 2);
-    }
-
-    #[test]
-    fn draft_accept_falls_back_to_verify_on_mismatch() {
-        let (text, n) = accept_draft_prefix("aaa bbb", "xxx yyy");
-        assert_eq!(text, "xxx yyy");
-        assert_eq!(n, 2);
-    }
 }

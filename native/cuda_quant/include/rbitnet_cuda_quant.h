@@ -82,6 +82,11 @@ RBITNET_CUDA_API void rbitnet_cuda_llama_destroy(void*);
 // Optional SIMT quantized GEMM prefill, 1..128 tokens, causal attention.
 RBITNET_CUDA_API int rbitnet_cuda_llama_prefill(void *context, const float *embeddings,
     unsigned position, unsigned count, unsigned mode, float *logits, unsigned *token);
+/* Optional per-position verification, 1..16 tokens. Mode 1 downloads
+ * count*vocab logits; mode 2 downloads count argmax IDs. Reject mode 0.
+ * truncate only adjusts valid dense KV length after a synchronized verification. */
+RBITNET_CUDA_API int rbitnet_cuda_llama_verify(void*,const float*,unsigned,unsigned,unsigned,float*,unsigned*);
+RBITNET_CUDA_API int rbitnet_cuda_llama_truncate(void*,unsigned length);
 /* mode: 0=transform only; 1=download F32 logits; 2=download greedy token only.
  * pos=0 starts a fresh sequence; only sequential positions are accepted. */
 RBITNET_CUDA_API int rbitnet_cuda_llama_step(void*, const float *embedding, unsigned pos, unsigned mode, float *logits, unsigned *token);

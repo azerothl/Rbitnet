@@ -1,0 +1,33 @@
+{
+  "base_commit": "1e61d4bdf02ae72237e4a5f56a1b2f07ebe61a9b",
+  "source_dirty": true,
+  "source_sha256": {
+    "crates/bitnet-core/src/llama/mod.rs": "c50c2c34c831954c60653f61443d3f83863c3a7ea1ed02b23d1ff0414ea67876",
+    "crates/bitnet-core/src/llama/resident.rs": "2565482d7c4dbb6c2ec3ed22f757dfc0df8d895c0085335b6a22f7a089349a95",
+    "crates/bitnet-core/src/llama/runtime.rs": "e2770cc88965c9149fbda3e9debb29bc159088a82ebc7c25f31a46db342ec798",
+    "crates/bitnet-core/src/model/executor.rs": "1f267f28fca7aa3b504797aa5299a14e3495e696df45eb05e62a0e10f3894c48",
+    "crates/bitnet-core/src/perf.rs": "1d83e6fad68cc8554c167b4a658940d028a93bfdda350ec5efcb7d5758bb0604",
+    "crates/bitnet-core/src/scheduler.rs": "a05acea0e0ed8158ff88f212a6987a05cf545cc323140474a3614626aac5c536",
+    "crates/bitnet-core/tests/optional_llama_sequence.rs": "0a5a6d6df4b7d66ddb42b4a8abd8d898571c205c6667863ea8864d142f20e64e",
+    "crates/bitnet-core/tests/scheduler_speculative.rs": "76abeb64041441d2838ca80cba8acc066b05ec611516f20caee6ec330d7e2cfb",
+    "native/cuda_quant/README.md": "65ffab5fb02e81263bc20b6af01aad1fc622243b77d1220ec96b5c11aa6bc3d6",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "f11a90dd3cdfd1e38d438a6462fe1859f3a4c0757238e05f066511aae9d70d40",
+    "native/cuda_quant/src/llama_resident.cuh": "1500e82245a8729f440bf07436ad6094f9d1c9debe7edcb092a7fa0f7894ba9e",
+    "native/cuda_quant/src/prefill_quant.cuh": "28900f5adbfeb2d3f64550be0eff3bd93e6a7e4f0aac92d7b139a6ef003ce244",
+    "scripts/validate_cache_streaming.py": "f6f3fbd1d90a195c493bc15757349651ec86905659389feb3ee395bfaf81a711",
+    "crates/bitnet-core/src/llama/speculative.rs": "fefaa62cb165a205878b5394607c84ae8ddcf7eda68909232d4fcfeb0223bb5a",
+    "scripts/benchmark_speculative.py": "bdcbe760fc2c344a6ec7a56f145dd06e085f435136e14a3c6295b88afe38dbc2"
+  },
+  "artifacts_sha256": {
+    "eager-oracles.log": "7db6d252059f18f17e21e8383a638018083209c5e8e4d1d2daa7d98a9e63b5e0",
+    "graph-real-sequences.log": "e8d5db427fc969c40061f16862ca458da14cc8a030e553d8b998aa570a79467f",
+    "graph-replay-oracles.log": "da0a10b1b438a06c54ad57614b2cd356337594aedbb17b8d21663b9612b8935a",
+    "graph-workspace.log": "b4bd1614966cc701f32042bf656e64d8f6049f3b5ec9e5a1a2f66103430789a9",
+    "initial-ungraphed.json": "aee85af92f42f15baea54a650d08d4dadd078f0f4470e9e7ba91394c9aad7b91",
+    "old-dll.log": "e6e7099f78a1fe7307b25ae72278f48c90e2763cf79fddb0e2bd382606aa12a1",
+    "README.md": "b3eaf47445f913f3c94efb4b0d456efbeae75eb122ae5ac2b2a980af9992d13f",
+    "results.json": "c283115c320275abb66bab4f9b2249f586baaddf41fb73d88a4b68040b518b54",
+    "streaming-prefix.json": "654aa7ed5fc2070c59ba09e7a474a9537a5d029091c5c13a1b7480bfa88087ca",
+    "summary.json": "91e3a2c288412b11852531622a34810677a0e9822efcfff2d7cc1aa1d7ebf34c"
+  }
+}

@@ -1,0 +1,25 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 8.17s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 17 tests
+test llama::kv_storage::tests::q4_roundtrip_preserves_sign ... ok
+test llama::kv_storage::tests::q8_roundtrip_preserves_row_shape ... ok
+test llama::model::rope_norm_tests::rope_gguf_factors_divide_analytic_frequencies ... ok
+test llama::model::rope_norm_tests::rope_invalid_factors_are_rejected ... ok
+test llama::model::rope_norm_tests::rope_norm_rotates_adjacent_pairs ... ok
+test llama::model::rope_norm_tests::rope_pos_zero_is_identity ... ok
+test llama::resident::tests::optional_real_verification_logits_argmax_and_rollback_match_serial ... ok
+test llama::runtime::stream_tests::utf8_fragments_wait_for_complete_characters_and_flush_at_stop ... ok
+test llama::slim_attention::tests::sliding_window_subsequence_matches_masked_baseline ... ok
+test llama::slim_attention::tests::slim_attention_flag_defaults_off ... ok
+test llama::slim_attention::tests::tile_tokens_from_env_defaults ... ok
+test llama::slim_attention::tests::tiled_matches_baseline_odd_seq_and_tile ... ok
+test llama::slim_attention::tests::tiled_matches_baseline_on_toy_tensors ... ok
+test llama::speculative::tests::cost_guard_ignores_cold_setup_and_keeps_only_profitable_blocks ... ok
+test llama::speculative::tests::delta_draft_acceptance_and_correction_preserve_known_target_distribution ... ok
+test llama::speculative::tests::rollback_boundary_tracks_all_first_and_partial_rejections_eos_and_budget ... ok
+test llama::speculative::tests::token_lookup_prefers_longest_recent_match_without_inventing_tokens ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 77 filtered out; finished in 1.56s
