@@ -130,7 +130,10 @@ impl GpuFull {
             || cfg.head != cfg.value
             || weights.expert_cache.is_some()
             || cfg.max_seq > 8192
-            || std::env::var("RBITNET_CUDA_ATTENTION").as_deref() == Ok("0")
+            || matches!(
+                std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
+                Ok("0" | "false" | "no")
+            )
         {
             return None;
         }
@@ -358,6 +361,7 @@ impl GpuFull {
             self.layers as u64 * 8 + u64::from(output),
         );
         crate::perf::record_gpt_full_token();
+        crate::perf::record_native_moe(true, self.layers as u64, 0);
         crate::perf::record_kv_write(self.kv_bytes_per_token);
         for _ in 0..self.layers {
             crate::perf::record_gpu_attention();

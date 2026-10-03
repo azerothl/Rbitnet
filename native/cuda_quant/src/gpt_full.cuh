@@ -108,6 +108,9 @@ struct ResidentGpt {
         return !host || (cudaMemcpyAsync(p,host,n*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess
             && cudaStreamSynchronize(stream)==cudaSuccess);
     }
+    template<typename T> bool alloc_kv(T *&p,size_t n) {
+        MemoryCategoryScope category(MemoryKv);return alloc(p,n);
+    }
     bool copy(const float *&p,size_t n) {float *device=nullptr;if(!p)return false;if(!alloc(device,n,p))return false;p=device;return true;}
     void matrix(const RbitnetLlamaMatrix &m,const float *in,float *out) {
         QuantKind kind;resident_kind(m.type,kind);
@@ -216,7 +219,7 @@ void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig *c,const RbitnetGptLay
     }
     for(auto &l:r->layers) {
         float *key=nullptr,*value=nullptr;
-        if(!r->alloc(key,size_t(c->capacity)*ks) || !r->alloc(value,size_t(c->capacity)*ks)
+        if(!r->alloc_kv(key,size_t(c->capacity)*ks) || !r->alloc_kv(value,size_t(c->capacity)*ks)
             || !r->copy(l.attn_norm,c->embd) || !r->copy(l.ffn_norm,c->embd) || !r->copy(l.q_bias,qs)
             || !r->copy(l.k_bias,ks) || !r->copy(l.v_bias,ks) || !r->copy(l.out_bias,c->embd)
             || !r->copy(l.router_bias,c->experts) || !r->copy(l.sinks,c->heads)

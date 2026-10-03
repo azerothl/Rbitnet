@@ -10,6 +10,7 @@
 #define RBITNET_CUDA_QUANT_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #define RBITNET_CUDA_API __declspec(dllexport)
@@ -20,6 +21,21 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Optional unified model-managed allocation ledger. The limit covers Rust-owned
+ * weights and every native KV/activation/snapshot/scratch allocation. It excludes
+ * CUDA driver/module/graph internals. Configure only a single current device;
+ * margin is left free on the device and existing live allocations are counted.
+ * Categories: weights=0, KV/state=1, activations=2, prefix=3, expert slots=4,
+ * scratch=5, other=6. Views/leases share their owner's one allocation. */
+typedef struct {
+    uint64_t version, limit, live, peak, allocations, refusals;
+    uint64_t categories[7];
+} RbitnetCudaMemoryStats;
+RBITNET_CUDA_API int rbitnet_cuda_memory_configure(uint64_t limit, uint64_t margin);
+RBITNET_CUDA_API int rbitnet_cuda_memory_stats(RbitnetCudaMemoryStats *stats);
+RBITNET_CUDA_API int rbitnet_cuda_memory_alloc(void **pointer, size_t bytes, unsigned category);
+RBITNET_CUDA_API int rbitnet_cuda_memory_free(void *pointer);
 
 // Shared-weight SIMT quantized GEMM. All three pointers are device addresses;
 // input is [tokens, columns], output [tokens, rows]. Synchronizes on return.

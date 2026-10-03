@@ -24,15 +24,19 @@ def main():
     p.add_argument('--tf32x3', action='store_true', help='Validate Llama compensated block prefill with prefix reuse')
     p.add_argument('--qwen-prefill', action='store_true', help='Validate full Qwen block prefill with checkpoints')
     p.add_argument('--gpt-full', action='store_true', help='Validate fixed-bank resident GPT-OSS resets, disconnects and serialization')
+    p.add_argument('--moe-cache', type=int, help='Validate actual dynamic MoE leases, disconnects and serialized concurrency with this MiB budget')
+    p.add_argument('--moe-model', choices=['gpt-oss-20b','glm47-flash'], default='gpt-oss-20b')
+    p.add_argument('--device-mib', type=int, default=12288)
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
     if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
     if args.gpt_full and (args.qwen_full or args.tf32x3 or args.speculative): p.error('select only one architecture experiment')
+    if args.moe_cache is not None and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative or args.moe_cache<=0): p.error('select a positive MoE cache budget as a separate experiment')
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, moe_cache_mib=args.moe_cache, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
@@ -41,6 +45,7 @@ def main():
         modes = [(next(m for m in config['models'] if m['id']=='qwen35-2b'), '0')]
     if args.tf32x3 and not args.qwen_prefill: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
     if args.gpt_full: modes = [(next(m for m in config['models'] if m['id']=='gpt-oss-20b'), '0')]
+    if args.moe_cache is not None: modes = [(next(m for m in config['models'] if m['id']==args.moe_model), '0')]
     for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
@@ -55,6 +60,8 @@ def main():
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
                 kw['env'].update(RBITNET_CUDA_GPT_FULL='1' if args.gpt_full else '0',RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full else '0',RBITNET_MOE_CACHE_MB='0')
+                if args.moe_cache is not None:
+                    kw['env'].update(RBITNET_MOE_CACHE_MB=str(args.moe_cache),RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
             return original(*a, **kw)
         server = Server(config, model, 'rbitnet', 'gpu', root); server.log_path = root/(label+'.log')
@@ -125,6 +132,13 @@ def main():
                 # the large prefill GEMMs. Require actual use on the cold cases.
                 if args.tf32x3: assert usage.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0)>0, 'compensated projections were not used'
                 if args.qwen_prefill: assert usage.get('rbitnet_core_gpu_prefill_blocks_total', 0)>0, 'Qwen block prefill was not used'
+            if args.moe_cache is not None:
+                usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
+                report['cases'][-1]['all_cases_metrics_delta']=usage;save()
+                assert usage.get('rbitnet_core_expert_cache_evictions_total',0)>0, 'test must exercise actual slot reuse'
+                assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)>0
+                assert after['rbitnet_core_cuda_managed_live_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
+                assert after['rbitnet_core_cuda_managed_peak_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
             print(label, 'stop and concurrency passed', flush=True)
         finally: server.close(); save()
 

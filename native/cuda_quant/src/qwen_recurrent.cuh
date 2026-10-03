@@ -161,6 +161,9 @@ struct ResidentQwenRecurrent {
         return !host || (cudaMemcpyAsync(p,host,n*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess
             && cudaStreamSynchronize(stream)==cudaSuccess);
     }
+    template<typename T> bool alloc_kv(T *&p,size_t n) {
+        MemoryCategoryScope category(MemoryKv);return alloc(p,n);
+    }
     void matrix(unsigned i,const float *input,float *output) {
         const auto &m=matrices[i];QuantKind kind;resident_kind(m.type,kind);
         launch_quant_kernel(kind,m.weights,m.row_bytes,input,m.cols,m.rows,m.rows,output,stream);
@@ -218,8 +221,8 @@ void *rbitnet_cuda_qwen_recurrent_create(const RbitnetQwenRecurrentConfig *c,
     if(cudaStreamCreateWithFlags(&r->stream,cudaStreamNonBlocking)!=cudaSuccess
         || !r->alloc(r->x,c->embd) || !r->alloc(r->h,c->embd) || !r->alloc(r->mixed,inner)
         || !r->alloc(r->z,values) || !r->alloc(r->beta,c->num_v) || !r->alloc(r->alpha,c->num_v)
-        || !r->alloc(r->activated,inner) || !r->alloc(r->history,size_t(inner)*c->conv)
-        || !r->alloc(r->state,size_t(values)*c->head) || !r->alloc(r->attn,values)
+        || !r->alloc(r->activated,inner) || !r->alloc_kv(r->history,size_t(inner)*c->conv)
+        || !r->alloc_kv(r->state,size_t(values)*c->head) || !r->alloc(r->attn,values)
         || !r->alloc(r->normed,values) || !r->alloc(r->projection,c->embd)
         || !r->alloc(r->gate,c->ffn) || !r->alloc(r->up,c->ffn)
         || !r->alloc(r->conv,size_t(inner)*c->conv,conv) || !r->alloc(r->dt,c->num_v,dt)
@@ -258,6 +261,7 @@ void *rbitnet_cuda_qwen_recurrent_snapshot(void *context) {
     s->head=r->cfg.head;s->num_k=r->cfg.num_k;s->num_v=r->cfg.num_v;s->conv=r->cfg.conv;s->length=r->filled;
     size_t state=size_t(s->num_v)*s->head*s->head*sizeof(float);
     size_t history=size_t(2*s->num_k+s->num_v)*s->head*s->conv*sizeof(float);
+    MemoryCategoryScope category(MemoryPrefix);
     if(cudaMalloc(reinterpret_cast<void**>(&s->state),state)!=cudaSuccess
         || cudaMalloc(reinterpret_cast<void**>(&s->history),history)!=cudaSuccess
         || cudaMemcpyAsync(s->state,r->state,state,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
