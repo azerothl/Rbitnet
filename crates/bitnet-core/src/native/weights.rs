@@ -79,6 +79,33 @@ impl Weights {
             requested_weights
         };
         result.residency_budget_bytes = budget;
+        // Reserve separate immutable small-router copies for the segmented MLA
+        // pipeline, while the ordinary reference still uses its CPU router.
+        let priority = if result.archive.normalized_architecture().as_deref() == Some("deepseek2")
+            && std::env::var("RBITNET_CUDA_MLA_FULL").as_deref() == Ok("1")
+        {
+            result
+                .archive
+                .tensors
+                .iter()
+                .filter(|t| {
+                    t.name.ends_with("ffn_gate_inp.weight")
+                        && t.dimensions.len() == 2
+                        && t.dimensions[1] < 128
+                        && ggml_type_supports_cuda_quant(t.ggml_type)
+                })
+                .try_fold(0usize, |n, t| {
+                    n.checked_add(result.archive.tensor_payload(t)?.len())
+                        .ok_or_else(|| {
+                            BitNetError::Inference("MLA router reservation overflow".into())
+                        })
+                })?
+        } else {
+            0
+        };
+        let placement_budget = budget.checked_sub(priority).ok_or_else(|| {
+            BitNetError::Inference("CUDA weight budget cannot reserve MLA routers".into())
+        })?;
         let requested_cache = std::env::var("RBITNET_MOE_CACHE_MB")
             .ok()
             .and_then(|s| s.parse::<usize>().ok())
@@ -135,7 +162,7 @@ impl Weights {
                 continue;
             }
             let payload = result.archive.tensor_payload(t)?;
-            if result.resident_bytes.saturating_add(payload.len()) > budget {
+            if result.resident_bytes.saturating_add(payload.len()) > placement_budget {
                 continue;
             }
             let cols = t.dimensions[0] as usize;
@@ -158,7 +185,8 @@ impl Weights {
             }
         }
         if cache_enabled {
-            let cache_budget = requested_cache.min(budget.saturating_sub(result.resident_bytes));
+            let cache_budget =
+                requested_cache.min(placement_budget.saturating_sub(result.resident_bytes));
             if cache_budget > 0 {
                 result.expert_cache = Some(Arc::new(std::sync::Mutex::new(
                     super::expert_cache::ExpertCache::new(

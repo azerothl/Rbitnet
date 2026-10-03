@@ -80,6 +80,56 @@ pub(super) fn reserve(a: &GgufArchive, c: &Config) -> Result<usize> {
     } else {
         0
     };
+    let mla = if attention
+        && c.family == Family::Mla
+        && std::env::var("RBITNET_CUDA_MLA_FULL").as_deref() == Ok("1")
+    {
+        let mut qrank = 0usize;
+        let mut shared = 0usize;
+        let mut norms = 0usize;
+        for il in 0..c.layers {
+            let qa = a
+                .tensor_by_name(&format!("blk.{il}.attn_q_a.weight"))
+                .ok_or_else(|| BitNetError::Inference("missing MLA query rank".into()))?;
+            let qr = usize::try_from(qa.dimensions[1]).map_err(|_| overflow())?;
+            qrank = qrank.max(qr);
+            for suffix in ["ffn_gate.weight", "ffn_gate_shexp.weight"] {
+                if let Some(t) = a.tensor_by_name(&format!("blk.{il}.{suffix}")) {
+                    shared = shared.max(usize::try_from(t.dimensions[1]).map_err(|_| overflow())?);
+                }
+            }
+            norms = sum(&[norms, product(&[2, c.embd])?, qr, c.kv_rank, c.experts])?;
+        }
+        let width = sum(&[c.kv_rank, c.rotary])?;
+        let split = if std::env::var("RBITNET_CUDA_SPLIT_KV").as_deref() == Ok("1") {
+            product(&[c.heads, c.max_seq.div_ceil(256), sum(&[c.kv_rank, 2])?])?
+        } else {
+            0
+        };
+        sum(&[
+            product(&[c.layers, c.max_seq, width])?,
+            norms,
+            product(&[5, c.embd])?,
+            product(&[2, qrank])?,
+            product(&[c.heads, c.head])?,
+            width,
+            c.kv_rank,
+            product(&[c.heads, width])?,
+            product(&[c.heads, c.kv_rank])?,
+            product(&[c.heads, c.value])?,
+            product(&[2, shared])?,
+            c.experts,
+            c.used,
+            c.used.max(blocks),
+            c.vocab,
+            blocks,
+            3,
+            product(&[c.max_seq, c.rotary])?,
+            split,
+        ])?
+    } else {
+        0
+    };
     let mut moe = 0usize;
     if std::env::var("RBITNET_CUDA_MOE").as_deref() != Ok("0") {
         for il in c.dense_layers..c.layers {
@@ -133,7 +183,7 @@ pub(super) fn reserve(a: &GgufArchive, c: &Config) -> Result<usize> {
         output = output.max(product(&[dims[1], batches])?);
     }
     let scratch = product(&[sum(&[input, output])?, 4, rayon::current_num_threads()])?;
-    sum(&[moe, product(&[partial.max(full), 4])?, scratch])
+    sum(&[moe, product(&[partial.max(full).max(mla), 4])?, scratch])
 }
 
 #[cfg(test)]
