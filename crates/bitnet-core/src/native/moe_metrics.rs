@@ -15,6 +15,7 @@ pub(crate) struct Layer {
     pub ready_experts: AtomicU64,
     pub ready_bytes: AtomicU64,
     pub gpu_ffns: AtomicU64,
+    pub fused_gpu_ffns: AtomicU64,
     pub fallback_ffns: AtomicU64,
     pub gpu_ffn_ns: AtomicU64,
     pub fallback_ffn_ns: AtomicU64,
@@ -49,6 +50,9 @@ impl Model {
     }
     pub(crate) fn layer(&self, layer: usize) -> Option<&Layer> {
         self.layers.get(layer)
+    }
+    pub(crate) fn fused_ffn(&self,layer:usize) {
+        if let Some(l)=self.layer(layer){l.fused_gpu_ffns.fetch_add(1,Ordering::Relaxed);}
     }
     pub(crate) fn ffn(&self, layer: usize, gpu: bool, ns: Option<u64>) {
         let Some(l) = self.layer(layer) else { return };
@@ -91,6 +95,7 @@ pub(crate) fn prometheus_text() -> String {
         ("cache_ready_experts", "gauge"),
         ("cache_ready_bytes", "gauge"),
         ("gpu_ffns_total", "counter"),
+        ("fused_gpu_ffns_total", "counter"),
         ("fallback_ffns_total", "counter"),
         ("gpu_ffn_ns_total", "counter"),
         ("fallback_ffn_ns_total", "counter"),
@@ -115,6 +120,7 @@ pub(crate) fn prometheus_text() -> String {
                 &l.ready_experts,
                 &l.ready_bytes,
                 &l.gpu_ffns,
+                &l.fused_gpu_ffns,
                 &l.fallback_ffns,
                 &l.gpu_ffn_ns,
                 &l.fallback_ffn_ns,

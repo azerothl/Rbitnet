@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Routed experts share one private stream and one host synchronization per layer.
+#include "moe_fused.cuh"
 namespace {
 template<QuantKind kind>
 __global__ void moe_matrix(const uint8_t *w,size_t row_bytes,unsigned cols,unsigned rows,
@@ -30,6 +31,7 @@ __global__ void moe_combine(const float *values,const float *bias,const unsigned
     out[i]=sum;
 }
 struct ResidentMoe {
+    bool fused=false,sealed=false;
     RbitnetMoeConfig cfg;
     RbitnetLlamaMatrix gate,up,down;
     std::vector<void*> allocations;
@@ -57,6 +59,20 @@ struct ResidentMoe {
 #undef MOE_QUANT
     }
     void enqueue() {
+        sealed=true;
+        if(fused) {
+            QuantKind kind;
+            if(gate.type==up.type) {
+                resident_kind(gate.type,kind);
+                launch_moe_fused_gate_up(kind,gate,up,experts,input,gb,ub,cfg.used,cfg.ffn,cfg.oai!=0,dynamic?selected:nullptr,g,stream);
+            }else {
+                matrix(gate,input,false,g,0);matrix(up,input,false,u,1);
+                moe_activate<<<(cfg.ffn*cfg.used+255)/256,256,0,stream>>>(g,u,gb,ub,experts,cfg.ffn,cfg.used,cfg.oai!=0);
+            }
+            resident_kind(down.type,kind);
+            launch_moe_fused_down(kind,down,experts,g,db,probabilities,cfg.used,cfg.embd,dynamic?selected+2*cfg.used:nullptr,output,stream);
+            return;
+        }
         matrix(gate,input,false,g,0);matrix(up,input,false,u,1);
         moe_activate<<<(cfg.ffn*cfg.used+255)/256,256,0,stream>>>(g,u,gb,ub,experts,cfg.ffn,cfg.used,cfg.oai!=0);
         matrix(down,g,true,d,2);
@@ -91,6 +107,10 @@ void *rbitnet_cuda_moe_create(const RbitnetMoeConfig *c,const RbitnetLlamaMatrix
 void *rbitnet_cuda_moe_dynamic_create(const RbitnetMoeConfig *c,const RbitnetLlamaMatrix *gate,
     const RbitnetLlamaMatrix *up,const RbitnetLlamaMatrix *down,const float *gb,const float *ub,const float *db) {
     return moe_create(c,gate,up,down,gb,ub,db,true);
+}
+int rbitnet_cuda_moe_configure_fused(void *context,unsigned enabled) {
+    auto *r=static_cast<ResidentMoe*>(context);if(!r || enabled>1 || r->sealed)return 1;
+    r->fused=enabled!=0;return 0;
 }
 void rbitnet_cuda_moe_destroy(void *context) {delete static_cast<ResidentMoe*>(context);}
 int rbitnet_cuda_moe_step(void *context,const float *input,const unsigned *experts,const float *probabilities,float *output) {

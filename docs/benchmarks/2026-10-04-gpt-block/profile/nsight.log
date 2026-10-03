@@ -1,0 +1,7 @@
+Capture range started in the application.
+Capture range ended in the application.
+Generating 'C:\Users\azero\AppData\Local\Temp\nsys-report-80bf.qdstrm'
+[1/1] [0%                          ] warmed-gpt-block.nsys-repProcessing events...
+[1/1] [0%                          ] warmed-gpt-block.nsys-rep[1/1] [====27%                     ] warmed-gpt-block.nsys-rep[1/1] [==========49%               ] warmed-gpt-block.nsys-rep[1/1] [========================100%] warmed-gpt-block.nsys-rep[1/1] [========================100%] warmed-gpt-block.nsys-rep
+Generated:
+	E:\devs\Rbitnet\target\gpt-block\profile\warmed-gpt-block.nsys-rep

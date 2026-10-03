@@ -16,3 +16,6 @@ pub(crate) mod qwen_recurrent;
 #[cfg(test)]
 mod split_attention;
 pub(crate) mod weights;
+
+#[cfg(test)]
+mod ordered_tests;

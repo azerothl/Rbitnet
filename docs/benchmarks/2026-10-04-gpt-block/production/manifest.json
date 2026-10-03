@@ -1,0 +1,28 @@
+{
+  "source_sha256": {
+    "crates\\bitnet-core\\src\\native\\fused_tests.rs": "9039e67a5fc7a0bf5e8a772ceb8d722b56b4a4857f6b1e327b970032b10a8190",
+    "crates\\bitnet-core\\src\\native\\gpt_block_runtime_tests.rs": "dd02e3fc4a6f71c21cf84c8ca1e668b9feb7ee024201f63371cd6c9aa2fb85e0",
+    "crates\\bitnet-core\\src\\native\\gpt_block_tests.rs": "1fe17dbceec28c1a00c1fa0a2dabc69ee0b04323f1f17b7e0829c5f04afbd86a",
+    "crates\\bitnet-core\\src\\native\\gpt_full.rs": "86077a2d89860752bf47ee1a1020f2a88ce6c4285ab20667827c3e33ea3da992",
+    "crates\\bitnet-core\\src\\native\\graph.rs": "813f8e8341b01b1f581b8ab60c65acf89c6390b8ec6c9010e54b722757f50241",
+    "crates\\bitnet-core\\src\\native\\grouped_tests.rs": "bfe35901e9369d867b72c79c9c3cfae17a288fc3910137f73fb98f16ea9bd36c",
+    "crates\\bitnet-core\\src\\native\\mod.rs": "bb3bf15e8e20a3629d4c59d19f22879927e792ce939042ce29502d5544dbfd6e",
+    "crates\\bitnet-core\\src\\native\\moe.rs": "2f8b97261d6f3edcc8949517cd9ffbddf2962d9eb3b297afd25d07bcf1bddea2",
+    "crates\\bitnet-core\\src\\native\\moe_metrics.rs": "91735be36bde562c1547d06879fe57d4c0b5a03d5c7d1a3e49db164cfdbb04f4",
+    "crates\\bitnet-core\\src\\native\\ordered_tests.rs": "3a2a3c5c61b48616fe104d4517c8d5e3b49afbd4b6a5a9aa4a23c5e2e775eab0",
+    "crates\\bitnet-core\\src\\native\\state_budget.rs": "701eff125195ad3c0c7789a4fae445f5088daf892625025378d0b21fe5566532",
+    "native/cuda_quant/src/gpt_full.cuh": "1199969f8a172027ef2541bce7097a8ab481eff8edd9ea81ceefd011ae7734ed",
+    "native/cuda_quant/src/moe_resident.cuh": "282a99abad4a845f8185221a49a762f3fabccbfb994272647dd824f469108fc1",
+    "native/cuda_quant/src/quant_matvec.cu": "614ee38b9f3e77f4f9a1a6621de4ba92d0887c08cdad1d68eb8cb2cbd85b50e5",
+    "native/cuda_quant/src/gpt_prefill.cuh": "5123201667575ada74b1b43aac986a468739c6c2350386f7a57f3afe484fa787",
+    "native/cuda_quant/src/grouped_moe.cuh": "4454acd9ef9a9cc8435c2d5cd8dc6980fcf26f3e6ffa13d13f7c3cb1d315c95a",
+    "native/cuda_quant/src/moe_fused.cuh": "6d166145883e5f11452aa951fd674d667c05eade5c0c9f859f1ef6aa0521988e",
+    "native/cuda_quant/src/mxfp4_ordered_gemm.cuh": "4292f7bce0b946df6f1f4c602c3948d69b0399a6877b537456118dfdd9f8c27f",
+    "native/cuda_quant/src/ordered_gemm.cuh": "5f0f5fe8464fddab5c74ea91add2c0f2e8c1cdeccca1ac452b7c0240c4578a3e",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "ad661a8563fddea9324acc71a696a5fb0f25728b09ba6f60386d01a9135ccb08",
+    "scripts/benchmark_cache_stack.py": "8de5558fe350ce5c1491d1fb0a9c751f7b7ab2c08d2e975e0979e5a396cf4e97",
+    "scripts/validate_cache_streaming.py": "186c0dbac3473a2216d98059f83df34a72edd7a98b62c006749fd709d17135dd"
+  },
+  "binary_sha256": "9ce0ab5beb07fbefad01084e7326d6011eb9edb6b3cec23677c3fa52f52a2ba8",
+  "library_sha256": "3a094ca396e63ee7bc42df87060c0f30cba021dea786ba7ce33d5b1e250bd860"
+}

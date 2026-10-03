@@ -1,0 +1,9 @@
+{
+  "block_capacity": 32,
+  "completed_prefill_blocks": 2,
+  "nonce": "42d84291-e5b5-42db-ae90-6f6a3abde40f",
+  "profiler_stop_succeeded": true,
+  "reference_output": "**Le robot lit un livre dans un jardin calme.**  \nIl s’installe sur un banc en bois, les pieds légèrement surélevés, et",
+  "same_output": true,
+  "tile": 0
+}
