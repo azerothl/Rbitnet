@@ -1,0 +1,658 @@
+{
+  "completed_child": {
+    "block_capacity": 32,
+    "completed_prefill_blocks": 2,
+    "nonce": "42d84291-e5b5-42db-ae90-6f6a3abde40f",
+    "profiler_stop_succeeded": true,
+    "reference_output": "**Le robot lit un livre dans un jardin calme.**  \nIl s\u2019installe sur un banc en bois, les pieds l\u00e9g\u00e8rement sur\u00e9lev\u00e9s, et",
+    "same_output": true,
+    "tile": 0
+  },
+  "kernel_events": 18392,
+  "ordered_multi_token_projection_launches": [
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      21,
+      1,
+      256,
+      36,
+      2667885
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      32,
+      1,
+      256,
+      36,
+      3967749
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      512,
+      21,
+      1,
+      256,
+      24,
+      13764873
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      512,
+      32,
+      1,
+      256,
+      24,
+      20962762
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      21,
+      1,
+      256,
+      12,
+      190275
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      32,
+      1,
+      256,
+      12,
+      276131
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)4>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      360,
+      21,
+      1,
+      256,
+      24,
+      3169818
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)4>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      360,
+      32,
+      1,
+      256,
+      24,
+      5058075
+    ]
+  ],
+  "grouped_expert_launches": [
+    [
+      "void <unnamed>::moe_group_ordered_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, bool, const <unnamed>::MoeGroupChunk *, const unsigned int *, float *)",
+      1440,
+      84,
+      1,
+      256,
+      72,
+      39324516
+    ],
+    [
+      "void <unnamed>::moe_group_ordered_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, bool, const <unnamed>::MoeGroupChunk *, const unsigned int *, float *)",
+      1440,
+      128,
+      1,
+      256,
+      72,
+      58704177
+    ]
+  ],
+  "all_kernel_grid_counts": [
+    [
+      "<unnamed>::attention_merge(const float *, unsigned int, unsigned int, unsigned int, float *, const float *)",
+      64,
+      1,
+      1,
+      128,
+      744,
+      2033986
+    ],
+    [
+      "<unnamed>::attention_merge(const float *, unsigned int, unsigned int, unsigned int, float *, const float *)",
+      64,
+      21,
+      1,
+      128,
+      24,
+      131395
+    ],
+    [
+      "<unnamed>::attention_merge(const float *, unsigned int, unsigned int, unsigned int, float *, const float *)",
+      64,
+      32,
+      1,
+      128,
+      24,
+      176867
+    ],
+    [
+      "<unnamed>::attention_partials(const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, unsigned int, float *)",
+      64,
+      8,
+      1,
+      128,
+      744,
+      8909893
+    ],
+    [
+      "<unnamed>::attention_partials(const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, unsigned int, float *)",
+      64,
+      8,
+      21,
+      128,
+      24,
+      433478
+    ],
+    [
+      "<unnamed>::attention_partials(const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, unsigned int, float *)",
+      64,
+      8,
+      32,
+      128,
+      24,
+      362629
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      3,
+      1,
+      1,
+      256,
+      24,
+      22176
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      4,
+      1,
+      1,
+      256,
+      24,
+      22112
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      42,
+      1,
+      1,
+      256,
+      48,
+      48380
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      64,
+      1,
+      1,
+      256,
+      48,
+      49886
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      237,
+      1,
+      1,
+      256,
+      24,
+      27040
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      336,
+      1,
+      1,
+      256,
+      24,
+      27936
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      360,
+      1,
+      1,
+      256,
+      24,
+      28543
+    ],
+    [
+      "<unnamed>::gpt_block_bias(float *, const float *, unsigned int, unsigned int)",
+      512,
+      1,
+      1,
+      256,
+      24,
+      34269
+    ],
+    [
+      "<unnamed>::gpt_norm_ordered(float *, const float *, float, unsigned int, float *, const float *)",
+      1,
+      1,
+      1,
+      256,
+      1520,
+      94589169
+    ],
+    [
+      "<unnamed>::gpt_norm_ordered(float *, const float *, float, unsigned int, float *, const float *)",
+      21,
+      1,
+      1,
+      256,
+      48,
+      2856973
+    ],
+    [
+      "<unnamed>::gpt_norm_ordered(float *, const float *, float, unsigned int, float *, const float *)",
+      32,
+      1,
+      1,
+      256,
+      48,
+      2898252
+    ],
+    [
+      "<unnamed>::gpt_rope(float *, float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, const float *)",
+      9,
+      1,
+      1,
+      256,
+      744,
+      1061502
+    ],
+    [
+      "<unnamed>::gpt_rope(float *, float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, const float *)",
+      9,
+      21,
+      1,
+      256,
+      24,
+      39552
+    ],
+    [
+      "<unnamed>::gpt_rope(float *, float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, float, const float *)",
+      9,
+      32,
+      1,
+      256,
+      24,
+      42144
+    ],
+    [
+      "<unnamed>::gpt_router(const float *, const float *, unsigned int, unsigned int, float, unsigned int *, float *, bool)",
+      1,
+      1,
+      1,
+      1,
+      744,
+      11138387
+    ],
+    [
+      "<unnamed>::gpt_router(const float *, const float *, unsigned int, unsigned int, float, unsigned int *, float *, bool)",
+      21,
+      1,
+      1,
+      1,
+      24,
+      358661
+    ],
+    [
+      "<unnamed>::gpt_router(const float *, const float *, unsigned int, unsigned int, float, unsigned int *, float *, bool)",
+      32,
+      1,
+      1,
+      1,
+      24,
+      355490
+    ],
+    [
+      "<unnamed>::gpt_router_matrix_ordered(const float *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      4,
+      1,
+      1,
+      256,
+      744,
+      34558967
+    ],
+    [
+      "<unnamed>::gpt_router_matrix_ordered(const float *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      4,
+      21,
+      1,
+      256,
+      24,
+      1025075
+    ],
+    [
+      "<unnamed>::gpt_router_matrix_ordered(const float *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      4,
+      32,
+      1,
+      256,
+      24,
+      1232535
+    ],
+    [
+      "<unnamed>::gpt_write_kv(const float *, const float *, float *, float *, const unsigned int *, unsigned int)",
+      2,
+      1,
+      1,
+      256,
+      744,
+      711399
+    ],
+    [
+      "<unnamed>::gpt_write_kv(const float *, const float *, float *, float *, const unsigned int *, unsigned int)",
+      2,
+      21,
+      1,
+      256,
+      24,
+      23457
+    ],
+    [
+      "<unnamed>::gpt_write_kv(const float *, const float *, float *, float *, const unsigned int *, unsigned int)",
+      2,
+      32,
+      1,
+      256,
+      24,
+      23936
+    ],
+    [
+      "<unnamed>::moe_activate(float *, const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, bool)",
+      45,
+      1,
+      1,
+      256,
+      744,
+      944813
+    ],
+    [
+      "<unnamed>::moe_activate(float *, const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, bool)",
+      945,
+      1,
+      1,
+      256,
+      24,
+      419080
+    ],
+    [
+      "<unnamed>::moe_activate(float *, const float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, bool)",
+      1440,
+      1,
+      1,
+      256,
+      24,
+      122753
+    ],
+    [
+      "<unnamed>::moe_combine(const float *, const float *, const unsigned int *, const float *, unsigned int, unsigned int, float *)",
+      12,
+      1,
+      1,
+      256,
+      744,
+      921020
+    ],
+    [
+      "<unnamed>::moe_group_combine(const float *, const float *, const unsigned int *, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      12,
+      21,
+      1,
+      256,
+      24,
+      47230
+    ],
+    [
+      "<unnamed>::moe_group_combine(const float *, const float *, const unsigned int *, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      12,
+      32,
+      1,
+      256,
+      24,
+      58015
+    ],
+    [
+      "<unnamed>::moe_group_worklist(const unsigned int *, unsigned int, unsigned int, <unnamed>::MoeGroupChunk *, unsigned int *)",
+      1,
+      1,
+      1,
+      1,
+      48,
+      3729059
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      1,
+      1,
+      1,
+      256,
+      744,
+      679241
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      2,
+      1,
+      1,
+      256,
+      1488,
+      1396946
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      12,
+      1,
+      1,
+      256,
+      1488,
+      1313231
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      16,
+      1,
+      1,
+      256,
+      744,
+      704269
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      237,
+      1,
+      1,
+      256,
+      24,
+      31234
+    ],
+    [
+      "<unnamed>::resident_add(float *, const float *, unsigned int)",
+      360,
+      1,
+      1,
+      256,
+      24,
+      37471
+    ],
+    [
+      "<unnamed>::resident_argmax(const float *, const unsigned int *, unsigned int, float *, unsigned int *)",
+      1,
+      1,
+      1,
+      256,
+      32,
+      76995
+    ],
+    [
+      "<unnamed>::resident_argmax(const float *, const unsigned int *, unsigned int, float *, unsigned int *)",
+      786,
+      1,
+      1,
+      256,
+      32,
+      108864
+    ],
+    [
+      "void <unnamed>::moe_group_ordered_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, bool, const <unnamed>::MoeGroupChunk *, const unsigned int *, float *)",
+      1440,
+      84,
+      1,
+      256,
+      72,
+      39324516
+    ],
+    [
+      "void <unnamed>::moe_group_ordered_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, bool, const <unnamed>::MoeGroupChunk *, const unsigned int *, float *)",
+      1440,
+      128,
+      1,
+      256,
+      72,
+      58704177
+    ],
+    [
+      "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      360,
+      4,
+      1,
+      256,
+      2232,
+      67212403
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      21,
+      1,
+      256,
+      36,
+      2667885
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      32,
+      1,
+      256,
+      36,
+      3967749
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      512,
+      21,
+      1,
+      256,
+      24,
+      13764873
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      512,
+      32,
+      1,
+      256,
+      24,
+      20962762
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      21,
+      1,
+      256,
+      12,
+      190275
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      64,
+      32,
+      1,
+      256,
+      12,
+      276131
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)4>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      360,
+      21,
+      1,
+      256,
+      24,
+      3169818
+    ],
+    [
+      "void <unnamed>::ordered_warp_gemm<(<unnamed>::QuantKind)4>(const unsigned char *, unsigned long long, const float *, unsigned int, unsigned int, unsigned int, float *)",
+      360,
+      32,
+      1,
+      256,
+      24,
+      5058075
+    ],
+    [
+      "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      64,
+      1,
+      1,
+      256,
+      1116,
+      22287668
+    ],
+    [
+      "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      512,
+      1,
+      1,
+      256,
+      744,
+      39026816
+    ],
+    [
+      "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      64,
+      1,
+      1,
+      256,
+      372,
+      2106015
+    ],
+    [
+      "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)3>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      25136,
+      1,
+      1,
+      256,
+      32,
+      29333241
+    ],
+    [
+      "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)4>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      360,
+      1,
+      1,
+      256,
+      744,
+      8616250
+    ]
+  ],
+  "hashes": {
+    "gpt-cuda-profile.exe": "71e467e01edbccb0ab2ffbc1125f351f3f7944d1f55adf9785eba47b93aea2e4",
+    "warmed-gpt-block.sqlite": "35924bf9523ffea13e52419aa1675ce0ba9d7564a43d9ff9cab09946df881c3d",
+    "warmed-gpt-block.nsys-rep": "077c96596c8244a9909dccbaab4f930ad766eea78ac0251992c97ddaf3e39c25",
+    "gpt_cuda_profile.rs": "9f850804c6f0a9711028876dacbf69bb7569a956c467e72a322bb7a5bc8cd8eb"
+  },
+  "limits": [
+    "Warmed profiled generation; trace timing is not throughput.",
+    "gridY>1 shows multiple tokens in one projection kernel; grouped kernels process the joint routed-token worklist."
+  ]
+}

@@ -418,6 +418,7 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
 
 #include "prefill_quant.cuh"
 #include "llama_resident.cuh"
+#include "ordered_gemm.cuh"
 
 extern "C" int rbitnet_cuda_split_attention_check(const float *k,const float *v,const float *q,
     unsigned capacity,unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,
@@ -453,7 +454,9 @@ extern "C" int rbitnet_cuda_split_attention_check(const float *k,const float *v,
 #include "output_head.cuh"
 
 #include "qwen_full.cuh"
+#include "grouped_moe.cuh"
 #include "gpt_full.cuh"
+#include "gpt_prefill.cuh"
 #include "mla_full.cuh"
 #include "native_completion_check.cuh"
 

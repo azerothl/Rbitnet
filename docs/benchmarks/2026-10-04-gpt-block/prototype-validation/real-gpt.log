@@ -1,0 +1,15 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 11.34s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::gpt_block_runtime_tests::actual_gpt_block_and_fusion_logits_seeded_outputs_prefixes_and_cancellation ... Real GPT block count=16 tile=0 fused=0 completed fused FFNs=0; logits/seed/penalty/prefix/cancellation exact
+Real GPT block count=32 tile=1 fused=0 completed fused FFNs=0; logits/seed/penalty/prefix/cancellation exact
+Real GPT block count=16 tile=0 fused=1 completed fused FFNs=4632; logits/seed/penalty/prefix/cancellation exact
+Real GPT block count=0 tile=0 fused=1 completed fused FFNs=13656; logits/seed/penalty/prefix/cancellation exact
+Real GPT block/fusion worst KL=0.000e0, absolute target NLL delta=0.000e0
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 130 filtered out; finished in 43.19s
+

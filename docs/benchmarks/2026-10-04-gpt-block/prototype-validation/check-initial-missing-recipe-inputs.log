@@ -1,0 +1,28 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core)
+    Checking bitnet-server v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-server)
+    Checking rbitnet-cli v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\rbitnet-cli)
+    Checking rbitnet-runner v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\rbitnet-runner)
+error: couldn't read `crates\rbitnet-cli\src\../../../recipes/bitnet-b158.recipe.json`: Le chemin d’accès spécifié est introuvable. (os error 3)
+   --> crates\rbitnet-cli\src\recipes.rs:105:22
+    |
+105 |         let bitnet = include_str!("../../../recipes/bitnet-b158.recipe.json");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: there is a file with the same name in a different directory
+    |
+105 |         let bitnet = include_str!("../../../../../../recipes/bitnet-b158.recipe.json");
+    |                                             +++++++++
+
+error: couldn't read `crates\rbitnet-cli\src\../../../recipes/tinyllama-q4.recipe.json`: Le chemin d’accès spécifié est introuvable. (os error 3)
+   --> crates\rbitnet-cli\src\recipes.rs:106:20
+    |
+106 |         let tiny = include_str!("../../../recipes/tinyllama-q4.recipe.json");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: there is a file with the same name in a different directory
+    |
+106 |         let tiny = include_str!("../../../../../../recipes/tinyllama-q4.recipe.json");
+    |                                           +++++++++
+
+error: could not compile `rbitnet-cli` (bin "rbitnet" test) due to 2 previous errors

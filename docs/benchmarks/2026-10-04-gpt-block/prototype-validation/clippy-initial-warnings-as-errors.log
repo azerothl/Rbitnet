@@ -1,0 +1,136 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core)
+    Checking rbitnet-proxy v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\rbitnet-proxy)
+error: this `let...else` may be rewritten with the `?` operator
+   --> crates\rbitnet-proxy\src\lib.rs:874:5
+    |
+874 | /     let Some(bytes) = body else {
+875 | |         return None;
+876 | |     };
+    | |______^ help: replace it with: `let bytes = body?;`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#question_mark
+    = note: `-D clippy::question-mark` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::question_mark)]`
+
+error: could not compile `rbitnet-proxy` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `rbitnet-proxy` (lib test) due to 1 previous error
+error: manual slice size calculation
+    --> crates\bitnet-core\src\backend.rs:1517:23
+     |
+1517 |         let w_bytes = w.len() * std::mem::size_of::<f32>();
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `std::mem::size_of_val(w)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_slice_size_calculation
+     = note: `-D clippy::manual-slice-size-calculation` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::manual_slice_size_calculation)]`
+
+error: manual slice size calculation
+    --> crates\bitnet-core\src\backend.rs:1518:23
+     |
+1518 |         let x_bytes = x.len() * std::mem::size_of::<f32>();
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `std::mem::size_of_val(x)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_slice_size_calculation
+
+error: called `unwrap` on `self.inner.toy` after checking its variant with `is_some`
+   --> crates\bitnet-core\src\inference.rs:569:17
+    |
+567 |           if self.inner.toy.is_some() {
+    |           --------------------------- help: try: `if let Some(<item>) = &self.inner.toy`
+568 |               let text =
+569 | /                 self.inner
+570 | |                     .toy
+571 | |                     .as_ref()
+572 | |                     .unwrap()
+    | |_____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#unnecessary_unwrap
+    = note: `-D clippy::unnecessary-unwrap` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::unnecessary_unwrap)]`
+
+error: manually reimplementing `div_ceil`
+  --> crates\bitnet-core\src\llama\kv_storage.rs:61:29
+   |
+61 |             Self::Q4 => 4 + (len + 1) / 2,
+   |                             ^^^^^^^^^^^^^ help: consider using `.div_ceil()`: `len.div_ceil(2)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_div_ceil
+   = note: `-D clippy::manual-div-ceil` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::manual_div_ceil)]`
+
+error: manual saturating arithmetic
+   --> crates\bitnet-core\src\native\gpt_full.rs:509:29
+    |
+509 |             || input.len()!=count.checked_mul(self.embd).unwrap_or(usize::MAX)
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `saturating_mul`: `count.saturating_mul(self.embd)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_saturating_arithmetic
+    = note: `-D clippy::manual-saturating-arithmetic` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_saturating_arithmetic)]`
+
+error: derefed type is same as origin
+    --> crates\bitnet-core\src\native\graph.rs:1326:33
+     |
+1326 |         if let Some(callback) = events.as_deref_mut() {
+     |                                 ^^^^^^^^^^^^^^^^^^^^^ help: try: `events`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#needless_option_as_deref
+     = note: `-D clippy::needless-option-as-deref` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::needless_option_as_deref)]`
+
+error: this `repeat().take()` can be written more concisely
+   --> crates\bitnet-core\src\scheduler.rs:671:5
+    |
+671 | /     std::iter::repeat(seed)
+672 | |         .take(max_tokens.max(1))
+    | |________________________________^ help: consider using `repeat_n()` instead: `std::iter::repeat_n(seed, max_tokens.max(1))`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_repeat_n
+    = note: `-D clippy::manual-repeat-n` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_repeat_n)]`
+
+error: could not compile `bitnet-core` (lib) due to 7 previous errors
+error: items after a test module
+   --> crates\bitnet-core\src\native\expert_cache.rs:25:1
+    |
+ 25 | mod tests {
+    | ^^^^^^^^^
+...
+148 | struct Entry {
+    | ^^^^^^^^^^^^
+...
+152 | pub(super) struct ExpertCache {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+166 | impl ExpertCache {
+    | ^^^^^^^^^^^^^^^^
+...
+516 | impl Drop for ExpertCache {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#items_after_test_module
+    = note: `-D clippy::items-after-test-module` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::items_after_test_module)]`
+    = help: move the items to before the test module was defined
+
+error: using `clone` on type `SamplingOptions` which implements the `Copy` trait
+    --> crates\bitnet-core\src\qwen35\runtime.rs:1123:56
+     |
+1123 |                     .generate_with_timings(prompt, 24, sampling.clone())
+     |                                                        ^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `sampling`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#clone_on_copy
+     = note: `-D clippy::clone-on-copy` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::clone_on_copy)]`
+
+error: using `clone` on type `SamplingOptions` which implements the `Copy` trait
+    --> crates\bitnet-core\src\qwen35\runtime.rs:1129:56
+     |
+1129 |                     .generate_with_timings(prompt, 24, sampling.clone())
+     |                                                        ^^^^^^^^^^^^^^^^ help: try removing the `clone` call: `sampling`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#clone_on_copy
+
+error: could not compile `bitnet-core` (lib test) due to 10 previous errors

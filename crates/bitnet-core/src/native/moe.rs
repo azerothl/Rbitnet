@@ -77,8 +77,10 @@ pub(super) struct GpuMoe {
     embd: usize,
     used: usize,
     experts: usize,
+    fused: bool,
 }
 impl GpuMoe {
+    pub(super) fn is_fused(&self)->bool {self.fused}
     pub(super) fn context_address(&self) -> usize {
         self.context
     }
@@ -282,7 +284,14 @@ impl GpuMoe {
         if context == 0 {
             return None;
         }
+        let requested=std::env::var("RBITNET_CUDA_MOE_FUSED").as_deref()==Ok("1");
+        let fused=if requested {
+            type Configure=unsafe extern "C" fn(*mut c_void,u32)->i32;
+            let configure=unsafe{lib.get::<Configure>(b"rbitnet_cuda_moe_configure_fused\0").ok()};
+            configure.is_some_and(|f|unsafe{f(context as *mut c_void,1)}==0)
+        } else {false};
         Some(Self {
+            fused,
             context,
             destroy,
             step,
@@ -627,3 +636,11 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path="fused_tests.rs"]
+mod fused_tests;
+
+#[cfg(test)]
+#[path="grouped_tests.rs"]
+mod grouped_tests;

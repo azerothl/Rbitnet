@@ -1,0 +1,606 @@
+{
+  "binary_sha256": "9ce0ab5beb07fbefad01084e7326d6011eb9edb6b3cec23677c3fa52f52a2ba8",
+  "library_sha256": "3a094ca396e63ee7bc42df87060c0f30cba021dea786ba7ce33d5b1e250bd860",
+  "speculative": false,
+  "qwen_full": false,
+  "gpt_full": true,
+  "split_kv": true,
+  "tf32x3": false,
+  "moe_cache_mib": null,
+  "moe_execution": "cache",
+  "mla_full": false,
+  "gpt_segmented": false,
+  "cases": [
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer. Conçu par le professeur Armand, ce robot n’était pas un simple assemblage de métal et de circuits ; il était doté d’un cœur de silicium, d’une mémoire infinie et d’une curiosité insatiable. Sa mission : explorer chaque recoin de la",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068977,
+        "id": "chatcmpl-1791068977",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer. Conçu par le professeur Armand, ce robot n’était pas un simple assemblage de métal et de circuits ; il était doté d’un cœur de silicium, d’une mémoire infinie et d’une curiosité insatiable. Sa mission : explorer chaque recoin de la",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068978,
+        "id": "chatcmpl-1791068978",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs inondés de lumière douce d’une vieille bibliothèque, où les étagères s’étiraient jusqu’à l’horizon comme des sentinelles de bois et de cuir, un robot nommé Célestin se déplaçait avec une grâce étonnamment humaine. Conçu à l’ère de la prochaine révolution numérique, Célestin n’était pas qu’un simple dispositif mécanique ; il portait en son cœur électronique une curiosité programmable, une soif d’apprentissage qui dépassait la simple exécution de programmes.\n\n### 1",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068980,
+        "id": "chatcmpl-1791068980",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs inondés de lumière douce d’une vieille bibliothèque, où les étagères s’étiraient jusqu’à l’horizon comme des sentinelles de bois et de cuir, un robot nommé Célestin se déplaçait avec une grâce étonnamment humaine. Conçu à l’ère de la prochaine révolution numérique, Célestin n’était pas qu’un simple dispositif mécanique ; il portait en son cœur électronique une curiosité programmable, une soif d’apprentissage qui dépassait la simple exécution de programmes.\n\n### 1",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068982,
+        "id": "chatcmpl-1791068982",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer dans ses circuits. Conçu par le professeur Armand, ce robot était doté d’un cerveau artificiel capable de traiter des données à la vitesse de la lumière, mais aussi d’une curiosité presque humaine, une curiosité qui l’avait poussé à demander un jour : « Pourquoi",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068983,
+        "id": "chatcmpl-1791068983",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer dans ses circuits. Conçu par le professeur Armand, ce robot était doté d’un cerveau artificiel capable de traiter des données à la vitesse de la lumière, mais aussi d’une curiosité presque humaine, une curiosité qui l’avait poussé à demander un jour : « Pourquoi",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068985,
+        "id": "chatcmpl-1791068985",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791068985,
+        "id": "chatcmpl-1791068985",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 21,
+          "prompt_tokens": 106,
+          "total_tokens": 127
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068986,
+          "id": "chatcmpl-1791068986",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 22,
+            "prompt_tokens": 99,
+            "total_tokens": 121
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068986,
+          "id": "chatcmpl-1791068986",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 99,
+            "total_tokens": 122
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l’Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068986,
+          "id": "chatcmpl-1791068986",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 100,
+            "total_tokens": 123
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068986,
+          "id": "chatcmpl-1791068986",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 30,
+            "prompt_tokens": 103,
+            "total_tokens": 133
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068987,
+          "id": "chatcmpl-1791068987",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 22,
+            "prompt_tokens": 99,
+            "total_tokens": 121
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068987,
+          "id": "chatcmpl-1791068987",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 99,
+            "total_tokens": 122
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l’Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068987,
+          "id": "chatcmpl-1791068987",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 100,
+            "total_tokens": 123
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791068988,
+          "id": "chatcmpl-1791068988",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 30,
+            "prompt_tokens": 103,
+            "total_tokens": 133
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 1908.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 44.0,
+        "rbitnet_inference_ttft_ms_avg": -10.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.07500100000000032,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 44.0,
+        "rbitnet_inference_decode_ms_sum": 1071.0,
+        "rbitnet_inference_itl_us_sum": 43702.0,
+        "rbitnet_inference_tpot_us_sum": 43702.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 98.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 0.0,
+        "rbitnet_core_cuda_managed_live_bytes": 0.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 0.0,
+        "rbitnet_core_cuda_managed_allocations_total": 0.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 102.0,
+        "rbitnet_core_gpu_mla_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 2448.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 4.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 4.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 772.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_native_moe_resident_layers_total": 2448.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 0.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 1175448.0,
+        "rbitnet_core_gpu_download_bytes_total": 408.0,
+        "rbitnet_core_gpu_gemv_calls_total": 19686.0,
+        "rbitnet_core_gpu_attention_calls_total": 2448.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 10027008.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 39026688.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 102.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 827392.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "managed_metrics": {
+        "rbitnet_core_cuda_managed_memory_available": 1.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 12884901888.0,
+        "rbitnet_core_cuda_managed_live_bytes": 11498891808.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 11498891808.0,
+        "rbitnet_core_cuda_managed_allocations_total": 718.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0
+      },
+      "scoped_metrics_after": "# HELP rbitnet_chat_requests_total Chat completion requests\n# TYPE rbitnet_chat_requests_total counter\nrbitnet_chat_requests_total 19\n# HELP rbitnet_chat_errors_total Chat completion handler errors (4xx/5xx from handler)\n# TYPE rbitnet_chat_errors_total counter\nrbitnet_chat_errors_total 0\n# HELP rbitnet_inference_timeouts_total Inference wall-clock timeouts\n# TYPE rbitnet_inference_timeouts_total counter\nrbitnet_inference_timeouts_total 0\n# HELP rbitnet_inference_ms_sum Sum of inference wall times in milliseconds\n# TYPE rbitnet_inference_ms_sum counter\nrbitnet_inference_ms_sum 12799\n# HELP rbitnet_inference_calls_total Completed inference calls (excludes timeouts)\n# TYPE rbitnet_inference_calls_total counter\nrbitnet_inference_calls_total 16\n# HELP rbitnet_unauthorized_total Rejected requests (missing/invalid API key)\n# TYPE rbitnet_unauthorized_total counter\nrbitnet_unauthorized_total 0\n# HELP rbitnet_model_unloads_total Admin or idle-triggered model unload events\n# TYPE rbitnet_model_unloads_total counter\nrbitnet_model_unloads_total 0\n# HELP rbitnet_model_reloads_total Admin-triggered model reload events\n# TYPE rbitnet_model_reloads_total counter\nrbitnet_model_reloads_total 0\n# HELP rbitnet_model_reload_failures_total Failed admin-triggered model reload events\n# TYPE rbitnet_model_reload_failures_total counter\nrbitnet_model_reload_failures_total 0\n# HELP rbitnet_model_reload_ms_sum Sum of model reload wall times in milliseconds\n# TYPE rbitnet_model_reload_ms_sum counter\nrbitnet_model_reload_ms_sum 0\n# HELP rbitnet_structured_output_validation_failures_total Completions rejected by response_format JSON / schema checks\n# TYPE rbitnet_structured_output_validation_failures_total counter\nrbitnet_structured_output_validation_failures_total 0\n# HELP rbitnet_inference_ttft_ms_sum Sum of estimated time-to-first-token in milliseconds\n# TYPE rbitnet_inference_ttft_ms_sum counter\nrbitnet_inference_ttft_ms_sum 689\n# HELP rbitnet_inference_ttft_ms_avg Average time-to-first-token in milliseconds (ttft_sum / calls)\n# TYPE rbitnet_inference_ttft_ms_avg gauge\nrbitnet_inference_ttft_ms_avg 43\n# HELP rbitnet_inference_decode_tokens_per_sec Estimated decode throughput from cumulative completion_tokens and decode_ms\n# TYPE rbitnet_inference_decode_tokens_per_sec gauge\nrbitnet_inference_decode_tokens_per_sec 90.802419\n# HELP rbitnet_inference_encode_ms_sum Sum of tokenizer encode wall times in milliseconds\n# TYPE rbitnet_inference_encode_ms_sum counter\nrbitnet_inference_encode_ms_sum 0\n# HELP rbitnet_inference_prefill_ms_sum Sum of model prefill phase wall times in milliseconds\n# TYPE rbitnet_inference_prefill_ms_sum counter\nrbitnet_inference_prefill_ms_sum 678\n# HELP rbitnet_inference_decode_ms_sum Sum of model decode phase wall times in milliseconds\n# TYPE rbitnet_inference_decode_ms_sum counter\nrbitnet_inference_decode_ms_sum 11079\n# HELP rbitnet_inference_itl_us_sum Sum of average inter-token latency (microseconds per generated token) per completed inference\n# TYPE rbitnet_inference_itl_us_sum counter\nrbitnet_inference_itl_us_sum 166293\n# HELP rbitnet_inference_tpot_us_sum Sum of estimated time-per-output-token in microseconds\n# TYPE rbitnet_inference_tpot_us_sum counter\nrbitnet_inference_tpot_us_sum 166293\n# HELP rbitnet_speculative_requests_total Requests handled with speculative path\n# TYPE rbitnet_speculative_requests_total counter\nrbitnet_speculative_requests_total 0\n# HELP rbitnet_completion_tokens_total Total completion tokens (generated; from tokenizer counts when the runtime reports them)\n# TYPE rbitnet_completion_tokens_total counter\nrbitnet_completion_tokens_total 1006\n# HELP rbitnet_native_accelerated_calls_total Inference calls executed on native accelerated backend paths\n# TYPE rbitnet_native_accelerated_calls_total counter\nrbitnet_native_accelerated_calls_total 16\n# HELP rbitnet_inference_calls_by_backend_family_total Completed inference calls by backend/model family\n# TYPE rbitnet_inference_calls_by_backend_family_total counter\nrbitnet_inference_calls_by_backend_family_total{backend=\"cuda\",family=\"gpt-oss\"} 16\n# TYPE rbitnet_moe_layer_cache_hits_total counter\n# TYPE rbitnet_moe_layer_cache_misses_total counter\n# TYPE rbitnet_moe_layer_cache_evictions_total counter\n# TYPE rbitnet_moe_layer_cache_upload_bytes_total counter\n# TYPE rbitnet_moe_layer_cache_upload_ns_total counter\n# TYPE rbitnet_moe_layer_cache_lock_wait_ns_total counter\n# TYPE rbitnet_moe_layer_cache_capacity_refusals_total counter\n# TYPE rbitnet_moe_layer_cache_ready_experts gauge\n# TYPE rbitnet_moe_layer_cache_ready_bytes gauge\n# TYPE rbitnet_moe_layer_gpu_ffns_total counter\n# TYPE rbitnet_moe_layer_fused_gpu_ffns_total counter\n# TYPE rbitnet_moe_layer_fallback_ffns_total counter\n# TYPE rbitnet_moe_layer_gpu_ffn_ns_total counter\n# TYPE rbitnet_moe_layer_fallback_ffn_ns_total counter\n# TYPE rbitnet_moe_layer_timed_gpu_ffns_total counter\n# TYPE rbitnet_moe_layer_timed_fallback_ffns_total counter\n# TYPE rbitnet_moe_layer_cpu_decisions_total counter\n# TYPE rbitnet_moe_layer_gpu_decisions_total counter\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"0\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"1\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"2\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"3\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"4\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"5\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"6\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"7\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"8\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"9\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"10\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"11\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"12\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"13\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"14\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"15\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"16\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"17\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"18\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"19\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"20\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"21\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"22\"} 0\nrbitnet_moe_layer_cache_hits_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_misses_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_evictions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_upload_bytes_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_upload_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_lock_wait_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_capacity_refusals_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_ready_experts{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cache_ready_bytes{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 1219\nrbitnet_moe_layer_fused_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_gpu_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_fallback_ffn_ns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_timed_gpu_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_timed_fallback_ffns_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_cpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\nrbitnet_moe_layer_gpu_decisions_total{model_id=\"1\",model=\"Gpt-Oss-20B\",architecture=\"gpt-oss\",layer=\"23\"} 0\n# TYPE rbitnet_core_cuda_managed_memory_available gauge\nrbitnet_core_cuda_managed_memory_available 1\n# TYPE rbitnet_core_cuda_managed_limit_bytes gauge\nrbitnet_core_cuda_managed_limit_bytes 12884901888\n# TYPE rbitnet_core_cuda_managed_live_bytes gauge\nrbitnet_core_cuda_managed_live_bytes 11498891808\n# TYPE rbitnet_core_cuda_managed_peak_bytes gauge\nrbitnet_core_cuda_managed_peak_bytes 11498891808\n# HELP rbitnet_core_cuda_managed_allocations_total Successful model-managed CUDA allocations\n# TYPE rbitnet_core_cuda_managed_allocations_total counter\nrbitnet_core_cuda_managed_allocations_total 718\n# HELP rbitnet_core_cuda_managed_refusals_total Managed cap or CUDA allocation refusals\n# TYPE rbitnet_core_cuda_managed_refusals_total counter\nrbitnet_core_cuda_managed_refusals_total 0\n# TYPE rbitnet_core_cuda_managed_category_bytes gauge\nrbitnet_core_cuda_managed_category_bytes{category=\"weights\"} 11185712640\nrbitnet_core_cuda_managed_category_bytes{category=\"kv_state\"} 201326592\nrbitnet_core_cuda_managed_category_bytes{category=\"activations\"} 51788832\nrbitnet_core_cuda_managed_category_bytes{category=\"prefix\"} 60063744\nrbitnet_core_cuda_managed_category_bytes{category=\"experts\"} 0\nrbitnet_core_cuda_managed_category_bytes{category=\"scratch\"} 0\nrbitnet_core_cuda_managed_category_bytes{category=\"other\"} 0\n# HELP rbitnet_core_gpu_qwen_full_tokens_total Tokens processed through the complete dense Qwen CUDA pipeline\n# TYPE rbitnet_core_gpu_qwen_full_tokens_total counter\nrbitnet_core_gpu_qwen_full_tokens_total 0\n# HELP rbitnet_core_gpu_gpt_full_tokens_total Tokens processed through the complete fixed-bank GPT-OSS CUDA pipeline\n# TYPE rbitnet_core_gpu_gpt_full_tokens_total counter\nrbitnet_core_gpu_gpt_full_tokens_total 1219\n# HELP rbitnet_core_gpu_mla_full_tokens_total Tokens processed through the complete fixed-bank MLA CUDA pipeline\n# TYPE rbitnet_core_gpu_mla_full_tokens_total counter\nrbitnet_core_gpu_mla_full_tokens_total 0\n# HELP rbitnet_core_gpu_split_attention_queries_total Native split-KV query positions summed over actual split-enabled layers\n# TYPE rbitnet_core_gpu_split_attention_queries_total counter\nrbitnet_core_gpu_split_attention_queries_total 29256\n# HELP rbitnet_core_gpu_tensor_gemm_calls_total Actual Tensor Core GEMM kernel launches\n# TYPE rbitnet_core_gpu_tensor_gemm_calls_total counter\nrbitnet_core_gpu_tensor_gemm_calls_total 0\n# HELP rbitnet_core_speculative_verify_blocks_total Native target verification blocks\n# TYPE rbitnet_core_speculative_verify_blocks_total counter\nrbitnet_core_speculative_verify_blocks_total 0\n# HELP rbitnet_core_speculative_target_tokens_total Target input positions evaluated in verification blocks including discarded tail\n# TYPE rbitnet_core_speculative_target_tokens_total counter\nrbitnet_core_speculative_target_tokens_total 0\n# HELP rbitnet_core_speculative_rollbacks_total Verification tails truncated after rejection or stop\n# TYPE rbitnet_core_speculative_rollbacks_total counter\nrbitnet_core_speculative_rollbacks_total 0\n# HELP rbitnet_core_speculative_draft_ns_total CPU wall nanoseconds proposing token drafts\n# TYPE rbitnet_core_speculative_draft_ns_total counter\nrbitnet_core_speculative_draft_ns_total 0\n# HELP rbitnet_core_speculative_verify_ns_total Wall nanoseconds in native target verification\n# TYPE rbitnet_core_speculative_verify_ns_total counter\nrbitnet_core_speculative_verify_ns_total 0\n# HELP rbitnet_core_gpu_prefill_blocks_total CUDA matrix prefill blocks\n# TYPE rbitnet_core_gpu_prefill_blocks_total counter\nrbitnet_core_gpu_prefill_blocks_total 26\n# HELP rbitnet_core_gpu_prefill_tokens_total Tokens evaluated through CUDA block prefill\n# TYPE rbitnet_core_gpu_prefill_tokens_total counter\nrbitnet_core_gpu_prefill_tokens_total 171\n# HELP rbitnet_core_gpu_quant_gemm_calls_total Shared-weight quantized CUDA matrix projections\n# TYPE rbitnet_core_gpu_quant_gemm_calls_total counter\nrbitnet_core_gpu_quant_gemm_calls_total 5011\n# HELP rbitnet_core_expert_cache_hits_total Expert groups found in this model's device cache\n# TYPE rbitnet_core_expert_cache_hits_total counter\nrbitnet_core_expert_cache_hits_total 0\n# HELP rbitnet_core_native_moe_resident_layers_total Routed FFN stages executed by resident native graphs\n# TYPE rbitnet_core_native_moe_resident_layers_total counter\nrbitnet_core_native_moe_resident_layers_total 29256\n# HELP rbitnet_core_native_moe_fallback_layers_total Routed FFN stages using individual expert fallback, potentially with GPU projections\n# TYPE rbitnet_core_native_moe_fallback_layers_total counter\nrbitnet_core_native_moe_fallback_layers_total 0\n# HELP rbitnet_core_native_moe_resident_ns_total Resident FFN wall time including cache fills, excluding whole-token graphs\n# TYPE rbitnet_core_native_moe_resident_ns_total counter\nrbitnet_core_native_moe_resident_ns_total 0\n# HELP rbitnet_core_native_moe_fallback_ns_total Fallback routed FFN wall time including any failed native preparation\n# TYPE rbitnet_core_native_moe_fallback_ns_total counter\nrbitnet_core_native_moe_fallback_ns_total 0\n# HELP rbitnet_core_expert_cache_misses_total Expert groups absent from this model's device cache\n# TYPE rbitnet_core_expert_cache_misses_total counter\nrbitnet_core_expert_cache_misses_total 0\n# HELP rbitnet_core_expert_cache_evictions_total Unleased expert groups evicted from device cache\n# TYPE rbitnet_core_expert_cache_evictions_total counter\nrbitnet_core_expert_cache_evictions_total 0\n# HELP rbitnet_core_expert_cache_upload_bytes_total Unchanged GGUF expert bytes uploaded on cache misses\n# TYPE rbitnet_core_expert_cache_upload_bytes_total counter\nrbitnet_core_expert_cache_upload_bytes_total 0\n# HELP rbitnet_core_expert_cache_upload_ns_total Wall time allocating and uploading expert groups in nanoseconds\n# TYPE rbitnet_core_expert_cache_upload_ns_total counter\nrbitnet_core_expert_cache_upload_ns_total 0\n# HELP rbitnet_core_quant_matvec_calls_total Quantized matrix-vector calls executed by bitnet-core\n# TYPE rbitnet_core_quant_matvec_calls_total counter\nrbitnet_core_quant_matvec_calls_total 0\n# HELP rbitnet_core_quant_matvec_rows_total Logical output rows processed by quantized matrix-vector kernels\n# TYPE rbitnet_core_quant_matvec_rows_total counter\nrbitnet_core_quant_matvec_rows_total 0\n# HELP rbitnet_core_quant_matvec_ns_total Wall time spent in quantized matrix-vector kernels, nanoseconds\n# TYPE rbitnet_core_quant_matvec_ns_total counter\nrbitnet_core_quant_matvec_ns_total 0\n# HELP rbitnet_core_gpu_upload_bytes_total Bytes copied from host to GPU device by bitnet-core\n# TYPE rbitnet_core_gpu_upload_bytes_total counter\nrbitnet_core_gpu_upload_bytes_total 11199759816\n# HELP rbitnet_core_gpu_download_bytes_total Bytes copied from GPU device to host by bitnet-core\n# TYPE rbitnet_core_gpu_download_bytes_total counter\nrbitnet_core_gpu_download_bytes_total 439178276\n# HELP rbitnet_core_gpu_gemv_calls_total GPU GEMV calls issued by bitnet-core\n# TYPE rbitnet_core_gpu_gemv_calls_total counter\nrbitnet_core_gpu_gemv_calls_total 207275\n# HELP rbitnet_core_gpu_attention_calls_total Fused resident-KV CUDA attention calls issued by bitnet-core\n# TYPE rbitnet_core_gpu_attention_calls_total counter\nrbitnet_core_gpu_attention_calls_total 29256\n# HELP rbitnet_core_scratch_alloc_bytes_total Bytes allocated by runtime scratch arenas\n# TYPE rbitnet_core_scratch_alloc_bytes_total counter\nrbitnet_core_scratch_alloc_bytes_total 0\n# HELP rbitnet_core_scratch_reuse_hits_total Scratch arena buffer reuse hits\n# TYPE rbitnet_core_scratch_reuse_hits_total counter\nrbitnet_core_scratch_reuse_hits_total 0\n# HELP rbitnet_core_kv_write_bytes_total Bytes written into KV cache backends\n# TYPE rbitnet_core_kv_write_bytes_total counter\nrbitnet_core_kv_write_bytes_total 119832576\n# HELP rbitnet_core_kv_physical_pages Current physical KV pages tracked by the active backend\n# TYPE rbitnet_core_kv_physical_pages counter\nrbitnet_core_kv_physical_pages 0\n# HELP rbitnet_core_kv_new_physical_pages_total Physical KV pages newly allocated by the active backend\n# TYPE rbitnet_core_kv_new_physical_pages_total counter\nrbitnet_core_kv_new_physical_pages_total 0\n# HELP rbitnet_core_kv_reused_physical_pages_total Physical KV pages reused by the active backend\n# TYPE rbitnet_core_kv_reused_physical_pages_total counter\nrbitnet_core_kv_reused_physical_pages_total 0\n# HELP rbitnet_core_kv_quant_format_code Active KV quant format code: 0=f32/off, 1=q8, 2=q4\n# TYPE rbitnet_core_kv_quant_format_code counter\nrbitnet_core_kv_quant_format_code 0\n# HELP rbitnet_core_kv_pool_active_seqs Active sequences tracked by the process-wide paged KV pool (RBITNET_KV_POOL)\n# TYPE rbitnet_core_kv_pool_active_seqs counter\nrbitnet_core_kv_pool_active_seqs 0\n# HELP rbitnet_core_kv_pool_allocated_pages Physical KV pages allocated in the shared pool (including free-listed)\n# TYPE rbitnet_core_kv_pool_allocated_pages counter\nrbitnet_core_kv_pool_allocated_pages 0\n# HELP rbitnet_core_kv_pool_free_pages Physical KV pages currently on the shared free list\n# TYPE rbitnet_core_kv_pool_free_pages counter\nrbitnet_core_kv_pool_free_pages 0\n# HELP rbitnet_core_kv_pool_fragmentation_permille Shared KV free/allocated ratio in permille (0-1000)\n# TYPE rbitnet_core_kv_pool_fragmentation_permille counter\nrbitnet_core_kv_pool_fragmentation_permille 0\n# HELP rbitnet_core_model_load_ms_total Model load wall time in milliseconds\n# TYPE rbitnet_core_model_load_ms_total counter\nrbitnet_core_model_load_ms_total 4171\n# HELP rbitnet_core_model_loads_total Model load attempts completed by bitnet-core\n# TYPE rbitnet_core_model_loads_total counter\nrbitnet_core_model_loads_total 1\n# HELP rbitnet_core_scheduler_batches_total Scheduler batch waves planned by bitnet-core\n# TYPE rbitnet_core_scheduler_batches_total counter\nrbitnet_core_scheduler_batches_total 0\n# HELP rbitnet_core_scheduler_batch_items_total Scheduled request items handled by batch waves\n# TYPE rbitnet_core_scheduler_batch_items_total counter\nrbitnet_core_scheduler_batch_items_total 0\n# HELP rbitnet_core_prefix_cache_hits_total Prefix KV cache hits\n# TYPE rbitnet_core_prefix_cache_hits_total counter\nrbitnet_core_prefix_cache_hits_total 18\n# HELP rbitnet_core_prefix_hit Radix/prefix KV hits (Akasha prefix_hit alias of prefix_cache_hits)\n# TYPE rbitnet_core_prefix_hit counter\nrbitnet_core_prefix_hit 18\n# HELP rbitnet_core_prefix_cache_misses_total Prefix KV cache misses\n# TYPE rbitnet_core_prefix_cache_misses_total counter\nrbitnet_core_prefix_cache_misses_total 1\n# HELP rbitnet_core_prefix_cache_bytes_saved_total Estimated KV bytes saved by prefix cache hits\n# TYPE rbitnet_core_prefix_cache_bytes_saved_total counter\nrbitnet_core_prefix_cache_bytes_saved_total 174882816\n# HELP rbitnet_core_speculative_draft_tokens_total Tokens proposed by speculative draft paths\n# TYPE rbitnet_core_speculative_draft_tokens_total counter\nrbitnet_core_speculative_draft_tokens_total 0\n# HELP rbitnet_core_speculative_verified_tokens_total Tokens verified or completed by the target model after speculative draft\n# TYPE rbitnet_core_speculative_verified_tokens_total counter\nrbitnet_core_speculative_verified_tokens_total 0\n# HELP rbitnet_core_speculative_accepted_tokens_total Draft tokens accepted by the lightweight verifier path\n# TYPE rbitnet_core_speculative_accepted_tokens_total counter\nrbitnet_core_speculative_accepted_tokens_total 0\n# HELP rbitnet_core_draft_accept Draft tokens accepted (Akasha draft_accept alias of speculative_accepted_tokens)\n# TYPE rbitnet_core_draft_accept counter\nrbitnet_core_draft_accept 0\n# HELP rbitnet_core_cuda_graph_replays_total Decode steps recorded under CUDA graph mode\n# TYPE rbitnet_core_cuda_graph_replays_total counter\nrbitnet_core_cuda_graph_replays_total 1074\n# HELP rbitnet_core_scheduler_decode_waves_total Decode wave steps planned by continuous batching scheduler\n# TYPE rbitnet_core_scheduler_decode_waves_total counter\nrbitnet_core_scheduler_decode_waves_total 0\n# HELP rbitnet_core_scheduler_prefill_chunks_total Prefill chunks admitted under Sarathi-style token budget\n# TYPE rbitnet_core_scheduler_prefill_chunks_total counter\nrbitnet_core_scheduler_prefill_chunks_total 0\n# HELP rbitnet_core_scheduler_stall_free_iters_total Stall-free schedule iterations (decode-first then prefill chunks)\n# TYPE rbitnet_core_scheduler_stall_free_iters_total counter\nrbitnet_core_scheduler_stall_free_iters_total 0\n# HELP rbitnet_core_scheduler_iteration_budget_tokens Configured / last iteration token budget for continuous batching\n# TYPE rbitnet_core_scheduler_iteration_budget_tokens counter\nrbitnet_core_scheduler_iteration_budget_tokens 0\n# HELP rbitnet_core_quant_matvec_by_type_total Quantized matvec calls by GGML type\n# TYPE rbitnet_core_quant_matvec_by_type_total counter\n# HELP rbitnet_core_memory_budget_checks_total Load-time memory budget evaluations\n# TYPE rbitnet_core_memory_budget_checks_total counter\nrbitnet_core_memory_budget_checks_total 1\n# HELP rbitnet_core_memory_budget_refusals_total Loads refused for exceeding RAM/VRAM budgets\n# TYPE rbitnet_core_memory_budget_refusals_total counter\nrbitnet_core_memory_budget_refusals_total 0\n# HELP rbitnet_core_memory_budget_estimated_load_bytes Last estimated weights+KV footprint at budget check\n# TYPE rbitnet_core_memory_budget_estimated_load_bytes gauge\nrbitnet_core_memory_budget_estimated_load_bytes 11611750656\n# HELP rbitnet_core_memory_budget_weight_bytes Last GGUF tensor payload size at budget check\n# TYPE rbitnet_core_memory_budget_weight_bytes gauge\nrbitnet_core_memory_budget_weight_bytes 11611750656\n# HELP rbitnet_core_memory_budget_kv_estimate_bytes Last F32 KV estimate used in budget check\n# TYPE rbitnet_core_memory_budget_kv_estimate_bytes gauge\nrbitnet_core_memory_budget_kv_estimate_bytes 0\n# HELP rbitnet_process_rss_bytes Process resident working set in bytes (Linux proc or Windows PSAPI; omitted if unavailable)\n# TYPE rbitnet_process_rss_bytes gauge\nrbitnet_process_rss_bytes 11712503808\n# HELP rbitnet_process_vram_measurement_available Whether process VRAM is measured (currently unavailable)\n# TYPE rbitnet_process_vram_measurement_available gauge\nrbitnet_process_vram_measurement_available 0\n"
+    }
+  ]
+}
