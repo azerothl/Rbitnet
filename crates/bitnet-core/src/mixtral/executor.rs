@@ -18,6 +18,8 @@ pub struct MixtralExecutor {
     pub backend_impl: Box<dyn ComputeBackend>,
     pub gguf: Arc<GgufArchive>,
     pub tokenizer_path: PathBuf,
+    context_capacity: usize,
+    prompt_tokenizer: Arc<LoadedPromptTokenizer>,
     runtime: Mutex<Option<MixtralRuntime>>,
 }
 
@@ -40,12 +42,17 @@ impl MixtralExecutor {
             backend_impl: backend,
             gguf,
             tokenizer_path,
+            context_capacity: runtime.context_capacity(),
+            prompt_tokenizer: Arc::clone(&runtime.tokenizer),
             runtime: Mutex::new(Some(runtime)),
         })
     }
 }
 
 impl crate::model::ModelExecutor for MixtralExecutor {
+    fn context_capacity(&self) -> Option<usize> {
+        Some(self.context_capacity)
+    }
     fn family(&self) -> &'static str {
         "mixtral"
     }
@@ -59,7 +66,7 @@ impl crate::model::ModelExecutor for MixtralExecutor {
     }
 
     fn is_ready(&self) -> bool {
-        self.tokenizer_path.is_file()
+        true
     }
 
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
@@ -73,7 +80,7 @@ impl crate::model::ModelExecutor for MixtralExecutor {
     }
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
-        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        let tok = &self.prompt_tokenizer;
         Ok(tok.encode_ids(prompt, true)?.len() as u32)
     }
 

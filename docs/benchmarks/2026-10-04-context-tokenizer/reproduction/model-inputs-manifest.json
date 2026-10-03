@@ -1,0 +1,62 @@
+[
+  {
+    "repo": "unsloth/Qwen3.5-0.8B-GGUF",
+    "revision": "6ab461498e2023f6e3c1baea90a8f0fe38ab64d0",
+    "filename": "Qwen3.5-0.8B-Q8_0.gguf",
+    "size": 811843840,
+    "git_blob_id": "d6a76f24990cc8dc8d5211af50adcff0a12a88ba",
+    "sha256": "0ad885ffd4bb022fc4f0d33a3308fa108ef8613159d3b3a67e23abca056b7a6c",
+    "directory": "D:/Rbitnet-benchmark-models/qwen35-08b",
+    "license": "apache-2.0",
+    "actual_sha256": "0ad885ffd4bb022fc4f0d33a3308fa108ef8613159d3b3a67e23abca056b7a6c",
+    "path": "D:\\Rbitnet-benchmark-models\\qwen35-08b\\Qwen3.5-0.8B-Q8_0.gguf"
+  },
+  {
+    "repo": "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
+    "revision": "731a9fc8f06f5f5e2db8a0cf9d256197eb6e05d1",
+    "filename": "mistral-7b-instruct-v0.1.Q4_K_M.gguf",
+    "size": 4368438944,
+    "git_blob_id": "03e7deae05c6259fec3550c97e554b67c2559f9e",
+    "sha256": "14466f9d658bf4a79f96c3f3f22759707c291cac4e62fea625e80c7d32169991",
+    "directory": "D:/Rbitnet-benchmark-models/mistral7b-sp",
+    "license": "apache-2.0",
+    "actual_sha256": "14466f9d658bf4a79f96c3f3f22759707c291cac4e62fea625e80c7d32169991",
+    "path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\mistral-7b-instruct-v0.1.Q4_K_M.gguf"
+  },
+  {
+    "repo": "mistralai/Mistral-7B-Instruct-v0.1",
+    "revision": "ec5deb64f2c6e6fa90c1abf74a91d5c93a9669ca",
+    "filename": "tokenizer.model",
+    "size": 493443,
+    "git_blob_id": "8b443ef19c2a19acc3ac64fb9c3db4a72921dff6",
+    "sha256": "dadfd56d766715c61d2ef780a525ab43b8e6da4de6865bda3d95fdef5e134055",
+    "directory": "D:/Rbitnet-benchmark-models/mistral7b-sp",
+    "license": "apache-2.0",
+    "actual_sha256": "dadfd56d766715c61d2ef780a525ab43b8e6da4de6865bda3d95fdef5e134055",
+    "path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\tokenizer.model"
+  },
+  {
+    "repo": "mistralai/Mistral-7B-Instruct-v0.1",
+    "revision": "ec5deb64f2c6e6fa90c1abf74a91d5c93a9669ca",
+    "filename": "tokenizer.json",
+    "size": 1795188,
+    "git_blob_id": "1e9f59c515a01088e1f7f72b68ab99f92d15fb96",
+    "sha256": null,
+    "directory": "D:/Rbitnet-benchmark-models/mistral7b-sp",
+    "license": "apache-2.0",
+    "actual_sha256": "11c08db21487c885d8c792180f0be237f6a261b89a46f128a6a80a3aa4bd1720",
+    "path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\tokenizer.json"
+  },
+  {
+    "repo": "mistralai/Mistral-7B-Instruct-v0.1",
+    "revision": "ec5deb64f2c6e6fa90c1abf74a91d5c93a9669ca",
+    "filename": "tokenizer_config.json",
+    "size": 2103,
+    "git_blob_id": "f63c0374bad221568938f908e397a38d9f0dfac0",
+    "sha256": null,
+    "directory": "D:/Rbitnet-benchmark-models/mistral7b-sp",
+    "license": "apache-2.0",
+    "actual_sha256": "475361439e5c012de9dffdedc416a66a50f1a29f7aa80b375ba014fb13d6bb8a",
+    "path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\tokenizer_config.json"
+  }
+]

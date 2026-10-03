@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "E:\devs\Rbitnet\target\performance-cache\run_context_live.py", line 46, in <module>
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4)as pool:parallel=list(pool.map(complete,[body]*4))
+                                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\concurrent\futures\_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\concurrent\futures\_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\azero\anaconda3\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\devs\Rbitnet\target\performance-cache\run_context_live.py", line 34, in complete
+    r=requests.post(server.base+'/v1/chat/completions',json=body,timeout=120);r.raise_for_status();return r.json()
+                                                                              ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\site-packages\requests\models.py", line 1024, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 503 Server Error: Service Unavailable for url: http://127.0.0.1:18138/v1/chat/completions

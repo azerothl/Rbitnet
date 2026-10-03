@@ -259,6 +259,9 @@ fn rope_inv_freq_from_factors(
 /// Returns `Ok(())` if every Llama weight matrix uses a GGML type we can mmap-GEMV.
 pub fn llama_mmap_quant_supported(archive: &GgufArchive) -> Result<()> {
     let cfg = LlamaConfig::from_gguf(archive)?;
+    llama_mmap_quant_supported_with_config(archive, &cfg)
+}
+fn llama_mmap_quant_supported_with_config(archive: &GgufArchive, cfg: &LlamaConfig) -> Result<()> {
     let check = |names: &[&str]| -> Result<()> {
         let t = archive.tensor_first_of(names).ok_or_else(|| {
             BitNetError::Inference(format!("mmap check: missing tensor {:?}", names))
@@ -291,10 +294,6 @@ pub fn llama_mmap_quant_supported(archive: &GgufArchive) -> Result<()> {
         check(&[&format!("{p}.ffn_down.weight")])?;
     }
     Ok(())
-}
-
-fn llama_mmap_quant_supported_ok(archive: &GgufArchive) -> bool {
-    llama_mmap_quant_supported(archive).is_ok()
 }
 
 #[derive(Clone, Debug)]
@@ -917,27 +916,35 @@ impl LlamaModel {
         archive: Arc<GgufArchive>,
         backend_kind: BackendKind,
     ) -> Result<Self> {
+        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
+        Self::from_gguf_arc_with_config(archive, backend_kind, cfg)
+    }
+    pub(crate) fn from_gguf_arc_with_config(
+        archive: Arc<GgufArchive>,
+        backend_kind: BackendKind,
+        cfg: LlamaConfig,
+    ) -> Result<Self> {
         if backend_kind == BackendKind::Hybrid || backend_kind == BackendKind::Cuda {
-            return Self::from_gguf_device_offload_internal(archive, backend_kind);
+            return Self::from_gguf_device_offload_internal(archive, backend_kind, cfg);
         }
         let mode = llama_weight_mode_from_env();
         match mode {
-            LlamaWeightMode::Dense => Self::from_gguf_dense_internal(archive),
+            LlamaWeightMode::Dense => Self::from_gguf_dense_internal(archive, cfg),
             LlamaWeightMode::MmapQuant => {
-                if llama_mmap_quant_supported(archive.as_ref()).is_err() {
+                if llama_mmap_quant_supported_with_config(archive.as_ref(), &cfg).is_err() {
                     return Err(BitNetError::Inference(
                         "mmap_quant: unsupported ggml_type on one or more Llama matrices \
                          (see ggml::ggml_type_supported_mmap_matvec)"
                             .into(),
                     ));
                 }
-                Self::from_gguf_mmap_internal(archive)
+                Self::from_gguf_mmap_internal(archive, cfg)
             }
             LlamaWeightMode::Auto => {
-                if llama_mmap_quant_supported_ok(archive.as_ref()) {
-                    Self::from_gguf_mmap_internal(archive)
+                if llama_mmap_quant_supported_with_config(archive.as_ref(), &cfg).is_ok() {
+                    Self::from_gguf_mmap_internal(archive, cfg)
                 } else {
-                    Self::from_gguf_dense_internal(archive)
+                    Self::from_gguf_dense_internal(archive, cfg)
                 }
             }
         }
@@ -946,8 +953,8 @@ impl LlamaModel {
     fn from_gguf_device_offload_internal(
         archive: Arc<GgufArchive>,
         backend_kind: BackendKind,
+        cfg: LlamaConfig,
     ) -> Result<Self> {
-        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
         let plan = LlamaOffloadPlan::for_quant_archive(backend_kind, &cfg, archive.as_ref())?;
         let cuda = if plan.enabled {
             CudaRuntime::try_load()
@@ -1128,8 +1135,7 @@ impl LlamaModel {
         })
     }
 
-    fn from_gguf_dense_internal(archive: Arc<GgufArchive>) -> Result<Self> {
-        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
+    fn from_gguf_dense_internal(archive: Arc<GgufArchive>, cfg: LlamaConfig) -> Result<Self> {
         let n_embd = cfg.n_embd;
         let n_vocab = cfg.n_vocab;
         let n_ff = cfg.n_ff;
@@ -1301,8 +1307,7 @@ impl LlamaModel {
         Ok(())
     }
 
-    fn from_gguf_mmap_internal(archive: Arc<GgufArchive>) -> Result<Self> {
-        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
+    fn from_gguf_mmap_internal(archive: Arc<GgufArchive>, cfg: LlamaConfig) -> Result<Self> {
         let n_embd = cfg.n_embd;
         let n_ff = cfg.n_ff;
         let n_embd_kv = cfg.n_kv * cfg.head_dim;

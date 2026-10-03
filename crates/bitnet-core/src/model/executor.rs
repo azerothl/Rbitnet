@@ -13,6 +13,10 @@ use crate::stream::StreamEvent;
 use crate::timings::PhaseTimings;
 
 pub trait ModelExecutor: Send + Sync {
+    /// Actual configured capacity; None for unbounded toy/stub executors.
+    fn context_capacity(&self) -> Option<usize> {
+        None
+    }
     fn family(&self) -> &'static str;
     fn backend(&self) -> BackendKind;
     fn backend_accelerated(&self) -> bool;
@@ -97,6 +101,8 @@ pub struct LlamaExecutor {
     pub tokenizer_path: PathBuf,
     /// Reported [`ModelExecutor::family`] (defaults to `llama` for standard checkpoints).
     pub family_reported: &'static str,
+    config: crate::llama::LlamaConfig,
+    prompt_tokenizer: Arc<LoadedPromptTokenizer>,
     runtime: Mutex<Option<LlamaRuntime>>,
 }
 
@@ -106,15 +112,22 @@ impl LlamaExecutor {
         backend: Box<dyn ComputeBackend>,
         gguf: Arc<GgufArchive>,
         tokenizer_path: PathBuf,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let config = crate::llama::LlamaConfig::from_gguf(gguf.as_ref())?;
+        let prompt_tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            &tokenizer_path,
+            &gguf,
+        )?);
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
+            config,
+            prompt_tokenizer,
             family_reported: "llama",
             runtime: Mutex::new(None),
-        }
+        })
     }
 
     /// Same weights/tokenizer as [`Self::new`], but [`ModelExecutor::family`] reports `architecture_slug`
@@ -125,25 +138,35 @@ impl LlamaExecutor {
         gguf: Arc<GgufArchive>,
         tokenizer_path: PathBuf,
         architecture_slug: &'static str,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let config = crate::llama::LlamaConfig::from_gguf(gguf.as_ref())?;
+        let prompt_tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            &tokenizer_path,
+            &gguf,
+        )?);
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
+            config,
+            prompt_tokenizer,
             family_reported: architecture_slug,
             runtime: Mutex::new(None),
-        }
+        })
     }
 }
 
 impl ModelExecutor for LlamaExecutor {
+    fn context_capacity(&self) -> Option<usize> {
+        Some(self.config.max_seq)
+    }
     fn family(&self) -> &'static str {
         self.family_reported
     }
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
-        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        let tok = &self.prompt_tokenizer;
         Ok(tok
             .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())?
             .len() as u32)
@@ -157,7 +180,7 @@ impl ModelExecutor for LlamaExecutor {
     }
 
     fn is_ready(&self) -> bool {
-        self.tokenizer_path.is_file()
+        true
     }
 
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
@@ -190,10 +213,12 @@ impl ModelExecutor for LlamaExecutor {
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
                 Arc::clone(&self.gguf),
                 &self.tokenizer_path,
                 self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
             )?);
         }
         slot.as_mut()
@@ -211,10 +236,12 @@ impl ModelExecutor for LlamaExecutor {
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
                 Arc::clone(&self.gguf),
                 &self.tokenizer_path,
                 self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
             )?);
         }
         let runtime = slot.as_mut().unwrap();
@@ -240,10 +267,12 @@ impl ModelExecutor for LlamaExecutor {
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
                 Arc::clone(&self.gguf),
                 &self.tokenizer_path,
                 self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
             )?);
         }
         slot.as_mut()
@@ -257,6 +286,8 @@ pub struct BitNetNativeExecutor {
     pub backend_impl: Box<dyn ComputeBackend>,
     pub gguf: Arc<GgufArchive>,
     pub tokenizer_path: PathBuf,
+    config: crate::llama::LlamaConfig,
+    prompt_tokenizer: Arc<LoadedPromptTokenizer>,
     runtime: Mutex<Option<LlamaRuntime>>,
 }
 
@@ -266,24 +297,34 @@ impl BitNetNativeExecutor {
         backend: Box<dyn ComputeBackend>,
         gguf: Arc<GgufArchive>,
         tokenizer_path: PathBuf,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let config = crate::llama::LlamaConfig::from_gguf(gguf.as_ref())?;
+        let prompt_tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            &tokenizer_path,
+            &gguf,
+        )?);
+        Ok(Self {
             backend_kind,
             backend_impl: backend,
             gguf,
             tokenizer_path,
+            config,
+            prompt_tokenizer,
             runtime: Mutex::new(None),
-        }
+        })
     }
 }
 
 impl ModelExecutor for BitNetNativeExecutor {
+    fn context_capacity(&self) -> Option<usize> {
+        Some(self.config.max_seq)
+    }
     fn family(&self) -> &'static str {
         "bitnet"
     }
 
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
-        let tok = LoadedPromptTokenizer::from_path(&self.tokenizer_path)?;
+        let tok = &self.prompt_tokenizer;
         Ok(tok
             .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())?
             .len() as u32)
@@ -298,7 +339,7 @@ impl ModelExecutor for BitNetNativeExecutor {
     }
 
     fn is_ready(&self) -> bool {
-        self.tokenizer_path.is_file()
+        true
     }
 
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
@@ -323,10 +364,12 @@ impl ModelExecutor for BitNetNativeExecutor {
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
                 Arc::clone(&self.gguf),
                 &self.tokenizer_path,
                 self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
             )?);
         }
         slot.as_mut()
@@ -346,10 +389,12 @@ impl ModelExecutor for BitNetNativeExecutor {
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
         if slot.is_none() {
-            *slot = Some(LlamaRuntime::load(
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
                 Arc::clone(&self.gguf),
                 &self.tokenizer_path,
                 self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
             )?);
         }
         slot.as_mut()
@@ -424,9 +469,7 @@ impl ModelExecutor for BitNetExecutor {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
-        let generated = self
-            .toy
-            .generate(prompt, max_tokens, sampling.temperature);
+        let generated = self.toy.generate(prompt, max_tokens, sampling.temperature);
         let words: Vec<&str> = generated.split_whitespace().collect();
         let mut full = String::new();
         for w in words {

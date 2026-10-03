@@ -29,5 +29,5 @@ pub fn build_llama_executor(
         backend,
         gguf,
         tokenizer_path,
-    )))
+    )?))
 }

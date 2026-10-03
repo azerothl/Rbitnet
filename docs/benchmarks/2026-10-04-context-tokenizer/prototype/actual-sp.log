@@ -1,0 +1,21 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 11.11s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 8 tests
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::internal_controls_preserve_multi_turn_ids_and_plain_text_normalization ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::malformed_proto_is_refused_without_dropping_unknown_fields_or_wrapping_lengths ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::mismatched_vocabulary_ids_or_embedding_rows_are_refused ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_actual_mistral_sentencepiece_ids_and_generations_match_hf ... Actual Mistral normalization: original SentencePiece exact; HF converted-policy differences=2; multi-turn controls preserved
+ACTUAL_SP_MISTRAL backend=Cpu: 32000 pieces metadata, original normalizer, boundaries, 6 reference/12 replay generations match HF on equal input IDs; 6 SP multi-turn generations replay exactly; Paris present
+ACTUAL_SP_MISTRAL backend=Cuda: 32000 pieces metadata, original normalizer, boundaries, 6 reference/12 replay generations match HF on equal input IDs; 6 SP multi-turn generations replay exactly; Paris present
+ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_trained_sentencepiece_reference_ids_normalizer_and_metadata ... Trained SentencePiece reference: vocab=1000, ordinary IDs/normalizer/4 BOS-EOS policies/interior controls exact
+ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_bos_eos_flags_match_metadata_and_do_not_duplicate_templates ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_skip_special_false_exposes_controls_without_replacing_normalizer ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::word_model_refuses_lost_interior_controls_instead_of_encoding_unk ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 128 filtered out; finished in 53.05s
+
