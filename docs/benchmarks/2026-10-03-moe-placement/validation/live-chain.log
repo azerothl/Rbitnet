@@ -1,0 +1,9 @@
+gpt-oss-20b-cpu scoped cache, placement, unload and reload passed
+gpt-oss-20b-cpu disconnect, sampling, penalties, stop and serialized concurrent requests passed
+gpt-oss-20b-adaptive scoped cache, placement, unload and reload passed
+gpt-oss-20b-adaptive disconnect, sampling, penalties, stop and serialized concurrent requests passed
+glm47-flash-cpu scoped cache, placement, unload and reload passed
+glm47-flash-cpu disconnect, sampling, penalties, stop and serialized concurrent requests passed
+glm47-flash-adaptive scoped cache, placement, unload and reload passed
+glm47-flash-adaptive disconnect, sampling, penalties, stop and serialized concurrent requests passed
+All four MoE live policy/metrics/lifecycle/streaming suites passed.

@@ -18,6 +18,7 @@ pub(crate) struct Weights {
     pub residency_budget_bytes: usize,
     pub state_reserve_bytes: usize,
     pub(super) expert_cache: Option<super::expert_cache::SharedCache>,
+    pub(super) moe_metrics: Option<Arc<super::moe_metrics::Model>>,
 }
 
 impl Weights {
@@ -47,6 +48,7 @@ impl Weights {
             residency_budget_bytes: 0,
             state_reserve_bytes: 0,
             expert_cache: None,
+            moe_metrics: None,
         };
         if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid) {
             return Ok(result);
@@ -111,12 +113,14 @@ impl Weights {
         let placement_budget = budget.checked_sub(priority).ok_or_else(|| {
             BitNetError::Inference("CUDA weight budget cannot reserve resident routers".into())
         })?;
+        let experts_cpu = super::moe_cost::Execution::from_env() == super::moe_cost::Execution::Cpu;
         let requested_cache = std::env::var("RBITNET_MOE_CACHE_MB")
             .ok()
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(0)
             .saturating_mul(1024 * 1024)
             .min(budget);
+        let requested_cache = if experts_cpu { 0 } else { requested_cache };
         let dynamic_api = crate::ggml::load_cuda_quant_library().is_some_and(|lib| unsafe {
             lib.get::<unsafe extern "C" fn()>(b"rbitnet_cuda_moe_dynamic_create\0")
                 .is_ok()
@@ -160,7 +164,10 @@ impl Weights {
             )
         });
         for t in tensors {
-            if cache_enabled && t.name.contains("_exps.") && t.dimensions.len() == 3 {
+            if (cache_enabled || experts_cpu)
+                && t.name.contains("_exps.")
+                && t.dimensions.len() == 3
+            {
                 continue;
             }
             if !ggml_type_supports_cuda_quant(t.ggml_type) || t.dimensions[1] < 128 {
@@ -175,12 +182,14 @@ impl Weights {
                 .iter()
                 .try_fold(1usize, |n, &d| n.checked_mul(d as usize))
                 .ok_or_else(|| BitNetError::Inference("matrix size overflow".into()))?;
-            let device = CudaDeviceQuantMatrix::from_payload(
+            let device = CudaDeviceQuantMatrix::from_archive_range(
                 Some(&rt),
-                t.ggml_type,
-                payload.to_vec(),
+                Arc::clone(&result.archive),
+                t,
+                0,
                 rows,
                 cols,
+                false,
             )?;
             if device.is_device_resident() {
                 result.resident_bytes += device.bytes();
@@ -216,6 +225,19 @@ impl Weights {
         Ok(result)
     }
 
+    pub(super) fn enable_moe_metrics(
+        &mut self,
+        metrics: Arc<super::moe_metrics::Model>,
+    ) -> Result<()> {
+        if let Some(cache) = &self.expert_cache {
+            cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?
+                .set_metrics(Arc::clone(&metrics));
+        }
+        self.moe_metrics = Some(metrics);
+        Ok(())
+    }
     pub fn tensor(&self, name: &str) -> Result<&GgufTensorInfo> {
         self.archive
             .tensor_by_name(name)
@@ -267,6 +289,40 @@ impl Weights {
         )
     }
 
+    /// Cost calibration must bypass resident views and CUDA host kernels.
+    pub(super) fn expert_cpu(&self, name: &str, expert: usize, x: &[f32]) -> Result<Vec<f32>> {
+        let t = self.tensor(name)?;
+        if t.dimensions.len() != 3 || expert >= t.dimensions[2] as usize {
+            return Err(BitNetError::Inference(format!(
+                "{name}: expert out of bounds"
+            )));
+        }
+        let cols = usize::try_from(t.dimensions[0])
+            .map_err(|_| BitNetError::Inference("expert columns overflow".into()))?;
+        let rows = usize::try_from(t.dimensions[1])
+            .map_err(|_| BitNetError::Inference("expert rows overflow".into()))?;
+        let bytes = ggml_row_size(t.ggml_type, cols as u64)?
+            .checked_mul(rows)
+            .ok_or_else(|| BitNetError::Inference("expert size overflow".into()))?;
+        let start = expert
+            .checked_mul(bytes)
+            .ok_or_else(|| BitNetError::Inference("expert offset overflow".into()))?;
+        let end = start
+            .checked_add(bytes)
+            .ok_or_else(|| BitNetError::Inference("expert end overflow".into()))?;
+        let payload = self
+            .archive
+            .tensor_payload(t)?
+            .get(start..end)
+            .ok_or_else(|| BitNetError::Inference("expert bank truncated".into()))?;
+        crate::ggml::QuantMatvecKernel::cpu_parallel().matvec_payload(
+            t.ggml_type,
+            payload,
+            x,
+            cols,
+            rows,
+        )
+    }
     pub fn heads(&self, name: &str, x: &[f32]) -> Result<Vec<f32>> {
         let t = self.tensor(name)?;
         if t.dimensions.len() != 3 {

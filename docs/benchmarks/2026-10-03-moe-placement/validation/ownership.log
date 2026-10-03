@@ -1,0 +1,12 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.20s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 4 tests
+test backend::transfer_tests::auto_selection_respects_mixtral_cpu_executor_without_gpu_probe ... ok
+test backend::transfer_tests::loader_only_prototypes_never_claim_native_acceleration ... ok
+test backend::transfer_tests::optional_native_completion_guard_finishes_pinned_download_on_early_return ... ok
+test backend::transfer_tests::optional_pageable_upload_and_refill_finish_before_private_stream_consumption ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 122 filtered out; finished in 0.22s
+

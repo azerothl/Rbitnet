@@ -893,9 +893,82 @@ impl CudaDeviceMatrix {
 /// Host payload is always retained for CPU golden / fallback. When CUDA loads, the same
 /// bytes are uploaded once; matvec prefers optional `*_matvec_device` symbols from
 /// `librbitnet_cuda_quant`, else falls back to host [`crate::ggml::matvec_payload_quant`].
+enum QuantHostBacking {
+    Owned(Vec<u8>),
+    Mapped {
+        archive: Arc<crate::gguf::GgufArchive>,
+        tensor: crate::gguf::GgufTensorInfo,
+        start: usize,
+        length: usize,
+    },
+}
+impl std::fmt::Debug for QuantHostBacking {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Owned(bytes) => f
+                .debug_struct("OwnedQuantBytes")
+                .field("length", &bytes.len())
+                .finish(),
+            Self::Mapped {
+                tensor,
+                start,
+                length,
+                ..
+            } => f
+                .debug_struct("MappedQuantBytes")
+                .field("tensor", &tensor.name)
+                .field("start", start)
+                .field("length", length)
+                .finish(),
+        }
+    }
+}
+impl std::ops::Deref for QuantHostBacking {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Owned(bytes) => bytes,
+            Self::Mapped {
+                archive,
+                tensor,
+                start,
+                length,
+            } => {
+                // Both tensor descriptor and checked span are immutable owners.
+                &archive
+                    .tensor_payload(tensor)
+                    .expect("validated immutable quant tensor")[*start..*start + *length]
+            }
+        }
+    }
+}
+impl QuantHostBacking {
+    fn mapped(
+        archive: Arc<crate::gguf::GgufArchive>,
+        tensor: &crate::gguf::GgufTensorInfo,
+        start: usize,
+        length: usize,
+    ) -> crate::error::Result<Self> {
+        let end = start.checked_add(length).ok_or_else(|| {
+            crate::error::BitNetError::Inference("mapped quant range overflow".into())
+        })?;
+        if length == 0 || end > archive.tensor_payload(tensor)?.len() {
+            return Err(crate::error::BitNetError::Inference(
+                "mapped quant range out of bounds".into(),
+            ));
+        }
+        Ok(Self::Mapped {
+            archive,
+            tensor: tensor.clone(),
+            start,
+            length,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CudaDeviceQuantMatrix {
-    host: Arc<Vec<u8>>,
+    host: Arc<QuantHostBacking>,
     device: Option<Arc<CudaDeviceBuffer>>,
     rt: Option<Arc<CudaRuntime>>,
     ggml_type: u32,
@@ -923,27 +996,27 @@ impl CudaDeviceQuantMatrix {
         )
     }
 
-    pub(crate) fn from_expert_payload(
-        rt: &Arc<CudaRuntime>,
-        ggml_type: u32,
-        payload: Vec<u8>,
-        out_rows: usize,
-        in_cols: usize,
-    ) -> crate::error::Result<Self> {
-        Self::from_payload_category(
-            Some(rt),
-            ggml_type,
-            payload,
-            out_rows,
-            in_cols,
-            device_memory::EXPERTS,
-        )
-    }
-
     fn from_payload_category(
         rt: Option<&Arc<CudaRuntime>>,
         ggml_type: u32,
         payload: Vec<u8>,
+        out_rows: usize,
+        in_cols: usize,
+        category: u32,
+    ) -> crate::error::Result<Self> {
+        Self::from_backing_category(
+            rt,
+            ggml_type,
+            QuantHostBacking::Owned(payload),
+            out_rows,
+            in_cols,
+            category,
+        )
+    }
+    fn from_backing_category(
+        rt: Option<&Arc<CudaRuntime>>,
+        ggml_type: u32,
+        payload: QuantHostBacking,
         out_rows: usize,
         in_cols: usize,
         category: u32,
@@ -1006,6 +1079,7 @@ impl CudaDeviceQuantMatrix {
     }
 
     /// Reuse an exclusively owned, compatible expert slot after its last step.
+    #[cfg(test)]
     pub(crate) fn refill(&mut self, payload: Vec<u8>) -> crate::error::Result<bool> {
         if payload.len() != self.bytes() {
             return Err(crate::error::BitNetError::Inference(
@@ -1027,7 +1101,77 @@ impl CudaDeviceQuantMatrix {
                 "expert refill CUDA upload failed".into(),
             ));
         }
-        self.host = Arc::new(payload);
+        self.host = Arc::new(QuantHostBacking::Owned(payload));
+        Ok(true)
+    }
+    /// Immutable GGUF span: keep the original mmap for CPU fallback without a
+    /// permanent Vec mirror. The caller chooses weights or experts allocation.
+    pub(crate) fn from_archive_range(
+        rt: Option<&Arc<CudaRuntime>>,
+        archive: Arc<crate::gguf::GgufArchive>,
+        tensor: &crate::gguf::GgufTensorInfo,
+        start: usize,
+        out_rows: usize,
+        in_cols: usize,
+        expert: bool,
+    ) -> crate::error::Result<Self> {
+        let row_bytes = crate::ggml::ggml_row_size(tensor.ggml_type, in_cols as u64)?;
+        if tensor.dimensions.first().copied() != Some(in_cols as u64)
+            || row_bytes == 0
+            || start % row_bytes != 0
+        {
+            return Err(crate::error::BitNetError::Inference(
+                "mapped quant row geometry mismatch".into(),
+            ));
+        }
+        let length = row_bytes.checked_mul(out_rows).ok_or_else(|| {
+            crate::error::BitNetError::Inference("mapped quant size overflow".into())
+        })?;
+        let backing = QuantHostBacking::mapped(archive, tensor, start, length)?;
+        Self::from_backing_category(
+            rt,
+            tensor.ggml_type,
+            backing,
+            out_rows,
+            in_cols,
+            if expert {
+                device_memory::EXPERTS
+            } else {
+                device_memory::WEIGHTS
+            },
+        )
+    }
+    pub(crate) fn refill_archive_range(
+        &mut self,
+        archive: Arc<crate::gguf::GgufArchive>,
+        tensor: &crate::gguf::GgufTensorInfo,
+        start: usize,
+    ) -> crate::error::Result<bool> {
+        if tensor.ggml_type != self.ggml_type
+            || tensor.dimensions.first().copied() != Some(self.in_cols as u64)
+            || start % self.row_bytes != 0
+        {
+            return Err(crate::error::BitNetError::Inference(
+                "mapped expert refill type mismatch".into(),
+            ));
+        }
+        let backing = QuantHostBacking::mapped(archive, tensor, start, self.bytes())?;
+        let (Some(device), Some(rt)) = (&mut self.device, &self.rt) else {
+            return Ok(false);
+        };
+        let Some(buffer) = Arc::get_mut(device) else {
+            return Ok(false);
+        };
+        if !rt.copy_host_to_device(
+            buffer.as_device_ptr(),
+            backing.as_ptr().cast(),
+            backing.len(),
+        ) {
+            return Err(crate::error::BitNetError::Inference(
+                "mapped expert refill CUDA upload failed".into(),
+            ));
+        }
+        self.host = Arc::new(backing);
         Ok(true)
     }
 
@@ -1717,3 +1861,7 @@ mod transfer_tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "backend/mapped_quant_tests.rs"]
+mod mapped_quant_tests;
