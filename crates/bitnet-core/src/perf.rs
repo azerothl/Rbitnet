@@ -803,3 +803,8 @@ pub fn prometheus_text() -> String {
     }
     s
 }
+
+/// Live model/layer metrics hold only counters; unloading removes their labels.
+pub fn moe_layer_prometheus_text() -> String {
+    crate::native::moe_metrics::prometheus_text()
+}

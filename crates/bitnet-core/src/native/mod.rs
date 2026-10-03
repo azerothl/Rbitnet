@@ -5,12 +5,14 @@ mod expert_cache;
 pub(crate) mod graph;
 pub(crate) mod head;
 mod moe;
+mod moe_cost;
+pub(crate) mod moe_metrics;
 mod output;
 pub(crate) mod prefix;
-pub(crate) mod qwen_full;
-pub(crate) mod qwen_recurrent;
 #[cfg(test)]
 mod quant_gemm;
+pub(crate) mod qwen_full;
+pub(crate) mod qwen_recurrent;
 #[cfg(test)]
 mod split_attention;
 pub(crate) mod weights;

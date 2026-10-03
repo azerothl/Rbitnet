@@ -1,0 +1,4 @@
+validation/** -text
+live/** -text
+performance/** -text
+scripts/*.py -text

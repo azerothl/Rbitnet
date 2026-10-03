@@ -1,0 +1,9 @@
+{"mode": "full-split", "cycle": 0, "prompt": 0, "prefill_ms": 9384.0, "decode_ms": 1858.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 0, "prompt": 1, "prefill_ms": 6663.0, "decode_ms": 1675.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 0, "prompt": 2, "prefill_ms": 978.0, "decode_ms": 195.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 1, "prompt": 0, "prefill_ms": 6579.0, "decode_ms": 1697.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 1, "prompt": 1, "prefill_ms": 6562.0, "decode_ms": 1660.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 1, "prompt": 2, "prefill_ms": 963.0, "decode_ms": 185.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 2, "prompt": 0, "prefill_ms": 6585.0, "decode_ms": 1683.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 2, "prompt": 1, "prefill_ms": 6555.0, "decode_ms": 1711.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "full-split", "cycle": 2, "prompt": 2, "prefill_ms": 995.0, "decode_ms": 188.0, "hits": 0.0, "blocks": 0.0, "matches": true}
