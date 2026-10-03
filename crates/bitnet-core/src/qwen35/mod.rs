@@ -8,7 +8,7 @@ pub mod cuda_ctx;
 pub mod executor;
 
 mod attention;
-mod config;
+pub(crate) mod config;
 pub(crate) mod gdn;
 mod moe;
 pub(crate) mod qmatvec;

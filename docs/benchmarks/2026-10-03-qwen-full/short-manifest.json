@@ -1,0 +1,96 @@
+{
+  "environment": {
+    "ollama_kv_dtype": "default f16",
+    "ram_bytes": 66157723648,
+    "driver": "610.88",
+    "ollama_version": "0.35.0",
+    "llama_rbitnet_kv_dtype": "f32",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "logical_cores": 16,
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "gpu_vram_mib": 16376,
+    "llama_cpp_build": "b11351",
+    "llama_cpp_commit": "631109b34",
+    "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+    "rbitnet_commit": "9a7eaf6 + local Qwen full pipeline",
+    "os": "Microsoft Windows NT 10.0.26220.0",
+    "physical_cores": 8,
+    "rbitnet_branch": "codex/qwen-full-resident",
+    "rbitnet_context_capacity": 8192,
+    "cuda_execution": "Qwen dense full token pipeline, Rust sampling or GPU greedy reduction; prefix disabled",
+    "cuda_quant_library_sha256": "fd9e688e7118f30d0382823704ac2af00c0d97eb9ebbde674311b98819141b29",
+    "rbitnet_exe_sha256": "a61b961c47df862758e0fa6a0ba35909a35b053dfc1b7444b29c15545a4ee433",
+    "shared_cuda_head_default": "off; RBITNET_CUDA_HEAD=1 opts in"
+  },
+  "llama_cpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351\\llama-server.exe",
+  "context": 1024,
+  "cwd": "E:\\devs\\Rbitnet",
+  "models": [
+    {
+      "id": "llama32-1b",
+      "gguf": "C:\\Users\\azero\\.ollama\\models\\blobs\\sha256-3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+      "ollama": "rbitnet-bench-llama32-1b:q4_k_m",
+      "parameter_count": 1235814432,
+      "quantization": "Q4_K_M",
+      "architecture": "llama",
+      "tokenizer": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+    },
+    {
+      "id": "qwen35-2b",
+      "gguf": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+      "ollama": "rbitnet-bench-qwen35-2b:q8_0",
+      "parameter_count": 1881825088,
+      "quantization": "Q8_0",
+      "architecture": "qwen35",
+      "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+      "source": {
+        "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+        "filename": "Qwen3.5-2B-Q8_0.gguf",
+        "repo": "unsloth/Qwen3.5-2B-GGUF"
+      }
+    },
+    {
+      "id": "gpt-oss-20b",
+      "gguf": "D:\\Rbitnet-benchmark-models\\gpt-oss-20b-GGUF\\gpt-oss-20b-Q4_K_M.gguf",
+      "ollama": "rbitnet-bench-gpt-oss-20b:q4_k_m",
+      "parameter_count": 20914757184,
+      "quantization": "Q4_K_M",
+      "architecture": "gpt-oss",
+      "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\gpt-oss-20b\\tokenizer.json",
+      "source": {
+        "revision": "d449b42d93e1c2c7bda5312f5c25c8fb91dfa9b4",
+        "filename": "gpt-oss-20b-Q4_K_M.gguf",
+        "repo": "unsloth/gpt-oss-20b-GGUF"
+      },
+      "expert_count": 32,
+      "expert_used_count": 4
+    },
+    {
+      "id": "glm47-flash",
+      "gguf": "D:\\Rbitnet-benchmark-models\\GLM-4.7-Flash-GGUF\\GLM-4.7-Flash-Q4_K_M.gguf",
+      "ollama": "rbitnet-bench-glm47-flash:q4_k_m",
+      "parameter_count": 29943393920,
+      "quantization": "Q4_K_M",
+      "architecture": "deepseek2",
+      "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\GLM-4.7-Flash\\tokenizer.json",
+      "source": {
+        "repo": "unsloth/GLM-4.7-Flash-GGUF",
+        "filename": "GLM-4.7-Flash-Q4_K_M.gguf",
+        "revision": "0d32489ecb9db6d2a4fc93bd27ef01519f95474d"
+      },
+      "expert_count": 64,
+      "expert_used_count": 4
+    }
+  ],
+  "cuda_quant_library": "E:\\devs\\Rbitnet\\target\\qwen-full\\cuda\\rbitnet_cuda_quant64.dll",
+  "llama_gpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351-cuda\\llama-server.exe",
+  "threads": 16,
+  "rbitnet": "E:\\devs\\Rbitnet\\target\\qwen-full\\short\\rbitnet.exe",
+  "ollama_url": "http://127.0.0.1:11436",
+  "ollama_pid": 52008,
+  "port": 18107,
+  "rbitnet_env": {
+    "RBITNET_CUDA_QWEN_FULL": "1",
+    "RBITNET_REQUIRE_QWEN_FULL": "1"
+  }
+}

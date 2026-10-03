@@ -1,0 +1,188 @@
+{
+  "warmup_excluded": true,
+  "control_prompt_excluded": true,
+  "modes": {
+    "baseline": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 14255.056900001364,
+        "min": 14167.935500008753,
+        "max": 14330.009000012069
+      },
+      "prefill_ms": {
+        "median": 12628.5,
+        "min": 12527.0,
+        "max": 12661.0
+      },
+      "decode_ms": {
+        "median": 1617.0,
+        "min": 1605.0,
+        "max": 1646.0
+      },
+      "upload_bytes": {
+        "median": 1067376640.0,
+        "min": 1067376640.0,
+        "max": 1067376640.0
+      },
+      "download_bytes": {
+        "median": 1272455168.0,
+        "min": 1272455168.0,
+        "max": 1272455168.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 79.15920877506998,
+        "min": 77.76427703523694,
+        "max": 79.75077881619937
+      }
+    },
+    "prefix": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 1707.8536999979406,
+        "min": 1676.6015000030166,
+        "max": 1749.442900007125
+      },
+      "prefill_ms": {
+        "median": 21.5,
+        "min": 21.0,
+        "max": 22.0
+      },
+      "decode_ms": {
+        "median": 1659.0,
+        "min": 1633.0,
+        "max": 1706.0
+      },
+      "upload_bytes": {
+        "median": 122331136.0,
+        "min": 122331136.0,
+        "max": 122331136.0
+      },
+      "download_bytes": {
+        "median": 218365952.0,
+        "min": 218365952.0,
+        "max": 218365952.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 77.16848299493022,
+        "min": 75.0293083235639,
+        "max": 78.38334353949786
+      }
+    },
+    "full": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 9869.145099997695,
+        "min": 9836.545600002864,
+        "max": 10124.931300000753
+      },
+      "prefill_ms": {
+        "median": 8620.5,
+        "min": 8595.0,
+        "max": 8829.0
+      },
+      "decode_ms": {
+        "median": 1236.5,
+        "min": 1234.0,
+        "max": 1275.0
+      },
+      "upload_bytes": {
+        "median": 13170972.0,
+        "min": 13170972.0,
+        "max": 13170972.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 103.51814667774195,
+        "min": 100.3921568627451,
+        "max": 103.72771474878444
+      }
+    },
+    "full-prefix": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 1289.7267999942414,
+        "min": 1280.7757999980822,
+        "max": 1294.3111000058707
+      },
+      "prefill_ms": {
+        "median": 10.0,
+        "min": 10.0,
+        "max": 10.0
+      },
+      "decode_ms": {
+        "median": 1266.5,
+        "min": 1263.0,
+        "max": 1275.0
+      },
+      "upload_bytes": {
+        "median": 1049088.0,
+        "min": 1049088.0,
+        "max": 1049088.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 101.06594547955078,
+        "min": 100.3921568627451,
+        "max": 101.34600158353128
+      }
+    }
+  },
+  "response_count": 36,
+  "response_matches": 36,
+  "sse_pairs": 12,
+  "sse_matches": 12,
+  "memory": {
+    "baseline": {
+      "peak_process_tree_rss_bytes": 4633268224,
+      "gpu_global_baseline_mib": 2104.0,
+      "gpu_global_peak_mib": 4749.0,
+      "gpu_global_peak_delta_mib": 2645.0
+    },
+    "prefix": {
+      "peak_process_tree_rss_bytes": 4786671616,
+      "gpu_global_baseline_mib": 2017.0,
+      "gpu_global_peak_mib": 4698.0,
+      "gpu_global_peak_delta_mib": 2681.0
+    },
+    "full": {
+      "peak_process_tree_rss_bytes": 4437151744,
+      "gpu_global_baseline_mib": 2013.0,
+      "gpu_global_peak_mib": 4728.0,
+      "gpu_global_peak_delta_mib": 2715.0
+    },
+    "full-prefix": {
+      "peak_process_tree_rss_bytes": 4432089088,
+      "gpu_global_baseline_mib": 2019.0,
+      "gpu_global_peak_mib": 4901.0,
+      "gpu_global_peak_delta_mib": 2882.0
+    }
+  }
+}
