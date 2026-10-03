@@ -80,10 +80,19 @@ pub async fn messages(
     if let Err(r) = crate::check_auth(&state, &headers) {
         return Ok(*r);
     }
+    let eng = match crate::available_engine(&state, None).await {
+        Ok(engine) => engine,
+        Err((code, message)) => return Ok((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(
+                json!({"type":"error","error":{"type":"api_error","message":message,"code":code}}),
+            ),
+        )
+            .into_response()),
+    };
 
     let prompt = anthropic_messages_to_prompt(&req.messages);
     let sampling = SamplingOptions::from_temperature(req.temperature);
-    let eng = state.engine.read().await.clone();
     let id = format!("msg_{}", uuid::Uuid::new_v4());
 
     if req.stream == Some(true) {

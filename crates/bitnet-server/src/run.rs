@@ -107,9 +107,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
             let loaded_for_app = loaded_id.clone();
             (
                 engine,
-                Box::new(move || {
-                    create_app_with_registry(eng, cfg, reg_arc, loaded_for_app, None)
-                }),
+                Box::new(move || create_app_with_registry(eng, cfg, reg_arc, loaded_for_app, None)),
             )
         }
         Ok(None) => {
@@ -216,6 +214,7 @@ pub async fn try_idle_unload(state: &AppState, idle_ms: u64) -> bool {
     {
         let mut w = state.engine.write().await;
         *w = Arc::new(stub_engine());
+        *state.last_load_error.write().await = None;
     }
     {
         let mut lid = state.loaded_registry_model_id.write().await;

@@ -172,7 +172,7 @@ Production-grade throughput still needs fused forwards and GPU-resident KV — s
 
 ## Research-backed priorities (2026-09)
 
-Folded from product research (engine landscape + arXiv ideas for a **native-first GGUF/BitNet** server). Criteria: fit to existing `bitnet-core` hooks > local impact (tok/s, RSS, concurrency ≥4) > cost > mature open code. **Native-first CPU remains the default path**; FlashAttention-2 / FA3 stay **deferred GPU_NATIVE research**, not a near-term default.
+Folded from product research (engine landscape + arXiv ideas for a **native-first GGUF/BitNet** server). Criteria: fit to existing `bitnet-core` hooks > local impact (tok/s, RSS, concurrency ≥4) > cost > mature open code. Native CPU paths remain available; automatic backend selection uses CUDA/ROCm only for supported architectures, and CPU for Qwen3/Mixtral. Current measured CUDA paths and opt-in gates are documented in [PERFORMANCE_CACHE_STACK.md](PERFORMANCE_CACHE_STACK.md).
 
 Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) (*Research backlog*). Product-facing quick wins (metrics UX, runner-proxy, provenance) also align with [FUTURE_DIFFERENTIATION.md](FUTURE_DIFFERENTIATION.md).
 
@@ -183,21 +183,21 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **Metrics surface** — TTFT, decode tok/s, `prefix_hit`, `draft_accept` on `/metrics` + `/ui` | Akasha scrape + akasha-os Models UX parity | Extend [AKASHA_METRICS.md](AKASHA_METRICS.md) series; status line in UI |
 | **Model provenance** — SHA256 in catalog/recipes; optional `RBITNET_TRUSTED_MODELS_ONLY` | Ecosystem security (GGUF trust) | Harden `rbitnet models install` / recipes |
 | **Structured output** stabilize | SGLang-style FSM already env-flagged | `RBITNET_STRUCTURED_OUTPUT` + JSON-schema tests |
-| **Speculative verify + metrics** | [2211.17192](https://arxiv.org/abs/2211.17192) | Solidify accept path; expose `draft_accept` |
-| **Prompt-lookup / n-gram draft** (no second GGUF) | PLD / [2304.04487](https://arxiv.org/abs/2304.04487); akasha-os already does PLD | Wire into existing speculative scheduler |
+| **Speculative verify + metrics** | [2211.17192](https://arxiv.org/abs/2211.17192) | Native Llama CUDA block verification, rollback and target-coupled sampling opt-in; a small GGUF draft and recurrent rollback remain [#97](https://github.com/azerothl/Rbitnet/issues/97) |
+| **Prompt-lookup / n-gram draft** (no second GGUF) | PLD / [2304.04487](https://arxiv.org/abs/2304.04487) | Token-based Llama PLD with measured cost guard; [published ablation](benchmarks/2026-10-03-speculative-llama/README.md), no general default activation |
 | **BitNet recipe / null-loss criteria** | [2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285) | Document `bitnet-b158` pack + golden gate |
 | **Runner-proxy multi-model path** | Ollama-like ops; [RUNNER_PROXY_SPEC.md](RUNNER_PROXY_SPEC.md) | Document as recommended multi-model default |
 | **Bench gate vs llama.cpp** | Credible Akasha SLO | One frozen line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) per release |
-| **Load-failure → retry** | akasha-os P16 pattern | State machine without process restart |
+| **Load-failure → retry** | akasha-os P16 pattern | HTTP 503 for readiness and inference after failed startup or real-model eviction; successful admin reload recovers; valid previous model survives a failed reload |
 
 ### Medium
 
 | Item | Why / cite | Action |
 |------|------------|--------|
-| **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | **Shipped opt-in** — pool + paged attention path; measure RSS/fragmentation @ concurrency 1/4/8 via `scripts/bench_paged_kv.sh` |
+| **Paged KV E2E** | PagedAttention [2309.06180](https://arxiv.org/abs/2309.06180) | CPU opt-in pool and attention; native CUDA dense buffers remain, GPU paging is [#92](https://github.com/azerothl/Rbitnet/issues/92) |
 | **Radix prefix (agent prompts)** | SGLang / RadixAttention [2312.07104](https://arxiv.org/abs/2312.07104) | **Shipped opt-in** — LRU radix + LCP reuse; `rbitnet_core_prefix_hit`; unit gate ≥70% after warm-up |
 | **Chunked prefill + stall-free schedule** | Sarathi-Serve [2403.02310](https://arxiv.org/abs/2403.02310) (Orca iteration-level batching) | **Shipped MVP** — `RBITNET_ITERATION_TOKEN_BUDGET` + stall-free waves; fused multi-seq e2e stalled ([#46](https://github.com/azerothl/Rbitnet/issues/46)) |
-| **Continuous batching fused waves** | vLLM-class serving | [#46](https://github.com/azerothl/Rbitnet/issues/46) — kernel hook shipped; e2e Llama batched forward deferred ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)) |
+| **Continuous batching fused waves** | vLLM-class serving | Scheduler hooks exist; tested CUDA HTTP requests still serialize model execution. Actual shared-weight multi-sequence forward is [#96](https://github.com/azerothl/Rbitnet/issues/96) |
 | **CPU tiled attention + KV Q8** | SlimAttention [2407.07304](https://arxiv.org/abs/2407.07304) | **KV Q8 shipped**; **SlimAttention 1D tile** (`llama::slim_attention`) + drift gate (#39); **decode opt-in wired** (`RBITNET_SLIM_ATTENTION=1`, optional `RBITNET_SLIM_ATTENTION_TILE`). |
 | **KV asymmetry (after Q8)** | KIVI [2402.02750](https://arxiv.org/abs/2402.02750) | **No-go this spike** — stay on Q8 default; go/no-go + PPL/RSS gates in [KIVI_DECISION.md](KIVI_DECISION.md) (#39) |
 | **BitNet ternary kernels (Rust SIMD)** | bitnet.cpp [2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144) | **Shipped microbench** — I2_S pack + TL2-LUT in `kernels.rs`; `scripts/bench_bitnet_kernels.sh`; row in BENCHMARKS_RESULTS |
@@ -222,7 +222,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 | **FlashAttention-2 / FA3 as default path** | [2205.14135](https://arxiv.org/abs/2205.14135), [2307.08691](https://arxiv.org/abs/2307.08691) | GPU-first; keep as GPU_NATIVE research only — **native-first CPU stays default** |
 | **INT-FlashAttention / TurboAttention** | [2409.16997](https://arxiv.org/abs/2409.16997), [2412.08585](https://arxiv.org/abs/2412.08585) | After GPU_NATIVE epic |
 | **DistServe disagg as product default** | [2401.09670](https://arxiv.org/abs/2401.09670) | Cluster KV transfer — out of local/desktop target |
-| **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Follow-up after #25 exit (Mixtral MoE spike shipped); DeepSeek MLA / non-Mixtral MoE graphs still refused |
+| **DeepSeek-V3 MoE / MLA native** | [2412.19437](https://arxiv.org/abs/2412.19437) | Split-MLA GLM-4.7-Flash is validated on the documented GGUF; complete V3/other layouts require architecture-specific validation. GPT-OSS and GLM resident pipelines remain [#88](https://github.com/azerothl/Rbitnet/issues/88)/[#89](https://github.com/azerothl/Rbitnet/issues/89) |
 | **Lookahead Decoding (Jacobi / tree attention)** | [2402.02057](https://arxiv.org/abs/2402.02057); [#44](https://github.com/azerothl/Rbitnet/issues/44) | **Wontfix for now** after PLD (#18) — see [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
 | **Medusa / EAGLE / EAGLE-2** | [2401.10774](https://arxiv.org/abs/2401.10774), [2401.15077](https://arxiv.org/abs/2401.15077), [2406.16858](https://arxiv.org/abs/2406.16858) | Draft heads / fine-tune — incompatible with download-and-serve GGUF |
 | **AWQ / GPTQ as primary format** | ecosystem | Conflicts with GGUF native-first; Akasha may route vLLM elsewhere |

@@ -15,7 +15,7 @@ pub use run::{run_server, try_idle_unload};
 
 use std::convert::Infallible;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -64,7 +64,9 @@ pub struct AppState {
     /// Which registry key’s GGUF is currently in [`AppState::engine`] (`None` after stub unload).
     pub loaded_registry_model_id: Arc<RwLock<Option<String>>>,
     pub last_inference_activity_ms: Arc<AtomicU64>,
-    /// Last model load failure (startup or admin reload). Cleared on successful load.
+    /// Retained across idle/admin eviction; a replacement stub cannot serve model requests.
+    pub requires_loaded_model: Arc<AtomicBool>,
+    /// Last model load failure (startup or admin reload). Cleared on successful load or unload.
     /// When set with a stub/non-ready engine, `/ready` reports `LoadFailed`.
     pub last_load_error: Arc<RwLock<Option<String>>>,
 }
@@ -89,6 +91,7 @@ pub fn build_app_state_with_registry(
     loaded_registry_model_id: Option<String>,
 ) -> AppState {
     let max_concurrent = config.max_concurrent;
+    let requires_loaded_model = engine.has_gguf();
     AppState {
         engine: Arc::new(RwLock::new(engine)),
         config: Arc::clone(&config),
@@ -98,6 +101,7 @@ pub fn build_app_state_with_registry(
         registry: Arc::new(RwLock::new(registry)),
         loaded_registry_model_id: Arc::new(RwLock::new(loaded_registry_model_id)),
         last_inference_activity_ms: Arc::new(AtomicU64::new(crate::unix_now_ms())),
+        requires_loaded_model: Arc::new(AtomicBool::new(requires_loaded_model)),
         last_load_error: Arc::new(RwLock::new(None)),
     }
 }
@@ -283,28 +287,12 @@ async fn ui_app() -> impl IntoResponse {
 }
 
 async fn readiness(State(state): State<AppState>) -> impl IntoResponse {
-    let eng = state.engine.read().await;
-    let load_err = state.last_load_error.read().await.clone();
-    // Startup / hard LoadFailed: stub (no GGUF) + recorded error → block ready until reload.
-    // Soft reload failure that keeps a previous ready GGUF engine stays ready.
-    if let Some(err) = load_err.as_ref() {
-        if !eng.has_gguf() {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                format!(
-                    "not ready: LoadFailed — {err}\n\
-                     retry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN (no process restart)\n"
-                ),
-            );
-        }
-    }
-    if eng.is_ready() {
-        (StatusCode::OK, "ready\n".to_string())
-    } else {
-        (
+    match available_engine(&state, None).await {
+        Ok(_) => (StatusCode::OK, "ready\n".to_string()),
+        Err((code, message)) => (
             StatusCode::SERVICE_UNAVAILABLE,
-            "not ready: tokenizer missing or model not configured\n".to_string(),
-        )
+            format!("not ready: {code} — {message}\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN\n"),
+        ),
     }
 }
 
@@ -313,14 +301,15 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     text.push_str(&bitnet_core::perf::prometheus_text());
     text.push_str(&bitnet_core::memory_budget::prometheus_text());
     if let Some(rss) = process_rss_bytes() {
-        text.push_str("# HELP rbitnet_process_rss_bytes Process resident set size in bytes (Linux /proc; 0 if unavailable)\n");
+        text.push_str("# HELP rbitnet_process_rss_bytes Process resident working set in bytes (Linux proc or Windows PSAPI; omitted if unavailable)\n");
         text.push_str("# TYPE rbitnet_process_rss_bytes gauge\n");
         text.push_str(&format!("rbitnet_process_rss_bytes {rss}\n"));
     }
-    // VRAM is N/A on the default CPU path; keep a documented zero gauge for Akasha parity.
-    text.push_str("# HELP rbitnet_process_vram_bytes Device VRAM bytes (0 on CPU-default path; see GPU_NATIVE_ROADMAP)\n");
-    text.push_str("# TYPE rbitnet_process_vram_bytes gauge\n");
-    text.push_str("rbitnet_process_vram_bytes 0\n");
+    // No process-scoped VRAM query is implemented. An unavailable measurement
+    // must not masquerade as an observed zero on an active GPU runtime.
+    text.push_str("# HELP rbitnet_process_vram_measurement_available Whether process VRAM is measured (currently unavailable)\n");
+    text.push_str("# TYPE rbitnet_process_vram_measurement_available gauge\n");
+    text.push_str("rbitnet_process_vram_measurement_available 0\n");
     (
         [(
             axum::http::header::CONTENT_TYPE,
@@ -330,7 +319,41 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     )
 }
 
-/// Best-effort process RSS from `/proc/self/status` (Linux). Returns `None` off-Linux.
+/// A replacement engine after LoadFailed/idle unload is not an intentional
+/// model completion stub. Keep explicit smoke/toy modes usable, and allow the
+/// last valid GGUF to serve when a reload of another model fails.
+pub(crate) async fn available_engine(
+    state: &AppState,
+    selected: Option<Arc<Engine>>,
+) -> Result<Arc<Engine>, (&'static str, String)> {
+    // Pin the validated engine for the entire request, including prompt encoding
+    // and SSE. An unload/reload must not turn a pending request into a stub response.
+    let shared = state.engine.read().await;
+    let engine = selected.unwrap_or_else(|| Arc::clone(&shared));
+    let no_model = !engine.has_gguf() && engine.openai_model_id().is_none();
+    let load_error = state.last_load_error.read().await.clone();
+    if no_model {
+        if let Some(message) = load_error {
+            return Err(("LoadFailed", message));
+        }
+        if state.requires_loaded_model.load(Ordering::Relaxed) {
+            return Err((
+                "ModelUnloaded",
+                "model unloaded; reload a model before requesting inference".into(),
+            ));
+        }
+    }
+    if !engine.is_ready() {
+        Err((
+            "ModelNotReady",
+            "model is not ready; configure and load a supported GGUF/tokenizer".into(),
+        ))
+    } else {
+        Ok(engine)
+    }
+}
+
+/// Resident working set from the host OS; no synthetic zero for unavailable APIs.
 fn process_rss_bytes() -> Option<u64> {
     #[cfg(target_os = "linux")]
     {
@@ -343,7 +366,40 @@ fn process_rss_bytes() -> Option<u64> {
         }
         None
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "windows")]
+    {
+        #[repr(C)]
+        struct Counters {
+            cb: u32,
+            page_faults: u32,
+            peak_working_set: usize,
+            working_set: usize,
+            quota_peak_paged: usize,
+            quota_paged: usize,
+            quota_peak_nonpaged: usize,
+            quota_nonpaged: usize,
+            pagefile: usize,
+            peak_pagefile: usize,
+        }
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GetCurrentProcess() -> *mut std::ffi::c_void;
+        }
+        #[link(name = "psapi")]
+        extern "system" {
+            fn GetProcessMemoryInfo(
+                process: *mut std::ffi::c_void,
+                counters: *mut Counters,
+                size: u32,
+            ) -> i32;
+        }
+        let mut counters: Counters = unsafe { std::mem::zeroed() };
+        counters.cb = std::mem::size_of::<Counters>() as u32;
+        let status =
+            unsafe { GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) };
+        (status != 0).then_some(counters.working_set as u64)
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
         None
     }
@@ -422,7 +478,11 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
     let model_id = eng
         .openai_model_id()
         .unwrap_or_else(|| "rbitnet-stub".into());
-    let metadata = eng.model_metadata();
+    let mut metadata = eng.model_metadata();
+    if !eng.has_gguf() && eng.openai_model_id().is_none() {
+        metadata.ready &= !state.requires_loaded_model.load(Ordering::Relaxed)
+            && state.last_load_error.read().await.is_none();
+    }
     Json(json!({
         "object": "list",
         "data": [
@@ -525,6 +585,7 @@ async fn admin_unload(
     {
         let mut eng = state.engine.write().await;
         *eng = Arc::new(stub_engine());
+        *state.last_load_error.write().await = None;
     }
     {
         let mut lid = state.loaded_registry_model_id.write().await;
@@ -694,6 +755,9 @@ async fn reload_registry_engine(
     );
     {
         let mut eng = state.engine.write().await;
+        state
+            .requires_loaded_model
+            .store(new_engine.has_gguf(), Ordering::Relaxed);
         *eng = new_engine;
     }
     {
@@ -735,6 +799,9 @@ async fn reload_single_engine(
         .unwrap_or_else(|| "rbitnet-stub".into());
     {
         let mut eng = state.engine.write().await;
+        state
+            .requires_loaded_model
+            .store(new_engine.has_gguf(), Ordering::Relaxed);
         *eng = new_engine;
     }
     {
@@ -1094,9 +1161,12 @@ fn apply_stop_sequences(mut text: String, stop: Option<&StopSequence>) -> String
 }
 
 /// Load GGUF for `requested` when it differs from the in-memory registry selection (engine-first lock order).
-async fn ensure_registry_model_loaded(state: &AppState, requested: &str) -> Result<(), Response> {
+async fn ensure_registry_model_loaded(
+    state: &AppState,
+    requested: &str,
+) -> Result<Arc<Engine>, Response> {
     let Some(reg) = state.registry.read().await.clone() else {
-        return Ok(());
+        return Ok(state.engine.read().await.clone());
     };
     let Some(entry) = reg.models.get(requested) else {
         return Err((
@@ -1114,7 +1184,7 @@ async fn ensure_registry_model_loaded(state: &AppState, requested: &str) -> Resu
         let eng = state.engine.read().await;
         let lid = state.loaded_registry_model_id.read().await;
         if lid.as_deref() == Some(requested) && eng.has_gguf() {
-            return Ok(());
+            return Ok(Arc::clone(&eng));
         }
     }
     let new_engine = match Engine::load_path_with_overrides(
@@ -1139,10 +1209,13 @@ async fn ensure_registry_model_loaded(state: &AppState, requested: &str) -> Resu
     {
         let mut eng = state.engine.write().await;
         let mut lid = state.loaded_registry_model_id.write().await;
-        *eng = new_engine;
+        state
+            .requires_loaded_model
+            .store(new_engine.has_gguf(), Ordering::Relaxed);
+        *eng = Arc::clone(&new_engine);
         *lid = Some(requested.to_string());
     }
-    Ok(())
+    Ok(new_engine)
 }
 
 async fn default_request_model(state: &AppState, requested: Option<&str>) -> String {
@@ -1265,7 +1338,7 @@ async fn chat_completions(
 
     let request_model = default_request_model(&state, req.model.as_deref()).await;
 
-    if let Some(reg) = state.registry.read().await.clone() {
+    let selected_engine = if let Some(reg) = state.registry.read().await.clone() {
         if !reg.models.contains_key(&request_model) {
             state
                 .metrics
@@ -1285,12 +1358,15 @@ async fn chat_completions(
             )
                 .into_response());
         }
-        if let Err(r) = ensure_registry_model_loaded(&state, &request_model).await {
-            state
-                .metrics
-                .chat_errors_total
-                .fetch_add(1, Ordering::Relaxed);
-            return Ok(r);
+        match ensure_registry_model_loaded(&state, &request_model).await {
+            Ok(engine) => Some(engine),
+            Err(r) => {
+                state
+                    .metrics
+                    .chat_errors_total
+                    .fetch_add(1, Ordering::Relaxed);
+                return Ok(r);
+            }
         }
     } else {
         let expected = state.expected_request_model_id.read().await;
@@ -1314,13 +1390,28 @@ async fn chat_completions(
                     .into_response());
             }
         }
-    }
+        None
+    };
 
     state
         .last_inference_activity_ms
         .store(unix_now_ms(), Ordering::Relaxed);
 
-    let tokenizer_chat_template = state.engine.read().await.tokenizer_chat_template();
+    let engine = match available_engine(&state, selected_engine).await {
+        Ok(engine) => engine,
+        Err((code, message)) => {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error":{"message":message,"type":"rbitnet_error","code":code}})),
+            )
+                .into_response());
+        }
+    };
+    let tokenizer_chat_template = engine.tokenizer_chat_template();
     let prompt = match try_build_prompt_from_messages_with_tokenizer_template(
         &req.messages,
         tokenizer_chat_template.as_deref(),
@@ -1377,8 +1468,7 @@ async fn chat_completions(
     }
 
     if let Some(cap) = state.config.max_prompt_tokens {
-        let eng = state.engine.read().await.clone();
-        match eng.count_prompt_tokens(&prompt) {
+        match engine.count_prompt_tokens(&prompt) {
             Ok(n) if n > cap => {
                 state
                     .metrics
@@ -1460,7 +1550,6 @@ async fn chat_completions(
         structured_json,
     };
     clear_inference_cancel();
-    let engine = state.engine.read().await.clone();
 
     if req.stream == Some(true) {
         return Ok(live_stream_chat_completion(
