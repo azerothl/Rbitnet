@@ -16,6 +16,7 @@ pub struct PerfSnapshot {
     pub gpu_attention_calls: u64,
     pub gpu_qwen_full_tokens: u64,
     pub gpu_split_attention_queries: u64,
+    pub gpu_tensor_gemm_calls: u64,
     pub scratch_alloc_bytes: u64,
     pub scratch_reuse_hits: u64,
     pub kv_write_bytes: u64,
@@ -69,6 +70,7 @@ struct PerfCounters {
     gpu_attention_calls: AtomicU64,
     gpu_qwen_full_tokens: AtomicU64,
     gpu_split_attention_queries: AtomicU64,
+    gpu_tensor_gemm_calls: AtomicU64,
     scratch_alloc_bytes: AtomicU64,
     scratch_reuse_hits: AtomicU64,
     kv_write_bytes: AtomicU64,
@@ -168,6 +170,11 @@ pub(crate) fn record_split_attention(queries: u64) {
     perf()
         .gpu_split_attention_queries
         .fetch_add(queries, Ordering::Relaxed);
+}
+pub(crate) fn record_gpu_tensor_gemm(calls: u64) {
+    perf()
+        .gpu_tensor_gemm_calls
+        .fetch_add(calls, Ordering::Relaxed);
 }
 
 pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u64) {
@@ -342,6 +349,7 @@ pub fn snapshot() -> PerfSnapshot {
         gpu_attention_calls: p.gpu_attention_calls.load(Ordering::Relaxed),
         gpu_qwen_full_tokens: p.gpu_qwen_full_tokens.load(Ordering::Relaxed),
         gpu_split_attention_queries: p.gpu_split_attention_queries.load(Ordering::Relaxed),
+        gpu_tensor_gemm_calls: p.gpu_tensor_gemm_calls.load(Ordering::Relaxed),
         scratch_alloc_bytes: p.scratch_alloc_bytes.load(Ordering::Relaxed),
         scratch_reuse_hits: p.scratch_reuse_hits.load(Ordering::Relaxed),
         kv_write_bytes: p.kv_write_bytes.load(Ordering::Relaxed),
@@ -403,6 +411,11 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_gpu_split_attention_queries_total",
         "Native split-KV query positions summed over actual split-enabled layers",
         snap.gpu_split_attention_queries
+    );
+    counter!(
+        "rbitnet_core_gpu_tensor_gemm_calls_total",
+        "Actual Tensor Core GEMM kernel launches",
+        snap.gpu_tensor_gemm_calls
     );
     counter!(
         "rbitnet_core_speculative_verify_blocks_total",

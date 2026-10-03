@@ -1,0 +1,20 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 9.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+
+thread 'llama::resident::tests::optional_real_tensor_prefill_teacher_forcing_matches_simt' (53140) panicked at crates\bitnet-core\src\llama\resident.rs:740:9:
+assertion failed: crate::perf::snapshot().gpu_tensor_gemm_calls > before
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test llama::resident::tests::optional_real_tensor_prefill_teacher_forcing_matches_simt ... FAILED
+
+failures:
+
+failures:
+    llama::resident::tests::optional_real_tensor_prefill_teacher_forcing_matches_simt
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 100 filtered out; finished in 3.06s
+
+error: test failed, to rerun pass `-p bitnet-core --lib`
