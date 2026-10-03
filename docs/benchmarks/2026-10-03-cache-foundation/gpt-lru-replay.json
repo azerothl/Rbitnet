@@ -1,0 +1,282 @@
+{
+  "trace": "target\\performance-cache\\moe-http\\gpt-oss-20b-4096-lru\\traces\\gpt-oss-61996-0.jsonl",
+  "router_events": 46032,
+  "results": [
+    {
+      "budget_mib": 512,
+      "policy": "lru",
+      "hits": 0,
+      "misses": 184128,
+      "evictions": 184088,
+      "upload_bytes": 2434024857600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 37422,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 110976,
+          "upload_bytes": 1467013939200
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 73152,
+          "upload_bytes": 967010918400
+        }
+      }
+    },
+    {
+      "budget_mib": 512,
+      "policy": "lfu",
+      "hits": 0,
+      "misses": 184128,
+      "evictions": 184088,
+      "upload_bytes": 2434024857600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 37422,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 110976,
+          "upload_bytes": 1467013939200
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 73152,
+          "upload_bytes": 967010918400
+        }
+      }
+    },
+    {
+      "budget_mib": 512,
+      "policy": "least-stale",
+      "hits": 0,
+      "misses": 184128,
+      "evictions": 184088,
+      "upload_bytes": 2434024857600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 37422,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 110976,
+          "upload_bytes": 1467013939200
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 73152,
+          "upload_bytes": 967010918400
+        }
+      }
+    },
+    {
+      "budget_mib": 2048,
+      "policy": "lru",
+      "hits": 111655,
+      "misses": 72473,
+      "evictions": 72311,
+      "upload_bytes": 958035081600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 8079,
+      "peak_bytes": 2141510400,
+      "phases": {
+        "prefill": {
+          "hits": 64575,
+          "misses": 46401,
+          "upload_bytes": 613384099200
+        },
+        "decode": {
+          "hits": 47080,
+          "misses": 26072,
+          "upload_bytes": 344650982400
+        }
+      }
+    },
+    {
+      "budget_mib": 2048,
+      "policy": "lfu",
+      "hits": 74300,
+      "misses": 109828,
+      "evictions": 109666,
+      "upload_bytes": 1451838297600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 18564,
+      "peak_bytes": 2141510400,
+      "phases": {
+        "prefill": {
+          "hits": 48786,
+          "misses": 62190,
+          "upload_bytes": 822102048000
+        },
+        "decode": {
+          "hits": 25514,
+          "misses": 47638,
+          "upload_bytes": 629736249600
+        }
+      }
+    },
+    {
+      "budget_mib": 2048,
+      "policy": "least-stale",
+      "hits": 82094,
+      "misses": 102034,
+      "evictions": 101872,
+      "upload_bytes": 1348807852800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 14244,
+      "peak_bytes": 2141510400,
+      "phases": {
+        "prefill": {
+          "hits": 48033,
+          "misses": 62943,
+          "upload_bytes": 832056105600
+        },
+        "decode": {
+          "hits": 34061,
+          "misses": 39091,
+          "upload_bytes": 516751747200
+        }
+      }
+    },
+    {
+      "budget_mib": 4096,
+      "policy": "lru",
+      "hits": 157478,
+      "misses": 26650,
+      "evictions": 26326,
+      "upload_bytes": 352291680000,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 1567,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 93320,
+          "misses": 17656,
+          "upload_bytes": 233398195200
+        },
+        "decode": {
+          "hits": 64158,
+          "misses": 8994,
+          "upload_bytes": 118893484800
+        }
+      }
+    },
+    {
+      "budget_mib": 4096,
+      "policy": "lfu",
+      "hits": 129944,
+      "misses": 54184,
+      "evictions": 53860,
+      "upload_bytes": 716269132800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 5699,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 87916,
+          "misses": 23060,
+          "upload_bytes": 304834752000
+        },
+        "decode": {
+          "hits": 42028,
+          "misses": 31124,
+          "upload_bytes": 411434380800
+        }
+      }
+    },
+    {
+      "budget_mib": 4096,
+      "policy": "least-stale",
+      "hits": 113344,
+      "misses": 70784,
+      "evictions": 70460,
+      "upload_bytes": 935707852800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 9085,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 67002,
+          "misses": 43974,
+          "upload_bytes": 581301100800
+        },
+        "decode": {
+          "hits": 46342,
+          "misses": 26810,
+          "upload_bytes": 354406752000
+        }
+      }
+    },
+    {
+      "budget_mib": 8192,
+      "policy": "lru",
+      "hits": 182326,
+      "misses": 1802,
+      "evictions": 1153,
+      "upload_bytes": 23820998400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 72,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 109664,
+          "misses": 1312,
+          "upload_bytes": 17343590400
+        },
+        "decode": {
+          "hits": 72662,
+          "misses": 490,
+          "upload_bytes": 6477408000
+        }
+      }
+    },
+    {
+      "budget_mib": 8192,
+      "policy": "lfu",
+      "hits": 182934,
+      "misses": 1194,
+      "evictions": 545,
+      "upload_bytes": 15783724800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 38,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 110305,
+          "misses": 671,
+          "upload_bytes": 8870083200
+        },
+        "decode": {
+          "hits": 72629,
+          "misses": 523,
+          "upload_bytes": 6913641600
+        }
+      }
+    },
+    {
+      "budget_mib": 8192,
+      "policy": "least-stale",
+      "hits": 176431,
+      "misses": 7697,
+      "evictions": 7048,
+      "upload_bytes": 101748182400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 435,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 105989,
+          "misses": 4987,
+          "upload_bytes": 65924150400
+        },
+        "decode": {
+          "hits": 70442,
+          "misses": 2710,
+          "upload_bytes": 35824032000
+        }
+      }
+    }
+  ]
+}

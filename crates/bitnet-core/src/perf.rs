@@ -36,6 +36,14 @@ pub struct PerfSnapshot {
     pub speculative_verified_tokens: u64,
     pub speculative_accepted_tokens: u64,
     pub cuda_graph_replays: u64,
+    pub expert_cache_hits: u64,
+    pub expert_cache_misses: u64,
+    pub expert_cache_evictions: u64,
+    pub expert_cache_upload_bytes: u64,
+    pub expert_cache_upload_ns: u64,
+    pub gpu_prefill_blocks: u64,
+    pub gpu_prefill_tokens: u64,
+    pub gpu_quant_gemm_calls: u64,
     pub scheduler_decode_waves: u64,
     pub scheduler_prefill_chunks: u64,
     pub scheduler_stall_free_iters: u64,
@@ -74,6 +82,14 @@ struct PerfCounters {
     speculative_verified_tokens: AtomicU64,
     speculative_accepted_tokens: AtomicU64,
     cuda_graph_replays: AtomicU64,
+    expert_cache_hits: AtomicU64,
+    expert_cache_misses: AtomicU64,
+    expert_cache_evictions: AtomicU64,
+    expert_cache_upload_bytes: AtomicU64,
+    expert_cache_upload_ns: AtomicU64,
+    gpu_prefill_blocks: AtomicU64,
+    gpu_prefill_tokens: AtomicU64,
+    gpu_quant_gemm_calls: AtomicU64,
     scheduler_decode_waves: AtomicU64,
     scheduler_prefill_chunks: AtomicU64,
     scheduler_stall_free_iters: AtomicU64,
@@ -122,6 +138,15 @@ pub fn record_quant_matvec(ggml_type: u32, rows: usize, cols: usize, elapsed_ns:
     }
 }
 
+pub(crate) fn record_gpu_prefill(tokens: usize, gemm_calls: u64) {
+    let p = perf();
+    p.gpu_prefill_blocks.fetch_add(1, Ordering::Relaxed);
+    p.gpu_prefill_tokens
+        .fetch_add(tokens as u64, Ordering::Relaxed);
+    p.gpu_quant_gemm_calls
+        .fetch_add(gemm_calls, Ordering::Relaxed);
+}
+
 pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u64) {
     let p = perf();
     p.gpu_upload_bytes
@@ -129,6 +154,20 @@ pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u
     p.gpu_download_bytes
         .fetch_add(download_bytes, Ordering::Relaxed);
     p.gpu_gemv_calls.fetch_add(gemv_calls, Ordering::Relaxed);
+}
+
+pub(crate) fn record_expert_cache(hit: bool, evictions: u64, bytes: u64, ns: u64) {
+    let p = perf();
+    if hit {
+        p.expert_cache_hits.fetch_add(1, Ordering::Relaxed);
+    } else {
+        p.expert_cache_misses.fetch_add(1, Ordering::Relaxed);
+    }
+    p.expert_cache_evictions
+        .fetch_add(evictions, Ordering::Relaxed);
+    p.expert_cache_upload_bytes
+        .fetch_add(bytes, Ordering::Relaxed);
+    p.expert_cache_upload_ns.fetch_add(ns, Ordering::Relaxed);
 }
 
 pub(crate) fn record_gpu_attention() {
@@ -282,6 +321,14 @@ pub fn snapshot() -> PerfSnapshot {
         speculative_verified_tokens: p.speculative_verified_tokens.load(Ordering::Relaxed),
         speculative_accepted_tokens: p.speculative_accepted_tokens.load(Ordering::Relaxed),
         cuda_graph_replays: p.cuda_graph_replays.load(Ordering::Relaxed),
+        expert_cache_hits: p.expert_cache_hits.load(Ordering::Relaxed),
+        expert_cache_misses: p.expert_cache_misses.load(Ordering::Relaxed),
+        expert_cache_evictions: p.expert_cache_evictions.load(Ordering::Relaxed),
+        expert_cache_upload_bytes: p.expert_cache_upload_bytes.load(Ordering::Relaxed),
+        expert_cache_upload_ns: p.expert_cache_upload_ns.load(Ordering::Relaxed),
+        gpu_prefill_blocks: p.gpu_prefill_blocks.load(Ordering::Relaxed),
+        gpu_prefill_tokens: p.gpu_prefill_tokens.load(Ordering::Relaxed),
+        gpu_quant_gemm_calls: p.gpu_quant_gemm_calls.load(Ordering::Relaxed),
         scheduler_decode_waves: p.scheduler_decode_waves.load(Ordering::Relaxed),
         scheduler_prefill_chunks: p.scheduler_prefill_chunks.load(Ordering::Relaxed),
         scheduler_stall_free_iters: p.scheduler_stall_free_iters.load(Ordering::Relaxed),
@@ -299,6 +346,46 @@ pub fn prometheus_text() -> String {
             writeln!(s, "{} {}", $name, $value).unwrap();
         }};
     }
+    counter!(
+        "rbitnet_core_gpu_prefill_blocks_total",
+        "CUDA matrix prefill blocks",
+        snap.gpu_prefill_blocks
+    );
+    counter!(
+        "rbitnet_core_gpu_prefill_tokens_total",
+        "Tokens evaluated through CUDA block prefill",
+        snap.gpu_prefill_tokens
+    );
+    counter!(
+        "rbitnet_core_gpu_quant_gemm_calls_total",
+        "Shared-weight quantized CUDA matrix projections",
+        snap.gpu_quant_gemm_calls
+    );
+    counter!(
+        "rbitnet_core_expert_cache_hits_total",
+        "Expert groups found in this model's device cache",
+        snap.expert_cache_hits
+    );
+    counter!(
+        "rbitnet_core_expert_cache_misses_total",
+        "Expert groups absent from this model's device cache",
+        snap.expert_cache_misses
+    );
+    counter!(
+        "rbitnet_core_expert_cache_evictions_total",
+        "Unleased expert groups evicted from device cache",
+        snap.expert_cache_evictions
+    );
+    counter!(
+        "rbitnet_core_expert_cache_upload_bytes_total",
+        "Unchanged GGUF expert bytes uploaded on cache misses",
+        snap.expert_cache_upload_bytes
+    );
+    counter!(
+        "rbitnet_core_expert_cache_upload_ns_total",
+        "Wall time allocating and uploading expert groups in nanoseconds",
+        snap.expert_cache_upload_ns
+    );
     counter!(
         "rbitnet_core_quant_matvec_calls_total",
         "Quantized matrix-vector calls executed by bitnet-core",

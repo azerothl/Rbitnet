@@ -157,6 +157,7 @@ pub struct CudaRuntime {
     cuda_memcpy:
         unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
     cuda_device_synchronize: unsafe extern "C" fn() -> cudaError_t,
+    cuda_stream_synchronize: unsafe extern "C" fn(*mut c_void) -> cudaError_t,
     cublas_create_v2: Option<unsafe extern "C" fn(*mut cublasHandle_t) -> cublasStatus_t>,
     cublas_destroy_v2: Option<unsafe extern "C" fn(cublasHandle_t) -> cublasStatus_t>,
     cublas_sgemv_v2: Option<
@@ -402,6 +403,12 @@ impl CudaRuntime {
                     lib.get(b"cudaDeviceSynchronize").ok()?;
                 *sym
             };
+            let cuda_stream_synchronize = unsafe {
+                *lib.get::<unsafe extern "C" fn(*mut c_void) -> cudaError_t>(
+                    b"cudaStreamSynchronize",
+                )
+                .ok()?
+            };
             let mut cublas_lib: Option<Library> = None;
             let mut cublas_create_v2 = None;
             let mut cublas_destroy_v2 = None;
@@ -488,6 +495,7 @@ impl CudaRuntime {
                 cuda_free,
                 cuda_memcpy,
                 cuda_device_synchronize,
+                cuda_stream_synchronize,
                 cublas_create_v2,
                 cublas_destroy_v2,
                 cublas_sgemv_v2,
@@ -520,7 +528,15 @@ impl CudaRuntime {
     }
 
     fn copy_host_to_device(&self, dst: *mut c_void, src: *const c_void, nbytes: usize) -> bool {
-        let status = unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_HOST_TO_DEVICE) };
+        let mut status =
+            unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_HOST_TO_DEVICE) };
+        // Pageable H2D cudaMemcpy may return after staging, before DMA ends.
+        // Our consumers use nonblocking private streams and cannot implicitly
+        // depend on the default stream. An owned resident/refilled weight is
+        // published only after that copy has actually reached the device.
+        if status == CUDA_SUCCESS {
+            status = unsafe { (self.cuda_stream_synchronize)(null_mut()) };
+        }
         if status != CUDA_SUCCESS {
             tracing::warn!(status, nbytes, "CUDA host upload failed");
         }
@@ -908,6 +924,32 @@ impl CudaDeviceQuantMatrix {
 
     pub fn bytes(&self) -> usize {
         self.row_bytes.saturating_mul(self.out_rows)
+    }
+
+    /// Reuse an exclusively owned, compatible expert slot after its last step.
+    pub(crate) fn refill(&mut self, payload: Vec<u8>) -> crate::error::Result<bool> {
+        if payload.len() != self.bytes() {
+            return Err(crate::error::BitNetError::Inference(
+                "expert refill shape mismatch".into(),
+            ));
+        }
+        let (Some(device), Some(rt)) = (&mut self.device, &self.rt) else {
+            return Ok(false);
+        };
+        let Some(buffer) = Arc::get_mut(device) else {
+            return Ok(false);
+        };
+        if !rt.copy_host_to_device(
+            buffer.as_device_ptr(),
+            payload.as_ptr().cast(),
+            payload.len(),
+        ) {
+            return Err(crate::error::BitNetError::Inference(
+                "expert refill CUDA upload failed".into(),
+            ));
+        }
+        self.host = Arc::new(payload);
+        Ok(true)
     }
 
     /// Prefer device-resident CUDA quant kernel; otherwise CPU payload matvec (golden parity).
@@ -1476,5 +1518,46 @@ pub fn make_backend(kind: BackendKind) -> Box<dyn ComputeBackend> {
         BackendKind::Rocm => Box::<RocmBackend>::default(),
         BackendKind::Vulkan => Box::<VulkanBackend>::default(),
         BackendKind::Metal => Box::<MetalBackend>::default(),
+    }
+}
+
+#[cfg(test)]
+mod transfer_tests {
+    #[test]
+    fn optional_pageable_upload_and_refill_finish_before_private_stream_consumption() {
+        if std::env::var("RBITNET_CUDA_QUANT_SMOKE").as_deref() != Ok("1") {
+            return;
+        }
+        let rt = super::CudaRuntime::try_load().expect("CUDA required");
+        let query = unsafe {
+            *rt._lib
+                .get::<unsafe extern "C" fn(*mut std::ffi::c_void) -> i32>(b"cudaStreamQuery")
+                .unwrap()
+        };
+        // Large pageable copies expose the staging-vs-DMA lifetime distinction.
+        let mut matrix = super::CudaDeviceQuantMatrix::from_payload(
+            Some(&rt),
+            0,
+            vec![0; 64 * 1024 * 1024],
+            4096,
+            4096,
+        )
+        .unwrap();
+        assert!(matrix.is_device_resident());
+        assert_eq!(unsafe { query(std::ptr::null_mut()) }, 0);
+        for value in [0x3fu8, 0x40, 0x41, 0] {
+            assert!(matrix.refill(vec![value; matrix.bytes()]).unwrap());
+            assert_eq!(
+                unsafe { query(std::ptr::null_mut()) },
+                0,
+                "weights were published before the DMA finished"
+            );
+        }
+        let held = matrix.clone();
+        assert!(
+            !matrix.refill(vec![0; matrix.bytes()]).unwrap(),
+            "shared device allocations cannot be overwritten"
+        );
+        drop(held);
     }
 }

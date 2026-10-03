@@ -536,10 +536,9 @@ impl Engine {
         if self.inner.stub {
             let text = stub_response(prompt, max_tokens);
             if !text.is_empty() {
-                for word in text.split_whitespace() {
-                    let piece = format!(" {word}");
+                for piece in text.split_inclusive(char::is_whitespace) {
                     on_event(StreamEvent::Delta {
-                        text: piece.trim_start().to_string() + " ",
+                        text: piece.to_string(),
                     })?;
                 }
             }

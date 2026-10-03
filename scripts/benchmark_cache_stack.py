@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Same-revision HTTP/SSE ablation of prefix checkpoints and CUDA block prefill."""
+import argparse
+import hashlib
+import json
+import pathlib
+import subprocess
+import time
+from unittest.mock import patch
+
+import requests
+from benchmark_engines import Server
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--config', type=pathlib.Path, required=True)
+    parser.add_argument('--model', choices=['llama32-1b', 'qwen35-2b'], required=True)
+    parser.add_argument('--backend', choices=['cpu', 'gpu'], default='gpu')
+    parser.add_argument('--binary', type=pathlib.Path, required=True)
+    parser.add_argument('--library', type=pathlib.Path, required=True)
+    parser.add_argument('--output-dir', type=pathlib.Path, required=True)
+    parser.add_argument('--cycles', type=int, default=4)
+    parser.add_argument('--port', type=int, default=18105)
+    args = parser.parse_args()
+    if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
+    root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
+    binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
+    config = json.loads(args.config.read_text(encoding='utf-8'))
+    config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
+    model = next(m for m in config['models'] if m['id'] == args.model)
+    report = dict(config=config, backend=args.backend, warmup_cycle=0, rows=[], sse=[], stops=[], memory={},
+                  binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(),
+                  source_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+                  source_dirty=bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip()))
+    # The input manifest describes a previous comparison. Preserve it as context,
+    # while making the tested binary/library provenance authoritative here.
+    report['baseline_manifest_environment'] = config.get('environment', {}).copy()
+    config.setdefault('environment', {}).update(
+        rbitnet_commit=report['source_commit'] + (' + local cache-stack changes' if report['source_dirty'] else ''),
+        rbitnet_branch=subprocess.check_output(['git', 'branch', '--show-current'], text=True).strip(),
+        rbitnet_exe_sha256=report['binary_sha256'], cuda_quant_library_sha256=report['library_sha256'],
+        cuda_execution='per-mode cache/block ablation; see row env and execution counters')
+    system = 'Tu es un assistant précis. Voici des notes communes à cette conversation.\n' + '\n'.join(
+        f'Note {i}: Les villes ont des bibliothèques, des jardins et des musées.' for i in range(72))
+    prompts = [
+        [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Écris un récit de 150 mots sur un robot qui explore une bibliothèque.'}],
+        [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Écris un récit de 150 mots sur un robot qui explore un musée.'}],
+        [{'role': 'user', 'content': 'Quelle est la capitale de la France ? Réponds en un mot.'}],
+    ]
+    modes = [('baseline', '0', '0'), ('prefix', '1', '0')]
+    if args.model == 'llama32-1b' and args.backend == 'gpu': modes += [('block', '0', '1'), ('combined', '1', '1')]
+    original = subprocess.Popen
+    baseline = {}
+    def save():
+        (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    for mode, prefix, block in modes:
+        overrides = dict(RBITNET_PREFIX_KV=prefix, RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
+                         RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128', RBITNET_CUDA_PREFILL=block,
+                         RBITNET_CUDA_PREFILL_TOKENS='128', RBITNET_REQUIRE_RESIDENT='1' if args.backend == 'gpu' and args.model == 'llama32-1b' else '0')
+        def popen(*a, **kw):
+            if kw.get('env'):
+                kw['env'] = kw['env'].copy(); kw['env'].update(overrides)
+                for key in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(key, None)
+            return original(*a, **kw)
+        server = Server(config, model, 'rbitnet', args.backend, root); server.log_path = root/(mode+'.log')
+        try:
+            with patch('subprocess.Popen', popen): server.start()
+            for cycle in range(args.cycles):
+                for index, messages in enumerate(prompts):
+                    body = dict(model=model['id'], messages=messages, max_tokens=128, temperature=0)
+                    before = server.metrics(); start = time.perf_counter()
+                    response = requests.post(server.base+'/v1/chat/completions', json=body, timeout=600); response.raise_for_status()
+                    raw = response.json(); wall = 1000*(time.perf_counter()-start); after = server.metrics()
+                    delta = {k: after.get(k, 0)-before.get(k, 0) for k in after}
+                    text = raw['choices'][0]['message']['content']
+                    if mode == 'baseline': baseline[cycle, index] = text
+                    row = dict(mode=mode, env=overrides, cycle=cycle, prompt=index, request=body, response=raw,
+                               wall_ms=wall, metrics_delta=delta, matches_baseline=text == baseline[cycle, index])
+                    report['rows'].append(row); save()
+                    print(json.dumps(dict(mode=mode, cycle=cycle, prompt=index, prefill_ms=delta.get('rbitnet_inference_prefill_ms_sum'),
+                                          decode_ms=delta.get('rbitnet_inference_decode_ms_sum'),
+                                          hits=delta.get('rbitnet_core_prefix_cache_hits_total'),
+                                          blocks=delta.get('rbitnet_core_gpu_prefill_blocks_total'), matches=row['matches_baseline'])), flush=True)
+                    assert text and '\ufffd' not in text and row['matches_baseline'], (mode, cycle, index, text)
+                    if block == '1': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native block prefill was not used'
+            messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Répète exactement : été, café, résumé, 🙂.'}]
+            for label, options in [('greedy', dict(temperature=0)), ('sampling', dict(temperature=0.7, seed=42)),
+                                   ('penalties', dict(temperature=0, frequency_penalty=0.2, presence_penalty=0.1))]:
+                body = dict(model=model['id'], messages=messages, max_tokens=128, **options)
+                response = requests.post(server.base+'/v1/chat/completions', json=body, timeout=600); response.raise_for_status()
+                text = response.json()['choices'][0]['message']['content']
+                stream = requests.post(server.base+'/v1/chat/completions', json={**body, 'stream': True}, timeout=600); stream.raise_for_status()
+                parts, done = [], False
+                for line in stream.content.decode('utf-8').splitlines():
+                    if line == 'data: [DONE]': done = True
+                    elif line.startswith('data: '): parts.append(json.loads(line[6:]).get('choices', [{}])[0].get('delta', {}).get('content', ''))
+                joined = ''.join(parts)
+                report['sse'].append(dict(mode=mode, sampling=label, request=body, text=text, sse_text=joined, done=done)); save()
+                assert done and joined == text and text and '\ufffd' not in text, (mode, label, text, joined)
+            stop_body = dict(model=model['id'], messages=prompts[2], max_tokens=128, temperature=0, stop=['Paris'])
+            response = requests.post(server.base+'/v1/chat/completions', json=stop_body, timeout=600); response.raise_for_status()
+            raw = response.json(); report['stops'].append(dict(mode=mode, request=stop_body, response=raw)); save()
+            assert 'Paris' not in raw['choices'][0]['message']['content']
+        finally:
+            report['memory'][mode] = server.close(); save()
+
+
+if __name__ == '__main__': main()

@@ -1,0 +1,77 @@
+{
+  "trace": "target\\performance-cache\\moe-http\\gpt-oss-20b-4096-lru\\traces\\gpt-oss-61996-0.jsonl",
+  "trace_sha256": "1f01154a74a5b377e14e7a441986fafff7790a4853e841a6f4ce7d23f1b578fe",
+  "total_router_events": 46032,
+  "router_events": 30048,
+  "results": [
+    {
+      "budget_mib": 4096,
+      "policy": "lru",
+      "hits": 103926,
+      "misses": 16266,
+      "evictions": 15942,
+      "upload_bytes": 215023507200,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 944,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 54642,
+          "misses": 10254,
+          "upload_bytes": 135549676800
+        },
+        "decode": {
+          "hits": 49284,
+          "misses": 6012,
+          "upload_bytes": 79473830400
+        }
+      }
+    },
+    {
+      "budget_mib": 4096,
+      "policy": "lfu",
+      "hits": 82346,
+      "misses": 37846,
+      "evictions": 37522,
+      "upload_bytes": 500293843200,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 4168,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 51178,
+          "misses": 13718,
+          "upload_bytes": 181340985600
+        },
+        "decode": {
+          "hits": 31168,
+          "misses": 24128,
+          "upload_bytes": 318952857600
+        }
+      }
+    },
+    {
+      "budget_mib": 4096,
+      "policy": "least-stale",
+      "hits": 76169,
+      "misses": 44023,
+      "evictions": 43699,
+      "upload_bytes": 581948841600,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 5936,
+      "peak_bytes": 4283020800,
+      "phases": {
+        "prefill": {
+          "hits": 39835,
+          "misses": 25061,
+          "upload_bytes": 331286371200
+        },
+        "decode": {
+          "hits": 36334,
+          "misses": 18962,
+          "upload_bytes": 250662470400
+        }
+      }
+    }
+  ]
+}

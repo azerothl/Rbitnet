@@ -412,6 +412,7 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
 }
 } // extern "C"
 
+#include "prefill_quant.cuh"
 #include "llama_resident.cuh"
 
 #include "moe_resident.cuh"
@@ -419,3 +420,11 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
 #include "qwen_recurrent.cuh"
 
 #include "output_head.cuh"
+
+extern "C" int rbitnet_cuda_quant_gemm_device(unsigned type,const void *weights,size_t row_bytes,
+    const float *input,unsigned columns,unsigned rows,unsigned tokens,float *output) {
+    RbitnetLlamaMatrix m={weights,row_bytes,type,columns,rows};QuantKind kind;
+    if(!input || !output || !tokens || !columns || !rows || !qwen_matrix_valid(m,columns,rows) || !resident_kind(type,kind))return 1;
+    launch_prefill_gemm(kind,weights,row_bytes,input,columns,rows,tokens,output,nullptr);
+    return cudaGetLastError()==cudaSuccess && cudaDeviceSynchronize()==cudaSuccess ? 0 : 2;
+}

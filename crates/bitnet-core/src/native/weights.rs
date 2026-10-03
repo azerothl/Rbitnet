@@ -16,6 +16,7 @@ pub(crate) struct Weights {
     small: HashMap<String, Vec<f32>>,
     pub resident_bytes: usize,
     pub residency_budget_bytes: usize,
+    pub(super) expert_cache: Option<super::expert_cache::SharedCache>,
 }
 
 impl Weights {
@@ -35,6 +36,7 @@ impl Weights {
             small,
             resident_bytes: 0,
             residency_budget_bytes: 0,
+            expert_cache: None,
         };
         if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid) {
             return Ok(result);
@@ -56,6 +58,30 @@ impl Weights {
             })
             .saturating_mul(1024 * 1024);
         result.residency_budget_bytes = budget;
+        let requested_cache = std::env::var("RBITNET_MOE_CACHE_MB")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0)
+            .saturating_mul(1024 * 1024)
+            .min(budget);
+        let dynamic_api = crate::ggml::load_cuda_quant_library().is_some_and(|lib| unsafe {
+            lib.get::<unsafe extern "C" fn()>(b"rbitnet_cuda_moe_dynamic_create\0")
+                .is_ok()
+                && lib
+                    .get::<unsafe extern "C" fn()>(b"rbitnet_cuda_moe_dynamic_step\0")
+                    .is_ok()
+        });
+        let cache_architecture = matches!(
+            result.archive.normalized_architecture().as_deref(),
+            Some("gpt-oss" | "gptoss" | "deepseek2")
+        );
+        let cache_enabled = cache_architecture
+            && requested_cache > 0
+            && dynamic_api
+            && std::env::var("RBITNET_CUDA_MOE").as_deref() != Ok("0");
+        if requested_cache > 0 && !cache_enabled {
+            tracing::warn!("dynamic expert cache unavailable; retaining static placement");
+        }
         let tied_output = result.archive.tensor_by_name("output.weight").is_none();
         let mut tensors: Vec<_> = result
             .archive
@@ -81,6 +107,9 @@ impl Weights {
             )
         });
         for t in tensors {
+            if cache_enabled && t.name.contains("_exps.") && t.dimensions.len() == 3 {
+                continue;
+            }
             if !ggml_type_supports_cuda_quant(t.ggml_type) || t.dimensions[1] < 128 {
                 continue;
             }
@@ -105,6 +134,22 @@ impl Weights {
                 result.resident.insert(payload.as_ptr() as usize, device);
             } else {
                 break;
+            }
+        }
+        if cache_enabled {
+            let cache_budget = requested_cache.min(budget.saturating_sub(result.resident_bytes));
+            if cache_budget > 0 {
+                result.expert_cache = Some(Arc::new(std::sync::Mutex::new(
+                    super::expert_cache::ExpertCache::new(
+                        Arc::clone(&result.archive),
+                        rt,
+                        cache_budget,
+                    ),
+                )));
+                tracing::info!(
+                    cache_mb = cache_budget / (1024 * 1024),
+                    "dynamic expert cache enabled"
+                );
             }
         }
         tracing::info!(

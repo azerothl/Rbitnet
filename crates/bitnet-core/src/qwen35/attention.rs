@@ -13,6 +13,12 @@ pub struct AttnKvCache {
     cuda_attention: Vec<Option<crate::native::attention::CudaAttention>>,
 }
 
+pub(super) struct AttnPrefix {
+    k: Vec<Vec<f32>>,
+    v: Vec<Vec<f32>>,
+    length: usize,
+}
+
 #[derive(Clone, Default)]
 enum KvMode {
     #[default]
@@ -48,6 +54,72 @@ impl Clone for AttnKvCache {
 }
 
 impl AttnKvCache {
+    pub(super) fn prefix_bytes(&self, length: usize) -> usize {
+        let layers = match &self.mode {
+            KvMode::DenseBuffers { k, .. } => k.iter().filter(|r| !r.is_empty()).count(),
+            KvMode::Paged { layers, .. } => layers.iter().filter(|l| !l.k_pages.is_empty()).count(),
+            KvMode::Dense => 0,
+        };
+        layers
+            .saturating_mul(length)
+            .saturating_mul(self.stride)
+            .saturating_mul(8)
+    }
+    pub(super) fn snapshot(&self, length: usize) -> Result<AttnPrefix> {
+        let mut k = Vec::new();
+        let mut v = Vec::new();
+        let layers = match &self.mode {
+            KvMode::DenseBuffers { k, .. } => k.len(),
+            KvMode::Paged { layers, .. } => layers.len(),
+            KvMode::Dense => {
+                return Err(BitNetError::Inference(
+                    "uninitialized Qwen KV snapshot".into(),
+                ))
+            }
+        };
+        for il in 0..layers {
+            let present = match &self.mode {
+                KvMode::DenseBuffers { k, .. } => !k[il].is_empty(),
+                KvMode::Paged { layers, .. } => !layers[il].k_pages.is_empty(),
+                KvMode::Dense => false,
+            };
+            let mut keys = Vec::new();
+            let mut values = Vec::new();
+            if present {
+                keys.reserve(length * self.stride);
+                values.reserve(length * self.stride);
+                for pos in 0..length {
+                    for h in 0..self.stride / self.kv_head_span {
+                        keys.extend_from_slice(self.read_k_slice(il, pos, h, self.kv_head_span)?);
+                        values.extend_from_slice(self.read_v_slice(
+                            il,
+                            pos,
+                            h,
+                            self.kv_head_span,
+                        )?);
+                    }
+                }
+            }
+            k.push(keys);
+            v.push(values);
+        }
+        Ok(AttnPrefix { k, v, length })
+    }
+    pub(super) fn restore(&mut self, saved: &AttnPrefix) -> Result<()> {
+        self.clear();
+        for il in 0..saved.k.len() {
+            if saved.k[il].is_empty() {
+                continue;
+            }
+            for pos in 0..saved.length {
+                let range = pos * self.stride..(pos + 1) * self.stride;
+                self.write_token(il, pos, &saved.k[il][range.clone()], &saved.v[il][range])?;
+            }
+        }
+        // The next attention call bulk-restores its device KV from these exact
+        // CPU copies, before appending the first token after the checkpoint.
+        Ok(())
+    }
     pub fn new(cfg: &Qwen35Config, max_seq: usize) -> Self {
         let stride = cfg.n_head_kv * cfg.head_dim;
         let paged_enabled = matches!(

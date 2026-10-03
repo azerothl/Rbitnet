@@ -264,3 +264,15 @@ ative/cuda_quant built via `scripts/build_cuda_quant.ps1`; `RBITNET_CUDA_QUANT_L
 | `cuda_device_quant_q4_0` (device-resident W) | 512×4096 | 173 µs |
 
 Notes: host-upload f32 pays H2D of **W** each call; resident f32/quant keep **W** on device. Full greedy Llama tok/s vs CPU still recorded separately when `RBITNET_MODEL` is set (Gate D).
+
+## Unsloth Llama 3.2 1B reference pack — 2026-10-03
+
+The Windows CPU [export recipe](../recipes/exported-llama.recipe.json) serves the pinned Unsloth Q4_K_M GGUF without Python in the serving process. The [hash-checked HTTP response](validation/2026-10-03-unsloth-llama32-1b.json) is `Paris.` (22 prompt tokens, two completion tokens). This verifies the prebuilt pack and recipe; no training or local GGUF conversion was performed.
+
+The [four-engine/model protocol and raw results](benchmarks/2026-10-03-parity-round2/README.md) include the exact same GGUF SHA-256 `3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1`, with real-model sequence checks. Ryzen 7 9800X3D, RTX 4080 SUPER, Windows, 16 CPU threads; three measured short-prompt repetitions after warmup, 32 output tokens.
+
+| Pack | Rbitnet CPU decode median | Rbitnet CUDA decode median |
+|---|---:|---:|
+| Unsloth Llama-3.2-1B-Instruct Q4_K_M | 38.6 tok/s | 477.6 tok/s |
+
+These are decoding rates from the dated report, not complete HTTP-request rates or long-context performance. The erroneous [2026-10-02 smoke](validation/2026-10-02-unsloth-llama32-1b.json) is retained as evidence of the earlier inference defect.
