@@ -6,6 +6,8 @@ __device__ unsigned gpt_total_key(float value) {
     return bits&0x80000000u?~bits:bits^0x80000000u;
 }
 __global__ void gpt_norm_ordered(float *x,const float *weights,float epsilon,unsigned n,float *y,const float *residual=nullptr) {
+    const unsigned token=blockIdx.x;
+    x+=size_t(token)*n;y+=size_t(token)*n;if(residual)residual+=size_t(token)*n;
     __shared__ float inv;
     if(!threadIdx.x) {
         float total=0;
@@ -20,6 +22,7 @@ __global__ void gpt_norm_ordered(float *x,const float *weights,float epsilon,uns
     for(unsigned i=threadIdx.x;i<n;i+=256)y[i]=__fmul_rn(__fmul_rn(x[i],inv),weights[i]);
 }
 __global__ void gpt_router_matrix_ordered(const float *weights,size_t row_bytes,const float *x,unsigned cols,unsigned rows,unsigned lanes,float *out) {
+    const unsigned token=blockIdx.y;x+=size_t(token)*cols;out+=size_t(token)*rows;
     unsigned row=(blockIdx.x*blockDim.x+threadIdx.x)/32,lane=threadIdx.x&31;
     if(row>=rows)return;
     const float *w=reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(weights)+size_t(row)*row_bytes);
@@ -38,7 +41,8 @@ __global__ void gpt_router(const float *raw,const float *bias,unsigned count,uns
     float scale,unsigned *ids,float *probabilities,bool ordered=false) {
     // GPT-OSS has 32 experts and selects four. A serial selection avoids a
     // nondeterministic parallel tie reduction and is small beside expert GEMVs.
-    if(threadIdx.x || blockIdx.x)return;
+    if(threadIdx.x)return;
+    raw+=size_t(blockIdx.x)*count;ids+=size_t(blockIdx.x)*used;probabilities+=size_t(blockIdx.x)*used;
     for(unsigned s=0;s<used;s++) {
         unsigned best=0,key=0;bool found=false;
         for(unsigned e=0;e<count;e++) {
@@ -62,19 +66,22 @@ __global__ void gpt_router(const float *raw,const float *bias,unsigned count,uns
 }
 __global__ void gpt_rope(float *q,float *k,const float *frequency,const unsigned *position,
     unsigned heads,unsigned kv_heads,unsigned dim,unsigned rotary,float magnitude,const float *phases=nullptr) {
+    const unsigned token=blockIdx.y,pos=*position+token;
+    q+=size_t(token)*heads*dim;k+=size_t(token)*kv_heads*dim;
     unsigned i=blockIdx.x*blockDim.x+threadIdx.x,half=rotary/2;
     if(i>=(heads+kv_heads)*half)return;
     unsigned head=i/half,j=i%half;
     float *row=head<heads?q+head*dim:k+(head-heads)*dim;
-    float angle=float(*position)*frequency[j],s=sinf(angle),c=cosf(angle),a=row[j],b=row[j+half];
-    if(phases) {size_t offset=(size_t(*position)*half+j)*2;s=phases[offset];c=phases[offset+1];}
+    float angle=float(pos)*frequency[j],s=sinf(angle),c=cosf(angle),a=row[j],b=row[j+half];
+    if(phases) {size_t offset=(size_t(pos)*half+j)*2;s=phases[offset];c=phases[offset+1];}
     row[j]=__fmul_rn(__fsub_rn(__fmul_rn(a,c),__fmul_rn(b,s)),magnitude);
     row[j+half]=__fmul_rn(__fadd_rn(__fmul_rn(a,s),__fmul_rn(b,c)),magnitude);
 }
 __global__ void gpt_write_kv(const float *k,const float *v,float *cache_k,float *cache_v,
     const unsigned *position,unsigned width) {
     unsigned i=blockIdx.x*blockDim.x+threadIdx.x;
-    if(i<width) {size_t offset=size_t(*position)*width+i;cache_k[offset]=k[i];cache_v[offset]=v[i];}
+    if(i<width) {size_t offset=size_t(*position+blockIdx.y)*width+i;
+        cache_k[offset]=k[size_t(blockIdx.y)*width+i];cache_v[offset]=v[size_t(blockIdx.y)*width+i];}
 }
 __global__ void gpt_trace_layer(const float *x,const float *router,const unsigned *ids,
     unsigned embd,unsigned experts,unsigned used,float *out) {
@@ -95,7 +102,9 @@ struct GptSnapshot {
     ~GptSnapshot() {if(data)cudaFree(data);}
 };
 
+void gpt_block_destroy(void*);
 struct ResidentGpt {
+    void *block=nullptr;
     RbitnetGptConfig cfg;
     RbitnetLlamaMatrix head;
     std::vector<RbitnetGptLayer> layers;
@@ -114,6 +123,7 @@ struct ResidentGpt {
     cudaGraph_t graphs[3]={};cudaGraphExec_t executable[3]={};
     ~ResidentGpt() {
         if(stream)cudaStreamSynchronize(stream);
+        gpt_block_destroy(block);
         for(auto p:executable)if(p)cudaGraphExecDestroy(p);
         for(auto p:segment_executable)if(p)cudaGraphExecDestroy(p);
         for(auto p:segment_graphs)if(p)cudaGraphDestroy(p);

@@ -1,0 +1,39 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-block-current\crates\bitnet-core)
+error[E0433]: failed to resolve: use of undeclared type `GpuMoe`
+   --> crates\bitnet-core\src\native\graph.rs:736:67
+    |
+736 |             if !fallback && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+    |                                                                   ^^^^^^ use of undeclared type `GpuMoe`
+    |
+help: consider importing this struct
+    |
+  3 + use crate::native::moe::GpuMoe;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `GpuMoe`
+   --> crates\bitnet-core\src\native\graph.rs:883:74
+    |
+883 |                     if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+    |                                                                          ^^^^^^ use of undeclared type `GpuMoe`
+    |
+help: consider importing this struct
+    |
+  3 + use crate::native::moe::GpuMoe;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `GpuMoe`
+   --> crates\bitnet-core\src\native\graph.rs:957:74
+    |
+957 |                     if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+    |                                                                          ^^^^^^ use of undeclared type `GpuMoe`
+    |
+help: consider importing this struct
+    |
+  3 + use crate::native::moe::GpuMoe;
+    |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `bitnet-core` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `bitnet-core` (lib test) due to 3 previous errors

@@ -1,0 +1,29 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-block\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+warning: associated function `from_expert_payload` is never used
+   --> crates\bitnet-core\src\backend.rs:999:19
+    |
+980 | impl CudaDeviceQuantMatrix {
+    | -------------------------- associated function in this implementation
+...
+999 |     pub(crate) fn from_expert_payload(
+    |                   ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `run` is never used
+   --> crates\bitnet-core\src\native\moe.rs:295:12
+    |
+ 81 | impl GpuMoe {
+    | ----------- method in this implementation
+...
+295 |     pub fn run(
+    |            ^^^
+
+warning: `bitnet-core` (lib test) generated 2 warnings
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 129 filtered out; finished in 0.00s
+
