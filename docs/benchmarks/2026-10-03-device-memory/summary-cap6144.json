@@ -1,0 +1,268 @@
+{
+  "warmup_cycle": 0,
+  "long_prompt_indices": [
+    0,
+    1
+  ],
+  "counts": {
+    "rows": 24,
+    "sse": 12,
+    "stops": 4,
+    "unload": 4,
+    "reload": 4
+  },
+  "modes": {
+    "gpt-oss-20b-cache0-lru": {
+      "samples": 2,
+      "prefill_ms": {
+        "median": 17349.0,
+        "min": 16582.0,
+        "max": 18116.0
+      },
+      "decode_ms": {
+        "median": 3318.0,
+        "min": 3277.0,
+        "max": 3359.0
+      },
+      "decode_tokens_per_second": {
+        "median": 19.291673824702066,
+        "min": 19.053289669544508,
+        "max": 19.530057979859627
+      },
+      "http_ms": {
+        "median": 20669.728150009178,
+        "min": 19861.25909999828,
+        "max": 21478.197200020077
+      },
+      "cache_hit_rate": 0.0,
+      "upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "resident_ffn_layers": {
+        "median": 4668.0,
+        "min": 4668.0,
+        "max": 4668.0
+      },
+      "fallback_ffn_layers": {
+        "median": 4668.0,
+        "min": 4668.0,
+        "max": 4668.0
+      },
+      "managed_live_bytes": 6318839168.0,
+      "managed_peak_bytes": 6318839168.0,
+      "categories": {
+        "weights": 6100692480,
+        "kv_state": 201326592,
+        "activations": 15999360,
+        "prefix": 0,
+        "experts": 0,
+        "scratch": 820736,
+        "other": 0
+      },
+      "reservation_bytes": 245666816,
+      "same_text_as_fixed": 2,
+      "memory": {
+        "peak_process_tree_rss_bytes": 17750544384,
+        "gpu_global_baseline_mib": 2210.0,
+        "gpu_global_peak_mib": 8563.0,
+        "gpu_global_peak_delta_mib": 6353.0
+      }
+    },
+    "gpt-oss-20b-cache4096-lru": {
+      "samples": 2,
+      "prefill_ms": {
+        "median": 20805.5,
+        "min": 19968.0,
+        "max": 21643.0
+      },
+      "decode_ms": {
+        "median": 4641.5,
+        "min": 3287.0,
+        "max": 5996.0
+      },
+      "decode_tokens_per_second": {
+        "median": 15.072212222203504,
+        "min": 10.67378252168112,
+        "max": 19.47064192272589
+      },
+      "http_ms": {
+        "median": 25456.515949990717,
+        "min": 23257.930699997814,
+        "max": 27655.10119998362
+      },
+      "cache_hit_rate": 0.8483022707797772,
+      "upload_bytes": {
+        "median": 74886768000.0,
+        "min": 68158195200.0,
+        "max": 81615340800.0
+      },
+      "upload_ms": {
+        "median": 15962.915549999998,
+        "min": 14175.7177,
+        "max": 17750.1134
+      },
+      "resident_ffn_layers": {
+        "median": 9336.0,
+        "min": 9336.0,
+        "max": 9336.0
+      },
+      "fallback_ffn_layers": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 5540896256.0,
+      "managed_peak_bytes": 5540896256.0,
+      "categories": {
+        "weights": 1024519680,
+        "kv_state": 201326592,
+        "activations": 31208448,
+        "prefix": 0,
+        "experts": 4283020800,
+        "scratch": 820736,
+        "other": 0
+      },
+      "reservation_bytes": 245666816,
+      "same_text_as_fixed": 2,
+      "memory": {
+        "peak_process_tree_rss_bytes": 16886996992,
+        "gpu_global_baseline_mib": 2210.0,
+        "gpu_global_peak_mib": 9531.0,
+        "gpu_global_peak_delta_mib": 7321.0
+      }
+    },
+    "glm47-flash-cache0-lru": {
+      "samples": 2,
+      "prefill_ms": {
+        "median": 27247.5,
+        "min": 26666.0,
+        "max": 27829.0
+      },
+      "decode_ms": {
+        "median": 6310.0,
+        "min": 6267.0,
+        "max": 6353.0
+      },
+      "decode_tokens_per_second": {
+        "median": 10.143101775291466,
+        "min": 10.073980796474107,
+        "max": 10.212222754108824
+      },
+      "http_ms": {
+        "median": 33574.76200000383,
+        "min": 33035.77889999724,
+        "max": 34113.74510001042
+      },
+      "cache_hit_rate": 0.0,
+      "upload_bytes": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "upload_ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "resident_ffn_layers": {
+        "median": 4182.0,
+        "min": 4164.0,
+        "max": 4200.0
+      },
+      "fallback_ffn_layers": {
+        "median": 11849.0,
+        "min": 11798.0,
+        "max": 11900.0
+      },
+      "managed_live_bytes": 6420946992.0,
+      "managed_peak_bytes": 6420946992.0,
+      "categories": {
+        "weights": 5996105728,
+        "kv_state": 418906112,
+        "activations": 5274672,
+        "prefix": 0,
+        "experts": 0,
+        "scratch": 660480,
+        "other": 0
+      },
+      "reservation_bytes": 438096304,
+      "same_text_as_fixed": 2,
+      "memory": {
+        "peak_process_tree_rss_bytes": 24078909440,
+        "gpu_global_baseline_mib": 2199.0,
+        "gpu_global_peak_mib": 9101.0,
+        "gpu_global_peak_delta_mib": 6902.0
+      }
+    },
+    "glm47-flash-cache4096-lru": {
+      "samples": 2,
+      "prefill_ms": {
+        "median": 58069.0,
+        "min": 57820.0,
+        "max": 58318.0
+      },
+      "decode_ms": {
+        "median": 10066.0,
+        "min": 9612.0,
+        "max": 10520.0
+      },
+      "decode_tokens_per_second": {
+        "median": 6.370996963554745,
+        "min": 6.083650190114068,
+        "max": 6.658343736995422
+      },
+      "http_ms": {
+        "median": 68144.88515000266,
+        "min": 67947.15389999328,
+        "max": 68342.61640001205
+      },
+      "cache_hit_rate": 0.6182708502276839,
+      "upload_bytes": {
+        "median": 139639468032.0,
+        "min": 139023876096.0,
+        "max": 140255059968.0
+      },
+      "upload_ms": {
+        "median": 37484.629,
+        "min": 37340.1037,
+        "max": 37629.1543
+      },
+      "resident_ffn_layers": {
+        "median": 16031.0,
+        "min": 15962.0,
+        "max": 16100.0
+      },
+      "fallback_ffn_layers": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 6052484528.0,
+      "managed_peak_bytes": 6052558256.0,
+      "categories": {
+        "weights": 1329418240,
+        "kv_state": 418906112,
+        "activations": 8622512,
+        "prefix": 0,
+        "experts": 4289863680,
+        "scratch": 660480,
+        "other": 0
+      },
+      "reservation_bytes": 438096304,
+      "same_text_as_fixed": 2,
+      "memory": {
+        "peak_process_tree_rss_bytes": 23575724032,
+        "gpu_global_baseline_mib": 2183.0,
+        "gpu_global_peak_mib": 9905.0,
+        "gpu_global_peak_delta_mib": 7722.0
+      }
+    }
+  }
+}
