@@ -1467,51 +1467,18 @@ async fn chat_completions(
             .into_response());
     }
 
-    if let Some(cap) = state.config.max_prompt_tokens {
-        match engine.count_prompt_tokens(&prompt) {
-            Ok(n) if n > cap => {
-                state
-                    .metrics
-                    .chat_errors_total
-                    .fetch_add(1, Ordering::Relaxed);
-                return Ok((
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "error": {
-                            "message": format!(
-                                "prompt too many tokens after encoding ({n}, max {cap}); raise RBITNET_MAX_PROMPT_TOKENS or shorten the prompt"
-                            ),
-                            "type": "invalid_request_error"
-                        }
-                    })),
-                )
-                    .into_response());
-            }
-            Ok(_) => {}
-            Err(e) => {
-                state
-                    .metrics
-                    .chat_errors_total
-                    .fetch_add(1, Ordering::Relaxed);
-                let status = StatusCode::from_u16(e.http_status_for_chat_completion())
-                    .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-                let mut msg = e.to_string();
-                if let Some(hint) = e.user_troubleshooting_hint() {
-                    msg.push_str(" — ");
-                    msg.push_str(hint);
-                }
-                return Ok((
-                    status,
-                    Json(json!({
-                        "error": {
-                            "message": msg,
-                            "type": "invalid_request_error"
-                        }
-                    })),
-                )
-                    .into_response());
-            }
-        }
+    if let Err((status, msg)) =
+        validate_request_context(&engine, &state.config, &prompt, max_tokens)
+    {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            status,
+            Json(json!({"error":{"message":msg,"type":"invalid_request_error"}})),
+        )
+            .into_response());
     }
 
     let permit = match state.semaphore.clone().try_acquire_owned() {
@@ -2058,4 +2025,36 @@ fn chunk_text_for_stream(text: &str) -> Vec<String> {
         out.push(text.to_string());
     }
     out
+}
+
+/// Shared by OpenAI compatibility routes and the independent Anthropic handler.
+/// Reject before admission/stream headers, using the allocated model capacity.
+fn validate_request_context(
+    engine: &Engine,
+    config: &ServerConfig,
+    prompt: &str,
+    max_tokens: u32,
+) -> Result<(), (StatusCode, String)> {
+    if config.max_prompt_tokens.is_none() && engine.context_capacity().is_none() {
+        return Ok(());
+    }
+    let map_error = |e: bitnet_core::BitNetError| {
+        let status = StatusCode::from_u16(e.http_status_for_chat_completion())
+            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let mut text = e.to_string();
+        if let Some(hint) = e.user_troubleshooting_hint() {
+            text.push_str(" — ");
+            text.push_str(hint);
+        }
+        (status, text)
+    };
+    let count = engine.count_prompt_tokens(prompt).map_err(map_error)?;
+    if let Some(cap) = config.max_prompt_tokens {
+        if count > cap {
+            return Err((StatusCode::BAD_REQUEST,format!("prompt too many tokens after encoding ({count}, max {cap}); raise RBITNET_MAX_PROMPT_TOKENS or shorten the prompt")));
+        }
+    }
+    engine
+        .validate_context_tokens(count, max_tokens)
+        .map_err(map_error)
 }

@@ -35,7 +35,7 @@ struct SavedPrefix {
 pub struct Qwen35Runtime {
     cfg: Qwen35Config,
     archive: Arc<GgufArchive>,
-    tokenizer: LoadedPromptTokenizer,
+    pub(super) tokenizer: Arc<LoadedPromptTokenizer>,
     attn_kv: AttnKvCache,
     rec: Vec<RecurrentState>,
     // Drop graphs borrowing layer contexts before those contexts and their weights.
@@ -126,6 +126,10 @@ impl Qwen35Runtime {
                 .map(|g| g.extra_weights_bytes)
                 .sum::<usize>()
     }
+    pub(crate) fn context_capacity(&self) -> usize {
+        self.cfg.max_seq
+    }
+
     pub fn load(
         archive: Arc<GgufArchive>,
         tokenizer_path: &Path,
@@ -146,7 +150,10 @@ impl Qwen35Runtime {
             std::env::var("RBITNET_CUDA_GRAPH").as_deref(),
             Ok("1") | Ok("true") | Ok("yes")
         );
-        let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
+        let tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            tokenizer_path,
+            &archive,
+        )?);
 
         let tok_embd = must_tensor(
             archive.as_ref(),
@@ -332,6 +339,7 @@ impl Qwen35Runtime {
         let t_enc = Instant::now();
         let prompt_ids = self.tokenizer.encode_ids(prompt, true)?;
         let encode_ms = t_enc.elapsed().as_millis() as u64;
+        crate::context_capacity::check_request(prompt_ids.len(), max_tokens, self.cfg.max_seq)?;
         if prompt_ids.is_empty() {
             return Ok((
                 String::new(),

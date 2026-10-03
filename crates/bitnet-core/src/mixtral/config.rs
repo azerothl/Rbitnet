@@ -96,10 +96,7 @@ impl MixtralConfig {
             .ok_or_else(|| BitNetError::Inference("missing mixtral.block_count".into()))?;
         let n_head = first_usize(
             md,
-            &[
-                "mixtral.attention.head_count",
-                "llama.attention.head_count",
-            ],
+            &["mixtral.attention.head_count", "llama.attention.head_count"],
         )
         .ok_or_else(|| BitNetError::Inference("missing mixtral.attention.head_count".into()))?;
 
@@ -137,13 +134,15 @@ impl MixtralConfig {
         let n_expert = first_usize(md, &["mixtral.expert_count", "llama.expert_count"])
             .or_else(|| tensor_dim(archive, "blk.0.ffn_gate_inp.weight", 1))
             .ok_or_else(|| BitNetError::Inference("missing mixtral.expert_count".into()))?;
-        let n_expert_used =
-            first_usize(md, &["mixtral.expert_used_count", "llama.expert_used_count"])
-                .unwrap_or(2)
-                .clamp(1, n_expert.max(1));
+        let n_expert_used = first_usize(
+            md,
+            &["mixtral.expert_used_count", "llama.expert_used_count"],
+        )
+        .unwrap_or(2)
+        .clamp(1, n_expert.max(1));
 
-        let rope_theta =
-            first_f32(md, &["mixtral.rope.freq_base", "llama.rope.freq_base"]).unwrap_or(1_000_000.0);
+        let rope_theta = first_f32(md, &["mixtral.rope.freq_base", "llama.rope.freq_base"])
+            .unwrap_or(1_000_000.0);
         let norm_eps = first_f32(
             md,
             &[
@@ -152,9 +151,11 @@ impl MixtralConfig {
             ],
         )
         .unwrap_or(1e-5);
-        let max_seq = first_usize(md, &["mixtral.context_length", "llama.context_length"])
-            .unwrap_or(2048)
-            .min(8192);
+        let max_seq = crate::context_capacity::capacity_from_env(
+            first_usize(md, &["mixtral.context_length", "llama.context_length"]).unwrap_or(2048),
+            8192,
+            Some(8192),
+        )?;
 
         Ok(Self {
             n_embd,

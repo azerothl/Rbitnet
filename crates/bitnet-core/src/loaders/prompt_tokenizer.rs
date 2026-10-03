@@ -2,7 +2,8 @@
 
 use std::path::Path;
 
-use sentencepiece::SentencePieceProcessor;
+mod sentencepiece_codec;
+use sentencepiece_codec::SentencePieceCodec;
 use tokenizers::Tokenizer;
 
 use crate::error::{BitNetError, Result};
@@ -10,20 +11,28 @@ use crate::error::{BitNetError, Result};
 /// Supports the two common layouts shipped next to GGUF files.
 pub(crate) enum LoadedPromptTokenizer {
     Hf(Tokenizer),
-    Sp(SentencePieceProcessor),
+    Sp(SentencePieceCodec),
 }
 
 impl LoadedPromptTokenizer {
+    #[cfg(test)]
     pub(crate) fn from_path(path: &Path) -> Result<Self> {
+        Self::load(path, None)
+    }
+    pub(crate) fn from_path_for_gguf(
+        path: &Path,
+        archive: &crate::gguf::GgufArchive,
+    ) -> Result<Self> {
+        Self::load(path, Some(archive))
+    }
+    fn load(path: &Path, archive: Option<&crate::gguf::GgufArchive>) -> Result<Self> {
         let lower = path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
         if lower.ends_with(".model") {
-            let sp = SentencePieceProcessor::open(path).map_err(|e| {
-                BitNetError::Inference(format!("sentencepiece load (tokenizer.model): {e}"))
-            })?;
+            let sp = SentencePieceCodec::load(path, archive)?;
             return Ok(Self::Sp(sp));
         }
         let tokenizer = Tokenizer::from_file(path).map_err(|e| {
@@ -43,14 +52,24 @@ impl LoadedPromptTokenizer {
                 let enc = t
                     .encode(prompt, add_special_tokens)
                     .map_err(|e| BitNetError::Inference(format!("encode: {e}")))?;
-                Ok(enc.get_ids().to_vec())
+                let mut ids = enc.get_ids().to_vec();
+                if add_special_tokens && prompt.starts_with("<s>") {
+                    if let Some(bos) = t.token_to_id("<s>") {
+                        if ids.first() == Some(&bos) {
+                            let plain = t.encode(prompt, false).map_err(|e| {
+                                BitNetError::Inference(format!("encode explicit BOS: {e}"))
+                            })?;
+                            if ids.len() > plain.get_ids().len()
+                                && ids[1..].starts_with(plain.get_ids())
+                            {
+                                ids.remove(0);
+                            }
+                        }
+                    }
+                }
+                Ok(ids)
             }
-            Self::Sp(sp) => {
-                let pieces = sp
-                    .encode(prompt)
-                    .map_err(|e| BitNetError::Inference(format!("encode: {e}")))?;
-                Ok(pieces.into_iter().map(|p| p.id).collect())
-            }
+            Self::Sp(sp) => sp.encode(prompt, add_special_tokens),
         }
     }
 
@@ -59,9 +78,7 @@ impl LoadedPromptTokenizer {
             Self::Hf(t) => t
                 .decode(ids, skip_special_tokens)
                 .map_err(|e| BitNetError::Inference(format!("decode: {e}"))),
-            Self::Sp(sp) => sp
-                .decode_piece_ids(ids)
-                .map_err(|e| BitNetError::Inference(format!("decode: {e}"))),
+            Self::Sp(sp) => sp.decode(ids, skip_special_tokens),
         }
     }
 

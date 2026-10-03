@@ -1,0 +1,30 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 10.59s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 8 tests
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::internal_controls_preserve_multi_turn_ids_and_plain_text_normalization ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::malformed_proto_is_refused_without_dropping_unknown_fields_or_wrapping_lengths ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::mismatched_vocabulary_ids_or_embedding_rows_are_refused ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_actual_mistral_sentencepiece_ids_and_generations_match_hf ... 
+thread 'loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_actual_mistral_sentencepiece_ids_and_generations_match_hf' (58148) panicked at crates\bitnet-core\src\loaders\prompt_tokenizer\sentencepiece_codec.rs:563:17:
+assertion `left == right` failed: actual Mistral normalizer/IDs "  été, café, résumé, 🙂.  " special=false
+  left: [259, 7166, 28725, 28345, 28725, 11310, 383, 28797, 28725, 28705, 29340, 28723, 259]
+ right: [28705, 7166, 28725, 28345, 28725, 11310, 383, 28797, 28725, 28705, 29340, 28723, 259]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_trained_sentencepiece_reference_ids_normalizer_and_metadata ... Trained SentencePiece reference: vocab=1000, ordinary IDs/normalizer/4 BOS-EOS policies/interior controls exact
+ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_bos_eos_flags_match_metadata_and_do_not_duplicate_templates ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_skip_special_false_exposes_controls_without_replacing_normalizer ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::word_model_refuses_lost_interior_controls_instead_of_encoding_unk ... ok
+
+failures:
+
+failures:
+    loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_actual_mistral_sentencepiece_ids_and_generations_match_hf
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 128 filtered out; finished in 0.17s
+
+error: test failed, to rerun pass `-p bitnet-core --lib`

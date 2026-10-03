@@ -1,7 +1,6 @@
 //! Autoregressive GPT-OSS and DeepSeek/GLM MLA graphs over GGUF quantized weights.
 //! Operations follow llama.cpp 631109b34 openai-moe.cpp and deepseek2.cpp.
 use super::moe_cost::{Cost, Execution};
-use crate::native::moe::GpuMoe;
 use super::weights::Weights;
 use crate::backend::BackendKind;
 use crate::cancel::inference_cancelled;
@@ -9,6 +8,7 @@ use crate::error::{BitNetError, Result};
 use crate::gguf::{GgufArchive, GgufValue};
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::model::ModelExecutor;
+use crate::native::moe::GpuMoe;
 use crate::sampling::{sample_token, SamplingOptions};
 use crate::stream::{emit_text_delta, StreamEvent};
 use crate::timings::PhaseTimings;
@@ -134,12 +134,8 @@ impl Config {
         let groups = val("expert_group_count").unwrap_or(1.0) as usize;
         let groups_used = val("expert_group_used_count").unwrap_or(1.0) as usize;
         let kv_heads = req("attention.head_count_kv")?;
-        let max_seq = std::env::var("RBITNET_MAX_SEQ")
-            .ok()
-            .and_then(|s| s.parse::<usize>().ok())
-            .filter(|&n| n > 0)
-            .unwrap_or(8192)
-            .min(req("context_length")?);
+        let max_seq =
+            crate::context_capacity::capacity_from_env(req("context_length")?, 8192, None)?;
         if token.dimensions.len() != 2
             || token.dimensions[0] as usize != embd
             || used > experts
@@ -282,7 +278,7 @@ pub(crate) struct Runtime {
     gpu_full: Option<gpu_full::GpuFull>,
     gpu_mla: Option<gpu_mla::GpuMla>,
     weights: Weights,
-    tokenizer: LoadedPromptTokenizer,
+    tokenizer: Arc<LoadedPromptTokenizer>,
     kv: Vec<LayerKv>,
     gpu_attention: Vec<Option<super::attention::CudaAttention>>,
     gpu_moe: Vec<Option<super::moe::GpuMoe>>,
@@ -503,7 +499,10 @@ impl Runtime {
             cfg.family.name().to_owned(),
             cfg.layers,
         ))?;
-        let tokenizer = LoadedPromptTokenizer::from_path(tokenizer)?;
+        let tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            tokenizer,
+            &weights.archive,
+        )?);
         let kv = (0..cfg.layers)
             .map(|_| LayerKv {
                 k: Vec::new(),
@@ -536,9 +535,10 @@ impl Runtime {
                 std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
                 Ok("0" | "false" | "no")
             );
-        let fused= gpu_moe.iter().flatten().filter(|m|m.is_fused()).count();
-        if std::env::var("RBITNET_REQUIRE_FUSED_MOE").as_deref()==Ok("1")
-            && (fused==0 || fused!=gpu_moe.iter().flatten().count()) {
+        let fused = gpu_moe.iter().flatten().filter(|m| m.is_fused()).count();
+        if std::env::var("RBITNET_REQUIRE_FUSED_MOE").as_deref() == Ok("1")
+            && (fused == 0 || fused != gpu_moe.iter().flatten().count())
+        {
             return Err(BitNetError::Inference("requested fused MoE unavailable: compatible GPU contexts and native fusion ABI are required".into()));
         }
         let gpu_full = gpu_full::GpuFull::new(&weights, &cfg, &gpu_moe, kind);
@@ -549,8 +549,9 @@ impl Runtime {
         if std::env::var("RBITNET_REQUIRE_MLA_FULL").as_deref() == Ok("1") && gpu_mla.is_none() {
             return Err(BitNetError::Inference("resident MLA unavailable: requires CUDA, supported native DLL, CPU quant SIMD, compatible unbiased MLA projections and backbone weights within budget".into()));
         }
-        if std::env::var("RBITNET_REQUIRE_GPT_PREFILL").as_deref()==Ok("1")
-            && gpu_full.as_ref().is_none_or(|f|f.prefill_capacity()==0) {
+        if std::env::var("RBITNET_REQUIRE_GPT_PREFILL").as_deref() == Ok("1")
+            && gpu_full.as_ref().is_none_or(|f| f.prefill_capacity() == 0)
+        {
             return Err(BitNetError::Inference("requested GPT block prefill unavailable: fixed expert banks, compatible ABI and state budget are required".into()));
         }
         let gpu_head = if gpu_full.is_none() && gpu_mla.is_none() {
@@ -734,7 +735,9 @@ impl Runtime {
         crate::perf::record_native_moe(!fallback, 1, elapsed);
         if let Some(metrics) = &self.weights.moe_metrics {
             metrics.ffn(il, !fallback, Some(elapsed));
-            if !fallback && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+            if !fallback && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused) {
+                metrics.fused_ffn(il);
+            }
         }
         if self
             .weights
@@ -881,7 +884,9 @@ impl Runtime {
                 crate::perf::record_native_moe(resident, 1, elapsed);
                 if let Some(metrics) = &self.weights.moe_metrics {
                     metrics.ffn(il, resident, Some(elapsed));
-                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused) {
+                        metrics.fused_ffn(il);
+                    }
                 }
             }
             full.end(logits, greedy)
@@ -955,7 +960,9 @@ impl Runtime {
                 crate::perf::record_native_moe(resident, 1, elapsed);
                 if let Some(metrics) = &self.weights.moe_metrics {
                     metrics.ffn(il, resident, Some(elapsed));
-                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
+                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused) {
+                        metrics.fused_ffn(il);
+                    }
                 }
             }
             full.end(logits, greedy)
@@ -1225,11 +1232,7 @@ impl Runtime {
         if ids.is_empty() {
             return Ok((String::new(), PhaseTimings::default()));
         }
-        if ids.len().saturating_add(limit as usize) > self.cfg.max_seq {
-            return Err(BitNetError::Inference(
-                "prompt and generation exceed context capacity".into(),
-            ));
-        }
+        crate::context_capacity::check_request(ids.len(), limit, self.cfg.max_seq)?;
         let pf = Instant::now();
         if let Some(cache) = &self.weights.expert_cache {
             cache
@@ -1249,30 +1252,50 @@ impl Runtime {
         } else {
             0
         };
-        let block_capacity=self.gpu_full.as_ref().map_or(0,|f|f.prefill_capacity());
-        if block_capacity>0 {
-            let mut full=self.gpu_full.take().unwrap();
-            let result=(|| {
-                let tensor=self.weights.tensor("token_embd.weight")?;
-                let mut pos=reused;
-                while pos<ids.len() {
-                    if inference_cancelled() {return Err(BitNetError::Inference("inference cancelled".into()));}
-                    let count=block_capacity.min(ids.len()-pos);
-                    let mut embeddings=vec![0.0;count*self.cfg.embd];
-                    for (&token,row) in ids[pos..pos+count].iter().zip(embeddings.chunks_exact_mut(self.cfg.embd)) {
-                        if token as usize>=self.cfg.vocab {return Err(BitNetError::Inference("block token out of bounds".into()));}
-                        crate::ggml::embedding_row_mmap(&self.weights.archive,tensor,token as usize,self.cfg.embd,self.cfg.vocab,row)?;
+        let block_capacity = self.gpu_full.as_ref().map_or(0, |f| f.prefill_capacity());
+        if block_capacity > 0 {
+            let mut full = self.gpu_full.take().unwrap();
+            let result = (|| {
+                let tensor = self.weights.tensor("token_embd.weight")?;
+                let mut pos = reused;
+                while pos < ids.len() {
+                    if inference_cancelled() {
+                        return Err(BitNetError::Inference("inference cancelled".into()));
                     }
-                    (logits,next_token)=full.prefill(&embeddings,pos,count,pos+count==ids.len(),gpu_greedy)?;
-                    pos+=count;
+                    let count = block_capacity.min(ids.len() - pos);
+                    let mut embeddings = vec![0.0; count * self.cfg.embd];
+                    for (&token, row) in ids[pos..pos + count]
+                        .iter()
+                        .zip(embeddings.chunks_exact_mut(self.cfg.embd))
+                    {
+                        if token as usize >= self.cfg.vocab {
+                            return Err(BitNetError::Inference("block token out of bounds".into()));
+                        }
+                        crate::ggml::embedding_row_mmap(
+                            &self.weights.archive,
+                            tensor,
+                            token as usize,
+                            self.cfg.embd,
+                            self.cfg.vocab,
+                            row,
+                        )?;
+                    }
+                    (logits, next_token) = full.prefill(
+                        &embeddings,
+                        pos,
+                        count,
+                        pos + count == ids.len(),
+                        gpu_greedy,
+                    )?;
+                    pos += count;
                 }
                 Ok(())
             })();
-            self.gpu_full=Some(full);
+            self.gpu_full = Some(full);
             result?;
-        }else {
-            for (pos,&id) in ids.iter().enumerate().skip(reused) {
-                (logits,next_token)=self.forward(id,pos,pos+1==ids.len(),gpu_greedy)?;
+        } else {
+            for (pos, &id) in ids.iter().enumerate().skip(reused) {
+                (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
             }
         }
         if let Some(full) = &mut self.gpu_full {
@@ -1341,6 +1364,8 @@ pub(crate) struct NativeExecutor {
     family: Family,
     id: String,
     runtime: Mutex<Runtime>,
+    context_capacity: usize,
+    prompt_tokenizer: Arc<LoadedPromptTokenizer>,
 }
 
 impl NativeExecutor {
@@ -1356,11 +1381,16 @@ impl NativeExecutor {
             kind,
             family,
             id,
+            context_capacity: runtime.cfg.max_seq,
+            prompt_tokenizer: Arc::clone(&runtime.tokenizer),
             runtime: Mutex::new(runtime),
         })
     }
 }
 impl ModelExecutor for NativeExecutor {
+    fn context_capacity(&self) -> Option<usize> {
+        Some(self.context_capacity)
+    }
     fn family(&self) -> &'static str {
         self.family.name()
     }
@@ -1380,11 +1410,7 @@ impl ModelExecutor for NativeExecutor {
         Some(self.id.clone())
     }
     fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
-        let r = self
-            .runtime
-            .lock()
-            .map_err(|_| BitNetError::Inference("runtime lock poisoned".into()))?;
-        Ok(r.tokenizer.encode_ids(prompt, true)?.len() as u32)
+        Ok(self.prompt_tokenizer.encode_ids(prompt, true)?.len() as u32)
     }
     fn offload_metadata(&self) -> Option<String> {
         self.runtime.lock().ok().map(|r| {
@@ -1810,5 +1836,5 @@ mod mla_runtime_tests;
 mod moe_policy_runtime_tests;
 
 #[cfg(test)]
-#[path="gpt_block_runtime_tests.rs"]
+#[path = "gpt_block_runtime_tests.rs"]
 mod gpt_block_runtime_tests;

@@ -23,6 +23,7 @@
 
 pub mod backend;
 pub mod cancel;
+pub(crate) mod context_capacity;
 pub mod deepseek2;
 pub mod error;
 pub mod experimental_flashinfer;

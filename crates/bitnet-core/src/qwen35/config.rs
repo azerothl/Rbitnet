@@ -259,15 +259,12 @@ impl Qwen35Config {
                 .ok_or_else(|| BitNetError::Inference("invalid vocab size".into()))?,
             n_embd: i64_to_usize(n_embd_i)?
                 .ok_or_else(|| BitNetError::Inference("invalid embedding size".into()))?,
-            max_seq: usize::try_from(ctx_len)
-                .map_err(|_| BitNetError::Inference("context length OOB".into()))?
-                .min(
-                    std::env::var("RBITNET_MAX_SEQ")
-                        .ok()
-                        .and_then(|s| s.parse().ok())
-                        .filter(|&v| v > 0)
-                        .unwrap_or(8192),
-                ),
+            max_seq: crate::context_capacity::capacity_from_env(
+                usize::try_from(ctx_len)
+                    .map_err(|_| BitNetError::Inference("context length OOB".into()))?,
+                8192,
+                None,
+            )?,
             n_layer: n_layer_us,
             rope_freq_base: rope_base,
             rope_dim_pairs: rope_dim_pairs / 2 * 2, // pairs

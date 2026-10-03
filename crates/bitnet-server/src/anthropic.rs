@@ -92,6 +92,21 @@ pub async fn messages(
     };
 
     let prompt = anthropic_messages_to_prompt(&req.messages);
+    if let Err((status, message)) =
+        crate::validate_request_context(&eng, &state.config, &prompt, req.max_tokens)
+    {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            status,
+            Json(
+                json!({"type":"error","error":{"type":"invalid_request_error","message":message}}),
+            ),
+        )
+            .into_response());
+    }
     let sampling = SamplingOptions::from_temperature(req.temperature);
     let id = format!("msg_{}", uuid::Uuid::new_v4());
 

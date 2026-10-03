@@ -36,7 +36,9 @@ pub struct EngineModelMetadata {
     pub summary: Option<String>,
     pub model_path: Option<String>,
     pub architecture: String,
+    /// Training context recorded by GGUF; does not imply allocated capacity.
     pub context_length: Option<u64>,
+    pub context_capacity: Option<usize>,
     pub quantization: Option<String>,
     pub backend: String,
     pub backend_accelerated: bool,
@@ -307,6 +309,7 @@ impl Engine {
                 .and_then(|g| g.architecture().map(ToString::to_string))
                 .unwrap_or_else(|| self.inner.model_family.clone()),
             context_length: gguf.and_then(|g| g.context_length()),
+            context_capacity: self.context_capacity(),
             quantization: gguf.and_then(|g| g.quantization_summary()),
             backend: self.inner.backend_kind.as_str().to_string(),
             backend_accelerated: self.backend_accelerated(),
@@ -408,6 +411,25 @@ impl Engine {
         self.inner.scheduler.enabled
     }
 
+    pub fn context_capacity(&self) -> Option<usize> {
+        self.inner
+            .executor
+            .as_ref()
+            .and_then(|e| e.context_capacity())
+    }
+    /// Validate already encoded HTTP prompts before opening an SSE response.
+    pub fn validate_context_tokens(&self, prompt_tokens: u32, max_tokens: u32) -> Result<()> {
+        if let Some(capacity) = self.context_capacity() {
+            crate::context_capacity::check_request(prompt_tokens as usize, max_tokens, capacity)?;
+        }
+        Ok(())
+    }
+    fn validate_prompt_context(&self, prompt: &str, max_tokens: u32) -> Result<()> {
+        if self.context_capacity().is_some() {
+            self.validate_context_tokens(self.count_prompt_tokens(prompt)?, max_tokens)?;
+        }
+        Ok(())
+    }
     /// tokenizer-encoded prompt length (for HTTP guards). Stub/toy use a rough character heuristic.
     pub fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
         if self.inner.stub || self.inner.toy.is_some() {
@@ -433,6 +455,7 @@ impl Engine {
         let Some(executor) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);
         };
+        self.validate_prompt_context(prompt, max_tokens)?;
         let req = InferenceRequest {
             prompt: prompt.to_string(),
             max_tokens,
@@ -504,6 +527,7 @@ impl Engine {
         let Some(executor) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);
         };
+        self.validate_prompt_context(prompt, max_tokens)?;
         let req = InferenceRequest {
             prompt: prompt.to_string(),
             max_tokens,
@@ -602,6 +626,7 @@ impl Engine {
         let Some(executor) = self.inner.executor.as_deref() else {
             return Err(BitNetError::ModelNotLoaded);
         };
+        self.validate_prompt_context(prompt, max_tokens)?;
         let req = InferenceRequest {
             prompt: prompt.to_string(),
             max_tokens,
