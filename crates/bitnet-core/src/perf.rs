@@ -15,6 +15,7 @@ pub struct PerfSnapshot {
     pub gpu_gemv_calls: u64,
     pub gpu_attention_calls: u64,
     pub gpu_qwen_full_tokens: u64,
+    pub gpu_gpt_full_tokens: u64,
     pub gpu_split_attention_queries: u64,
     pub gpu_tensor_gemm_calls: u64,
     pub scratch_alloc_bytes: u64,
@@ -69,6 +70,7 @@ struct PerfCounters {
     gpu_gemv_calls: AtomicU64,
     gpu_attention_calls: AtomicU64,
     gpu_qwen_full_tokens: AtomicU64,
+    gpu_gpt_full_tokens: AtomicU64,
     gpu_split_attention_queries: AtomicU64,
     gpu_tensor_gemm_calls: AtomicU64,
     scratch_alloc_bytes: AtomicU64,
@@ -175,6 +177,9 @@ pub(crate) fn record_split_attention(queries: u64) {
     perf()
         .gpu_split_attention_queries
         .fetch_add(queries, Ordering::Relaxed);
+}
+pub(crate) fn record_gpt_full_token() {
+    perf().gpu_gpt_full_tokens.fetch_add(1, Ordering::Relaxed);
 }
 pub(crate) fn record_gpu_tensor_gemm(calls: u64) {
     perf()
@@ -353,6 +358,7 @@ pub fn snapshot() -> PerfSnapshot {
         gpu_gemv_calls: p.gpu_gemv_calls.load(Ordering::Relaxed),
         gpu_attention_calls: p.gpu_attention_calls.load(Ordering::Relaxed),
         gpu_qwen_full_tokens: p.gpu_qwen_full_tokens.load(Ordering::Relaxed),
+        gpu_gpt_full_tokens: p.gpu_gpt_full_tokens.load(Ordering::Relaxed),
         gpu_split_attention_queries: p.gpu_split_attention_queries.load(Ordering::Relaxed),
         gpu_tensor_gemm_calls: p.gpu_tensor_gemm_calls.load(Ordering::Relaxed),
         scratch_alloc_bytes: p.scratch_alloc_bytes.load(Ordering::Relaxed),
@@ -411,6 +417,11 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_gpu_qwen_full_tokens_total",
         "Tokens processed through the complete dense Qwen CUDA pipeline",
         snap.gpu_qwen_full_tokens
+    );
+    counter!(
+        "rbitnet_core_gpu_gpt_full_tokens_total",
+        "Tokens processed through the complete fixed-bank GPT-OSS CUDA pipeline",
+        snap.gpu_gpt_full_tokens
     );
     counter!(
         "rbitnet_core_gpu_split_attention_queries_total",

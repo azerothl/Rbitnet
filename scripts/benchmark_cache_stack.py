@@ -15,7 +15,7 @@ from benchmark_engines import Server
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=pathlib.Path, required=True)
-    parser.add_argument('--model', choices=['llama32-1b', 'qwen35-2b'], required=True)
+    parser.add_argument('--model', choices=['llama32-1b', 'qwen35-2b', 'gpt-oss-20b'], required=True)
     parser.add_argument('--backend', choices=['cpu', 'gpu'], default='gpu')
     parser.add_argument('--binary', type=pathlib.Path, required=True)
     parser.add_argument('--library', type=pathlib.Path, required=True)
@@ -26,10 +26,13 @@ def main():
     parser.add_argument('--split-kv', action='store_true', help='Compare exact split-KV attention with its previous resident path')
     parser.add_argument('--tf32x3', action='store_true', help='Compare Llama block prefill with compensated Tensor Core projections')
     parser.add_argument('--qwen-prefill', action='store_true', help='Compare full Qwen serial/SIMT block/Tensor Core block prefill')
+    parser.add_argument('--gpt-full', action='store_true', help='Compare GPT-OSS partial, resident, and resident split-KV paths')
     args = parser.parse_args()
     if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
     if args.qwen_full and (args.model != 'qwen35-2b' or args.backend != 'gpu'): parser.error('--qwen-full requires dense Qwen GPU')
-    if args.split_kv and (args.backend != 'gpu' or (args.model == 'qwen35-2b' and not args.qwen_full)): parser.error('--split-kv requires resident Llama or full Qwen GPU')
+    if args.gpt_full and (args.model != 'gpt-oss-20b' or args.backend != 'gpu' or args.qwen_full or args.qwen_prefill or args.tf32x3): parser.error('--gpt-full requires GPT-OSS GPU')
+    if args.model == 'gpt-oss-20b' and not args.gpt_full: parser.error('GPT-OSS ablation requires --gpt-full')
+    if args.split_kv and (args.backend != 'gpu' or (args.model == 'qwen35-2b' and not args.qwen_full)): parser.error('--split-kv requires resident Llama, Qwen, or GPT-OSS GPU')
     if args.qwen_prefill and (args.model != 'qwen35-2b' or args.backend != 'gpu' or not args.qwen_full): parser.error('--qwen-prefill requires full dense Qwen GPU')
     if args.tf32x3 and not args.qwen_prefill and (args.model != 'llama32-1b' or args.backend != 'gpu' or args.qwen_full): parser.error('--tf32x3 requires resident Llama GPU or --qwen-prefill')
     root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
@@ -74,6 +77,8 @@ def main():
         modes=[('baseline','0','0','1',split,'0','0'), ('block','0','0','1',split,'0','1')]
         if args.tf32x3: modes += [('tensor','0','0','1',split,'1','1'), ('tensor-prefix','1','0','1',split,'1','1')]
         else: modes += [('block-prefix','1','0','1',split,'0','1')]
+    if args.gpt_full:
+        modes=[('baseline','0','0','0','0','0','0'),('full','0','0','0','0','0','0'),('full-split','0','0','0','1','0','0')]
     original = subprocess.Popen
     baseline = {}
     baseline_sse = {}
@@ -82,6 +87,9 @@ def main():
     for mode, prefix, block, full, split, tensor, qwen_block in modes:
         overrides = dict(RBITNET_PREFIX_KV=prefix, RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
                          RBITNET_CUDA_QWEN_FULL=full, RBITNET_REQUIRE_QWEN_FULL=full,
+                         RBITNET_CUDA_GPT_FULL='1' if args.gpt_full and mode != 'baseline' else '0',
+                         RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full and mode != 'baseline' else '0',
+                         RBITNET_MOE_CACHE_MB='0',
                          RBITNET_CUDA_SPLIT_KV=split,
                          RBITNET_CUDA_PREFILL_TF32X3=tensor,
                          RBITNET_CUDA_QWEN_PREFILL=qwen_block,
@@ -115,6 +123,7 @@ def main():
                     if block == '1': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native block prefill was not used'
                     if qwen_block == '1' and index < 2 and prefix == '0': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native Qwen block prefill was not used'
                     if full == '1': assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0, 'full Qwen pipeline was not used'
+                    if args.gpt_full and mode != 'baseline': assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0, 'full GPT-OSS pipeline was not used'
                     if split == '1': assert delta.get('rbitnet_core_gpu_split_attention_queries_total', 0) > 0, 'split-KV kernels were not used'
                     if tensor == '1' and index < 2 and prefix == '0': assert delta.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0) > 0, 'Tensor Core projections were not used'
             messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Répète exactement : été, café, résumé, 🙂.'}]

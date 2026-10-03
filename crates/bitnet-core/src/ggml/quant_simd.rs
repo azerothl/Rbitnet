@@ -18,10 +18,11 @@ macro_rules! dispatch {
     };
 }
 
-pub(super) fn dot(ty: u32, row: &[u8], x: &[f32]) -> Option<f32> {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    #[cfg(target_arch = "x86_64")]
-    static WIDE: OnceLock<bool> = OnceLock::new();
+static ENABLED: OnceLock<bool> = OnceLock::new();
+#[cfg(target_arch = "x86_64")]
+static WIDE: OnceLock<bool> = OnceLock::new();
+
+pub(crate) fn f32_accumulator_lanes() -> Option<usize> {
     #[cfg(target_arch = "x86_64")]
     if *ENABLED.get_or_init(|| {
         std::env::var("RBITNET_CPU_SIMD_QUANT").as_deref() != Ok("0")
@@ -29,6 +30,24 @@ pub(super) fn dot(ty: u32, row: &[u8], x: &[f32]) -> Option<f32> {
             && std::arch::is_x86_feature_detected!("fma")
             && std::arch::is_x86_feature_detected!("f16c")
     }) {
+        if *WIDE.get_or_init(|| {
+            std::env::var("RBITNET_CPU_AVX512").as_deref() != Ok("0")
+                && std::arch::is_x86_feature_detected!("avx512f")
+                && std::arch::is_x86_feature_detected!("avx512bw")
+        }) {
+            return Some(16);
+        }
+        return Some(8);
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    let _ = &ENABLED;
+    None
+}
+
+pub(super) fn dot(ty: u32, row: &[u8], x: &[f32]) -> Option<f32> {
+    let lanes = f32_accumulator_lanes()?;
+    #[cfg(target_arch = "x86_64")]
+    {
         let (elements, bytes) = super::types::type_layout(ty).ok()?;
         if !matches!(ty, 0 | 2 | 6 | 8 | 12 | 13 | 14 | 39)
             || x.len() % elements != 0
@@ -36,19 +55,18 @@ pub(super) fn dot(ty: u32, row: &[u8], x: &[f32]) -> Option<f32> {
         {
             return None;
         }
-        if *WIDE.get_or_init(|| {
-            std::env::var("RBITNET_CPU_AVX512").as_deref() != Ok("0")
-                && std::arch::is_x86_feature_detected!("avx512f")
-                && std::arch::is_x86_feature_detected!("avx512bw")
-        }) {
-            return Some(unsafe { dispatch!(dot_avx512, ty, row, x) });
+        // The shape and CPU features have been checked before unaligned loads.
+        if lanes == 16 {
+            Some(unsafe { dispatch!(dot_avx512, ty, row, x) })
+        } else {
+            Some(unsafe { dispatch!(dot_avx2, ty, row, x) })
         }
-        // The shape and CPU features have been checked before any unaligned SIMD load.
-        return Some(unsafe { dispatch!(dot_avx2, ty, row, x) });
     }
     #[cfg(not(target_arch = "x86_64"))]
-    let _ = (&ENABLED, ty, row, x);
-    None
+    {
+        let _ = (lanes, ty, row, x);
+        None
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
