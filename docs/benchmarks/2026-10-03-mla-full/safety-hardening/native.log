@@ -1,0 +1,168 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 10.11s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 28 tests
+test backend::device_memory::tests::opt_in_shared_allocator_bounds_views_native_rollback_fallback_and_concurrent_admission ... ok
+test backend::transfer_tests::loader_only_prototypes_never_claim_native_acceleration ... ok
+test backend::transfer_tests::optional_native_completion_guard_finishes_pinned_download_on_early_return ... ok
+test loaders::registry::tests::dispatch_bitnet_native_requires_tokenizer_not_not_impl ... ok
+test native::attention::tests::opt_in_attention_matches_gqa_sinks_window_and_restored_prefix ... ok
+test native::cache_policy::tests::temporal_and_layer_policies_disagree_on_future_and_current_slots ... ok
+test native::expert_cache::tests::optional_expert_cache_protects_leases_reuses_slots_and_enforces_budget ... ok
+test native::graph::gpu_full::tests::full_graph_matches_f64_biases_sinks_windows_rope_gqa_reset_and_output_modes ... GPT-OSS full F64 oracle passed format 0, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 2, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 6, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 8, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 12, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 13, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 14, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 39, graphs/eager, ordinary/split attention
+ok
+test native::graph::gpu_full::tests::router_matches_total_cmp_ties_nan_signed_zero_and_selected_softmax ... ok
+test native::graph::gpu_mla::tests::compressed_attention_matches_f64_with_different_key_value_widths_at_tile_boundaries ... ok
+test native::graph::gpu_mla::tests::quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_prefix ... MLA F64 oracle passed format 0: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 2: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 6: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 8: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 12: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 13: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 14: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 39: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+ok
+test native::graph::gpu_mla::tests::sigmoid_softmax_group_selection_preserves_ids_ties_bias_and_normalization ... ok
+test native::graph::mla_runtime_tests::opt_in_mla_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+test native::graph::mla_runtime_tests::opt_in_real_mla_cpu_routed_fallback_preserves_logits_sampling_and_prefix ... ok
+test native::graph::state_budget::tests::reservation_overflow_is_rejected ... ok
+test native::graph::tests::mla_rotates_consecutive_pairs_and_gpt_oss_rotates_halves ... ok
+test native::graph::tests::opt_in_gpt_full_real_layer_diagnosis ... ok
+test native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+test native::head::tests::opt_in_head_preserves_f64_logits_large_vocab_nan_ties_and_input_changes ... ok
+test native::moe::tests::opt_in_routed_graph_matches_f64_experts_biases_and_selection_changes ... ok
+test native::output::tests::harmony_analysis_is_not_a_finished_answer ... ok
+test native::prefix::tests::byte_budget_lru_and_replacement_release_owned_snapshots ... ok
+test native::prefix::tests::recurrent_checkpoints_cannot_be_truncated_but_attention_can ... ok
+test native::quant_gemm::opt_in_compensated_gemm_matches_f64_all_formats_and_dynamic_ranges ... GGUF type=0 K=512 M=33 N=7 mode=0 event_ms=0.015360 worst_error_over_l1=8.776e-9
+GGUF type=0 K=512 M=33 N=7 mode=1 event_ms=0.025088 worst_error_over_l1=8.941e-9
+GGUF type=0 K=512 M=33 N=16 mode=0 event_ms=0.016384 worst_error_over_l1=9.387e-9
+GGUF type=0 K=512 M=33 N=16 mode=1 event_ms=0.025088 worst_error_over_l1=1.022e-8
+GGUF type=0 K=512 M=33 N=33 mode=0 event_ms=0.015360 worst_error_over_l1=1.073e-8
+GGUF type=0 K=512 M=33 N=33 mode=1 event_ms=0.027648 worst_error_over_l1=1.122e-8
+GGUF type=0 K=512 M=33 N=128 mode=0 event_ms=0.015360 worst_error_over_l1=1.319e-8
+GGUF type=0 K=512 M=33 N=128 mode=1 event_ms=0.028160 worst_error_over_l1=1.442e-8
+GGUF type=2 K=512 M=33 N=7 mode=0 event_ms=0.014848 worst_error_over_l1=1.774e-7
+GGUF type=2 K=512 M=33 N=7 mode=1 event_ms=0.028672 worst_error_over_l1=4.851e-8
+GGUF type=2 K=512 M=33 N=16 mode=0 event_ms=0.015872 worst_error_over_l1=2.666e-7
+GGUF type=2 K=512 M=33 N=16 mode=1 event_ms=0.029184 worst_error_over_l1=4.851e-8
+GGUF type=2 K=512 M=33 N=33 mode=0 event_ms=0.015360 worst_error_over_l1=3.248e-7
+GGUF type=2 K=512 M=33 N=33 mode=1 event_ms=0.031744 worst_error_over_l1=5.676e-8
+GGUF type=2 K=512 M=33 N=128 mode=0 event_ms=0.015360 worst_error_over_l1=3.248e-7
+GGUF type=2 K=512 M=33 N=128 mode=1 event_ms=0.032256 worst_error_over_l1=6.263e-8
+GGUF type=6 K=512 M=33 N=7 mode=0 event_ms=0.016384 worst_error_over_l1=3.720e-8
+GGUF type=6 K=512 M=33 N=7 mode=1 event_ms=0.038912 worst_error_over_l1=1.853e-8
+GGUF type=6 K=512 M=33 N=16 mode=0 event_ms=0.017920 worst_error_over_l1=5.697e-8
+GGUF type=6 K=512 M=33 N=16 mode=1 event_ms=0.038912 worst_error_over_l1=2.259e-8
+GGUF type=6 K=512 M=33 N=33 mode=0 event_ms=0.017920 worst_error_over_l1=5.697e-8
+GGUF type=6 K=512 M=33 N=33 mode=1 event_ms=0.041472 worst_error_over_l1=2.259e-8
+GGUF type=6 K=512 M=33 N=128 mode=0 event_ms=0.017920 worst_error_over_l1=7.489e-8
+GGUF type=6 K=512 M=33 N=128 mode=1 event_ms=0.041984 worst_error_over_l1=2.259e-8
+GGUF type=8 K=512 M=33 N=7 mode=0 event_ms=0.015872 worst_error_over_l1=2.312e-8
+GGUF type=8 K=512 M=33 N=7 mode=1 event_ms=0.031744 worst_error_over_l1=1.219e-8
+GGUF type=8 K=512 M=33 N=16 mode=0 event_ms=0.015872 worst_error_over_l1=2.359e-8
+GGUF type=8 K=512 M=33 N=16 mode=1 event_ms=0.032256 worst_error_over_l1=1.321e-8
+GGUF type=8 K=512 M=33 N=33 mode=0 event_ms=0.015872 worst_error_over_l1=2.551e-8
+GGUF type=8 K=512 M=33 N=33 mode=1 event_ms=0.034304 worst_error_over_l1=1.426e-8
+GGUF type=8 K=512 M=33 N=128 mode=0 event_ms=0.015872 worst_error_over_l1=2.869e-8
+GGUF type=8 K=512 M=33 N=128 mode=1 event_ms=0.034304 worst_error_over_l1=1.858e-8
+GGUF type=12 K=512 M=33 N=7 mode=0 event_ms=0.015872 worst_error_over_l1=2.831e-8
+GGUF type=12 K=512 M=33 N=7 mode=1 event_ms=0.039424 worst_error_over_l1=1.384e-8
+GGUF type=12 K=512 M=33 N=16 mode=0 event_ms=0.015872 worst_error_over_l1=2.831e-8
+GGUF type=12 K=512 M=33 N=16 mode=1 event_ms=0.039856 worst_error_over_l1=1.384e-8
+GGUF type=12 K=512 M=33 N=33 mode=0 event_ms=0.016384 worst_error_over_l1=3.151e-8
+GGUF type=12 K=512 M=33 N=33 mode=1 event_ms=0.043008 worst_error_over_l1=1.735e-8
+GGUF type=12 K=512 M=33 N=128 mode=0 event_ms=0.016384 worst_error_over_l1=3.896e-8
+GGUF type=12 K=512 M=33 N=128 mode=1 event_ms=0.042496 worst_error_over_l1=1.735e-8
+GGUF type=13 K=512 M=33 N=7 mode=0 event_ms=0.015872 worst_error_over_l1=3.358e-8
+GGUF type=13 K=512 M=33 N=7 mode=1 event_ms=0.039936 worst_error_over_l1=1.317e-8
+GGUF type=13 K=512 M=33 N=16 mode=0 event_ms=0.016384 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=16 mode=1 event_ms=0.040448 worst_error_over_l1=1.513e-8
+GGUF type=13 K=512 M=33 N=33 mode=0 event_ms=0.015920 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=33 mode=1 event_ms=0.044032 worst_error_over_l1=1.513e-8
+GGUF type=13 K=512 M=33 N=128 mode=0 event_ms=0.016384 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=128 mode=1 event_ms=0.043008 worst_error_over_l1=1.603e-8
+GGUF type=14 K=512 M=33 N=7 mode=0 event_ms=0.015360 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=7 mode=1 event_ms=0.038912 worst_error_over_l1=3.310e-8
+GGUF type=14 K=512 M=33 N=16 mode=0 event_ms=0.017408 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=16 mode=1 event_ms=0.039424 worst_error_over_l1=3.639e-8
+GGUF type=14 K=512 M=33 N=33 mode=0 event_ms=0.017408 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=33 mode=1 event_ms=0.043520 worst_error_over_l1=3.639e-8
+GGUF type=14 K=512 M=33 N=128 mode=0 event_ms=0.017440 worst_error_over_l1=1.279e-7
+GGUF type=14 K=512 M=33 N=128 mode=1 event_ms=0.044032 worst_error_over_l1=4.031e-8
+GGUF type=39 K=512 M=33 N=7 mode=0 event_ms=0.016384 worst_error_over_l1=3.942e-8
+GGUF type=39 K=512 M=33 N=7 mode=1 event_ms=0.042496 worst_error_over_l1=1.043e-8
+GGUF type=39 K=512 M=33 N=16 mode=0 event_ms=0.018432 worst_error_over_l1=4.748e-8
+GGUF type=39 K=512 M=33 N=16 mode=1 event_ms=0.042960 worst_error_over_l1=1.539e-8
+GGUF type=39 K=512 M=33 N=33 mode=0 event_ms=0.017920 worst_error_over_l1=4.748e-8
+GGUF type=39 K=512 M=33 N=33 mode=1 event_ms=0.045056 worst_error_over_l1=1.539e-8
+GGUF type=39 K=512 M=33 N=128 mode=0 event_ms=0.017920 worst_error_over_l1=6.764e-8
+GGUF type=39 K=512 M=33 N=128 mode=1 event_ms=0.045056 worst_error_over_l1=2.030e-8
+GGUF type=0 K=513 M=65 N=17 mode=0 event_ms=0.016320 worst_error_over_l1=1.353e-8
+GGUF type=0 K=513 M=65 N=17 mode=1 event_ms=0.028112 worst_error_over_l1=1.083e-8
+GGUF type=0 K=33 M=3 N=2 mode=0 event_ms=0.005632 worst_error_over_l1=5.471e-8
+GGUF type=0 K=33 M=3 N=2 mode=1 event_ms=0.006656 worst_error_over_l1=3.929e-8
+ok
+test native::quant_gemm::optional_real_gguf_gemm_accuracy_and_cuda_event_cost ... ok
+test native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore ... ok
+test native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence ... Qwen block format=0 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021730772470363036
+Qwen block format=0 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000001888508740499617
+Qwen block format=0 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019932534423006132
+Qwen block format=2 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000000016286777482221737
+Qwen block format=2 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000004540345877046548
+Qwen block format=2 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000010924805504686219
+Qwen block format=6 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000008869132095412624
+Qwen block format=6 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000003212573762567672
+Qwen block format=6 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000023453955166896634
+Qwen block format=8 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011519856091268821
+Qwen block format=8 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002076552769736395
+Qwen block format=8 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011577067948742581
+Qwen block format=12 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020975785597343588
+Qwen block format=12 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013694864264834905
+Qwen block format=12 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013853661329221723
+Qwen block format=13 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020526972832612955
+Qwen block format=13 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019005068008226544
+Qwen block format=13 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021464891686306942
+Qwen block format=14 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021953019890830205
+Qwen block format=14 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002090942072818791
+Qwen block format=14 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020682061174781552
+Qwen block format=39 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023046958919081817
+Qwen block format=39 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023308976215830057
+Qwen block format=39 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002130988612236706
+Qwen block format=0 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021730772470363036
+Qwen block format=0 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000001888508740499617
+Qwen block format=0 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019932534423006132
+Qwen block format=2 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000000016286777482221737
+Qwen block format=2 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000004540345877046548
+Qwen block format=2 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000000010924805504686219
+Qwen block format=6 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000008869132095412624
+Qwen block format=6 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.000000003212573762567672
+Qwen block format=6 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000000023453955166896634
+Qwen block format=8 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011519856091268821
+Qwen block format=8 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002076552769736395
+Qwen block format=8 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011577067948742581
+Qwen block format=12 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020975785597343588
+Qwen block format=12 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013694864264834905
+Qwen block format=12 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013853661329221723
+Qwen block format=13 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020526972832612955
+Qwen block format=13 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019005068008226544
+Qwen block format=13 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021464891686306942
+Qwen block format=14 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021953019890830205
+Qwen block format=14 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002090942072818791
+Qwen block format=14 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000020682061174781552
+Qwen block format=39 head=32 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023046958919081817
+Qwen block format=39 head=128 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023308976215830057
+Qwen block format=39 head=256 graphs=1: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002130988612236706
+ok
+test native::split_attention::opt_in_split_kv_matches_f64_across_tiles_graph_positions_and_causality ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 87 filtered out; finished in 16.35s

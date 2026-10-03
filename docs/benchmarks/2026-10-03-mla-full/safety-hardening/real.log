@@ -1,0 +1,35 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 3 tests
+test native::graph::gpu_mla::tests::compressed_attention_matches_f64_with_different_key_value_widths_at_tile_boundaries ... ok
+test native::graph::gpu_mla::tests::quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_prefix ... MLA F64 oracle passed format 0: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 2: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 6: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 8: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 12: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 13: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 14: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 39: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+ok
+test native::graph::gpu_mla::tests::sigmoid_softmax_group_selection_preserves_ids_ties_bias_and_normalization ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 1.08s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+test native::graph::mla_runtime_tests::opt_in_mla_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... MLA reference resident weights 1267 MiB; resident routed layers 46/47
+MLA real teacher-forcing + six generations passed graphs=0, split=0, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=0, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=1, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=1, prefix=1
+MLA real worst KL=2.363e-11, worst absolute target NLL delta=1.526e-5
+ok
+test native::graph::mla_runtime_tests::opt_in_real_mla_cpu_routed_fallback_preserves_logits_sampling_and_prefix ... GLM actual CPU routed fallback: six logit positions, three generations plus three restored prefixes; KL 1.780e-11, NLL 8.316e-6
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 113 filtered out; finished in 301.80s

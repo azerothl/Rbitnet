@@ -97,3 +97,30 @@ strict `RBITNET_REQUIRE_MLA_FULL=1` rejects unavailable pipelines. Split KV
 and prefixes are independent options. No Ollama/llama.cpp parity claim is made
 by these within-engine ablations. GPT dynamic experts, native block MLA prefill,
 GPU paging/quantization, async prefetch and multi-sequence serving are later lots.
+
+## Later lifetime hardening
+
+The [separate manifest](safety-hardening/manifest.json) identifies the later safety
+source commit and CLI/DLL hashes. The original timing tables above still belong
+to `21bcfa7`; no complete performance ablation of this rebuilt DLL is claimed.
+
+Native API cleanup now finishes queued copies and device work on every early
+return, and ends/discards an abandoned capture before freeing caller buffers or
+leases. A delayed pinned download and deliberately abandoned valid capture check
+this cleanup without inducing a hardware fault. MLA rejects unfinished-token
+outputs/checkpoints; monotonically assigned context generations reject a snapshot
+that survives destruction and is offered to a newly created context.
+
+This build passes 254 workspace tests (one ignored), Clippy, release/CUDA builds,
+28 native regression tests, three synthetic F64 oracles and the two real GLM
+teacher/sampling/prefix suites with the same KL/NLL bounds. All six lifecycle
+cases and both five-case streaming suites were rerun on this exact safety build.
+This includes tiny-cache all-CPU routed FFNs, client disconnect/recovery, stops
+and four simultaneous requests handled by the serialized runtime.
+
+The tiny-cache streaming invocation initially could not copy its executable
+because E: was full; no server/model started. The failure log is retained. Only
+regenerable untracked debug PDBs were removed, then this one suite was rerun with
+the same executable, DLL and source hashes. Source, models and raw results were
+retained. No hardware fault recovery or native batching is established by these
+tests.
