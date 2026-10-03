@@ -268,6 +268,9 @@ RBITNET_CUDA_API int rbitnet_cuda_mla_hidden_check(void*,float*);
 RBITNET_CUDA_API int rbitnet_cuda_mla_router_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,float,unsigned*,float*);
 RBITNET_CUDA_API int rbitnet_cuda_mla_attention_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,float,unsigned,unsigned,float*);
 
+/* Diagnostic completion guard; mode1 returns after queueing device work and
+ * mode2 abandons a capture. Cleanup waits without inducing a hardware fault. */
+RBITNET_CUDA_API int rbitnet_cuda_native_completion_check(unsigned,float*);
 #ifdef __cplusplus
 }
 #endif

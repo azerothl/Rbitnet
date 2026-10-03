@@ -635,6 +635,16 @@ fn quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_pr
                 destroy,
             };
             assert!(!handle.ptr.is_null());
+            let mut early_ids = vec![0; USED];
+            let mut early_p = vec![0.; USED];
+            assert_ne!(
+                unsafe { prepare(handle.ptr, 0, early_ids.as_mut_ptr(), early_p.as_mut_ptr()) },
+                0
+            );
+            assert_ne!(
+                unsafe { end(handle.ptr, 0, std::ptr::null_mut(), std::ptr::null_mut()) },
+                0
+            );
             let mut oracles: Vec<_> = (0..2)
                 .map(|_| Oracle {
                     weights: dense.clone(),
@@ -730,17 +740,21 @@ fn quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_pr
                             0
                         );
                     }
-                    let mut got = vec![0.0; N];
-                    assert_eq!(unsafe { hidden(handle.ptr, got.as_mut_ptr()) }, 0);
-                    for (i, (&a, &b)) in got.iter().zip(&expected).enumerate() {
-                        assert!((a as f64-b).abs()<5e-5*(1.0+b.abs()),"format={ty} graph={graphs} split={split} CPU={pass} pos={pos} row={i}: {a} vs {b}");
-                    }
+                    let mut premature = vec![0.; N];
+                    assert_ne!(unsafe { hidden(handle.ptr, premature.as_mut_ptr()) }, 0);
+                    let premature_snapshot = unsafe { snapshot(handle.ptr, pos as u32 + 1) };
+                    assert!(premature_snapshot.is_null());
                     let mut logits = vec![0.0; 257];
                     let mut id = 0;
                     assert_eq!(
                         unsafe { end(handle.ptr, 1, logits.as_mut_ptr(), &mut id) },
                         0
                     );
+                    let mut got = vec![0.0; N];
+                    assert_eq!(unsafe { hidden(handle.ptr, got.as_mut_ptr()) }, 0);
+                    for (i, (&a, &b)) in got.iter().zip(&expected).enumerate() {
+                        assert!((a as f64-b).abs()<5e-5*(1.0+b.abs()),"format={ty} graph={graphs} split={split} CPU={pass} pos={pos} row={i}: {a} vs {b}");
+                    }
                     let expected = dot(&dense[13], N, &rms(&expected, &norm));
                     for (i, (&a, b)) in logits.iter().zip(expected).enumerate() {
                         assert!(
@@ -845,8 +859,25 @@ fn quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_pr
             );
             // Reset abandons this partly completed token without reading its tail.
             assert_eq!(unsafe { begin(handle.ptr, embedding.as_ptr(), 0) }, 0);
-            drop(checkpoint);
             drop(handle);
+            // A checkpoint can outlive the native context allocation. It may
+            // not be installed in another context, including address reuse.
+            let recreated = Handle {
+                ptr: unsafe {
+                    create(
+                        &cfg,
+                        layers.as_ptr(),
+                        &descriptors[13],
+                        norm.as_ptr(),
+                        phases.as_ptr(),
+                    )
+                },
+                destroy,
+            };
+            assert!(!recreated.ptr.is_null());
+            assert_ne!(unsafe { restore(recreated.ptr, checkpoint.ptr, 5) }, 0);
+            drop(recreated);
+            drop(checkpoint);
             drop(moe);
         }
         drop(owned);

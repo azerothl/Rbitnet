@@ -154,8 +154,14 @@ __global__ void mla_attention(const float *cache,const float *q,const unsigned *
         out[i]=value;
     }
 }
+uint64_t mla_identity() {
+    static std::mutex mutex;static uint64_t next=0;
+    std::lock_guard<std::mutex> lock(mutex);
+    if(next==std::numeric_limits<uint64_t>::max())return 0;
+    return ++next;
+}
 struct MlaSnapshot {
-    const void *owner=nullptr;
+    uint64_t owner=0;
     unsigned layers=0,width=0,length=0;
     float *data=nullptr;
     ~MlaSnapshot() {if(data)cudaFree(data);}
@@ -173,7 +179,8 @@ struct ResidentMla {
     float *router=nullptr,*probabilities=nullptr,*scratch=nullptr,*phases=nullptr,*norm=nullptr,*logits=nullptr;
     float *maxima=nullptr,*maximum=nullptr;
     unsigned *ids=nullptr,*token=nullptr,*position=nullptr;
-    unsigned filled=0,next_layer=0,host_position=0;bool prepared=false;
+    uint64_t identity=mla_identity();
+    unsigned filled=0,next_layer=0,host_position=0;bool prepared=false,token_started=false,output_ready=false;
     cudaStream_t stream=nullptr;
     ~ResidentMla() {
         if(stream)cudaStreamSynchronize(stream);
@@ -300,6 +307,7 @@ void *rbitnet_cuda_mla_full_create(const RbitnetMlaConfig *c,const RbitnetMlaLay
         qrank=max(qrank,l.qa.rows);
     }
     auto *r=new(std::nothrow) ResidentMla;if(!r)return nullptr;
+    if(!r->identity) {delete r;return nullptr;}
     r->cfg=*c;r->head=*head;r->layers.assign(layers,layers+c->layers);
     r->graphs.resize(size_t(c->layers)*3+3,nullptr);r->executable.resize(r->graphs.size(),nullptr);
     unsigned blocks=(c->vocab+255)/256;
@@ -330,31 +338,34 @@ void *rbitnet_cuda_mla_full_create(const RbitnetMlaConfig *c,const RbitnetMlaLay
 void rbitnet_cuda_mla_full_destroy(void *context) {delete static_cast<ResidentMla*>(context);}
 int rbitnet_cuda_mla_full_begin(void *context,const float *embedding,unsigned pos) {
     auto *r=static_cast<ResidentMla*>(context);if(!r || !embedding || pos>=r->cfg.capacity || pos>r->filled)return 1;
+    NativeCallCompletion completion(r->stream);
     // Starting at zero also discards a partly completed cancelled token.
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
-    r->host_position=pos;r->next_layer=0;r->prepared=false;r->filled=pos;
+    r->host_position=pos;r->next_layer=0;r->prepared=false;r->token_started=false;r->output_ready=false;r->filled=pos;
     if(cudaMemcpyAsync(r->x,embedding,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&r->host_position,sizeof(unsigned),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 2;
-    return 0;
+    int status=completion.complete(0,2);if(!status)r->token_started=true;return status;
 }
 int rbitnet_cuda_mla_full_prepare(void *context,unsigned il,unsigned *ids,float *probabilities) {
     auto *r=static_cast<ResidentMla*>(context);
-    if(!r || il!=r->next_layer || il>=r->cfg.layers || r->prepared
+    if(!r || !r->token_started || il!=r->next_layer || il>=r->cfg.layers || r->prepared
         || (il>=r->cfg.dense_layers && (!ids || !probabilities)))return 1;
+    NativeCallCompletion completion(r->stream);
     if(!r->launch(il*3,[&]{r->enqueue_prepare(il);}))return 2;
     if(il>=r->cfg.dense_layers
         && (cudaMemcpyAsync(ids,r->ids,r->cfg.used*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
             || cudaMemcpyAsync(probabilities,r->probabilities,r->cfg.used*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess))return 3;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
-    r->prepared=true;return 0;
+    r->prepared=true;completion.dismiss();return 0;
 }
 int rbitnet_cuda_mla_full_ffn_input(void *context,float *input) {
     auto *r=static_cast<ResidentMla*>(context);if(!r || !input || !r->prepared)return 1;
-    return cudaMemcpyAsync(input,r->h,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess
-        && cudaStreamSynchronize(r->stream)==cudaSuccess?0:2;
+    NativeCallCompletion completion(r->stream);
+    return completion.complete(cudaMemcpyAsync(input,r->h,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess?0:2,2);
 }
 int rbitnet_cuda_mla_full_finish(void *context,unsigned il,const void *const *selected,const float *cpu_routed) {
     auto *r=static_cast<ResidentMla*>(context);if(!r || il!=r->next_layer || il>=r->cfg.layers || !r->prepared)return 1;
+    NativeCallCompletion completion(r->stream);
     if(il>=r->cfg.dense_layers) {
         auto *m=static_cast<ResidentMoe*>(r->layers[il].moe);
         if(cpu_routed) {
@@ -370,22 +381,23 @@ int rbitnet_cuda_mla_full_finish(void *context,unsigned il,const void *const *se
     if(!r->launch(il*3+(cpu_routed?2:1),[&]{r->enqueue_finish(il,cpu_routed!=nullptr);})
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
     r->prepared=false;r->next_layer++;if(r->next_layer==r->cfg.layers)r->filled=r->host_position+1;
-    return 0;
+    completion.dismiss();return 0;
 }
 int rbitnet_cuda_mla_full_end(void *context,unsigned mode,float *logits,unsigned *token) {
-    auto *r=static_cast<ResidentMla*>(context);if(!r || mode>2 || r->prepared || r->next_layer!=r->cfg.layers
+    auto *r=static_cast<ResidentMla*>(context);if(!r || (!r->token_started && !r->output_ready) || mode>2 || r->prepared || r->next_layer!=r->cfg.layers
         || (mode==1 && !logits) || (mode==2 && !token))return 1;
+    NativeCallCompletion completion(r->stream);
     if(!r->launch(r->cfg.layers*3+mode,[&]{r->enqueue_head(mode);}))return 2;
     if(mode==1 && cudaMemcpyAsync(logits,r->logits,r->cfg.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 3;
     if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 3;
-    return cudaStreamSynchronize(r->stream)==cudaSuccess?0:3;
+    int status=completion.complete(0,3);if(!status) {r->token_started=false;r->output_ready=true;}return status;
 }
 void rbitnet_cuda_mla_snapshot_destroy(void *snapshot) {delete static_cast<MlaSnapshot*>(snapshot);}
 void *rbitnet_cuda_mla_snapshot(void *context,unsigned length) {
     auto *r=static_cast<ResidentMla*>(context);
-    if(!r || !length || length>r->filled || r->prepared || r->next_layer!=r->cfg.layers)return nullptr;
+    if(!r || !length || length>r->filled || r->prepared || r->token_started || r->next_layer!=r->cfg.layers)return nullptr;
     auto *s=new(std::nothrow) MlaSnapshot;if(!s)return nullptr;
-    s->owner=r;s->layers=r->cfg.layers;s->width=r->cfg.rank+r->cfg.rotary;s->length=length;
+    s->owner=r->identity;s->layers=r->cfg.layers;s->width=r->cfg.rank+r->cfg.rotary;s->length=length;
     size_t words=size_t(length)*s->width;
     {MemoryCategoryScope category(MemoryPrefix);
         if(cudaMalloc(reinterpret_cast<void**>(&s->data),size_t(s->layers)*words*sizeof(float))!=cudaSuccess) {delete s;return nullptr;}}
@@ -399,21 +411,22 @@ void *rbitnet_cuda_mla_snapshot(void *context,unsigned length) {
 }
 int rbitnet_cuda_mla_restore(void *context,const void *snapshot,unsigned length) {
     auto *r=static_cast<ResidentMla*>(context);auto *s=static_cast<const MlaSnapshot*>(snapshot);
-    if(!r || !s || s->owner!=r || s->layers!=r->cfg.layers || s->width!=r->cfg.rank+r->cfg.rotary
+    if(!r || !s || s->owner!=r->identity || s->layers!=r->cfg.layers || s->width!=r->cfg.rank+r->cfg.rotary
         || !length || length>s->length || length>r->cfg.capacity)return 1;
+    NativeCallCompletion completion(r->stream);
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
     size_t words=size_t(length)*s->width,source_words=size_t(s->length)*s->width;
     for(unsigned il=0;il<s->layers;il++)if(cudaMemcpyAsync(r->cache[il],s->data+size_t(il)*source_words,words*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess)return 2;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
-    r->filled=length;r->next_layer=r->cfg.layers;r->prepared=false;return 0;
+    r->filled=length;r->next_layer=r->cfg.layers;r->prepared=false;r->token_started=false;r->output_ready=false;completion.dismiss();return 0;
 }
 // Diagnostic host-array helpers use the production kernels. They are never
 // called from hot model inference and do not change any captured addresses.
 int rbitnet_cuda_mla_hidden_check(void *context,float *hidden) {
     auto *r=static_cast<ResidentMla*>(context);
-    if(!r || !hidden || r->prepared || r->next_layer!=r->cfg.layers)return 1;
-    return cudaMemcpyAsync(hidden,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess
-        && cudaStreamSynchronize(r->stream)==cudaSuccess?0:2;
+    if(!r || !hidden || r->prepared || r->token_started || !r->output_ready || r->next_layer!=r->cfg.layers)return 1;
+    NativeCallCompletion completion(r->stream);
+    return completion.complete(cudaMemcpyAsync(hidden,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)==cudaSuccess?0:2,2);
 }
 int rbitnet_cuda_mla_router_check(const float *raw,const float *bias,unsigned count,unsigned used,
     unsigned groups,unsigned groups_used,unsigned sigmoid,unsigned normalize,float scale,unsigned *ids,float *probabilities) {
