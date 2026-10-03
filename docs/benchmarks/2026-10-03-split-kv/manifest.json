@@ -1,0 +1,61 @@
+{
+  "base_commit": "f173f1202a07d5cf787961aae0643bc9b45555c4",
+  "source_dirty": true,
+  "binary_sha256": "bd37f1fbe3aaf4d416e6203e9c0ec130100f98836bac86f7f2a7d78ab87e2f17",
+  "cuda_quant_library_sha256": "2c05fbcdb8d3289ebd74d2a14d73be1e19bd5dace08ff9c0481881b395693f76",
+  "source_sha256": {
+    "native/cuda_quant/src/split_attention.cuh": "dfe06621a0aeec2d3a2418a969364c64fc3f664f70bf610bf376ea874a05f567",
+    "native/cuda_quant/src/llama_resident.cuh": "7ad2420bad177f8d930dede324952112212e21d89d8e4377c0156f002699adce",
+    "native/cuda_quant/src/qwen_full.cuh": "831b749caf9da237902aa0c27a06ae06ac52cfd861b511d038a0f766abb2ed1d",
+    "native/cuda_quant/src/quant_matvec.cu": "c92b1e004f371619789824b52b1bb64bc4930f1d7bcd20c59a36f3076a48f332",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "a9fff1b66e92f4341583d9fdf1fd0f4b96e7306b9c3871a375a6c853ba6e8d6f",
+    "crates/bitnet-core/src/native/split_attention.rs": "6ac4333b58b91f5a936055f8bd478a1fb71e306691d7234559744dbc88b1f3ef",
+    "crates/bitnet-core/src/native/mod.rs": "e34973933f0efb423aa38d7073077c48ac2c108c8af42a3110bf4d9f09e6579a",
+    "crates/bitnet-core/src/native/qwen_full.rs": "a136f97639062eec5017b502623d564ef33f9ca2a3a50ce009d308c7d52cbe4e",
+    "crates/bitnet-core/src/llama/resident.rs": "8d8f3a087a6ff6be0c7c0a3079be52606aabc2ecfb64dd2b618d9de047a8815a",
+    "crates/bitnet-core/src/perf.rs": "63c207cf6eb269e7d1006eab098e1223f05ff790e9b55f2d1a87edc7493ad0fe",
+    "scripts/benchmark_cache_stack.py": "481695352444a57615a7a8b7b99b2888350d8836521e40a715a747fbe3e2d11f",
+    "scripts/benchmark_engines.py": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e",
+    "scripts/benchmark_split_kv_short.py": "aef5363c8f3af32da55ce6a08076ef30eb4fab64f273db483414956b1f7958a6",
+    "scripts/validate_cache_streaming.py": "7ec1a0f9050550885424f278243cbb0ab544ab394e50ca024b747a49fc47a423"
+  },
+  "models": {
+    "llama32-1b": {
+      "gguf_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+      "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b"
+    },
+    "qwen35-2b": {
+      "gguf_sha256": "1b04acba824817554f4ce23639bc8495ff70453b8fcb047900c731521021f2c1",
+      "tokenizer_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42"
+    }
+  },
+  "evidence_files": [
+    "llama-ablation.json",
+    "llama-summary.json",
+    "qwen-ablation.json",
+    "qwen-summary.json",
+    "short-ablation.json",
+    "streaming-llama.json",
+    "streaming-qwen.json",
+    "comparison-manifest.json",
+    "comparison-short.json",
+    "comparison-long.json",
+    "comparison-driver.ps1",
+    "short-llama32-1b-prompts.json",
+    "short-qwen35-2b-prompts.json",
+    "long-llama32-1b-prompts.json",
+    "long-qwen35-2b-prompts.json",
+    "cuda-build.log",
+    "workspace.log",
+    "clippy.log",
+    "cli-build.log",
+    "oracle.log",
+    "llama-verify.log",
+    "llama-sequence.log",
+    "qwen-graph.log",
+    "qwen-eager.log",
+    "qwen-oracle.log",
+    "legacy-dll.log"
+  ],
+  "note": "Same release CLI and native DLL for ablations, comparisons and streaming. Timings isolated from compilation and GPU tests. Source hashes cover physical Windows working-tree bytes. Reference protocol and context/KV differences are explicit in README."
+}

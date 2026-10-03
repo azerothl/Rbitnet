@@ -20,12 +20,13 @@ def main():
     p.add_argument('--port', type=int, default=18106)
     p.add_argument('--speculative', action='store_true', help='Validate native Llama PLD together with prefix reuse')
     p.add_argument('--qwen-full', action='store_true', help='Validate complete dense Qwen GPU pipeline with checkpoints')
+    p.add_argument('--split-kv', action='store_true', help='Validate exact split-KV with runtime graphs and cached prefixes')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, split_kv=args.split_kv, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
@@ -40,6 +41,7 @@ def main():
                 kw['env'].update(RBITNET_PREFIX_KV='1', RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
                                  RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='32', RBITNET_CUDA_PREFILL=block,
                                  RBITNET_SPECULATIVE_PLD='1' if args.speculative else '0', RBITNET_SPECULATIVE='0', RBITNET_SPECULATIVE_TOKENS='15',
+                                 RBITNET_CUDA_SPLIT_KV='1' if args.split_kv else '0',
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
@@ -97,6 +99,10 @@ def main():
             assert equal, label
             if args.speculative: assert delta.get('rbitnet_core_speculative_verify_blocks_total', 0) > 0
             if args.qwen_full: assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0
+            if args.split_kv:
+                used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
+                if model['id']=='llama32-1b' or args.qwen_full: assert used > 0
+                else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
             print(label, 'stop and concurrency passed', flush=True)
         finally: server.close(); save()
 
