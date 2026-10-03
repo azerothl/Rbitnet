@@ -29,6 +29,8 @@ Le décodage paginé varie de -8.25 % face au dense dans cette ablation. Cette m
 
 Les 1/4/8 contextes de la fixture mesurent le partage/cycle de vie, pas un forward multi-séquences. Le serveur utilise encore un seul runtime de génération. Les formats F16/Q8, pages Qwen/GPT/MLA, le KV CPU/SSD et le continuous batching restent dans leurs lots distincts (#93, #94, #96). #92 reste ouvert pour ces architectures et l'intégration serveur multi-séquences.
 
+Le harness réseau initial réassignait sa liste de modes après la restriction Llama : il a aussi exécuté cinq contrôles Qwen avec le chemin Qwen existant. Ces captures supplémentaires sont conservées, mais ne prouvent aucun KV paginé Qwen. Les dix contrôles Llama des deux modes constituent la validation serveur paginée rapportée ici. La restriction de modes du harness de travail est corrigée pour les expériences suivantes ; la copie publiée conserve le script effectivement exécuté.
+
 ## Provenance et reproduction
 
 Les captures `production/`, `ablation/` et `live/` appartiennent à la version intégrée. Les captures `prototype-*` appartiennent au premier prototype et ne sont pas regroupées dans les résultats intégrés. `manifest.json` lie les sources, le binaire et la DLL. Les scripts `reproduction/` documentent les commandes et variables ; les captures publiées normalisent uniquement BOM/CRLF et conservent leurs empreintes originales.
