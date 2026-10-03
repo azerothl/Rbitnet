@@ -14,6 +14,7 @@ use crate::ggml::tensor_to_f32;
 use crate::gguf::{GgufArchive, GgufTensorInfo};
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::{sample_token, SamplingOptions};
+use crate::stream::emit_text_delta;
 use crate::timings::PhaseTimings;
 
 use super::attention::{block_full_attention, AttnKvCache};
@@ -29,6 +30,8 @@ pub struct Qwen35Runtime {
     tokenizer: LoadedPromptTokenizer,
     attn_kv: AttnKvCache,
     rec: Vec<RecurrentState>,
+    gpu_recurrent: Vec<Option<crate::native::qwen_recurrent::GpuRecurrent>>,
+    gpu_head: Option<crate::native::head::GpuHead>,
     weights: Weights,
     tok_embd: GgufTensorInfo,
     out_norm: GgufTensorInfo,
@@ -89,8 +92,21 @@ fn rms_combine(
 }
 
 impl Qwen35Runtime {
+    pub(crate) fn gpu_execution_summary(&self) -> (usize, usize, bool) {
+        (
+            self.gpu_recurrent.iter().flatten().count(),
+            self.cfg.recurrent_layers.iter().filter(|&&v| v).count(),
+            self.gpu_head.is_some(),
+        )
+    }
     pub(crate) fn resident_weights_bytes(&self) -> usize {
         self.weights.resident_bytes
+            + self
+                .gpu_recurrent
+                .iter()
+                .flatten()
+                .map(|g| g.extra_weights_bytes)
+                .sum::<usize>()
     }
     pub fn load(
         archive: Arc<GgufArchive>,
@@ -173,22 +189,56 @@ impl Qwen35Runtime {
             )));
         }
         let sv_state = (gate_out / num_v).max(1);
+        let mut extra_budget = weights
+            .residency_budget_bytes
+            .saturating_sub(weights.resident_bytes);
+        let gpu_recurrent: Vec<_> = (0..cfg.n_layer)
+            .map(|il| {
+                if matches!(backend_kind, BackendKind::Cuda | BackendKind::Hybrid)
+                    && cfg.n_expert == 0
+                    && cfg.is_recurrent_layer(il)
+                    && sv_state == cfg.ssm_d_state
+                {
+                    let gpu = crate::native::qwen_recurrent::GpuRecurrent::new(
+                        &weights,
+                        il,
+                        sv_state,
+                        cfg.ssm_n_group,
+                        num_v,
+                        cfg.norm_eps,
+                        extra_budget,
+                    );
+                    if let Some(gpu) = &gpu {
+                        extra_budget -= gpu.extra_weights_bytes;
+                    }
+                    gpu
+                } else {
+                    None
+                }
+            })
+            .collect();
+        tracing::info!(
+            layers = gpu_recurrent.iter().flatten().count(),
+            "resident Qwen recurrent blocks"
+        );
         let mut rec = Vec::with_capacity(cfg.n_layer);
-        for _ in 0..cfg.n_layer {
-            rec.push(RecurrentState::new(
-                d_conv,
-                d_inner,
-                sv_state,
-                cfg.ssm_dt_rank.max(1),
-            ));
+        for (il, gpu) in gpu_recurrent.iter().enumerate() {
+            rec.push(if gpu.is_some() || !cfg.is_recurrent_layer(il) {
+                RecurrentState::new(0, 0, 0, 0)
+            } else {
+                RecurrentState::new(d_conv, d_inner, sv_state, cfg.ssm_dt_rank.max(1))
+            });
         }
 
+        let gpu_head = crate::native::head::GpuHead::new(&weights, &out_head.name, cfg.norm_eps);
         Ok(Self {
             cfg,
             archive,
             tokenizer,
             attn_kv,
             rec,
+            gpu_recurrent,
+            gpu_head,
             weights,
             tok_embd,
             out_norm,
@@ -242,6 +292,8 @@ impl Qwen35Runtime {
 
         let t_pf = Instant::now();
         let mut logits = Vec::new();
+        let mut next_token = None;
+        let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
         let prefill_chunk = self.prefill_chunk_tokens.max(1);
         for (chunk_idx, chunk) in prompt_ids.chunks(prefill_chunk).enumerate() {
             let chunk_base = chunk_idx * prefill_chunk;
@@ -250,7 +302,8 @@ impl Qwen35Runtime {
                 if inference_cancelled() {
                     return Err(BitNetError::Inference("inference cancelled".into()));
                 }
-                logits = self.forward_one(tid, pos, &arch, pos + 1 == prompt_ids.len())?;
+                (logits, next_token) =
+                    self.forward_inner(tid, pos, &arch, pos + 1 == prompt_ids.len(), gpu_greedy)?;
             }
             if self.trace_layer_timings {
                 tracing::debug!(
@@ -274,28 +327,28 @@ impl Qwen35Runtime {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
-            let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
+            let next_id = next_token
+                .take()
+                .unwrap_or_else(|| sample_token(&logits, &sampling, &gen, &mut rng));
             if eos_ids.contains(&next_id) {
                 break;
             }
             gen.push(next_id);
             let text = self.tokenizer.decode_ids(&gen, true)?;
             if let Some(callback) = events.as_deref_mut() {
-                if let Some(delta) = text.strip_prefix(&previous) {
-                    if !delta.is_empty() {
-                        callback(crate::stream::StreamEvent::Delta { text: delta.into() })?;
-                    }
-                }
+                emit_text_delta(&text, &mut previous, false, callback)?;
             }
-            previous = text;
             if step + 1 < max_tokens {
-                logits = self.forward_one(next_id, pos, &arch, true)?;
+                (logits, next_token) = self.forward_inner(next_id, pos, &arch, true, gpu_greedy)?;
             }
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
 
         let text = self.tokenizer.decode_ids(&gen, true)?;
+        if let Some(callback) = events {
+            emit_text_delta(&text, &mut previous, true, callback)?;
+        }
         let phases = PhaseTimings {
             encode_ms,
             prefill_ms,
@@ -306,6 +359,7 @@ impl Qwen35Runtime {
         Ok((text, phases))
     }
 
+    #[cfg(test)]
     fn forward_one(
         &mut self,
         token: u32,
@@ -313,6 +367,18 @@ impl Qwen35Runtime {
         archive: &Arc<GgufArchive>,
         logits_required: bool,
     ) -> Result<Vec<f32>> {
+        self.forward_inner(token, pos, archive, logits_required, false)
+            .map(|result| result.0)
+    }
+
+    fn forward_inner(
+        &mut self,
+        token: u32,
+        pos: usize,
+        archive: &Arc<GgufArchive>,
+        logits_required: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
         let cfg = &self.cfg;
         let step_t0 = if self.trace_layer_timings {
             Some(Instant::now())
@@ -344,6 +410,18 @@ impl Qwen35Runtime {
             } else {
                 None
             };
+            if let Some(gpu) = &mut self.gpu_recurrent[il] {
+                x = gpu.run(&x, pos)?;
+                if self.trace_layer_timings {
+                    tracing::info!(
+                        pos,
+                        layer = il,
+                        total_layer_us = layer_t0.unwrap().elapsed().as_micros(),
+                        "qwen35 resident layer timing"
+                    );
+                }
+                continue;
+            }
             let residual = x.clone();
             let h = rms_combine(
                 &x,
@@ -569,22 +647,29 @@ impl Qwen35Runtime {
         }
 
         if !logits_required {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), None));
         }
         let logits_t0 = if self.trace_layer_timings {
             Some(Instant::now())
         } else {
             None
         };
-        let xn = rms_combine(&x, &self.out_norm, archive, cfg.norm_eps)?;
-        let head = &self.out_head;
-        let logits = self.weights.payload(
-            archive.tensor_payload(head)?,
-            head.ggml_type,
-            cfg.n_embd,
-            cfg.n_vocab,
-            &xn,
-        )?;
+        let output = if let Some(head) = &mut self.gpu_head {
+            head.run(&x, greedy)?
+        } else {
+            let xn = rms_combine(&x, &self.out_norm, archive, cfg.norm_eps)?;
+            let head = &self.out_head;
+            (
+                self.weights.payload(
+                    archive.tensor_payload(head)?,
+                    head.ggml_type,
+                    cfg.n_embd,
+                    cfg.n_vocab,
+                    &xn,
+                )?,
+                None,
+            )
+        };
         if self.trace_layer_timings {
             let logits_ms = logits_t0.map(|t| t.elapsed().as_millis()).unwrap_or(0);
             let step_ms = step_t0.map(|t| t.elapsed().as_millis()).unwrap_or(0);
@@ -595,7 +680,7 @@ impl Qwen35Runtime {
                 "qwen35 token timing"
             );
         }
-        Ok(logits)
+        Ok(output)
     }
 }
 
@@ -603,5 +688,102 @@ fn seeded_rng(seed: Option<u64>) -> StdRng {
     match seed {
         Some(seed) => StdRng::seed_from_u64(seed),
         None => StdRng::from_entropy(),
+    }
+}
+
+#[cfg(test)]
+mod sequence_tests {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Reference {
+        format: String,
+        cases: Vec<Case>,
+    }
+    #[derive(Deserialize)]
+    struct Case {
+        name: String,
+        prompt: String,
+        prompt_ids: Vec<u32>,
+        greedy_ids: Vec<u32>,
+        text: String,
+        stop_type: String,
+    }
+
+    #[test]
+    fn optional_qwen_greedy_ids_text_and_sequence_reset_match_reference() {
+        let (Ok(gguf), Ok(tokenizer), Ok(fixture)) = (
+            std::env::var("RBITNET_QWEN_TEST_GGUF"),
+            std::env::var("RBITNET_QWEN_TEST_TOKENIZER"),
+            std::env::var("RBITNET_QWEN_SEQUENCE_JSON"),
+        ) else {
+            return;
+        };
+        let reference: Reference =
+            serde_json::from_str(&std::fs::read_to_string(fixture).unwrap()).unwrap();
+        assert_eq!(reference.format, "rbitnet-qwen-sequence-v1");
+        assert!(!reference.cases.is_empty());
+        let backend = match std::env::var("RBITNET_QWEN_SEQUENCE_BACKEND").as_deref() {
+            Ok("cuda") => BackendKind::Cuda,
+            Ok("cpu") | Err(_) => BackendKind::Cpu,
+            Ok(other) => panic!("unsupported Qwen test backend: {other}"),
+        };
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        let mut rt =
+            Qwen35Runtime::load(Arc::clone(&archive), Path::new(&tokenizer), backend).unwrap();
+        if std::env::var("RBITNET_QWEN_REQUIRE_RESIDENT").as_deref() == Ok("1") {
+            assert_eq!(
+                rt.gpu_recurrent.iter().flatten().count(),
+                rt.cfg.recurrent_layers.iter().filter(|&&v| v).count()
+            );
+            assert!(
+                rt.gpu_recurrent.iter().any(|g| g.is_some()),
+                "resident recurrent blocks required"
+            );
+        }
+        for case in reference.cases {
+            assert_eq!(
+                rt.tokenizer.encode_ids(&case.prompt, true).unwrap(),
+                case.prompt_ids,
+                "{}: prompt IDs",
+                case.name
+            );
+            rt.attn_kv.clear();
+            for st in &mut rt.rec {
+                st.conv_hist.fill(0.0);
+                st.ssm_state.fill(0.0);
+            }
+            let mut logits = Vec::new();
+            for (pos, &id) in case.prompt_ids.iter().enumerate() {
+                logits = rt
+                    .forward_one(id, pos, &archive, pos + 1 == case.prompt_ids.len())
+                    .unwrap();
+            }
+            for (step, &expected) in case.greedy_ids.iter().enumerate() {
+                let got = logits
+                    .iter()
+                    .enumerate()
+                    .max_by(|a, b| a.1.total_cmp(b.1))
+                    .unwrap()
+                    .0 as u32;
+                assert_eq!(got, expected, "{}: token {step}", case.name);
+                if step + 1 < case.greedy_ids.len() {
+                    logits = rt
+                        .forward_one(got, case.prompt_ids.len() + step, &archive, true)
+                        .unwrap();
+                }
+            }
+            let limit = case.greedy_ids.len() as u32 + if case.stop_type == "eos" { 8 } else { 0 };
+            let (text, stats) = rt
+                .generate_with_timings(&case.prompt, limit, SamplingOptions::from_temperature(0.0))
+                .unwrap();
+            assert_eq!(text, case.text, "{}: completion text", case.name);
+            assert_eq!(stats.prompt_tokens as usize, case.prompt_ids.len());
+            assert_eq!(
+                stats.completion_tokens as usize + usize::from(case.stop_type == "eos"),
+                case.greedy_ids.len()
+            );
+        }
     }
 }

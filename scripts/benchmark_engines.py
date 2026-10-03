@@ -176,10 +176,15 @@ class Server:
     def close(self):
         memory = self.memory.finish() if self.memory.thread.ident is not None else {}
         if self.engine == "ollama" and self.owns_ollama_model:
-            http(self.base + "/api/generate", {"model": self.model["ollama"], "keep_alive": 0})
-            deadline = time.monotonic() + 30
-            while http(self.base + "/api/ps")["models"] and time.monotonic() < deadline:
-                time.sleep(0.3)
+            try:
+                http(self.base + "/api/generate", {"model": self.model["ollama"], "keep_alive": 0})
+                deadline = time.monotonic() + 30
+                while http(self.base + "/api/ps")["models"] and time.monotonic() < deadline:
+                    time.sleep(0.3)
+            except (RuntimeError, requests.RequestException) as error:
+                # Preserve the failed measurement (e.g. a missing model) instead
+                # of aborting the report while attempting to unload it.
+                memory["cleanup_error"] = str(error)
         elif self.proc and self.proc.poll() is None:
             self.proc.terminate()
             try:
@@ -423,6 +428,9 @@ def main():
                     emit({"failed": [model["id"], engine, backend], "error": str(error)[:1000]})
                 finally:
                     row["memory"] = server.close()
+                    if "cleanup_error" in row["memory"]:
+                        row["status"] = "error"
+                        row.setdefault("error", row["memory"]["cleanup_error"])
                     if server.log_path.exists():
                         log = server.log_path.read_text(encoding="utf-8", errors="replace")
                         row["server_log_tail"] = log[-6000:]

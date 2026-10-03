@@ -8,7 +8,7 @@ use crate::gguf::{GgufArchive, GgufValue};
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::model::ModelExecutor;
 use crate::sampling::{sample_token, SamplingOptions};
-use crate::stream::StreamEvent;
+use crate::stream::{emit_text_delta, StreamEvent};
 use crate::timings::PhaseTimings;
 use rand::{rngs::StdRng, SeedableRng};
 use rayon::prelude::*;
@@ -270,6 +270,8 @@ pub(crate) struct Runtime {
     tokenizer: LoadedPromptTokenizer,
     kv: Vec<LayerKv>,
     gpu_attention: Vec<Option<super::attention::CudaAttention>>,
+    gpu_moe: Vec<Option<super::moe::GpuMoe>>,
+    gpu_head: Option<super::head::GpuHead>,
     use_gpu_attention: bool,
 }
 impl Runtime {
@@ -478,18 +480,40 @@ impl Runtime {
             })
             .collect();
         let gpu_attention = (0..cfg.layers).map(|_| None).collect();
+        let gpu_moe: Vec<_> = (0..cfg.layers)
+            .map(|il| {
+                if il < cfg.dense_layers {
+                    None
+                } else {
+                    super::moe::GpuMoe::new(
+                        &weights,
+                        il,
+                        cfg.experts,
+                        cfg.used,
+                        cfg.family == Family::GptOss,
+                    )
+                }
+            })
+            .collect();
+        tracing::info!(
+            layers = gpu_moe.iter().filter(|m| m.is_some()).count(),
+            "resident CUDA routed expert layers"
+        );
         let use_gpu_attention = matches!(kind, BackendKind::Cuda | BackendKind::Hybrid)
             && weights.resident_bytes > 0
             && !matches!(
                 std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
                 Ok("0" | "false" | "no")
             );
+        let gpu_head = super::head::GpuHead::new(&weights, "output.weight", cfg.eps);
         Ok(Self {
             cfg,
             weights,
             tokenizer,
             kv,
             gpu_attention,
+            gpu_moe,
+            gpu_head,
             use_gpu_attention,
         })
     }
@@ -533,7 +557,7 @@ impl Runtime {
             .collect();
         self.linear(il, &format!("ffn_down{suffix}"), &hidden)
     }
-    fn moe(&self, il: usize, x: &[f32]) -> Result<Vec<f32>> {
+    fn moe(&mut self, il: usize, x: &[f32]) -> Result<Vec<f32>> {
         let c = &self.cfg;
         let mut prob = self.linear(il, "ffn_gate_inp", x)?;
         if prob.len() != c.experts {
@@ -585,25 +609,32 @@ impl Runtime {
                 *w /= sum;
             }
         }
-        let mut result = vec![0.0; c.embd];
-        for (&expert, &weight) in selected.iter().zip(&weights) {
-            let gate = self.expert(il, "ffn_gate_exps", expert, x)?;
-            let up = self.expert(il, "ffn_up_exps", expert, x)?;
-            let hidden: Vec<f32> = gate
-                .iter()
-                .zip(&up)
-                .map(|(&g, &u)| {
-                    if c.family == Family::GptOss {
-                        let g = g.min(7.0);
-                        g / (1.0 + (-1.702 * g).exp()) * (u.clamp(-7.0, 7.0) + 1.0)
-                    } else {
-                        g / (1.0 + (-g).exp()) * u
-                    }
-                })
-                .collect();
-            let down = self.expert(il, "ffn_down_exps", expert, &hidden)?;
-            for (out, d) in result.iter_mut().zip(down) {
-                *out += weight * c.weight_scale * d;
+        let mut result = if let Some(gpu) = &mut self.gpu_moe[il] {
+            let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
+            gpu.run(x, &selected, &scaled)?
+        } else {
+            vec![0.0; c.embd]
+        };
+        if self.gpu_moe[il].is_none() {
+            for (&expert, &weight) in selected.iter().zip(&weights) {
+                let gate = self.expert(il, "ffn_gate_exps", expert, x)?;
+                let up = self.expert(il, "ffn_up_exps", expert, x)?;
+                let hidden: Vec<f32> = gate
+                    .iter()
+                    .zip(&up)
+                    .map(|(&g, &u)| {
+                        if c.family == Family::GptOss {
+                            let g = g.min(7.0);
+                            g / (1.0 + (-1.702 * g).exp()) * (u.clamp(-7.0, 7.0) + 1.0)
+                        } else {
+                            g / (1.0 + (-g).exp()) * u
+                        }
+                    })
+                    .collect();
+                let down = self.expert(il, "ffn_down_exps", expert, &hidden)?;
+                for (out, d) in result.iter_mut().zip(down) {
+                    *out += weight * c.weight_scale * d;
+                }
             }
         }
         if self
@@ -783,7 +814,13 @@ impl Runtime {
             .heads(&format!("blk.{il}.attn_v_b.weight"), &values)?;
         self.linear(il, "attn_output", &attended)
     }
-    fn forward(&mut self, token: u32, pos: usize, logits: bool) -> Result<Vec<f32>> {
+    fn forward(
+        &mut self,
+        token: u32,
+        pos: usize,
+        logits: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
         let c = &self.cfg;
         if pos >= c.max_seq || token as usize >= c.vocab {
             return Err(BitNetError::Inference("token/context out of bounds".into()));
@@ -822,10 +859,13 @@ impl Runtime {
             add(&mut x, &ffn)?;
         }
         if !logits {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), None));
+        }
+        if let Some(head) = &mut self.gpu_head {
+            return head.run(&x, greedy);
         }
         let x = norm(&x, self.weights.dense("output_norm.weight")?, self.cfg.eps)?;
-        self.weights.matvec("output.weight", &x)
+        Ok((self.weights.matvec("output.weight", &x)?, None))
     }
     fn generate(
         &mut self,
@@ -854,8 +894,10 @@ impl Runtime {
         }
         let pf = Instant::now();
         let mut logits = Vec::new();
+        let mut next_token = None;
+        let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
         for (pos, &id) in ids.iter().enumerate() {
-            logits = self.forward(id, pos, pos + 1 == ids.len())?;
+            (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
         }
         let prefill_ms = pf.elapsed().as_millis() as u64;
         let mut rng = match sampling.seed {
@@ -866,11 +908,14 @@ impl Runtime {
         let stop = self.tokenizer.eos_token_ids();
         let dec = Instant::now();
         let mut previous = String::new();
+        let mut emitted = String::new();
         for step in 0..limit {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
-            let next = sample_token(&logits, &sampling, &generated, &mut rng);
+            let next = next_token
+                .take()
+                .unwrap_or_else(|| sample_token(&logits, &sampling, &generated, &mut rng));
             if stop.contains(&next) {
                 break;
             }
@@ -882,17 +927,12 @@ impl Runtime {
                 raw
             };
             if let Some(callback) = events.as_deref_mut() {
-                if let Some(delta) = text.strip_prefix(&previous) {
-                    if !delta.is_empty() {
-                        callback(StreamEvent::Delta {
-                            text: delta.to_string(),
-                        })?;
-                    }
-                }
+                emit_text_delta(&text, &mut emitted, false, callback)?;
             }
             previous = text;
             if step + 1 < limit {
-                logits = self.forward(next, ids.len() + step as usize, true)?;
+                (logits, next_token) =
+                    self.forward(next, ids.len() + step as usize, true, gpu_greedy)?;
             }
         }
         let phases = PhaseTimings {
@@ -902,6 +942,9 @@ impl Runtime {
             prompt_tokens: ids.len() as u32,
             completion_tokens: generated.len() as u32,
         };
+        if let Some(callback) = events.as_deref_mut() {
+            emit_text_delta(&previous, &mut emitted, true, callback)?;
+        }
         Ok((previous, phases))
     }
 }
@@ -959,8 +1002,8 @@ impl ModelExecutor for NativeExecutor {
     fn offload_metadata(&self) -> Option<String> {
         self.runtime.lock().ok().map(|r| {
             format!(
-                "resident quantized weights: {} MiB; remaining matrices execute on CPU",
-                r.weights.resident_bytes / (1024 * 1024)
+                "resident quantized weights: {} MiB; resident output head: {}; remaining matrices execute on CPU",
+                r.weights.resident_bytes / (1024 * 1024),r.gpu_head.is_some()
             )
         })
     }

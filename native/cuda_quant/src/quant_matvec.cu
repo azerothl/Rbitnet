@@ -32,7 +32,8 @@ __device__ __forceinline__ void get_scale_min_k4(int j, const uint8_t *q, uint8_
 enum class QuantKind { F32, Q4_0, Q5_0, Q8_0, Q4_K, Q5_K, Q6_K, MXFP4 };
 
 // Each warp cooperates on one output row instead of serializing all columns in one thread.
-__device__ __forceinline__ float weight_at(QuantKind kind, const uint8_t *row, size_t i) {
+template<QuantKind kind>
+__device__ __forceinline__ float weight_at(const uint8_t *row, size_t i) {
     if (kind == QuantKind::F32) return reinterpret_cast<const float *>(row)[i];
     if (kind == QuantKind::Q4_0 || kind == QuantKind::Q5_0 || kind == QuantKind::Q8_0 || kind == QuantKind::MXFP4) {
         int j = i % 32;
@@ -78,16 +79,114 @@ __device__ __forceinline__ float weight_at(QuantKind kind, const uint8_t *row, s
     return __fsub_rn(__fmul_rn(__fmul_rn(d,float(sc)),float(q)), __fmul_rn(minv,float(m)));
 }
 
-__global__ void quant_matvec_kernel(QuantKind kind, const uint8_t *w, size_t row_bytes,
-    const float *x, size_t x_len, size_t ne1, size_t rows_per_batch, float *y) {
-    const int lane = threadIdx.x & 31;
-    const size_t row = (size_t(blockIdx.x)*blockDim.x + threadIdx.x)/32;
-    if (row >= ne1) return;
-    x += (row/rows_per_batch)*x_len;
+template<QuantKind kind>
+__device__ __forceinline__ float quant_row_dot(const uint8_t *weights,const float *x,size_t x_len) {
+    const int lane=threadIdx.x&31;
     float sum = 0.0f;
-    for (size_t i=lane; i<x_len; i+=32) sum = fmaf(weight_at(kind,w+row*row_bytes,i),x[i],sum);
+    if constexpr(kind==QuantKind::Q4_K || kind==QuantKind::Q5_K || kind==QuantKind::Q6_K) {
+        constexpr size_t bytes=kind==QuantKind::Q4_K?144:kind==QuantKind::Q5_K?176:210;
+        for(size_t block=0;block<x_len/256;block++) {
+            const uint8_t *b=weights+block*bytes;
+            float d=fp16_bits_to_f32(*reinterpret_cast<const uint16_t*>(b+(kind==QuantKind::Q6_K?208:0)));
+            [[maybe_unused]] float minv=kind==QuantKind::Q6_K?0.0f:fp16_bits_to_f32(*reinterpret_cast<const uint16_t*>(b+2));
+            #pragma unroll
+            for(int step=0;step<2;step++) {
+                const int group=lane/8+step*4,j=(lane%8)*4;
+                const float4 input=*reinterpret_cast<const float4*>(x+block*256+group*32+j);
+                uint32_t packed; [[maybe_unused]] uint32_t high=0;float scale; [[maybe_unused]] float minimum=0.0f;
+                if constexpr(kind==QuantKind::Q6_K) {
+                    const int pass=group/4,quarter=group%4;
+                    const uint8_t *ql=b+pass*64+(quarter%2)*32+j;
+                    const uint8_t *qh=b+128+pass*32+j;
+                    // Q6_K rows are aligned to two bytes, not necessarily four.
+                    packed=uint32_t(*reinterpret_cast<const uint16_t*>(ql))|(uint32_t(*reinterpret_cast<const uint16_t*>(ql+2))<<16);
+                    high=uint32_t(*reinterpret_cast<const uint16_t*>(qh))|(uint32_t(*reinterpret_cast<const uint16_t*>(qh+2))<<16);
+                    packed=(packed>>(quarter/2*4))&0x0f0f0f0fu;
+                    high=(high>>(quarter*2))&0x03030303u;
+                    scale=d*float(int8_t(b[192+pass*8+quarter*2+j/16]));
+                } else {
+                    uint8_t sc,m;get_scale_min_k4(group,b+4,&sc,&m);
+                    packed=*reinterpret_cast<const uint32_t*>(b+(kind==QuantKind::Q5_K?48:16)+(group/2)*32+j);
+                    packed=(packed>>(group%2*4))&0x0f0f0f0fu;
+                    if constexpr(kind==QuantKind::Q5_K) high=(*reinterpret_cast<const uint32_t*>(b+16+j)>>group)&0x01010101u;
+                    scale=d*float(sc);minimum=minv*float(m);
+                }
+                #pragma unroll
+                for(int k=0;k<4;k++) {
+                    int q=(packed>>(8*k))&15;
+                    if constexpr(kind==QuantKind::Q6_K)q|=((high>>(8*k))&3)<<4;
+                    if constexpr(kind==QuantKind::Q5_K)q|=((high>>(8*k))&1)<<4;
+                    float value;
+                    if constexpr(kind==QuantKind::Q6_K)value=scale*float(q-32);
+                    else value=__fsub_rn(__fmul_rn(scale,float(q)),minimum);
+                    float xi=k==0?input.x:k==1?input.y:k==2?input.z:input.w;
+                    sum=fmaf(value,xi,sum);
+                }
+            }
+        }
+    } else if constexpr(kind==QuantKind::Q8_0 || kind==QuantKind::MXFP4) {
+        constexpr size_t bytes=kind==QuantKind::Q8_0?34:17;
+        constexpr int groups=kind==QuantKind::Q8_0?4:8;
+        const int group=kind==QuantKind::Q8_0?lane/8:lane/4;
+        const int j=(kind==QuantKind::Q8_0?lane%8:lane%4)*4;
+        for(size_t block=0;block<x_len/32;block+=groups) {
+            size_t qb=block+group;
+            if(qb>=x_len/32)continue;
+            const uint8_t *b=weights+qb*bytes;
+            float d;uint32_t packed;
+            if constexpr(kind==QuantKind::Q8_0) {
+                d=fp16_bits_to_f32(*reinterpret_cast<const uint16_t*>(b));
+                packed=uint32_t(*reinterpret_cast<const uint16_t*>(b+2+j))|(uint32_t(*reinterpret_cast<const uint16_t*>(b+4+j))<<16);
+            } else {
+                d=__uint_as_float(b[0]<2?(0x00200000u<<b[0]):((uint32_t(b[0])-1)<<23));
+                // MXFP4 has odd-byte rows, so do not assume aligned word loads.
+                packed=uint32_t(b[1+j])|(uint32_t(b[2+j])<<8)|(uint32_t(b[3+j])<<16)|(uint32_t(b[4+j])<<24);
+            }
+            const float4 first=*reinterpret_cast<const float4*>(x+qb*32+j);
+            #pragma unroll
+            for(int half=0;half<(kind==QuantKind::Q8_0?1:2);half++) {
+                const float4 input=half?*reinterpret_cast<const float4*>(x+qb*32+16+j):first;
+                #pragma unroll
+                for(int k=0;k<4;k++) {
+                    int q;
+                    if constexpr(kind==QuantKind::Q8_0)q=int8_t(packed>>(k*8));
+                    else {
+                        int nibble=(packed>>(k*8+half*4))&15;
+                        int magnitude=(0xC8643210u>>((nibble&7)*4))&15;
+                        q=(nibble&8)?-magnitude:magnitude;
+                    }
+                    float xi=k==0?input.x:k==1?input.y:k==2?input.z:input.w;
+                    sum=fmaf(d*float(q),xi,sum);
+                }
+            }
+        }
+    } else {
+        for(size_t i=lane;i<x_len;i+=32)sum=fmaf(weight_at<kind>(weights,i),x[i],sum);
+    }
     for (int shift=16; shift>0; shift/=2) sum += __shfl_down_sync(0xffffffff,sum,shift);
-    if (lane == 0) y[row]=sum;
+    return sum;
+}
+template<QuantKind kind>
+__global__ void quant_matvec_kernel(const uint8_t *w,size_t row_bytes,
+    const float *x,size_t x_len,size_t ne1,size_t rows_per_batch,float *y) {
+    const size_t row=(size_t(blockIdx.x)*blockDim.x+threadIdx.x)/32;
+    if(row>=ne1)return;
+    float sum=quant_row_dot<kind>(w+row*row_bytes,x+(row/rows_per_batch)*x_len,x_len);
+    if((threadIdx.x&31)==0)y[row]=sum;
+}
+
+// Format selection belongs on the host, rather than inside every decoded coefficient.
+void launch_quant_kernel(QuantKind kind, const void *w, size_t row_bytes,
+    const float *x, size_t cols, size_t rows, size_t rows_per_batch, float *y,
+    cudaStream_t stream = nullptr) {
+    const int threads = 256;
+    const int blocks = int((rows + 7) / 8);
+#define LAUNCH_QUANT(K) case QuantKind::K: quant_matvec_kernel<QuantKind::K><<<blocks,threads,0,stream>>>(static_cast<const uint8_t*>(w),row_bytes,x,cols,rows,rows_per_batch,y); break
+    switch(kind) {
+        LAUNCH_QUANT(F32); LAUNCH_QUANT(Q4_0); LAUNCH_QUANT(Q5_0); LAUNCH_QUANT(Q8_0);
+        LAUNCH_QUANT(Q4_K); LAUNCH_QUANT(Q5_K); LAUNCH_QUANT(Q6_K); LAUNCH_QUANT(MXFP4);
+    }
+#undef LAUNCH_QUANT
 }
 
 struct Attention {
@@ -176,17 +275,7 @@ int launch_device_w(
     if (cudaMemcpy(g_scratch.d_x, x, x_len * batches * sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess) {
         return 4;
     }
-    const int threads = 128;
-    const int blocks = (int)((ne1*batches + threads/32 - 1) / (threads/32));
-    quant_matvec_kernel<<<blocks, threads>>>(
-        kind,
-        reinterpret_cast<const uint8_t *>(d_w),
-        row_bytes,
-        g_scratch.d_x,
-        x_len,
-        ne1*batches,
-        ne1,
-        g_scratch.d_y);
+    launch_quant_kernel(kind,d_w,row_bytes,g_scratch.d_x,x_len,ne1*batches,ne1,g_scratch.d_y);
     if (cudaGetLastError() != cudaSuccess) {
         return 5;
     }
@@ -322,3 +411,11 @@ int rbitnet_cuda_attention_step(void *context,const float *q,const float *k,cons
     a->filled=pos+1;return 0;
 }
 } // extern "C"
+
+#include "llama_resident.cuh"
+
+#include "moe_resident.cuh"
+
+#include "qwen_recurrent.cuh"
+
+#include "output_head.cuh"

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 spec = importlib.util.spec_from_file_location("benchmark_engines", Path(__file__).resolve().parents[1] / "benchmark_engines.py")
@@ -59,6 +60,13 @@ class BenchmarkTests(unittest.TestCase):
         # No daemon exists at this unused address. close() must perform no HTTP call.
         server.base = "http://127.0.0.1:1"
         self.assertEqual(server.close(), {})
+
+    def test_missing_model_cleanup_preserves_failure_for_the_report(self):
+        with patch.object(bench, "gpu_used_mib", return_value=None):
+            server = bench.Server({}, {"id": "missing", "ollama": "missing"}, "ollama", "cpu", Path("."))
+        server.owns_ollama_model = True
+        with patch.object(bench, "http", side_effect=RuntimeError("HTTP 404: model missing")):
+            self.assertEqual(server.close()["cleanup_error"], "HTTP 404: model missing")
 
 
 if __name__ == "__main__":

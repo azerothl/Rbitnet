@@ -1,0 +1,234 @@
+{
+  "workspace": {
+    "command": "RBITNET_BACKEND=cpu cargo test --workspace --release",
+    "passed": 211,
+    "failed": 0,
+    "ignored": 1
+  },
+  "hardware_checks": [
+    {
+      "name": "cuda-quant",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "cuda_quant_residency",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\cuda-quant.log",
+      "log_sha256": "80b4f886e0a755d0d5ced233bfdccaddc912ce8d4a0f94592b0a83c8d6ce267f"
+    },
+    {
+      "name": "cuda-moe",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "native::moe::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\cuda-moe.log",
+      "log_sha256": "061c55bbd2d65921bdb3e31620e234729f6de114d99f40edad0efa01b21b4848"
+    },
+    {
+      "name": "cuda-attention",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "native::attention::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\cuda-attention.log",
+      "log_sha256": "2e3cc83812d595e551c5a0eaf6ba080d7851d1975f2e568a48cdc76b20131679"
+    },
+    {
+      "name": "cpu-avx512",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "ggml::quant_simd",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\cpu-avx512.log",
+      "log_sha256": "bee4322d9551c167675120110feb70cd21bd1f7e1c1d6b4789f2d05a5c22e0fa"
+    },
+    {
+      "name": "cpu-avx2",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--lib",
+        "ggml::quant_simd",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\cpu-avx2.log",
+      "log_sha256": "3fc24bcd788dfeb3d0d6e60d7bbebd0924866c0be24daa9408662ceabbde9a60"
+    },
+    {
+      "name": "golden-cpu",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "optional_llama_sequence",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\golden-cpu.log",
+      "log_sha256": "68f5da7f995a584df4f5f70cc73ce16af1c940322d622514d0559f3ccc5c3753"
+    },
+    {
+      "name": "golden-cuda",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "optional_llama_sequence",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\golden-cuda.log",
+      "log_sha256": "47fe0a8294a7a392dd1c0709d06a375119a9e873ce674f398f455c28e1f557e5"
+    },
+    {
+      "name": "golden-cuda-eager",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "optional_llama_sequence",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\golden-cuda-eager.log",
+      "log_sha256": "d901252ad2223556504838f32e38e611f96e15b7602469dec180e4ae726b7333"
+    },
+    {
+      "name": "golden-cuda-fallback",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "bitnet-core",
+        "--release",
+        "--test",
+        "optional_llama_sequence",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "target\\parity-optimization\\validation\\golden-cuda-fallback.log",
+      "log_sha256": "232d6db4452afb26fc78c8384250f37b6987000a3b562167edde60c9b41e4a2a"
+    }
+  ],
+  "hardware_environment": {
+    "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\parity-optimization\\moe\\rbitnet_cuda_quant64.dll",
+    "RBITNET_CUDA_QUANT_SMOKE": "1",
+    "RBITNET_PREFIX_KV": "0"
+  },
+  "oracle_formats": [
+    "F32",
+    "Q4_0",
+    "Q5_0",
+    "Q8_0",
+    "Q4_K",
+    "Q5_K",
+    "Q6_K",
+    "MXFP4"
+  ],
+  "oracle_coverage": {
+    "cpu": "AVX2 and AVX512 packed kernels vs independently dequantized F64 dot products",
+    "gpu": "eight formats, row views, batches and four concurrent host threads",
+    "moe": "eight formats times standard/OAI, independent biased F64 experts and changed selections on reused graph",
+    "attention": "standalone GQA/MLA vs F64 at positions 0, 18, 256, 2047 and reset31; sinks and windows",
+    "full_llama": "five pinned reference cases, 43 IDs; CPU, resident captured/eager and fallback; generated text/BOS/EOS checked"
+  },
+  "python_tests": {
+    "command": "python -m unittest discover -s scripts/tests -p test_benchmark_engines.py -v",
+    "passed": 4
+  },
+  "final_builds": {
+    "cli": "cargo build --release -p rbitnet-cli --bin rbitnet",
+    "cuda": "scripts/build_cuda_quant.ps1 -OutDir native/cuda_quant/build",
+    "exit_code": 0
+  },
+  "static_checks": {
+    "clippy": {
+      "command": "cargo clippy --workspace --all-targets --release",
+      "exit_code": 0,
+      "note": "Existing repository warnings remain."
+    },
+    "format": {
+      "changed_optimization_files": "passed rustfmt --check",
+      "workspace": "Existing unrelated formatting differences; no repository-wide rewrite."
+    },
+    "git_diff_check": "passed"
+  },
+  "final_http_modes": [
+    "greedy",
+    "sampling",
+    "penalties"
+  ],
+  "final_http_observation": "Normal GGUF chat template; accents and emoji preserved, nonempty SSE equals completion, DONE received.",
+  "measured_binary_sha256": {
+    "cli": "2f5d852c5d3d26088a8710d9b5f88cb3963f4ebbdd54303be7fb9d588ca553aa",
+    "cuda": "15a32cf82a6149adaebb03a4ff4fa5f4c14fb31c8670e4d9b9e79a395091ad83"
+  },
+  "final_binary_sha256": {
+    "cli": "c385071b48321164cc09698a71dc8f5fe0fd123f93f5c4fef42d7024f40d2deb",
+    "cuda": "7751ae952d5e66e31626a608b1c976c43f3a08182f66c68d5f758180dbe3956a"
+  },
+  "binary_delta_note": "Final CLI includes formatting, preservation of explicit GPU placement overrides and UTF-8 stream followups after measured binary; final DLL rebuilt from same measured native sources. Final HTTP probe uses these rebuilt binaries.",
+  "source_file_sha256": {
+    "crates/bitnet-core/src/ggml/quant_simd.rs": "246ddb676c9c893e24457cef2ddcb0ce4f76843a24d6628dd4d7b54faff457f7",
+    "crates/bitnet-core/src/ggml/quant_dot.rs": "ded56e73b43da0792585c6d366a79da3c3fd81c25778bc474d8af1f7d93f0179",
+    "crates/bitnet-core/src/llama/model.rs": "d2f2fbc3a1b03e59e32ebb5943186d993a53e5d0ae5c9bf18d9023ed362a8fa3",
+    "crates/bitnet-core/src/llama/runtime.rs": "33ecf271034863d917a3432e7e837e211ee8466a89be7ed8a1891939301faaa1",
+    "crates/bitnet-core/src/llama/resident.rs": "1c460806dda7daed7dba21f08a276f74adeb1ae8092bdc1454ca9ce8f3df6544",
+    "crates/bitnet-core/src/native/graph.rs": "0873f0798f55289256d5d16ec076b868e0b1897c60d0759b528a056714560327",
+    "crates/bitnet-core/src/native/moe.rs": "8396384c018c6c74c644b63ebd497e9c33eaa931edd43e5a00c8e74dadc390d8",
+    "native/cuda_quant/src/quant_matvec.cu": "663e5692c5d9eaf793f6278b87e3874a9e709ce589fcbb228be8ec4d00769b7e",
+    "native/cuda_quant/src/llama_resident.cuh": "7cb48a1ec2d9df596572cb6424c68b026b1a4c158b9e5c5d7790d578ecbd0474",
+    "native/cuda_quant/src/moe_resident.cuh": "f77bab98ca53732a2065fbe6825e9a702f894e9aaaad5886e10aa20b2ba3810f",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "6bec3178bcf48a24a05144200298aec19f680799331d641fd253e655c9e2120a"
+  }
+}

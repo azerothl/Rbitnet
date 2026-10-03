@@ -15,6 +15,7 @@ pub(crate) struct Weights {
     resident: BTreeMap<usize, CudaDeviceQuantMatrix>,
     small: HashMap<String, Vec<f32>>,
     pub resident_bytes: usize,
+    pub residency_budget_bytes: usize,
 }
 
 impl Weights {
@@ -33,6 +34,7 @@ impl Weights {
             resident: BTreeMap::new(),
             small,
             resident_bytes: 0,
+            residency_budget_bytes: 0,
         };
         if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid) {
             return Ok(result);
@@ -53,6 +55,7 @@ impl Weights {
                 512
             })
             .saturating_mul(1024 * 1024);
+        result.residency_budget_bytes = budget;
         let tied_output = result.archive.tensor_by_name("output.weight").is_none();
         let mut tensors: Vec<_> = result
             .archive
@@ -116,6 +119,11 @@ impl Weights {
         self.archive
             .tensor_by_name(name)
             .ok_or_else(|| BitNetError::Inference(format!("missing GGUF tensor `{name}`")))
+    }
+    pub(super) fn device_matrix(&self, name: &str) -> Option<CudaDeviceQuantMatrix> {
+        let t = self.tensor(name).ok()?;
+        let p = self.archive.tensor_payload(t).ok()?.as_ptr() as usize;
+        self.resident.get(&p).cloned()
     }
     pub fn dense(&self, name: &str) -> Result<&[f32]> {
         self.small

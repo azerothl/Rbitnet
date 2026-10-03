@@ -1,0 +1,16 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 7.30s
+     Running tests\cuda_quant_residency.rs (target\release\deps\cuda_quant_residency-e4359bf06a6bd6a7.exe)
+
+running 7 tests
+test cuda_quant_types_match_optional_kernel_abi ... ok
+test device_resident_quant_metric_defaults_zero_without_cuda ... ok
+test device_quant_matrix_matches_full_dequant_row_dots ... ok
+test device_quant_matrix_cpu_fallback_matches_payload_golden ... ok
+test opt_in_device_resident_quant_kernel_when_lib_present ... ok
+test opt_in_concurrent_model_runtime_loading_and_uploads ... ok
+test opt_in_all_formats_views_batches_and_concurrent_calls ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+

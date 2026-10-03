@@ -53,7 +53,7 @@ Rbitnet exposes Prometheus text at **`GET /metrics`** (default bind `127.0.0.1:8
 | `rbitnet_core_scheduler_prefill_chunks_total` | Prefill chunks admitted | Chunked prefill under token budget |
 | `rbitnet_core_scheduler_iteration_budget_tokens` | Last / configured iteration budget | `RBITNET_ITERATION_TOKEN_BUDGET` |
 | `rbitnet_core_model_load_ms_total` / `_loads_total` | Load timing | Startup / reload |
-| `rbitnet_core_cuda_graph_replays_total` | Graphed decode steps | N/A (Rbitnet-specific) |
+| `rbitnet_core_cuda_graph_replays_total` | Successful native CUDA graph launches (resident token / routed FFN / Qwen recurrent block / output head) | N/A (Rbitnet-specific); excludes legacy scheduling hooks |
 
 Derived gauges (`*_avg`, `*_tokens_per_sec`) are computed at scrape time from the sums above; they are part of the frozen contract so Akasha UI can show live TTFT / tok/s without extra series math.
 

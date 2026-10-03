@@ -1,0 +1,19 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 8.03s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 6 tests
+test native::graph::tests::mla_rotates_consecutive_pairs_and_gpt_oss_rotates_halves ... ok
+test native::output::tests::harmony_analysis_is_not_a_finished_answer ... ok
+test native::attention::tests::opt_in_attention_matches_gqa_sinks_window_and_restored_prefix ... ok
+Qwen block head=32 graphs=0: 34 F64 timesteps/reset passed, max abs error=0.0000002858064602762056
+test native::moe::tests::opt_in_routed_graph_matches_f64_experts_biases_and_selection_changes ... ok
+test native::head::tests::opt_in_head_preserves_f64_logits_large_vocab_nan_ties_and_input_changes ... ok
+Qwen block head=128 graphs=0: 34 F64 timesteps/reset passed, max abs error=0.0000005939338350025025
+Qwen block head=32 graphs=1: 34 F64 timesteps/reset passed, max abs error=0.0000002858064602762056
+Qwen block head=128 graphs=1: 34 F64 timesteps/reset passed, max abs error=0.0000005939338350025025
+test native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 79 filtered out; finished in 0.22s
+

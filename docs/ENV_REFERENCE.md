@@ -61,7 +61,16 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_SESSIONS` | off | Enable session store (also implied by `RBITNET_CONTINUOUS_BATCHING`). |
 | `RBITNET_MODEL_SHA256` | (none) | Expected SHA-256 hex of the GGUF; verified after install/download when set. |
 | `RBITNET_TRUSTED_MODELS_ONLY` | off | If `1`, refuse Hub downloads outside the curated catalog and require a known SHA-256 on curated install. |
-| `RBITNET_CUDA_GRAPH` | off | Enable CUDA graph decode metrics path (`llama/cuda_graph.rs`). |
+| `RBITNET_CUDA_GRAPH` | off | Legacy scheduling diagnostics (`llama/cuda_graph.rs`); does not launch device graphs or increment native replay metrics. |
+| `RBITNET_CUDA_RESIDENT` | auto | Fully resident dense Llama graph when every projection is on CUDA, KV is dense and prefix reuse is off; `0` restores per-projection execution. Unsupported models/DLLs retain their existing path. |
+| `RBITNET_CUDA_RESIDENT_GRAPH` | on | Capture/replay the resident Llama token graph; `0` executes the same device kernels eagerly for ablation. |
+| `RBITNET_CUDA_MOE` | auto | Resident routed FFN graph for GPT-OSS/MLA layers with all three expert matrices on CUDA; `0` restores the individual expert path. |
+| `RBITNET_CUDA_QWEN_RECURRENT` | auto | Complete dense Qwen3.5 recurrent blocks on CUDA when their eight projections are resident/supported. Retains convolution and F32 GDN state; `0` uses the CPU recurrent path. Qwen MoE and unsupported head layouts retain their existing path. |
+| `RBITNET_CUDA_QWEN_RECURRENT_GRAPH` | on | Capture/replay each supported recurrent block; `0` runs the same block kernels eagerly. |
+| `RBITNET_CUDA_HEAD` | off | Experimental resident output RMSNorm/projection and GPU greedy reduction for Qwen/GPT-OSS/MLA: `1` enables it when supported/resident. Current Windows ablations show no speed gain, so it stays opt-in. Sampling, penalties and JSON keep full F32 logits and the common sampler. |
+| `RBITNET_CPU_SIMD_QUANT` | on | Decode packed weights into AVX2/FMA registers with F16C; `0` restores the older block decoder. Activations remain F32. |
+| `RBITNET_CPU_AVX512` | auto | Use 16-lane kernels when AVX512F/BW are available; `0` uses the 8-lane AVX2 path. |
+| `RAYON_NUM_THREADS` | available CPUs | Also controls the dedicated quantized matvec pool; set before loading a runtime. |
 | `RBITNET_MTP_K` | `1` | Multi-token burst width when `>1` (Atlas-style MTP scheduler hook). |
 | `RBITNET_KV_POOL` | off | Enable process-wide shared physical KV pages end-to-end (`kv_pool.rs`). Implies paged slabs for Llama runtime; reclaim on `clear()` / sequence close. Prefer with `RBITNET_LLAMA_PAGED_KV=1`. Bench: `scripts/bench_paged_kv.sh`. |
 | `RBITNET_KV_POOL_MAX_SEQS` | `8` | Max concurrent sequences / per-seq logical page budget divisor in `PagedKvPool`. |
@@ -86,7 +95,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_LLAMA_MATMUL` | (unset) | Reserved hook: `ggml` requests a future native ggml bridge (still Rust kernels today). Meaningful only when `bitnet-core` is built with `--features experimental-ggml-kernels`; see [GOLDEN_TESTS.md](GOLDEN_TESTS.md). |
 | `RBITNET_HYBRID_POLICY` | `layers` | Hybrid layer-selection policy: `layers` keeps explicit/early-layer behavior, `hotcold` selects deeper hot decode layers first, `auto` uses explicit `RBITNET_HYBRID_LAYERS` when present then hot/cold selection. |
 | `RBITNET_HYBRID_LAYERS` | `auto` | With `RBITNET_BACKEND=hybrid`, comma/range list of Llama layers to offload (`0`, `0-3`, `0,2,4`). If unset, the loader selects early layers within `RBITNET_HYBRID_MAX_VRAM_MB`. |
-| `RBITNET_HYBRID_MAX_VRAM_MB` | hybrid `512`; CUDA Llama `4096`, native Qwen/GPT/MLA `12288` | Soft weight placement budget. Llama plans with F32 sizes; native Qwen/GPT/MLA count actual quantized payload bytes and prefer output + attention/shared projections before routed experts. KV, allocator and driver overhead are additional. |
+| `RBITNET_HYBRID_MAX_VRAM_MB` | hybrid `512`; CUDA Llama `4096`, native Qwen/GPT/MLA `12288` | Soft weight placement budget. Quantized Llama auto/native Qwen/GPT/MLA count actual packed bytes; native models prefer output + attention/shared projections before routed experts. Qwen's extra small head projections count toward the same budget. KV, recurrent states, allocator and driver overhead are additional. |
 | `RBITNET_HYBRID_MIN_ROWS` | `512` | Minimum matrix output rows for Llama hybrid upload; smaller matrices stay on CPU. |
 | `RBITNET_HYBRID_OUTPUT` | CUDA on, hybrid off | Llama output head placement; `0`/`false`/`no` disables it. Automatic placement reserves its budget before selecting layers. |
 | `RBITNET_HYBRID_LOG` | off | Reserved flag for verbose hybrid diagnostics; current builds always log the selected offload plan at runtime creation. |

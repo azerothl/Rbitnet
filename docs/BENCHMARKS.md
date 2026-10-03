@@ -10,6 +10,10 @@ Local one-off model performance notes for the current Windows developer machine 
 
 ## Real-model comparison: Rbitnet, Ollama and llama.cpp
 
+The [second optimization round](benchmarks/2026-10-03-parity-round2/README.md) measures dense Qwen recurrent blocks with resident CUDA state, shared GPU output heads, sequence parity and concurrent runtime loading against fresh CPU/GPU references for all four models.
+
+The [resident CUDA/SIMD optimization report](benchmarks/2026-10-03-parity/README.md) records the next four-model CPU/GPU measurements, actual CUDA graph execution, routed FFN fusion, validation and primary-source research. It distinguishes measured gains from unfinished work toward parity.
+
 The [corrected native inference rerun](benchmarks/2026-10-03-optimized/README.md) measures all four Rbitnet models on CPU/CUDA after SIMD, resident quantized weights, fused attention, native GPT-OSS/MLA graphs and conversation-template fixes. The original report remains frozen; the rerun explicitly identifies reused Ollama/llama.cpp measurements and current Rbitnet measurements.
 
 The [performance diagnosis of 3 October 2026](https://github.com/azerothl/Rbitnet/blob/main/docs/profiling/2026-10-03/README.md) traces the failed architectures and measures Llama operator costs plus six CPU/CUDA ablations on the same GGUF.

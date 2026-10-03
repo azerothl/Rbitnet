@@ -122,7 +122,13 @@ impl MatrixWeights {
         }
     }
 
-    fn embed_row(&self, tok: usize, n_embd: usize, n_vocab: usize, out: &mut [f32]) -> Result<()> {
+    pub(super) fn embed_row(
+        &self,
+        tok: usize,
+        n_embd: usize,
+        n_vocab: usize,
+        out: &mut [f32],
+    ) -> Result<()> {
         match self {
             Self::Dense(v) => {
                 for j in 0..n_embd {
@@ -377,6 +383,82 @@ impl LlamaOffloadPlan {
 
     pub fn layer_enabled(&self, layer: usize) -> bool {
         self.enabled && self.layers.get(layer).copied().unwrap_or(false)
+    }
+
+    fn for_quant_archive(
+        kind: BackendKind,
+        cfg: &LlamaConfig,
+        archive: &GgufArchive,
+    ) -> Result<Self> {
+        let mut plan = Self::from_env(kind, cfg);
+        let policy = std::env::var("RBITNET_HYBRID_POLICY").unwrap_or_else(|_| {
+            if kind == BackendKind::Cuda {
+                "auto".into()
+            } else {
+                "layers".into()
+            }
+        });
+        if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid)
+            || !policy.trim().eq_ignore_ascii_case("auto")
+            || std::env::var("RBITNET_HYBRID_LAYERS").is_ok()
+        {
+            return Ok(plan);
+        }
+        #[cfg(feature = "profile-llama")]
+        if std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref() == Ok("1") {
+            return Ok(plan);
+        }
+        let budget = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(if kind == BackendKind::Cuda { 4096 } else { 512 })
+            .saturating_mul(1024 * 1024);
+        let cost = |t: &GgufTensorInfo| -> Result<usize> {
+            if t.dimensions.get(1).copied().unwrap_or(0) < plan.min_rows as u64 {
+                return Ok(0);
+            }
+            if ggml_type_supports_cuda_quant(t.ggml_type) {
+                Ok(archive.tensor_payload(t)?.len())
+            } else {
+                t.dimensions
+                    .iter()
+                    .try_fold(4usize, |n, &d| n.checked_mul(d as usize))
+                    .ok_or_else(|| BitNetError::Inference("offload size overflow".into()))
+            }
+        };
+        let output = archive
+            .tensor_first_of(&["output.weight", "token_embd.weight"])
+            .ok_or_else(|| BitNetError::Inference("missing output weights".into()))?;
+        let requested = match std::env::var("RBITNET_HYBRID_OUTPUT").as_deref() {
+            Ok("0" | "false" | "no") => false,
+            Ok("1" | "true" | "yes") => true,
+            _ => kind == BackendKind::Cuda,
+        };
+        let output_bytes = cost(output)?;
+        plan.output = requested && output_bytes <= budget;
+        let mut used = if plan.output { output_bytes } else { 0 };
+        for il in 0..cfg.n_layer {
+            let prefix = format!("blk.{il}.");
+            let mut bytes = 0usize;
+            for t in archive
+                .tensors
+                .iter()
+                .filter(|t| t.name.starts_with(&prefix) && t.dimensions.len() == 2)
+            {
+                bytes = bytes.saturating_add(cost(t)?);
+            }
+            plan.layers[il] = bytes > 0 && used.saturating_add(bytes) <= budget;
+            if plan.layers[il] {
+                used += bytes;
+            }
+        }
+        plan.estimated_weight_bytes = used;
+        plan.enabled = plan.output || plan.layers.iter().any(|&v| v);
+        plan.reason = format!(
+            "{} auto offload uses actual quantized payload sizes",
+            kind.as_str()
+        );
+        Ok(plan)
     }
 
     pub fn summary(&self) -> String {
@@ -866,7 +948,7 @@ impl LlamaModel {
         backend_kind: BackendKind,
     ) -> Result<Self> {
         let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
-        let plan = LlamaOffloadPlan::from_env(backend_kind, &cfg);
+        let plan = LlamaOffloadPlan::for_quant_archive(backend_kind, &cfg, archive.as_ref())?;
         let cuda = if plan.enabled {
             CudaRuntime::try_load()
         } else {

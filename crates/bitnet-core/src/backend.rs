@@ -330,6 +330,11 @@ impl CudaRuntime {
     }
 
     fn load() -> Option<Self> {
+        // Finish the CUDA runtime's lazy driver initialization before another model loader
+        // opens the same DLL. Keep per-model buffers and metrics independent; only cold
+        // initialization is serialized, never kernel execution or graph replay.
+        static INITIALIZATION: Mutex<()> = Mutex::new(());
+        let _initialization = INITIALIZATION.lock().ok()?;
         let mut candidates: Vec<String> = Vec::new();
         if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
             for rel in [
@@ -378,6 +383,9 @@ impl CudaRuntime {
                     lib.get(b"cudaFree").ok()?;
                 *sym
             };
+            if unsafe { cuda_free(null_mut()) } != CUDA_SUCCESS {
+                continue;
+            }
             let cuda_memcpy = unsafe {
                 let sym: libloading::Symbol<
                     unsafe extern "C" fn(
@@ -497,7 +505,11 @@ impl CudaRuntime {
 
     fn alloc_device(&self, nbytes: usize) -> Option<*mut c_void> {
         let mut dev_ptr: *mut c_void = null_mut();
-        let ok = unsafe { (self.cuda_malloc)(&mut dev_ptr, nbytes) } == CUDA_SUCCESS;
+        let status = unsafe { (self.cuda_malloc)(&mut dev_ptr, nbytes) };
+        if status != CUDA_SUCCESS {
+            tracing::warn!(status, nbytes, "CUDA allocation failed");
+        }
+        let ok = status == CUDA_SUCCESS;
         ok.then_some(dev_ptr)
     }
 
@@ -508,8 +520,11 @@ impl CudaRuntime {
     }
 
     fn copy_host_to_device(&self, dst: *mut c_void, src: *const c_void, nbytes: usize) -> bool {
-        let ok = unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_HOST_TO_DEVICE) }
-            == CUDA_SUCCESS;
+        let status = unsafe { (self.cuda_memcpy)(dst, src, nbytes, CUDA_MEMCPY_HOST_TO_DEVICE) };
+        if status != CUDA_SUCCESS {
+            tracing::warn!(status, nbytes, "CUDA host upload failed");
+        }
+        let ok = status == CUDA_SUCCESS;
         if ok {
             self.upload_bytes
                 .fetch_add(nbytes as u64, Ordering::Relaxed);
@@ -885,6 +900,10 @@ impl CudaDeviceQuantMatrix {
 
     pub fn is_device_resident(&self) -> bool {
         self.device.is_some()
+    }
+
+    pub(crate) fn device_address(&self) -> Option<usize> {
+        self.device.as_ref().map(|buffer| buffer.ptr)
     }
 
     pub fn bytes(&self) -> usize {

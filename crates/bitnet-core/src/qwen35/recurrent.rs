@@ -6,7 +6,8 @@ use crate::native::weights::Weights;
 
 use super::config::Qwen35Config;
 use super::gdn::{
-    gated_delta_net_step, l2_normalize_vec, silu_inplace, ssm_conv_f32, stitch_conv_window_mut,
+    gated_delta_net_step_inplace, l2_normalize_vec, silu_inplace, ssm_conv_f32,
+    stitch_conv_window_mut,
 };
 use super::qmatvec::weighted_matmul_vec as quant_matmul_vec;
 
@@ -211,12 +212,12 @@ pub(crate) fn recurrent_forward(
     let mut attn_flat = vec![0f32; value_dim];
     let sv = head_v;
     for h in 0..num_v {
-        let q_slice = resize_head_vec(slice_head(&q_part, head_k, num_k, h), sv);
-        let k_slice = resize_head_vec(slice_head(&k_part, head_k, num_k, h), sv);
+        let q_slice = slice_head(&q_part, head_k, num_k, h, sv);
+        let k_slice = slice_head(&k_part, head_k, num_k, h, sv);
         let v_slice = &v_part[h * sv..(h + 1) * sv];
         let state_off = h * sv * sv;
-        let s_in = &st.ssm_state[state_off..state_off + sv * sv];
-        let (attn_chunk, s_new) = gated_delta_net_step(
+        let s_in = &mut st.ssm_state[state_off..state_off + sv * sv];
+        let attn_chunk = gated_delta_net_step_inplace(
             s_in,
             &q_slice,
             &k_slice,
@@ -226,7 +227,6 @@ pub(crate) fn recurrent_forward(
             sv,
             true,
         );
-        st.ssm_state[state_off..state_off + sv * sv].copy_from_slice(&s_new);
         attn_flat[h * sv..(h + 1) * sv].copy_from_slice(&attn_chunk);
     }
 
@@ -289,10 +289,20 @@ fn softplus_f32(x: f32) -> f32 {
     }
 }
 
-fn slice_head(buf: &[f32], head_k: usize, num_k: usize, h: usize) -> Vec<f32> {
+fn slice_head(
+    buf: &[f32],
+    head_k: usize,
+    num_k: usize,
+    h: usize,
+    out_len: usize,
+) -> std::borrow::Cow<'_, [f32]> {
     let hk = h % num_k;
     let s = hk * head_k;
-    buf[s..s + head_k].to_vec()
+    if head_k == out_len {
+        std::borrow::Cow::Borrowed(&buf[s..s + head_k])
+    } else {
+        std::borrow::Cow::Owned(resize_head_vec(buf[s..s + head_k].to_vec(), out_len))
+    }
 }
 
 fn resize_head_vec(buf: Vec<f32>, out_len: usize) -> Vec<f32> {

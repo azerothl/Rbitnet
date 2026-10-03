@@ -59,6 +59,13 @@ fn optional_llama_greedy_sequence_and_turn_stop_match_reference() {
         );
         let mut runtime =
             LlamaRuntime::load(Arc::clone(&archive), Path::new(&tokenizer_path), backend).unwrap();
+        if std::env::var("RBITNET_REQUIRE_RESIDENT").as_deref() == Ok("1") {
+            assert!(
+                runtime.uses_resident_cuda(),
+                "{}: CUDA resident path unavailable",
+                case.name
+            );
+        }
         let mut logits = runtime.prefill_chunk(&case.prompt_ids, 0).unwrap();
         for (step, expected) in case.greedy_ids.iter().enumerate() {
             let got = logits

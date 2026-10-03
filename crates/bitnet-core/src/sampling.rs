@@ -17,6 +17,19 @@ pub struct SamplingOptions {
 }
 
 impl SamplingOptions {
+    /// GPU greedy reduction is equivalent only when no host-side logits mask or
+    /// repetition adjustment is required. top_p and seed are inert at temp<=0.
+    pub(crate) fn device_greedy_eligible(&self) -> bool {
+        let structured = std::env::var("RBITNET_STRUCTURED_OUTPUT").unwrap_or_default();
+        self.temperature <= 0.0
+            && self.frequency_penalty == 0.0
+            && self.presence_penalty == 0.0
+            && !self.structured_json
+            && !matches!(
+                structured.trim().to_ascii_lowercase().as_str(),
+                "json" | "tool" | "tool-call" | "tool_call"
+            )
+    }
     #[must_use]
     pub fn from_temperature(temperature: f32) -> Self {
         Self {
@@ -95,8 +108,8 @@ fn apply_structured_output_mask(logits: &mut [f32], prior_tokens: &[u32], force_
         .unwrap_or_else(|_| "off".into())
         .trim()
         .to_ascii_lowercase();
-    let enabled = force_json
-        || matches!(mode.as_str(), "json" | "tool" | "tool-call" | "tool_call");
+    let enabled =
+        force_json || matches!(mode.as_str(), "json" | "tool" | "tool-call" | "tool_call");
     if !enabled {
         return;
     }

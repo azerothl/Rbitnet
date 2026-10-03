@@ -99,6 +99,39 @@ fn device_quant_matrix_matches_full_dequant_row_dots() {
 }
 
 #[test]
+fn opt_in_concurrent_model_runtime_loading_and_uploads() {
+    if std::env::var("RBITNET_CUDA_QUANT_SMOKE").as_deref() != Ok("1") {
+        return;
+    }
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
+    let threads: Vec<_> = (0..8)
+        .map(|worker| {
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let rt = bitnet_core::CudaRuntime::try_load().expect("CUDA runtime required");
+                let (payload, mut x, rows, cols) = q4_0_two_row_fixture();
+                for value in &mut x {
+                    *value += worker as f32 * 0.03125;
+                }
+                let expected = matvec_payload_quant(2, &payload, &x, cols, rows).unwrap();
+                let matrix =
+                    CudaDeviceQuantMatrix::from_payload(Some(&rt), 2, payload, rows, cols).unwrap();
+                assert!(matrix.is_device_resident(), "worker {worker} upload failed");
+                let actual = matrix.matvec(&x).expect("CUDA kernel required");
+                for (a, b) in actual.iter().zip(&expected) {
+                    assert!((a - b).abs() <= 1e-3, "worker {worker}: {a} != {b}");
+                }
+                assert_eq!(rt.metrics_snapshot().device_resident_quant_gemv_calls, 1);
+            })
+        })
+        .collect();
+    for thread in threads {
+        thread.join().unwrap();
+    }
+}
+
+#[test]
 fn device_resident_quant_metric_defaults_zero_without_cuda() {
     let m = CudaRuntimeMetrics::default();
     assert_eq!(m.device_resident_quant_gemv_calls, 0);

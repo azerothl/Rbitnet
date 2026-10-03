@@ -2,6 +2,7 @@
 
 mod dequant;
 mod quant_dot;
+mod quant_simd;
 pub(crate) mod simd;
 mod types;
 

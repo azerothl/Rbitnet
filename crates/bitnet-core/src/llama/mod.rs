@@ -9,6 +9,7 @@ pub mod kv_storage;
 mod model;
 #[cfg(feature = "profile-llama")]
 pub mod profile;
+mod resident;
 mod runtime;
 pub mod slim_attention;
 
@@ -18,8 +19,8 @@ pub use kv_storage::{
     KvCache, KvPoolStats, KvQuantFormat, KvStorage, PagedKvPool, PagedSeqKv, SharedPhysKvStore,
 };
 pub use model::{llama_mmap_quant_supported, LlamaModel, LlamaWeightMode};
-pub use runtime::LlamaRuntime;
 pub(crate) use runtime::llama_encode_add_special_tokens;
+pub use runtime::LlamaRuntime;
 pub use slim_attention::{
     attention_baseline, attention_tiled, slim_attention_enabled, tile_tokens_from_env,
     DEFAULT_TILE_TOKENS,

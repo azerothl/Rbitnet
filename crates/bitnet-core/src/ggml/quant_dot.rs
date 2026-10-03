@@ -185,6 +185,9 @@ pub fn dot_row(ty: u32, row_payload: &[u8], x: &[f32]) -> Result<f32> {
             "quant_dot: row payload length mismatch vs x / ne[0]".into(),
         ));
     }
+    if let Some(value) = super::quant_simd::dot(ty, row_payload, x) {
+        return Ok(value);
+    }
     match ty {
         0 => dot_row_f32(row_payload, x),
         1 => dot_row_f16(row_payload, x),
@@ -563,10 +566,15 @@ fn validate_matvec_shape(t: &GgufTensorInfo, x: &[f32], ne0: usize, ne1: usize) 
 fn quant_matvec_thread_pool() -> &'static ThreadPool {
     static POOL: OnceLock<ThreadPool> = OnceLock::new();
     POOL.get_or_init(|| {
-        let threads = thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1)
-            .max(1);
+        let threads = std::env::var("RAYON_NUM_THREADS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or_else(|| {
+                thread::available_parallelism()
+                    .map(|n| n.get())
+                    .unwrap_or(1)
+            });
         rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
             .thread_name(|i| format!("rbitnet-quant-{i}"))
@@ -610,16 +618,12 @@ fn matvec_rows_parallel(
     x: &[f32],
     ne1: usize,
 ) -> Result<Vec<f32>> {
-    let threads = thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(1)
-        .max(1)
-        .min(ne1.max(1));
     let pool = quant_matvec_thread_pool();
+    let threads = pool.current_num_threads().min(ne1.max(1));
     if threads <= 1 || ne1 < 2 {
         return matvec_rows_scalar(ty, payload, row_bytes, x, ne1);
     }
-    let chunk_rows = (ne1 + threads - 1) / threads;
+    let chunk_rows = ne1.div_ceil(threads);
     let chunk_starts: Vec<usize> = (0..ne1).step_by(chunk_rows).collect();
     let chunk_results: Vec<std::result::Result<(usize, Vec<f32>), BitNetError>> =
         pool.install(|| {

@@ -26,7 +26,7 @@ use crate::prefix_kv_exec::{
     prefix_scope_for_runtime, restore_dense_kv, restore_paged_kv, shared_prefix_kv_execution_cache,
     snapshot_dense_kv, snapshot_key, snapshot_paged_kv, SharedPrefixKvExecutionCache,
 };
-use crate::stream::StreamEvent;
+use crate::stream::{emit_text_delta, StreamEvent};
 
 use super::config::LlamaConfig;
 use super::cuda_graph::CudaDecodeGraph;
@@ -50,6 +50,7 @@ fn llama_decode_skip_special_tokens() -> bool {
 /// Loads [`LlamaModel`] from GGUF and a Hugging Face tokenizer file (`tokenizer.json`, or `tokenizer.model` when loadable).
 pub struct LlamaRuntime {
     model: LlamaModel,
+    resident: Option<super::resident::Resident>,
     tokenizer: LoadedPromptTokenizer,
     kv: KvStorage,
     backend: Box<dyn ComputeBackend>,
@@ -76,6 +77,16 @@ impl LlamaRuntime {
         let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
         let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
         let kv = llama_kv_from_env(&model.cfg)?;
+        let resident = if backend_kind == BackendKind::Cuda
+            && kv.as_paged().is_none()
+            && !matches!(
+                std::env::var("RBITNET_PREFIX_KV").as_deref(),
+                Ok("1" | "true" | "yes")
+            ) {
+            super::resident::Resident::new(&model)
+        } else {
+            None
+        };
         let backend = make_backend(backend_kind);
         let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
             .ok()
@@ -96,6 +107,7 @@ impl LlamaRuntime {
         };
         Ok(Self {
             model,
+            resident,
             tokenizer,
             kv,
             backend,
@@ -151,7 +163,17 @@ impl LlamaRuntime {
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
-        self.kv.clear();
+        if matches!(
+            std::env::var("RBITNET_PREFIX_KV").as_deref(),
+            Ok("1" | "true" | "yes")
+        ) {
+            self.resident = None;
+        }
+        // The resident cache starts a new sequence at position zero on the device.
+        // Clearing the unused host cache would write hundreds of MiB per request.
+        if self.resident.is_none() {
+            self.kv.clear();
+        }
         kv_pool::record_pool_metrics();
         let t_enc = Instant::now();
         let prompt_ids = self
@@ -166,6 +188,10 @@ impl LlamaRuntime {
                     ..Default::default()
                 },
             ));
+        }
+
+        if self.resident.is_some() && sampling.device_greedy_eligible() {
+            return self.generate_resident_greedy(&prompt_ids, max_tokens, encode_ms, on_event);
         }
 
         let mut prefill_from = 0usize;
@@ -355,16 +381,8 @@ impl LlamaRuntime {
                 .tokenizer
                 .decode_ids(&gen, llama_decode_skip_special_tokens())?;
             if let Some(cb) = on_event.as_deref_mut() {
-                let delta = if full.len() >= prev_text.len() {
-                    full[prev_text.len()..].to_string()
-                } else {
-                    full.clone()
-                };
-                if !delta.is_empty() {
-                    cb(StreamEvent::Delta { text: delta })?;
-                }
+                emit_text_delta(&full, &mut prev_text, false, cb)?;
             }
-            prev_text = full;
             if step + 1 < max_tokens {
                 logits = self.decode_one(next_id, pos)?;
             }
@@ -376,6 +394,9 @@ impl LlamaRuntime {
         let text = self
             .tokenizer
             .decode_ids(&gen, llama_decode_skip_special_tokens())?;
+        if let Some(cb) = on_event.as_deref_mut() {
+            emit_text_delta(&text, &mut prev_text, true, cb)?;
+        }
         let phases = PhaseTimings {
             encode_ms,
             prefill_ms,
@@ -384,10 +405,10 @@ impl LlamaRuntime {
             completion_tokens: gen.len() as u32,
         };
 
-        if let Some(cb) = on_event.as_deref_mut() {
+        if let Some(cb) = on_event {
             cb(StreamEvent::Done(crate::scheduler::InferenceOutput {
                 text: text.clone(),
-                stats: crate::scheduler::InferenceStats::from_phases(phases.clone(), false),
+                stats: crate::scheduler::InferenceStats::from_phases(phases, false),
             }))?;
         }
 
@@ -397,19 +418,26 @@ impl LlamaRuntime {
     pub fn prefill_chunk(&mut self, tokens: &[u32], base_pos: usize) -> Result<Vec<f32>> {
         let mut logits = Vec::new();
         for (idx, &tid) in tokens.iter().enumerate() {
-            logits = self.model.forward_step(
-                &mut self.kv,
-                tid,
-                base_pos + idx,
-                self.backend.as_ref(),
-                &mut self.scratch,
-                idx + 1 == tokens.len(),
-            )?;
+            logits = if let Some(resident) = &mut self.resident {
+                resident.forward(&self.model, tid, base_pos + idx, idx + 1 == tokens.len())?
+            } else {
+                self.model.forward_step(
+                    &mut self.kv,
+                    tid,
+                    base_pos + idx,
+                    self.backend.as_ref(),
+                    &mut self.scratch,
+                    idx + 1 == tokens.len(),
+                )?
+            };
         }
         Ok(logits)
     }
 
     pub fn decode_one(&mut self, token: u32, pos: usize) -> Result<Vec<f32>> {
+        if let Some(resident) = &mut self.resident {
+            return resident.forward(&self.model, token, pos, true);
+        }
         self.cuda_graph.record_decode_step(true);
         self.model.forward_with_backend_and_scratch(
             &mut self.kv,
@@ -418,6 +446,86 @@ impl LlamaRuntime {
             self.backend.as_ref(),
             &mut self.scratch,
         )
+    }
+
+    /// Whether this runtime executes the entire token graph on CUDA.
+    pub fn uses_resident_cuda(&self) -> bool {
+        self.resident.is_some()
+    }
+
+    fn generate_resident_greedy(
+        &mut self,
+        ids: &[u32],
+        limit: u32,
+        encode_ms: u64,
+        mut events: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
+    ) -> Result<(String, PhaseTimings)> {
+        let resident = self
+            .resident
+            .as_mut()
+            .expect("resident eligibility checked");
+        let pf = Instant::now();
+        let mut next = 0;
+        for (pos, &token) in ids.iter().enumerate() {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            next = resident.greedy(&self.model, token, pos, pos + 1 == ids.len())?;
+        }
+        let prefill_ms = pf.elapsed().as_millis() as u64;
+        if let Some(cb) = events.as_deref_mut() {
+            cb(StreamEvent::FirstToken {
+                stats: crate::scheduler::InferenceStats::from_phases(
+                    PhaseTimings {
+                        encode_ms,
+                        prefill_ms,
+                        decode_ms: 0,
+                        prompt_tokens: ids.len() as u32,
+                        completion_tokens: 0,
+                    },
+                    false,
+                ),
+            })?;
+        }
+        let stop = self.tokenizer.eos_token_ids();
+        let decode = Instant::now();
+        let mut generated = Vec::new();
+        let mut previous = String::new();
+        let mut emitted = String::new();
+        for step in 0..limit {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            if stop.contains(&next) {
+                break;
+            }
+            generated.push(next);
+            let text = self
+                .tokenizer
+                .decode_ids(&generated, llama_decode_skip_special_tokens())?;
+            if let Some(cb) = events.as_deref_mut() {
+                emit_text_delta(&text, &mut emitted, false, cb)?;
+            }
+            previous = text;
+            if step + 1 < limit {
+                next = resident.greedy(&self.model, next, ids.len() + step as usize, true)?;
+            }
+        }
+        let phases = PhaseTimings {
+            encode_ms,
+            prefill_ms,
+            decode_ms: decode.elapsed().as_millis() as u64,
+            prompt_tokens: ids.len() as u32,
+            completion_tokens: generated.len() as u32,
+        };
+        if let Some(cb) = events {
+            emit_text_delta(&previous, &mut emitted, true, cb)?;
+            cb(StreamEvent::Done(crate::scheduler::InferenceOutput {
+                text: previous.clone(),
+                stats: crate::scheduler::InferenceStats::from_phases(phases, false),
+            }))?;
+        }
+        Ok((previous, phases))
     }
 
     /// After a full prompt, return the **greedy** next token id (temperature 0, no penalties).
@@ -524,5 +632,33 @@ fn truncate_prefix_snap(
                 token_count,
             }))
         }
+    }
+}
+
+#[cfg(test)]
+mod stream_tests {
+    #[test]
+    fn utf8_fragments_wait_for_complete_characters_and_flush_at_stop() {
+        let mut emitted = String::new();
+        let mut received = String::new();
+        let mut event = |event| {
+            if let crate::stream::StreamEvent::Delta { text } = event {
+                received.push_str(&text);
+            }
+            Ok(())
+        };
+        for decoded in [
+            "r\u{fffd}",
+            "ré",
+            "ré\u{fffd}",
+            "résumé ",
+            "résumé \u{fffd}",
+            "résumé 🙂",
+            "résumé 🙂\u{fffd}",
+        ] {
+            super::emit_text_delta(decoded, &mut emitted, false, &mut event).unwrap();
+        }
+        super::emit_text_delta("résumé 🙂\u{fffd}", &mut emitted, true, &mut event).unwrap();
+        assert_eq!(received, "résumé 🙂\u{fffd}");
     }
 }

@@ -71,8 +71,10 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
 
     fn offload_metadata(&self) -> Option<String> {
         let runtime = self.runtime.lock().ok()?;
-        let bytes = runtime.as_ref()?.resident_weights_bytes();
-        Some(format!("native qwen35 graph; {} MiB quantized weights resident on CUDA; remaining weights on CPU", bytes / (1024 * 1024)))
+        let rt = runtime.as_ref()?;
+        let bytes = rt.resident_weights_bytes();
+        let (gpu, total, head) = rt.gpu_execution_summary();
+        Some(format!("native qwen35 graph; {} MiB quantized weights resident on CUDA; {gpu}/{total} recurrent blocks resident; resident output head: {head}; remaining operations use the existing CPU/GPU path", bytes / (1024 * 1024)))
     }
 
     fn generate_with_timings(
