@@ -1,0 +1,10 @@
+Rbitnet UI: http://127.0.0.1:18119/ui
+2026-10-03T15:56:13.987994Z ERROR bitnet_server::run: LoadFailed at startup — binding HTTP with stub for retry msg=failed to init engine from env: Inference("resident MLA unavailable: requires CUDA, supported native DLL, CPU quant SIMD, compatible unbiased MLA projections and backbone weights within budget") — if this is a MoE/MLA GGUF, see GitHub issue #25 (not yet supported on the default Llama path).
+2026-10-03T15:56:14.262625Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.264135Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.277500Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.293210Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.294388Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.295476Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.296518Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-03T15:56:14.297531Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms

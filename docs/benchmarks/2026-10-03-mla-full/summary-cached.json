@@ -1,0 +1,334 @@
+{
+  "warmup_cycle": 0,
+  "measured_long_samples_per_mode": 4,
+  "modes": {
+    "baseline": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 202450.0,
+        "min": 200809.0,
+        "max": 203430.0
+      },
+      "decode_ms": {
+        "median": 19697.0,
+        "min": 19582.0,
+        "max": 20014.0
+      },
+      "decode_tokens_per_second": {
+        "median": 6.498593314273028,
+        "min": 6.395523133806336,
+        "max": 6.536615258911245
+      },
+      "http_ms": {
+        "median": 222144.75399999355,
+        "min": 220417.3962000059,
+        "max": 223447.8203000035
+      },
+      "upload_bytes": {
+        "median": 248941143808.0,
+        "min": 248153379840.0,
+        "max": 249728907776.0
+      },
+      "download_bytes": {
+        "median": 13232126080.0,
+        "min": 13228215040.0,
+        "max": 13236037120.0
+      },
+      "expert_upload_bytes": {
+        "median": 234864783360.0,
+        "min": 234072834048.0,
+        "max": 235656732672.0
+      },
+      "expert_upload_ms": {
+        "median": 60376.76845,
+        "min": 59888.9424,
+        "max": 60875.6525
+      },
+      "cache_hit_rate": 0.8667371265304011,
+      "resident_ffns": {
+        "median": 77349.0,
+        "min": 77326.0,
+        "max": 77372.0
+      },
+      "fallback_ffns": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "split_queries": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 10344854960.0,
+      "managed_peak_bytes": 10347509168.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 28402176000,
+        "gpu_global_baseline_mib": 2191.0,
+        "gpu_global_peak_mib": 15214.0,
+        "gpu_global_peak_delta_mib": 13023.0
+      }
+    },
+    "mla": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 153290.5,
+        "min": 151239.0,
+        "max": 156790.0
+      },
+      "decode_ms": {
+        "median": 13792.0,
+        "min": 13596.0,
+        "max": 13825.0
+      },
+      "decode_tokens_per_second": {
+        "median": 9.280758267289261,
+        "min": 9.258589511754069,
+        "max": 9.414533686378347
+      },
+      "http_ms": {
+        "median": 166997.66554999223,
+        "min": 165016.74869999988,
+        "max": 170633.3283999993
+      },
+      "upload_bytes": {
+        "median": 235493656614.0,
+        "min": 234701713608.0,
+        "max": 236285599620.0
+      },
+      "download_bytes": {
+        "median": 2475680.0,
+        "min": 2474944.0,
+        "max": 2476416.0
+      },
+      "expert_upload_bytes": {
+        "median": 235472449536.0,
+        "min": 234680500224.0,
+        "max": 236264398848.0
+      },
+      "expert_upload_ms": {
+        "median": 62681.242249999996,
+        "min": 61583.9052,
+        "max": 65999.3585
+      },
+      "cache_hit_rate": 0.8663977556270928,
+      "resident_ffns": {
+        "median": 77349.0,
+        "min": 77326.0,
+        "max": 77372.0
+      },
+      "fallback_ffns": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 1681.5,
+        "min": 1681.0,
+        "max": 1682.0
+      },
+      "split_queries": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "managed_live_bytes": 10169517572.0,
+      "managed_peak_bytes": 10172171780.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 28086247424,
+        "gpu_global_baseline_mib": 2196.0,
+        "gpu_global_peak_mib": 15365.0,
+        "gpu_global_peak_delta_mib": 13169.0
+      }
+    },
+    "mla-split": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 114852.0,
+        "min": 114294.0,
+        "max": 115657.0
+      },
+      "decode_ms": {
+        "median": 6214.5,
+        "min": 6100.0,
+        "max": 6348.0
+      },
+      "decode_tokens_per_second": {
+        "median": 20.600621486888265,
+        "min": 20.163831127914303,
+        "max": 20.983606557377048
+      },
+      "http_ms": {
+        "median": 121096.161450012,
+        "min": 120596.58919999492,
+        "max": 121775.23379999911
+      },
+      "upload_bytes": {
+        "median": 234876626982.0,
+        "min": 234084683976.0,
+        "max": 235668569988.0
+      },
+      "download_bytes": {
+        "median": 2475680.0,
+        "min": 2474944.0,
+        "max": 2476416.0
+      },
+      "expert_upload_bytes": {
+        "median": 234855419904.0,
+        "min": 234063470592.0,
+        "max": 235647369216.0
+      },
+      "expert_upload_ms": {
+        "median": 61129.6244,
+        "min": 60876.8771,
+        "max": 62210.8692
+      },
+      "cache_hit_rate": 0.8667403586342421,
+      "resident_ffns": {
+        "median": 77349.0,
+        "min": 77326.0,
+        "max": 77372.0
+      },
+      "fallback_ffns": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "prefix_hits": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "mla_tokens": {
+        "median": 1681.5,
+        "min": 1681.0,
+        "max": 1682.0
+      },
+      "split_queries": {
+        "median": 79030.5,
+        "min": 79007.0,
+        "max": 79054.0
+      },
+      "managed_live_bytes": 10169846532.0,
+      "managed_peak_bytes": 10172500740.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 28088033280,
+        "gpu_global_baseline_mib": 2269.0,
+        "gpu_global_peak_mib": 15468.0,
+        "gpu_global_peak_delta_mib": 13199.0
+      }
+    },
+    "mla-split-prefix": {
+      "samples": 4,
+      "prompt_tokens": {
+        "median": 1554.5,
+        "min": 1554,
+        "max": 1555
+      },
+      "prefill_ms": {
+        "median": 433.5,
+        "min": 408.0,
+        "max": 456.0
+      },
+      "decode_ms": {
+        "median": 6289.5,
+        "min": 5976.0,
+        "max": 6477.0
+      },
+      "decode_tokens_per_second": {
+        "median": 20.35789265101863,
+        "min": 19.762235602902578,
+        "max": 21.4190093708166
+      },
+      "http_ms": {
+        "median": 6726.57819998858,
+        "min": 6387.483800004702,
+        "max": 6936.890699987998
+      },
+      "upload_bytes": {
+        "median": 8736866550.0,
+        "min": 8282511444.0,
+        "max": 9191221656.0
+      },
+      "download_bytes": {
+        "median": 197024.0,
+        "min": 196288.0,
+        "max": 197760.0
+      },
+      "expert_upload_bytes": {
+        "median": 8735182848.0,
+        "min": 8280834048.0,
+        "max": 9189531648.0
+      },
+      "expert_upload_ms": {
+        "median": 2340.9485,
+        "min": 2146.1512,
+        "max": 2496.1821
+      },
+      "cache_hit_rate": 0.9377340823970037,
+      "resident_ffns": {
+        "median": 6141.0,
+        "min": 6118.0,
+        "max": 6164.0
+      },
+      "fallback_ffns": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "prefix_hits": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "mla_tokens": {
+        "median": 133.5,
+        "min": 133.0,
+        "max": 134.0
+      },
+      "split_queries": {
+        "median": 6274.5,
+        "min": 6251.0,
+        "max": 6298.0
+      },
+      "managed_live_bytes": 10338126084.0,
+      "managed_peak_bytes": 10342759428.0,
+      "memory": {
+        "peak_process_tree_rss_bytes": 28083793920,
+        "gpu_global_baseline_mib": 2105.0,
+        "gpu_global_peak_mib": 15213.0,
+        "gpu_global_peak_delta_mib": 13108.0
+      }
+    }
+  }
+}
