@@ -1,0 +1,10 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running tests\optional_llama_sequence.rs (target\release\deps\optional_llama_sequence-4d8de5d94c760a0f.exe)
+
+running 3 tests
+test optional_llama_greedy_sequence_and_turn_stop_match_reference ... ok
+test optional_prompt_lookup_matches_serial_target_in_seeded_and_penalized_generation ... ok
+test optional_resident_prefix_reuse_matches_cold_generations_after_divergence_and_eviction ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.97s

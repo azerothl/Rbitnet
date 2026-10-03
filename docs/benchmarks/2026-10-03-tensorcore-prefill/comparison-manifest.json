@@ -1,0 +1,68 @@
+{
+  "environment": {
+    "ollama_kv_dtype": "default f16",
+    "ram_bytes": 66157723648,
+    "driver": "610.88",
+    "ollama_version": "0.35.0",
+    "llama_rbitnet_kv_dtype": "f32",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "logical_cores": 16,
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "gpu_vram_mib": 16376,
+    "llama_cpp_build": "b11351",
+    "llama_cpp_commit": "631109b34",
+    "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+    "rbitnet_commit": "e358b63 + local compensated GEMM",
+    "os": "Microsoft Windows NT 10.0.26220.0",
+    "physical_cores": 8,
+    "rbitnet_branch": "codex/tensorcore-prefill",
+    "rbitnet_context_capacity": 8192,
+    "cuda_execution": "Llama resident split-KV plus opt-in compensated TF32x3 block GEMM; prefix reuse disabled",
+    "cuda_quant_library_sha256": "298ea914f9343796b4671e901425a6df9986fae0d3ae0606871eb5348abc355e",
+    "rbitnet_exe_sha256": "be35f6caf7f088793d46859bfe0288651c5b8c5f64d0afd2bd886d49a79f4e57",
+    "shared_cuda_head_default": "off; RBITNET_CUDA_HEAD=1 opts in"
+  },
+  "llama_cpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351\\llama-server.exe",
+  "context": 2048,
+  "cwd": "E:\\devs\\Rbitnet",
+  "models": [
+    {
+      "id": "llama32-1b",
+      "gguf": "C:\\Users\\azero\\.ollama\\models\\blobs\\sha256-3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+      "ollama": "rbitnet-bench-llama32-1b:q4_k_m",
+      "parameter_count": 1235814432,
+      "quantization": "Q4_K_M",
+      "architecture": "llama",
+      "tokenizer": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+    },
+    {
+      "id": "qwen35-2b",
+      "gguf": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+      "ollama": "rbitnet-bench-qwen35-2b:q8_0",
+      "parameter_count": 1881825088,
+      "quantization": "Q8_0",
+      "architecture": "qwen35",
+      "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+      "source": {
+        "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+        "filename": "Qwen3.5-2B-Q8_0.gguf",
+        "repo": "unsloth/Qwen3.5-2B-GGUF"
+      }
+    }
+  ],
+  "cuda_quant_library": "E:\\devs\\Rbitnet\\target\\tensorcore\\cuda\\rbitnet_cuda_quant64.dll",
+  "llama_gpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351-cuda\\llama-server.exe",
+  "threads": 16,
+  "rbitnet": "E:\\devs\\Rbitnet\\target\\release\\rbitnet.exe",
+  "ollama_url": "http://127.0.0.1:11439",
+  "port": 18110,
+  "rbitnet_env": {
+    "RBITNET_CUDA_QWEN_FULL": "1",
+    "RBITNET_REQUIRE_QWEN_FULL": "1",
+    "RBITNET_CUDA_SPLIT_KV": "1",
+    "RBITNET_PREFIX_KV": "0",
+    "RBITNET_CUDA_PREFILL": "1",
+    "RBITNET_CUDA_PREFILL_TF32X3": "1"
+  },
+  "ollama_pid": 50820
+}

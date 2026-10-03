@@ -6,6 +6,7 @@
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
+#include <mma.h>
 #include <math_constants.h>
 
 #include <cstdint>
@@ -456,4 +457,28 @@ extern "C" int rbitnet_cuda_quant_gemm_device(unsigned type,const void *weights,
     if(!input || !output || !tokens || !columns || !rows || !qwen_matrix_valid(m,columns,rows) || !resident_kind(type,kind))return 1;
     launch_prefill_gemm(kind,weights,row_bytes,input,columns,rows,tokens,output,nullptr);
     return cudaGetLastError()==cudaSuccess && cudaDeviceSynchronize()==cudaSuccess ? 0 : 2;
+}
+
+extern "C" int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,size_t row_bytes,
+    const float *input,unsigned columns,unsigned rows,unsigned tokens,unsigned tf32x3,
+    unsigned repeats,float *output,float *elapsed_ms) {
+    RbitnetLlamaMatrix m={weights,row_bytes,type,columns,rows};QuantKind kind;
+    if(!input || !output || !elapsed_ms || !weights || tokens<2 || tokens>128 || !columns || !rows
+        || tf32x3>1 || !repeats || repeats>1000 || !qwen_matrix_valid(m,columns,rows) || !resident_kind(type,kind))return 1;
+    if(tf32x3 && !tf32_prefill_supported())return 2;
+    ResidentLlama buffers;
+    if(cudaStreamCreateWithFlags(&buffers.stream,cudaStreamNonBlocking)!=cudaSuccess)return 3;
+    uint8_t *dw=nullptr;float *dx=nullptr,*dy=nullptr;
+    if(!buffers.alloc(dw,size_t(rows)*row_bytes,static_cast<const uint8_t*>(weights))
+        || !buffers.alloc(dx,size_t(tokens)*columns,input) || !buffers.alloc(dy,size_t(tokens)*rows))return 4;
+    struct Events {cudaEvent_t begin=nullptr,end=nullptr;~Events(){if(begin)cudaEventDestroy(begin);if(end)cudaEventDestroy(end);}} events;
+    if(cudaEventCreate(&events.begin)!=cudaSuccess || cudaEventCreate(&events.end)!=cudaSuccess)return 5;
+    for(unsigned i=0;i<2;i++)launch_prefill_gemm(kind,dw,row_bytes,dx,columns,rows,tokens,dy,buffers.stream,tf32x3!=0);
+    if(cudaGetLastError()!=cudaSuccess || cudaEventRecord(events.begin,buffers.stream)!=cudaSuccess)return 6;
+    for(unsigned i=0;i<repeats;i++)launch_prefill_gemm(kind,dw,row_bytes,dx,columns,rows,tokens,dy,buffers.stream,tf32x3!=0);
+    if(cudaGetLastError()!=cudaSuccess || cudaEventRecord(events.end,buffers.stream)!=cudaSuccess
+        || cudaEventSynchronize(events.end)!=cudaSuccess || cudaEventElapsedTime(elapsed_ms,events.begin,events.end)!=cudaSuccess)return 6;
+    *elapsed_ms/=repeats;
+    return cudaMemcpyAsync(output,dy,size_t(tokens)*rows*sizeof(float),cudaMemcpyDeviceToHost,buffers.stream)==cudaSuccess
+        && cudaStreamSynchronize(buffers.stream)==cudaSuccess ? 0 : 7;
 }

@@ -122,3 +122,31 @@ The composition follows the exact attention-state reduction discussed in
 [FlashInfer §2.2 and Appendix D](https://arxiv.org/html/2501.01005v1).
 This is Rbitnet's own SIMT implementation. The heuristic unified maximum from
 [FlashDecoding++](https://arxiv.org/abs/2311.01282) is not used.
+
+## Compensated Tensor Core prefill GEMM
+
+`RBITNET_CUDA_PREFILL_TF32X3=1` opts resident Llama block prefill into a 32x32
+output tile, sharing each decoded GGUF weight across 32 tokens. Each F32 input
+splits into a TF32 high part and TF32 residual. Three products retain the high
+term and two corrections; the residual-residual term is omitted. K=32 subtotals
+are added in FP32 outside Tensor Core accumulation. This adapts the correction
+and external accumulation ideas of [Ootomo and Yokota, §3.2–3.5](https://arxiv.org/html/2203.03341v3)
+without adopting their CUTLASS implementation or claiming bit-exact SGEMM or
+full FP32 accuracy for arbitrary input ranges.
+
+The option requires SM80+. Build scripts include SM80 and compute_80 PTX for
+forward JIT compatibility, alongside existing targets. Only RTX 4080 SUPER has
+been measured here. Blocks below 64 tokens or projections with fewer than
+1 024 columns / 131 072 output elements retain the existing SIMT kernel.
+One-token decode is unchanged. There is no full floating-point weight mirror.
+Support also checks the actual kernel image's binary and PTX target: a custom
+compute_75 PTX build JIT-compiled on a newer GPU must not claim Tensor Cores.
+
+Rust configures the context through the optional `configure_tensor_prefill`
+ABI before its first block. This avoids Windows DLL CRT `getenv` snapshots
+disagreeing with Rust environment changes during multiple model loads/tests.
+After successful block execution, `tensor_gemm_calls` reports actual selected
+kernel launches, including graph replays; Rust publishes
+`rbitnet_core_gpu_tensor_gemm_calls_total`. Missing symbols keep the legacy
+path and report zero. `quant_gemm_check` is a diagnostic host-array oracle/
+CUDA-event timer for the same hot kernels, not a production transfer path.

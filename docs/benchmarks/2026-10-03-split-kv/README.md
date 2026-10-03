@@ -65,7 +65,7 @@ Les capacités de contexte diffèrent : 8 192 pour Rbitnet, 2 048 demandés aux 
 
 ```powershell
 pwsh -NoProfile -File scripts/build_cuda_quant.ps1 -OutDir "$PWD/target/split-kv/cuda"
-cargo build --release -p bitnet-cli
+cargo build --release -p rbitnet-cli
 python scripts/benchmark_cache_stack.py --config docs/benchmarks/2026-10-03-split-kv/comparison-manifest.json --model llama32-1b --backend gpu --binary target/release/rbitnet.exe --library target/split-kv/cuda/rbitnet_cuda_quant64.dll --cycles 3 --split-kv --output-dir target/repro/llama
 python scripts/benchmark_cache_stack.py --config docs/benchmarks/2026-10-03-split-kv/comparison-manifest.json --model qwen35-2b --backend gpu --binary target/release/rbitnet.exe --library target/split-kv/cuda/rbitnet_cuda_quant64.dll --cycles 3 --qwen-full --split-kv --output-dir target/repro/qwen
 python scripts/benchmark_split_kv_short.py --config docs/benchmarks/2026-10-03-split-kv/comparison-manifest.json --binary target/release/rbitnet.exe --library target/split-kv/cuda/rbitnet_cuda_quant64.dll --output-dir target/repro/short

@@ -1,0 +1,80 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.20s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=0 event_ms=0.079735
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=1 event_ms=0.141892
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=0 event_ms=0.079531
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=1 event_ms=0.135846
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=0 event_ms=0.079599
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=16 mode=1 event_ms=0.142747
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=0 event_ms=0.234162
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=1 event_ms=0.182204
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=0 event_ms=0.234257
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=1 event_ms=0.181453
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=0 event_ms=0.234299
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=64 mode=1 event_ms=0.174660
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=0 event_ms=0.431718
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=1 event_ms=0.232482
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=0 event_ms=0.431309
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=1 event_ms=0.232721
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=0 event_ms=0.422946
+matrix=blk.0.attn_q.weight M=2048 K=2048 N=128 mode=1 event_ms=0.239479
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=0 event_ms=0.050590
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=1 event_ms=0.135339
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=0 event_ms=0.051507
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=1 event_ms=0.135543
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=0 event_ms=0.050830
+matrix=blk.0.attn_k.weight M=512 K=2048 N=16 mode=1 event_ms=0.136021
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=0 event_ms=0.086528
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=1 event_ms=0.147115
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=0 event_ms=0.079838
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=1 event_ms=0.147114
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=0 event_ms=0.086192
+matrix=blk.0.attn_k.weight M=512 K=2048 N=64 mode=1 event_ms=0.147115
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=0 event_ms=0.142199
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=1 event_ms=0.154214
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=0 event_ms=0.141961
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=1 event_ms=0.147354
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=0 event_ms=0.148446
+matrix=blk.0.attn_k.weight M=512 K=2048 N=128 mode=1 event_ms=0.147251
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=0 event_ms=0.235554
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=1 event_ms=0.235418
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=0 event_ms=0.235418
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=1 event_ms=0.233847
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=0 event_ms=0.235554
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=16 mode=1 event_ms=0.225932
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=0 event_ms=0.847497
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=1 event_ms=0.418919
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=0 event_ms=0.839407
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=1 event_ms=0.413495
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=0 event_ms=0.843981
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=64 mode=1 event_ms=0.423629
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=0 event_ms=1.678814
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=1 event_ms=0.776670
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=0 event_ms=1.679838
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=1 event_ms=0.787558
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=0 event_ms=1.677756
+matrix=blk.0.ffn_gate.weight M=8192 K=2048 N=128 mode=1 event_ms=0.776738
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=0 event_ms=0.328397
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=1 event_ms=0.552073
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=0 event_ms=0.327680
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=1 event_ms=0.553472
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=0 event_ms=0.327236
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=16 mode=1 event_ms=0.550400
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=0 event_ms=0.911360
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=1 event_ms=0.695535
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=0 event_ms=0.904192
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=1 event_ms=0.697651
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=0 event_ms=0.910541
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=64 mode=1 event_ms=0.701884
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=0 event_ms=1.626282
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=1 event_ms=0.911155
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=0 event_ms=1.628467
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=1 event_ms=0.906270
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=0 event_ms=1.627853
+matrix=blk.0.ffn_down.weight M=2048 K=8192 N=128 mode=1 event_ms=0.913340
+test native::quant_gemm::optional_real_gguf_gemm_accuracy_and_cuda_event_cost ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 1.42s

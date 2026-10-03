@@ -24,10 +24,12 @@ def main():
     parser.add_argument('--port', type=int, default=18105)
     parser.add_argument('--qwen-full', action='store_true', help='Compare complete dense Qwen GPU pipeline and prefix cache')
     parser.add_argument('--split-kv', action='store_true', help='Compare exact split-KV attention with its previous resident path')
+    parser.add_argument('--tf32x3', action='store_true', help='Compare Llama block prefill with compensated Tensor Core projections')
     args = parser.parse_args()
     if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
     if args.qwen_full and (args.model != 'qwen35-2b' or args.backend != 'gpu'): parser.error('--qwen-full requires dense Qwen GPU')
     if args.split_kv and (args.backend != 'gpu' or (args.model == 'qwen35-2b' and not args.qwen_full)): parser.error('--split-kv requires resident Llama or full Qwen GPU')
+    if args.tf32x3 and (args.model != 'llama32-1b' or args.backend != 'gpu' or args.qwen_full): parser.error('--tf32x3 requires resident Llama GPU')
     root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
@@ -62,15 +64,18 @@ def main():
                  ('split-prefix', '1', '0', '1' if args.qwen_full else '0', '1')]
         if not args.qwen_full: modes += [('block', '0', '1', '0', '0'), ('split-block', '0', '1', '0', '1')]
     else: modes = [(*mode, '0') for mode in modes]
+    modes = [(*mode, '0') for mode in modes]
+    if args.tf32x3: modes = [('baseline','0','1','0','1','0'), ('tensor','0','1','0','1','1'), ('tensor-prefix','1','1','0','1','1')]
     original = subprocess.Popen
     baseline = {}
     baseline_sse = {}
     def save():
         (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-    for mode, prefix, block, full, split in modes:
+    for mode, prefix, block, full, split, tensor in modes:
         overrides = dict(RBITNET_PREFIX_KV=prefix, RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
                          RBITNET_CUDA_QWEN_FULL=full, RBITNET_REQUIRE_QWEN_FULL=full,
                          RBITNET_CUDA_SPLIT_KV=split,
+                         RBITNET_CUDA_PREFILL_TF32X3=tensor,
                          RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128', RBITNET_CUDA_PREFILL=block,
                          RBITNET_CUDA_PREFILL_TOKENS='128', RBITNET_REQUIRE_RESIDENT='1' if args.backend == 'gpu' and args.model == 'llama32-1b' else '0')
         def popen(*a, **kw):
@@ -101,6 +106,7 @@ def main():
                     if block == '1': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native block prefill was not used'
                     if full == '1': assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0, 'full Qwen pipeline was not used'
                     if split == '1': assert delta.get('rbitnet_core_gpu_split_attention_queries_total', 0) > 0, 'split-KV kernels were not used'
+                    if tensor == '1' and index < 2 and prefix == '0': assert delta.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0) > 0, 'Tensor Core projections were not used'
             messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Répète exactement : été, café, résumé, 🙂.'}]
             for label, options in [('greedy', dict(temperature=0)), ('sampling', dict(temperature=0.7, seed=42)),
                                    ('penalties', dict(temperature=0, frequency_penalty=0.2, presence_penalty=0.1))]:
