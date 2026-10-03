@@ -8,6 +8,7 @@ mod config;
 mod metrics;
 mod model_registry;
 mod run;
+mod stream_stop;
 
 pub use anthropic::{anthropic_messages_to_prompt, AnthropicMessage};
 pub use run::{run_server, try_idle_unload};
@@ -1768,7 +1769,7 @@ async fn live_stream_chat_completion(
 
     let model_sse = model.clone();
     let id_sse = id.clone();
-    let stop = stop.clone();
+    let mut stop_filter = stream_stop::StreamStop::new(stop.as_ref());
     let start = Instant::now();
     let mut role_sent = false;
     let mut finished = false;
@@ -1796,11 +1797,14 @@ async fn live_stream_chat_completion(
                     });
                     return Poll::Ready(Some(Ok(format!("data: {}\n\n", chunk))));
                 }
+                // We consumed an event; recv did not register a pending waker.
+                cx.waker().wake_by_ref();
                 Poll::Pending
             }
             Poll::Ready(Some(Ok(StreamEvent::Delta { text }))) => {
-                let piece = apply_stop_sequences_stream_delta(&text, stop.as_ref());
+                let piece = stop_filter.push(&text);
                 if piece.is_empty() {
+                    cx.waker().wake_by_ref();
                     return Poll::Pending;
                 }
                 let chunk = json!({
@@ -1846,7 +1850,15 @@ async fn live_stream_chat_completion(
                         "finish_reason": "stop"
                     }]
                 });
-                Poll::Ready(Some(Ok(format!("data: {}\n\ndata: [DONE]\n\n", finish))))
+                let tail = stop_filter.finish();
+                let mut packet = String::new();
+                if !tail.is_empty() {
+                    let delta = json!({"id":id_sse.as_str(), "object":"chat.completion.chunk", "created":created,
+                        "model":model_sse.as_str(), "choices":[{"index":0, "delta":{"content":tail}, "finish_reason":serde_json::Value::Null}]});
+                    packet.push_str(&format!("data: {}\n\n", delta));
+                }
+                packet.push_str(&format!("data: {}\n\ndata: [DONE]\n\n", finish));
+                Poll::Ready(Some(Ok(packet)))
             }
             Poll::Ready(Some(Err(msg))) => {
                 metrics.chat_errors_total.fetch_add(1, Ordering::Relaxed);
@@ -1891,26 +1903,6 @@ async fn live_stream_chat_completion(
         .header("cache-control", "no-cache")
         .body(Body::from_stream(body_stream))
         .unwrap()
-}
-
-fn apply_stop_sequences_stream_delta(text: &str, stop: Option<&StopSequence>) -> String {
-    let mut out = text.to_string();
-    let Some(stop) = stop else {
-        return out;
-    };
-    let mut cut = None;
-    for s in stop.as_strings() {
-        if s.is_empty() {
-            continue;
-        }
-        if let Some(pos) = out.find(&s) {
-            cut = Some(cut.map_or(pos, |prev: usize| prev.min(pos)));
-        }
-    }
-    if let Some(pos) = cut {
-        out.truncate(pos);
-    }
-    out
 }
 
 #[allow(dead_code)]

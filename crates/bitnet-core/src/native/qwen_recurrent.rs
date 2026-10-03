@@ -36,6 +36,22 @@ type Create = unsafe extern "C" fn(
 ) -> *mut c_void;
 type Destroy = unsafe extern "C" fn(*mut c_void);
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, u32, *mut f32) -> i32;
+type Snapshot = unsafe extern "C" fn(*mut c_void) -> *mut c_void;
+type Restore = unsafe extern "C" fn(*mut c_void, *const c_void, u32) -> i32;
+struct SnapshotApi {
+    create: Snapshot,
+    restore: Restore,
+    destroy: Destroy,
+}
+pub(crate) struct SavedRecurrent {
+    context: usize,
+    destroy: Destroy,
+}
+impl Drop for SavedRecurrent {
+    fn drop(&mut self) {
+        unsafe { (self.destroy)(self.context as *mut c_void) }
+    }
+}
 
 pub(crate) struct GpuRecurrent {
     context: usize,
@@ -44,6 +60,8 @@ pub(crate) struct GpuRecurrent {
     _weights: Vec<CudaDeviceQuantMatrix>,
     embd: usize,
     graphs: bool,
+    snapshots: Option<SnapshotApi>,
+    pub state_bytes: usize,
     pub extra_weights_bytes: usize,
 }
 impl GpuRecurrent {
@@ -185,6 +203,23 @@ impl GpuRecurrent {
         if context == 0 {
             return None;
         }
+        let snapshots = unsafe {
+            lib.get::<Snapshot>(b"rbitnet_cuda_qwen_recurrent_snapshot\0")
+                .ok()
+                .zip(
+                    lib.get::<Restore>(b"rbitnet_cuda_qwen_recurrent_restore\0")
+                        .ok(),
+                )
+                .zip(
+                    lib.get::<Destroy>(b"rbitnet_cuda_qwen_recurrent_snapshot_destroy\0")
+                        .ok(),
+                )
+                .map(|((create, restore), destroy)| SnapshotApi {
+                    create: *create,
+                    restore: *restore,
+                    destroy: *destroy,
+                })
+        };
         Some(Self {
             context,
             destroy,
@@ -192,8 +227,42 @@ impl GpuRecurrent {
             _weights: owned,
             embd: cfg.embd as usize,
             graphs: cfg.graphs != 0,
+            snapshots,
+            state_bytes: (num_v * head * head + inner * cfg.conv as usize) * 4,
             extra_weights_bytes,
         })
+    }
+    pub fn supports_snapshot(&self) -> bool {
+        self.snapshots.is_some()
+    }
+    pub fn snapshot(&self) -> Option<SavedRecurrent> {
+        let api = self.snapshots.as_ref()?;
+        let context = unsafe { (api.create)(self.context as *mut c_void) } as usize;
+        (context != 0).then_some(SavedRecurrent {
+            context,
+            destroy: api.destroy,
+        })
+    }
+    pub fn restore(&mut self, snapshot: &SavedRecurrent, length: usize) -> Result<()> {
+        let api = self
+            .snapshots
+            .as_ref()
+            .ok_or_else(|| BitNetError::Inference("Qwen state snapshots unavailable".into()))?;
+        let length = u32::try_from(length)
+            .map_err(|_| BitNetError::Inference("Qwen snapshot position overflow".into()))?;
+        let status = unsafe {
+            (api.restore)(
+                self.context as *mut c_void,
+                snapshot.context as *const c_void,
+                length,
+            )
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen state restore failed: {status}"
+            )));
+        }
+        Ok(())
     }
     pub fn run(&mut self, input: &[f32], pos: usize) -> Result<Vec<f32>> {
         if input.len() != self.embd {

@@ -1,0 +1,210 @@
+{
+  "binary_sha256": "afd2c9d69a2b75c2be88170365a80c952ec952c34787c3f7609870916a863bf8",
+  "library_sha256": "9ebf02b422cad99c5ba67d83863ceac69a620b12d81aacf0dd91706b99c8cf03",
+  "cases": [
+    {
+      "config": "llama32-1b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020763,
+        "id": "chatcmpl-1791020763",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil de l'après-midi se reflétait sur les pages de papier, créant un éclair de lumière qui éclairait les ombres. Les bibliothécaires et les étudiants se promenaient tranquillement, lisant ou étudiant, tandis que les robots, comme moi, attendaient leur tour.\n\nJe me tenais sur une étagère, entouré",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020763,
+        "id": "chatcmpl-1791020763",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " robot"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020764,
+        "id": "chatcmpl-1791020764",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le robot, nommé \"Nova\", avait été conçu pour explorer les bibliothèques, pour découvrir les livres et les manuscrits, et pour apprendre sur les cultures et les traditions des différentes époques. Il avait été livré à l'humanité il y a quelques années, après avoir passé plusieurs années à se perfectionner et à améliorer ses capacités.\n\nLe premier jour d'expérimentation, Nova avait été placé dans une bibliothèque voisine de sa propre ville. Il avait été équipé de diverses technologies pour pouvoir lire, scanner et analyser",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020764,
+        "id": "chatcmpl-1791020764",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "llama32-1b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Je",
+        " me"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020764,
+        "id": "chatcmpl-1791020764",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Je me tenais debout dans la grande salle de lecture de la bibliothèque, les murs ornés de livres de tous les genres et de tous les paysages. Le soleil brillait à travers les vitres, projetant des ombres fascinantes sur le sol. Les bibliothécaires et les utilisateurs du centre se promenaient tranquillement, lisant ou cherchant des livres pour les lire.\n\nJe me suis positionné à côté d'un robot qui se trouvait à l'entrée de la salle. Il était un modèle de robot spécialement con",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791020765,
+        "id": "chatcmpl-1791020765",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 72,
+          "total_tokens": 200
+        }
+      },
+      "equal": true
+    }
+  ]
+}

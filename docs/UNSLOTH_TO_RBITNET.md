@@ -138,7 +138,9 @@ Review `/v1/models` for `loaded: true`, `ready: true`, `metadata.architecture: l
 
 ## Recorded reference result
 
-On 2026-10-02, the pinned Unsloth Llama-3.2-1B-Instruct Q4_K_M pack was loaded by the Windows release build and returned a non-empty `/v1/chat/completions` response through this recipe. The response was repetitive and incorrect for the capital-of-France prompt. **Loading/API smoke passed; text quality failed manual review.** The catalog entry remains `verified: false` and `tested: false`. See the [saved evidence](validation/2026-10-02-unsloth-llama32-1b.json) and [model matrix](MODEL_MATRIX.md).
+On 2026-10-03, after the inference repairs in PR #82, the same pinned Unsloth Llama-3.2-1B-Instruct Q4_K_M pack passed the Windows CPU recipe and hash/path checks. The capital-of-France request returned **`Paris.`**, with 22 prompt tokens and two completion tokens. See the [actual response and metadata](validation/2026-10-03-unsloth-llama32-1b.json). The [published CPU/CUDA comparison](benchmarks/2026-10-03-parity-round2/README.md) and its real-model sequence checks cover this same GGUF SHA-256.
+
+The [2026-10-02 record](validation/2026-10-02-unsloth-llama32-1b.json) remains available: loading succeeded at that time, but the response was repetitive and factually incorrect. It describes the earlier runtime.
 
 This run uses a prebuilt upstream GGUF. It does not validate a new Unsloth/TRL training run, local GGUF conversion, GPU performance or golden token parity. If your export has repeated or incorrect output, check the tokenizer, training template and special tokens, then compare against a reference engine on the same GGUF. Keep the failure visible in your validation record.
 

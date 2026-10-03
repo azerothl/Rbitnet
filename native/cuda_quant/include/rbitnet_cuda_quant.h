@@ -21,6 +21,11 @@
 extern "C" {
 #endif
 
+// Shared-weight SIMT quantized GEMM. All three pointers are device addresses;
+// input is [tokens, columns], output [tokens, rows]. Synchronizes on return.
+RBITNET_CUDA_API int rbitnet_cuda_quant_gemm_device(unsigned type, const void *weights,
+    size_t row_bytes, const float *input, unsigned columns, unsigned rows, unsigned tokens, float *output);
+
 RBITNET_CUDA_API int rbitnet_cuda_q4_0_matvec(
     const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
 RBITNET_CUDA_API int rbitnet_cuda_q8_0_matvec(
@@ -74,9 +79,18 @@ typedef struct {
 } RbitnetLlamaConfig;
 RBITNET_CUDA_API void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig*, const RbitnetLlamaLayer*, const RbitnetLlamaMatrix*, const float *output_norm, const float *rope_frequency);
 RBITNET_CUDA_API void rbitnet_cuda_llama_destroy(void*);
+// Optional SIMT quantized GEMM prefill, 1..128 tokens, causal attention.
+RBITNET_CUDA_API int rbitnet_cuda_llama_prefill(void *context, const float *embeddings,
+    unsigned position, unsigned count, unsigned mode, float *logits, unsigned *token);
 /* mode: 0=transform only; 1=download F32 logits; 2=download greedy token only.
  * pos=0 starts a fresh sequence; only sequential positions are accepted. */
 RBITNET_CUDA_API int rbitnet_cuda_llama_step(void*, const float *embedding, unsigned pos, unsigned mode, float *logits, unsigned *token);
+/* Immutable device snapshots contain the first length tokens, not unused capacity.
+ * Restore may truncate an attention snapshot. The caller owns/destroys the snapshot
+ * independently of its source context and keeps it scoped to the same model. */
+RBITNET_CUDA_API void *rbitnet_cuda_llama_snapshot(void*, unsigned length);
+RBITNET_CUDA_API void rbitnet_cuda_llama_snapshot_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_llama_restore(void*, const void *snapshot, unsigned length);
 
 #ifdef __cplusplus
 }
@@ -90,6 +104,13 @@ RBITNET_CUDA_API void *rbitnet_cuda_moe_create(const RbitnetMoeConfig *cfg,
     const RbitnetLlamaMatrix *gate, const RbitnetLlamaMatrix *up, const RbitnetLlamaMatrix *down,
     const float *gate_bias, const float *up_bias, const float *down_bias);
 RBITNET_CUDA_API void rbitnet_cuda_moe_destroy(void *context);
+// Optional expert-cache API. Descriptors retain full-bank shapes, but weight
+// addresses are supplied per selected expert to each synchronous step.
+RBITNET_CUDA_API void *rbitnet_cuda_moe_dynamic_create(const RbitnetMoeConfig *cfg,
+    const RbitnetLlamaMatrix *gate, const RbitnetLlamaMatrix *up, const RbitnetLlamaMatrix *down,
+    const float *gate_bias, const float *up_bias, const float *down_bias);
+RBITNET_CUDA_API int rbitnet_cuda_moe_dynamic_step(void *context, const float *input,
+    const unsigned *experts, const float *probabilities, float *output, const void *const *selected);
 RBITNET_CUDA_API int rbitnet_cuda_moe_step(void *context,const float *input,
     const unsigned *experts,const float *probabilities,float *output);
 
@@ -105,6 +126,9 @@ RBITNET_CUDA_API void *rbitnet_cuda_qwen_recurrent_create(const RbitnetQwenRecur
     const RbitnetLlamaMatrix *matrices,const float *attn_norm,const float *ffn_norm,
     const float *conv_weights,const float *dt_bias,const float *a,const float *ssm_norm);
 RBITNET_CUDA_API void rbitnet_cuda_qwen_recurrent_destroy(void *context);
+RBITNET_CUDA_API void *rbitnet_cuda_qwen_recurrent_snapshot(void *context);
+RBITNET_CUDA_API void rbitnet_cuda_qwen_recurrent_snapshot_destroy(void *snapshot);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_recurrent_restore(void *context, const void *snapshot, unsigned length);
 /* pos=0 clears convolution history and recurrent state. Other positions must
  * be sequential. Failures are reported, never silently restarted on CPU. */
 RBITNET_CUDA_API int rbitnet_cuda_qwen_recurrent_step(void *context,const float *input,

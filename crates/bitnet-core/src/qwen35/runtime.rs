@@ -22,7 +22,14 @@ use super::config::Qwen35Config;
 use super::moe::{moe_forward, shared_expert_forward};
 use super::qmatvec::token_embedding_row;
 use super::recurrent::{first_recurrent_gate_out_dim, recurrent_forward, RecurrentState};
+use crate::native::prefix::{self, PrefixStore};
 use crate::native::weights::Weights;
+
+struct SavedPrefix {
+    attention: super::attention::AttnPrefix,
+    recurrent: Vec<RecurrentState>,
+    device: Vec<Option<crate::native::qwen_recurrent::SavedRecurrent>>,
+}
 
 pub struct Qwen35Runtime {
     cfg: Qwen35Config,
@@ -41,6 +48,8 @@ pub struct Qwen35Runtime {
     debug_moe_topk: Option<usize>,
     prefill_chunk_tokens: usize,
     cuda_graph_enabled: bool,
+    prefixes: PrefixStore<SavedPrefix>,
+    prefix_supported: bool,
 }
 
 fn must_tensor(archive: &GgufArchive, name: &str) -> Result<GgufTensorInfo> {
@@ -231,6 +240,13 @@ impl Qwen35Runtime {
         }
 
         let gpu_head = crate::native::head::GpuHead::new(&weights, &out_head.name, cfg.norm_eps);
+        let prefix_supported = gpu_recurrent
+            .iter()
+            .flatten()
+            .all(|g| g.supports_snapshot());
+        if prefix::enabled() && !prefix_supported {
+            tracing::warn!("Qwen prefix reuse unavailable with this CUDA DLL");
+        }
         Ok(Self {
             cfg,
             archive,
@@ -248,6 +264,8 @@ impl Qwen35Runtime {
             debug_moe_topk,
             prefill_chunk_tokens,
             cuda_graph_enabled,
+            prefixes: PrefixStore::from_env(),
+            prefix_supported,
         })
     }
 
@@ -291,19 +309,56 @@ impl Qwen35Runtime {
         }
 
         let t_pf = Instant::now();
+        let mut matched = 0;
+        if prefix::enabled() && self.prefix_supported {
+            // Leave at least one token to recompute logits; a checkpoint can
+            // only restore its complete recurrent state at its original length.
+            let reusable = &prompt_ids[..prompt_ids.len().saturating_sub(1)];
+            if let Some((saved, length)) =
+                self.prefixes
+                    .lookup(reusable, false, prefix::minimum_tokens())
+            {
+                self.attn_kv.restore(&saved.attention)?;
+                for (dst, src) in self.rec.iter_mut().zip(&saved.recurrent) {
+                    *dst = src.clone();
+                }
+                for (gpu, state) in self.gpu_recurrent.iter_mut().zip(&saved.device) {
+                    if let (Some(gpu), Some(state)) = (gpu, state) {
+                        gpu.restore(state, length)?;
+                    }
+                }
+                matched = length;
+                crate::perf::record_prefix_hit(self.attn_kv.prefix_bytes(length));
+            } else {
+                crate::perf::record_prefix_cache_miss();
+            }
+        }
         let mut logits = Vec::new();
         let mut next_token = None;
         let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
         let prefill_chunk = self.prefill_chunk_tokens.max(1);
+        let checkpoint_interval =
+            env_opt_usize("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS").unwrap_or(256);
+        let checkpoint_enabled = prefix::enabled() && self.prefix_supported;
         for (chunk_idx, chunk) in prompt_ids.chunks(prefill_chunk).enumerate() {
             let chunk_base = chunk_idx * prefill_chunk;
             for (idx, &tid) in chunk.iter().enumerate() {
                 let pos = chunk_base + idx;
+                if pos < matched {
+                    continue;
+                }
                 if inference_cancelled() {
                     return Err(BitNetError::Inference("inference cancelled".into()));
                 }
                 (logits, next_token) =
                     self.forward_inner(tid, pos, &arch, pos + 1 == prompt_ids.len(), gpu_greedy)?;
+                if checkpoint_enabled
+                    && pos + 1 < prompt_ids.len()
+                    && (pos + 1 == prompt_ids.len().saturating_sub(1)
+                        || (pos + 1) % checkpoint_interval == 0)
+                {
+                    self.save_prefix(&prompt_ids[..pos + 1])?;
+                }
             }
             if self.trace_layer_timings {
                 tracing::debug!(
@@ -357,6 +412,54 @@ impl Qwen35Runtime {
             completion_tokens: gen.len() as u32,
         };
         Ok((text, phases))
+    }
+
+    fn save_prefix(&mut self, tokens: &[u32]) -> Result<()> {
+        if self.prefixes.contains(tokens) {
+            return Ok(());
+        }
+        if !prefix::enabled() || !self.prefix_supported || tokens.len() < prefix::minimum_tokens() {
+            return Ok(());
+        }
+        let bytes = self
+            .attn_kv
+            .prefix_bytes(tokens.len())
+            .saturating_add(
+                self.rec
+                    .iter()
+                    .map(|s| (s.conv_hist.len() + s.ssm_state.len()) * 4)
+                    .sum::<usize>(),
+            )
+            .saturating_add(
+                self.gpu_recurrent
+                    .iter()
+                    .flatten()
+                    .map(|g| g.state_bytes)
+                    .sum::<usize>(),
+            );
+        if !self.prefixes.reserve(tokens, bytes) {
+            return Ok(());
+        }
+        let mut device = Vec::with_capacity(self.gpu_recurrent.len());
+        for gpu in &self.gpu_recurrent {
+            let state = if let Some(gpu) = gpu {
+                let Some(state) = gpu.snapshot() else {
+                    tracing::warn!("Qwen checkpoint allocation failed; skipping prefix insertion");
+                    return Ok(());
+                };
+                Some(state)
+            } else {
+                None
+            };
+            device.push(state);
+        }
+        let saved = SavedPrefix {
+            attention: self.attn_kv.snapshot(tokens.len())?,
+            recurrent: self.rec.clone(),
+            device,
+        };
+        self.prefixes.insert(tokens.to_vec(), saved, bytes);
+        Ok(())
     }
 
     #[cfg(test)]
@@ -709,6 +812,100 @@ mod sequence_tests {
         greedy_ids: Vec<u32>,
         text: String,
         stop_type: String,
+    }
+
+    #[test]
+    fn optional_qwen_prefix_checkpoints_restore_kv_gdn_and_convolution_after_divergence() {
+        if std::env::var("RBITNET_QWEN_PREFIX_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        assert!(prefix::enabled());
+        let gguf = std::env::var("RBITNET_QWEN_TEST_GGUF").unwrap();
+        let tokenizer = std::env::var("RBITNET_QWEN_TEST_TOKENIZER").unwrap();
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        let backend = if std::env::var("RBITNET_QWEN_SEQUENCE_BACKEND").as_deref() == Ok("cuda") {
+            BackendKind::Cuda
+        } else {
+            BackendKind::Cpu
+        };
+        let common = "<|im_start|>system\nTu es un assistant précis. Réponds sans raisonnement détaillé.\n<|im_end|>\n<|im_start|>user\n";
+        let prompts: Vec<_> = [
+            "Quelle est la capitale de la France ?",
+            "Quelle est la capitale de l'Italie ?",
+            "Quelle est la capitale de la France ?",
+            "Calcule 17 + 25.",
+            "Répète été, café, résumé, 🙂.",
+            "Quelle est la capitale de la France ?",
+        ]
+        .into_iter()
+        .map(|q| format!("{common}{q}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"))
+        .collect();
+        for sampling in [
+            SamplingOptions::from_temperature(0.0),
+            SamplingOptions {
+                temperature: 0.7,
+                seed: Some(735),
+                top_p: Some(0.9),
+                ..Default::default()
+            },
+            SamplingOptions {
+                temperature: 0.7,
+                seed: Some(735),
+                frequency_penalty: 0.2,
+                presence_penalty: 0.1,
+                ..Default::default()
+            },
+        ] {
+            let mut warm =
+                Qwen35Runtime::load(Arc::clone(&archive), Path::new(&tokenizer), backend).unwrap();
+            let before = crate::perf::snapshot().prefix_cache_hits;
+            for prompt in &prompts {
+                let actual = warm
+                    .generate_with_timings(prompt, 24, sampling.clone())
+                    .unwrap();
+                let mut cold =
+                    Qwen35Runtime::load(Arc::clone(&archive), Path::new(&tokenizer), backend)
+                        .unwrap();
+                let expected = cold
+                    .generate_with_timings(prompt, 24, sampling.clone())
+                    .unwrap();
+                assert!(!actual.0.is_empty());
+                assert_eq!(actual.0, expected.0);
+                assert_eq!(actual.1.completion_tokens, expected.1.completion_tokens);
+                if backend == BackendKind::Cuda {
+                    assert!(warm
+                        .gpu_recurrent
+                        .iter()
+                        .flatten()
+                        .all(|g| g.supports_snapshot()));
+                }
+            }
+            assert!(
+                crate::perf::snapshot().prefix_cache_hits > before,
+                "prefix checkpoints must be reused"
+            );
+            let expected = warm
+                .generate_with_timings(&prompts[0], 24, sampling)
+                .unwrap()
+                .0;
+            let mut emitted = false;
+            let mut callback = |event| {
+                if matches!(event, crate::stream::StreamEvent::Delta { .. }) {
+                    emitted = true;
+                    crate::cancel::request_inference_cancel();
+                }
+                Ok(())
+            };
+            let cancelled = warm.generate_inner(&prompts[0], 24, sampling, Some(&mut callback));
+            crate::cancel::clear_inference_cancel();
+            assert!(emitted && cancelled.unwrap_err().to_string().contains("cancelled"));
+            assert_eq!(
+                warm.generate_with_timings(&prompts[0], 24, sampling)
+                    .unwrap()
+                    .0,
+                expected
+            );
+        }
     }
 
     #[test]

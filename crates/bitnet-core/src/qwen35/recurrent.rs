@@ -11,6 +11,7 @@ use super::gdn::{
 };
 use super::qmatvec::weighted_matmul_vec as quant_matmul_vec;
 
+#[derive(Clone)]
 pub struct RecurrentState {
     pub conv_hist: Vec<f32>,
     pub ssm_state: Vec<f32>,

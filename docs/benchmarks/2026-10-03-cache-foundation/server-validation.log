@@ -1,0 +1,78 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+   Compiling bitnet-server v0.1.0 (E:\devs\Rbitnet\crates\bitnet-server)
+    Finished `release` profile [optimized] target(s) in 12.50s
+     Running unittests src\lib.rs (target\release\deps\bitnet_server-56a599123944dd75.exe)
+
+running 7 tests
+test anthropic::tests::prompt_from_string_content ... ok
+test anthropic::tests::prompt_from_text_blocks_joins_text ... ok
+test stream_stop::tests::pending_suffix_is_bounded_and_released_when_no_stop_completes ... ok
+test config::tests::parse_runtime_config_flat_toml_subset ... ok
+test chat_template::tests::absent_tools_do_not_enable_tool_instructions ... ok
+test stream_stop::tests::every_utf8_partition_matches_the_nonstreaming_stop_result ... ok
+test chat_template::tests::renders_roles_without_treating_user_content_as_template_code ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\release\deps\rbitnet_server-51166d9750b618ae.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\anthropic_compat.rs (target\release\deps\anthropic_compat-7cb79d8101856ad4.exe)
+
+running 4 tests
+test anthropic_prompt_conversion_string_and_blocks ... ok
+test anthropic_stub_messages_non_stream ... ok
+test anthropic_messages_respects_api_key ... ok
+test anthropic_stub_messages_live_stream ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\mixtral_moe_v1.rs (target\release\deps\mixtral_moe_v1-0a7c02644df5ee4d.exe)
+
+running 1 test
+test mixtral_moe_v1_chat_completions_e2e ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\openai_compat.rs (target\release\deps\openai_compat-ec0d9abfaaa10db0.exe)
+
+running 27 tests
+test chat_accepts_uppercase_bearer_scheme ... ok
+test admin_reload_failure_keeps_old_engine ... ok
+test akasha_contract_metrics_series_present ... ok
+test admin_reload_rejects_wrong_token ... ok
+test admin_reload_swaps_engine_and_records_metrics ... ok
+test chat_accepts_bearer_api_key ... ok
+test admin_reload_requires_enabled_admin_token ... ok
+test chat_accepts_x_api_key_header ... ok
+test chat_applies_stop_sequence_after_generation ... ok
+test chat_defaults_model_when_omitted ... ok
+test structured_output_schema_golden ... ok
+test chat_format_chatml_changes_prompt_rendering ... ok
+test chat_rejects_wrong_api_key ... ok
+test chat_rejects_prompt_over_token_cap ... ok
+test explicit_chat_format_overrides_tokenizer_config_template ... ok
+test completions_endpoint_maps_to_chat_response ... ok
+test get_routes_require_api_key_when_configured ... ok
+test health_ready_metrics_do_not_require_api_key ... ok
+test idle_unload_skips_stub_without_gguf ... ok
+test load_failed_ready_exposes_error_and_reload_recovers ... ok
+test openai_stub_chat_streams_token_deltas ... ok
+test openai_stub_models_and_chat ... ok
+test parallel_stub_chats_under_concurrency_cap ... ok
+test response_format_rejects_non_json_stub ... ok
+test static_ui_is_served_without_api_key ... ok
+test streaming_stop_flushes_pending_text_and_terminates_with_done ... ok
+test tokenizer_config_chatml_template_is_detected ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests bitnet_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

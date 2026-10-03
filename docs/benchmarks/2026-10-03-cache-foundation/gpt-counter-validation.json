@@ -1,0 +1,35 @@
+{
+  "measured_request_count": 8,
+  "router_events": 30048,
+  "measured": {
+    "rbitnet_core_expert_cache_hits_total": 103926.0,
+    "rbitnet_core_expert_cache_misses_total": 16266.0,
+    "rbitnet_core_expert_cache_evictions_total": 15942.0,
+    "rbitnet_core_expert_cache_upload_bytes_total": 215023507200.0,
+    "rbitnet_core_expert_cache_upload_ns_total": 46012910300.0
+  },
+  "simulation": {
+    "budget_mib": 4096,
+    "policy": "lru",
+    "hits": 103926,
+    "misses": 16266,
+    "evictions": 15942,
+    "upload_bytes": 215023507200,
+    "cpu_fallback_layers": 0,
+    "collision_misses": 944,
+    "peak_bytes": 4283020800,
+    "phases": {
+      "prefill": {
+        "hits": 54642,
+        "misses": 10254,
+        "upload_bytes": 135549676800
+      },
+      "decode": {
+        "hits": 49284,
+        "misses": 6012,
+        "upload_bytes": 79473830400
+      }
+    }
+  },
+  "equal": true
+}

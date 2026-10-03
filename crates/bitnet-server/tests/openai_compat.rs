@@ -153,10 +153,7 @@ async fn openai_stub_models_and_chat() {
 async fn openai_stub_chat_streams_token_deltas() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let (engine, _guard) = {
-        let _guard = EnvGuard::set(&[
-            ("RBITNET_MODEL", None),
-            ("RBITNET_STUB", Some("1")),
-        ]);
+        let _guard = EnvGuard::set(&[("RBITNET_MODEL", None), ("RBITNET_STUB", Some("1"))]);
         let engine = Arc::new(Engine::from_env().expect("engine"));
         (engine, _guard)
     };
@@ -395,8 +392,16 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
         .await
         .expect("ready");
     assert_eq!(ready.status(), http::StatusCode::SERVICE_UNAVAILABLE);
-    let ready_text =
-        String::from_utf8(ready.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+    let ready_text = String::from_utf8(
+        ready
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
     assert!(ready_text.contains("LoadFailed"), "{ready_text}");
 
     // Successful reload (stub from env) clears LoadFailed.
@@ -416,7 +421,10 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
     assert!(res.status().is_success());
     {
         let err = state.last_load_error.read().await;
-        assert!(err.is_none(), "expected cleared last_load_error, got {err:?}");
+        assert!(
+            err.is_none(),
+            "expected cleared last_load_error, got {err:?}"
+        );
     }
     let ready = app
         .oneshot(
@@ -535,6 +543,66 @@ async fn chat_applies_stop_sequence_after_generation() {
 }
 
 #[tokio::test]
+async fn streaming_stop_flushes_pending_text_and_terminates_with_done() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let app = create_app_with_config(
+        Arc::new(Engine::from_env().unwrap()),
+        Arc::new(ServerConfig::test_defaults()),
+    );
+    for stop in ["Prompt", "Stub", "an unmatched stop sequence"] {
+        let body = serde_json::json!({"model":"any", "messages":[{"role":"user", "content":"hello"}], "max_tokens":32, "stop":[stop]});
+        let request = |body: serde_json::Value| {
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap()
+        };
+        let unary = app.clone().oneshot(request(body.clone())).await.unwrap();
+        assert!(unary.status().is_success());
+        let unary: serde_json::Value =
+            serde_json::from_slice(&unary.into_body().collect().await.unwrap().to_bytes()).unwrap();
+        let mut streaming = body;
+        streaming["stream"] = true.into();
+        let response = app.clone().oneshot(request(streaming)).await.unwrap();
+        assert!(response.status().is_success());
+        // Allow every producer event to be queued before polling. Consuming an
+        // empty delta must still wake the stream for an already queued Done.
+        tokio::task::yield_now().await;
+        let bytes = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            response.into_body().collect(),
+        )
+        .await
+        .expect("SSE stalled after a suppressed delta")
+        .unwrap()
+        .to_bytes();
+        let raw = std::str::from_utf8(&bytes).unwrap();
+        let mut text = String::new();
+        for line in raw
+            .lines()
+            .filter(|line| line.starts_with("data: ") && *line != "data: [DONE]")
+        {
+            let value: serde_json::Value = serde_json::from_str(&line[6..]).unwrap();
+            if let Some(delta) = value["choices"][0]["delta"]["content"].as_str() {
+                text.push_str(delta);
+            }
+        }
+        assert!(raw.contains("data: [DONE]"));
+        assert_eq!(
+            text,
+            unary["choices"][0]["message"]["content"].as_str().unwrap()
+        );
+    }
+}
+
+#[tokio::test]
 async fn chat_format_chatml_changes_prompt_rendering() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[
@@ -628,10 +696,18 @@ async fn akasha_contract_metrics_series_present() {
         )
         .await
         .expect("chat");
-    assert!(res.status().is_success(), "chat should succeed in stub mode");
+    assert!(
+        res.status().is_success(),
+        "chat should succeed in stub mode"
+    );
 
     let metrics = create_app_with_config(Arc::clone(&engine), Arc::clone(&config))
-        .oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("metrics");
     assert!(metrics.status().is_success());
@@ -659,7 +735,12 @@ async fn akasha_contract_metrics_series_present() {
     }
 
     let models = create_app_with_config(engine, config)
-        .oneshot(Request::builder().uri("/v1/models").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/v1/models")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("models");
     assert!(models.status().is_success());
@@ -1054,15 +1135,10 @@ async fn idle_unload_skips_stub_without_gguf() {
     let (_app, state) =
         create_app_with_expected_model(engine, Arc::new(ServerConfig::test_defaults()), None);
     // Force "idle" timestamp.
-    state
-        .last_inference_activity_ms
-        .store(0, Ordering::Relaxed);
+    state.last_inference_activity_ms.store(0, Ordering::Relaxed);
     assert!(
         !try_idle_unload(&state, 1).await,
         "stub has no GGUF — idle unload must no-op"
     );
-    assert_eq!(
-        state.metrics.model_unloads_total.load(Ordering::Relaxed),
-        0
-    );
+    assert_eq!(state.metrics.model_unloads_total.load(Ordering::Relaxed), 0);
 }

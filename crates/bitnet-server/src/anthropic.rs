@@ -16,9 +16,9 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use bitnet_core::error::BitNetError;
 use bitnet_core::inference::Engine;
+use bitnet_core::request_inference_cancel;
 use bitnet_core::sampling::SamplingOptions;
 use bitnet_core::stream::StreamEvent;
-use bitnet_core::request_inference_cancel;
 use futures::stream::poll_fn;
 use futures::Future;
 use serde::{Deserialize, Serialize};
@@ -216,10 +216,12 @@ async fn live_stream_messages(
             Poll::Ready(Some(Ok(StreamEvent::FirstToken { stats }))) => {
                 // Refresh usage on first token; Anthropic clients tolerate late input_tokens.
                 let _ = stats;
+                cx.waker().wake_by_ref();
                 Poll::Pending
             }
             Poll::Ready(Some(Ok(StreamEvent::Delta { text }))) => {
                 if text.is_empty() {
+                    cx.waker().wake_by_ref();
                     return Poll::Pending;
                 }
                 let delta = json!({
@@ -235,7 +237,9 @@ async fn live_stream_messages(
             Poll::Ready(Some(Ok(StreamEvent::Done(output)))) => {
                 let ms = start.elapsed().as_millis() as u64;
                 metrics.inference_ms_total.fetch_add(ms, Ordering::Relaxed);
-                metrics.inference_calls_total.fetch_add(1, Ordering::Relaxed);
+                metrics
+                    .inference_calls_total
+                    .fetch_add(1, Ordering::Relaxed);
                 metrics.record_backend_family_call(&backend_kind, &model_family);
                 metrics
                     .inference_ttft_ms_total

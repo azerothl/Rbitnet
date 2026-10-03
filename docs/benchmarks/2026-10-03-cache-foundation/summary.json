@@ -1,0 +1,168 @@
+{
+  "llama": {
+    "baseline": {
+      "prefill_ms": {
+        "median": 10753.5,
+        "min": 10751.0,
+        "max": 10770.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1485.0,
+        "min": 1484.0,
+        "max": 1490.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 12256.664249995083,
+        "min": 12239.605900002061,
+        "max": 12264.50429999386,
+        "n": 4
+      },
+      "decode_tokens_per_second": 86.1952861952862,
+      "memory": {
+        "peak_process_tree_rss_bytes": 1992122368,
+        "gpu_global_baseline_mib": 1931.0,
+        "gpu_global_peak_mib": 3538.0,
+        "gpu_global_peak_delta_mib": 1607.0
+      }
+    },
+    "prefix": {
+      "prefill_ms": {
+        "median": 11.0,
+        "min": 11.0,
+        "max": 12.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1483.0,
+        "min": 1481.0,
+        "max": 1486.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 1510.9080500042182,
+        "min": 1500.1976000057766,
+        "max": 1511.8897999927867,
+        "n": 4
+      },
+      "decode_tokens_per_second": 86.31153068105192,
+      "memory": {
+        "peak_process_tree_rss_bytes": 1990746112,
+        "gpu_global_baseline_mib": 1931.0,
+        "gpu_global_peak_mib": 3759.0,
+        "gpu_global_peak_delta_mib": 1828.0
+      }
+    },
+    "block": {
+      "prefill_ms": {
+        "median": 2004.0,
+        "min": 1999.0,
+        "max": 2013.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1490.5,
+        "min": 1486.0,
+        "max": 1493.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 3504.4839499969385,
+        "min": 3495.8318999997573,
+        "max": 3528.567400004249,
+        "n": 4
+      },
+      "decode_tokens_per_second": 85.87722240858773,
+      "memory": {
+        "peak_process_tree_rss_bytes": 1990520832,
+        "gpu_global_baseline_mib": 1931.0,
+        "gpu_global_peak_mib": 3547.0,
+        "gpu_global_peak_delta_mib": 1616.0
+      }
+    },
+    "combined": {
+      "prefill_ms": {
+        "median": 12.0,
+        "min": 12.0,
+        "max": 12.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1486.0,
+        "min": 1483.0,
+        "max": 1488.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 1513.8163500087103,
+        "min": 1503.6086999898544,
+        "max": 1516.669999997248,
+        "n": 4
+      },
+      "decode_tokens_per_second": 86.13728129205921,
+      "memory": {
+        "peak_process_tree_rss_bytes": 1990889472,
+        "gpu_global_baseline_mib": 1921.0,
+        "gpu_global_peak_mib": 3769.0,
+        "gpu_global_peak_delta_mib": 1848.0
+      }
+    }
+  },
+  "qwen": {
+    "baseline": {
+      "prefill_ms": {
+        "median": 13152.0,
+        "min": 13139.0,
+        "max": 13561.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1767.0,
+        "min": 1703.0,
+        "max": 1799.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 14923.621200003254,
+        "min": 14882.542500010459,
+        "max": 15382.118800000171,
+        "n": 4
+      },
+      "decode_tokens_per_second": 72.4391624221845,
+      "memory": {
+        "peak_process_tree_rss_bytes": 4631564288,
+        "gpu_global_baseline_mib": 1921.0,
+        "gpu_global_peak_mib": 4482.0,
+        "gpu_global_peak_delta_mib": 2561.0
+      }
+    },
+    "prefix": {
+      "prefill_ms": {
+        "median": 21.0,
+        "min": 21.0,
+        "max": 24.0,
+        "n": 4
+      },
+      "decode_ms": {
+        "median": 1663.5,
+        "min": 1632.0,
+        "max": 1698.0,
+        "n": 4
+      },
+      "wall_ms": {
+        "median": 1701.6067000004114,
+        "min": 1671.2215000006836,
+        "max": 1740.9786000062013,
+        "n": 4
+      },
+      "decode_tokens_per_second": 76.94619777577397,
+      "memory": {
+        "peak_process_tree_rss_bytes": 4786843648,
+        "gpu_global_baseline_mib": 1918.0,
+        "gpu_global_peak_mib": 4609.0,
+        "gpu_global_peak_delta_mib": 2691.0
+      }
+    }
+  }
+}
