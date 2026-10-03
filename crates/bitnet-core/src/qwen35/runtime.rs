@@ -107,6 +107,9 @@ impl Qwen35Runtime {
     pub(crate) fn has_full_gpu_pipeline(&self) -> bool {
         self.gpu_full.is_some()
     }
+    pub(crate) fn gpu_prefill_capacity(&self) -> usize {
+        self.gpu_full.as_ref().map_or(1, |g| g.prefill_capacity())
+    }
     pub(crate) fn gpu_execution_summary(&self) -> (usize, usize, bool) {
         (
             self.gpu_recurrent.iter().flatten().count(),
@@ -379,32 +382,54 @@ impl Qwen35Runtime {
         let gpu_greedy = (self.gpu_head.is_some() || self.gpu_full.is_some())
             && sampling.device_greedy_eligible();
         let prefill_chunk = self.prefill_chunk_tokens.max(1);
-        let checkpoint_interval =
-            env_opt_usize("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS").unwrap_or(256);
+        let checkpoint_interval = env_opt_usize("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS")
+            .unwrap_or(256)
+            .max(1);
         let checkpoint_enabled = prefix::enabled() && self.prefix_supported;
-        for (chunk_idx, chunk) in prompt_ids.chunks(prefill_chunk).enumerate() {
-            let chunk_base = chunk_idx * prefill_chunk;
-            for (idx, &tid) in chunk.iter().enumerate() {
-                let pos = chunk_base + idx;
-                if pos < matched {
-                    continue;
-                }
-                if inference_cancelled() {
-                    return Err(BitNetError::Inference("inference cancelled".into()));
-                }
-                (logits, next_token) =
-                    self.forward_inner(tid, pos, &arch, pos + 1 == prompt_ids.len(), gpu_greedy)?;
-                if checkpoint_enabled
-                    && pos + 1 < prompt_ids.len()
-                    && (pos + 1 == prompt_ids.len().saturating_sub(1)
-                        || (pos + 1) % checkpoint_interval == 0)
-                {
-                    self.save_prefix(&prompt_ids[..pos + 1])?;
-                }
+        let capacity = self.gpu_full.as_ref().map_or(1, |g| g.prefill_capacity());
+        let mut pos = matched;
+        while pos < prompt_ids.len() {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let mut end = pos
+                .saturating_add(prefill_chunk.min(capacity))
+                .min(prompt_ids.len());
+            if checkpoint_enabled && pos < prompt_ids.len() - 1 {
+                // An exact GDN checkpoint cannot be reconstructed by truncating
+                // the end state of a block. Stop at each intended checkpoint.
+                let checkpoint =
+                    (pos / checkpoint_interval + 1).saturating_mul(checkpoint_interval);
+                end = end.min(checkpoint).min(prompt_ids.len() - 1);
+            }
+            let count = end - pos;
+            (logits, next_token) = if count > 1 {
+                self.forward_block(
+                    &prompt_ids[pos..end],
+                    pos,
+                    &arch,
+                    end == prompt_ids.len(),
+                    gpu_greedy,
+                )?
+            } else {
+                self.forward_inner(
+                    prompt_ids[pos],
+                    pos,
+                    &arch,
+                    end == prompt_ids.len(),
+                    gpu_greedy,
+                )?
+            };
+            pos = end;
+            if checkpoint_enabled
+                && pos < prompt_ids.len()
+                && (pos == prompt_ids.len() - 1 || pos % checkpoint_interval == 0)
+            {
+                self.save_prefix(&prompt_ids[..pos])?;
             }
             if self.trace_layer_timings {
                 tracing::debug!(
-                    prefill_chunk_tokens = chunk.len(),
+                    prefill_chunk_tokens = count,
                     cuda_graph_enabled = self.cuda_graph_enabled,
                     "qwen35 prefill chunk processed"
                 );
@@ -532,6 +557,36 @@ impl Qwen35Runtime {
     ) -> Result<Vec<f32>> {
         self.forward_inner(token, pos, archive, logits_required, false)
             .map(|result| result.0)
+    }
+
+    fn forward_block(
+        &mut self,
+        tokens: &[u32],
+        pos: usize,
+        archive: &Arc<GgufArchive>,
+        output: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
+        if pos >= self.cfg.max_seq || tokens.len() > self.cfg.max_seq - pos {
+            return Err(BitNetError::Inference("prefill exceeds max_seq".into()));
+        }
+        let mut embeddings = Vec::with_capacity(tokens.len() * self.cfg.n_embd);
+        for &token in tokens {
+            if token as usize >= self.cfg.n_vocab {
+                return Err(BitNetError::Inference("token id out of range".into()));
+            }
+            embeddings.extend(token_embedding_row(
+                archive,
+                &self.tok_embd,
+                token as usize,
+                self.cfg.n_embd,
+                self.cfg.n_vocab,
+            )?);
+        }
+        self.gpu_full
+            .as_mut()
+            .ok_or_else(|| BitNetError::Inference("Qwen block pipeline unavailable".into()))?
+            .prefill(&embeddings, pos, tokens.len(), output, greedy)
     }
 
     fn forward_inner(
@@ -875,6 +930,147 @@ mod sequence_tests {
         greedy_ids: Vec<u32>,
         text: String,
         stop_type: String,
+    }
+
+    #[test]
+    fn optional_real_block_prefill_cancellation_keeps_checkpoints_and_restarts() {
+        if std::env::var("RBITNET_QWEN_BLOCK_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let gguf = std::env::var("RBITNET_QWEN_TEST_GGUF").unwrap();
+        let tokenizer = std::env::var("RBITNET_QWEN_TEST_TOKENIZER").unwrap();
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        let previous =
+            std::env::var("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS").unwrap_or("256".into());
+        std::env::set_var("RBITNET_CUDA_QWEN_PREFILL", "1");
+        std::env::set_var("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS", "128");
+        let mut rt = Qwen35Runtime::load(
+            Arc::clone(&archive),
+            Path::new(&tokenizer),
+            BackendKind::Cuda,
+        )
+        .unwrap();
+        assert_eq!(rt.gpu_prefill_capacity(), 128);
+        let prompt=format!("<|im_start|>system\n{}<|im_end|>\n<|im_start|>user\nQuelle est la capitale de la France ? Réponds en un mot.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n","Les bibliothèques conservent des livres et les villes ont des jardins.\n".repeat(72));
+        let total = rt.tokenizer.encode_ids(&prompt, true).unwrap().len();
+        assert!(total > 1024);
+        let before = crate::perf::snapshot().gpu_prefill_blocks;
+        crate::cancel::clear_inference_cancel();
+        let interrupt = std::thread::spawn(move || {
+            for _ in 0..5000 {
+                if crate::perf::snapshot().gpu_prefill_blocks > before {
+                    crate::cancel::request_inference_cancel();
+                    return true;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            false
+        });
+        let cancelled =
+            rt.generate_with_timings(&prompt, 16, SamplingOptions::from_temperature(0.0));
+        let armed = interrupt.join().unwrap();
+        crate::cancel::clear_inference_cancel();
+        assert!(armed && cancelled.unwrap_err().to_string().contains("cancelled"));
+        let blocks = crate::perf::snapshot().gpu_prefill_blocks - before;
+        assert!(
+            blocks > 0 && blocks < (total.div_ceil(128)) as u64,
+            "cancelled after {blocks} blocks for {total} tokens"
+        );
+        let resumed = rt
+            .generate_with_timings(&prompt, 16, SamplingOptions::from_temperature(0.0))
+            .unwrap()
+            .0;
+        let mut cold =
+            Qwen35Runtime::load(archive, Path::new(&tokenizer), BackendKind::Cuda).unwrap();
+        assert_eq!(
+            resumed,
+            cold.generate_with_timings(&prompt, 16, SamplingOptions::from_temperature(0.0))
+                .unwrap()
+                .0
+        );
+        std::env::set_var("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS", previous);
+        eprintln!("Cancelled during actual block prefill after {blocks} blocks / {total} tokens; checkpoint resume matches cold generation");
+    }
+
+    #[test]
+    fn optional_real_block_prefill_teacher_forcing_matches_serial_logits_and_state() {
+        if std::env::var("RBITNET_QWEN_BLOCK_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let gguf = std::env::var("RBITNET_QWEN_TEST_GGUF").unwrap();
+        let tokenizer = std::env::var("RBITNET_QWEN_TEST_TOKENIZER").unwrap();
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        let previous_graph = std::env::var("RBITNET_CUDA_QWEN_FULL_GRAPH").unwrap_or("1".into());
+        let previous_tensor = std::env::var("RBITNET_CUDA_PREFILL_TF32X3").unwrap_or("0".into());
+        std::env::set_var("RBITNET_CUDA_QWEN_PREFILL", "0");
+        let mut reference = Qwen35Runtime::load(
+            Arc::clone(&archive),
+            Path::new(&tokenizer),
+            BackendKind::Cuda,
+        )
+        .unwrap();
+        assert_eq!(reference.gpu_prefill_capacity(), 1);
+        let mut checked = 0;
+        let mut worst_kl = 0.0f64;
+        let mut worst_nll = 0.0f64;
+        let before = crate::perf::snapshot();
+        for graphs in ["0", "1"] {
+            std::env::set_var("RBITNET_CUDA_QWEN_FULL_GRAPH", graphs);
+            for tensor in ["0", "1"] {
+                std::env::set_var("RBITNET_CUDA_QWEN_PREFILL", "1");
+                std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", tensor);
+                let mut block = Qwen35Runtime::load(
+                    Arc::clone(&archive),
+                    Path::new(&tokenizer),
+                    BackendKind::Cuda,
+                )
+                .unwrap();
+                assert_eq!(block.gpu_prefill_capacity(), 128);
+                for sentence in ["Paris est la capitale de la France. Ses bibliothèques contiennent des livres. ","def add(a, b):\n    return a + b\nprint(add(17, 25))\n"] {
+                    let ids=reference.tokenizer.encode_ids(&sentence.repeat(60),true).unwrap();
+                    for count in [7,16,63,64,127,128,129,257] {
+                        let mut expected=Vec::new();
+                        for (pos,&id) in ids[..count].iter().enumerate() {
+                            expected=reference.forward_one(id,pos,&archive,pos+1==count).unwrap();
+                        }
+                        let mut actual=Vec::new();
+                        for (index,chunk) in ids[..count].chunks(128).enumerate() {
+                            actual=block.forward_block(chunk,index*128,&archive,index*128+chunk.len()==count,false).unwrap().0;
+                        }
+                        for pos in count-1..count+5 {
+                            assert_eq!(actual.len(),expected.len());
+                            let argmax=|x:&[f32]| x.iter().enumerate().max_by(|a,b|a.1.total_cmp(b.1)).unwrap().0;
+                            assert_eq!(argmax(&actual),argmax(&expected),"graphs={graphs} tensor={tensor} prefix={count} pos={pos}");
+                            for (&a,&e) in actual.iter().zip(&expected) {
+                                assert!(a.is_finite() && e.is_finite() && (a-e).abs()<=0.003*(1.0+e.abs()),"graphs={graphs} tensor={tensor} prefix={count} pos={pos}: {a} vs {e}");
+                            }
+                            let log_probs=|x:&[f32]| {
+                                let max=x.iter().copied().fold(f32::NEG_INFINITY,f32::max) as f64;
+                                let z=x.iter().map(|&v|(v as f64-max).exp()).sum::<f64>().ln()+max;
+                                x.iter().map(|&v|v as f64-z).collect::<Vec<_>>()
+                            };
+                            let p=log_probs(&expected);let q=log_probs(&actual);
+                            let kl=p.iter().zip(&q).map(|(&p,&q)|p.exp()*(p-q)).sum::<f64>();
+                            let nll=(p[ids[pos+1] as usize]-q[ids[pos+1] as usize]).abs();
+                            worst_kl=worst_kl.max(kl);worst_nll=worst_nll.max(nll);
+                            assert!(kl<=1e-5 && nll<=1e-3,"KL={kl} NLL delta={nll}");checked+=1;
+                            if pos<count+4 {
+                                expected=reference.forward_one(ids[pos+1],pos+1,&archive,true).unwrap();
+                                actual=block.forward_one(ids[pos+1],pos+1,&archive,true).unwrap();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let after = crate::perf::snapshot();
+        assert!(
+            after.gpu_tensor_gemm_calls > before.gpu_tensor_gemm_calls
+                && after.gpu_prefill_tokens > before.gpu_prefill_tokens
+        );
+        std::env::set_var("RBITNET_CUDA_QWEN_FULL_GRAPH", previous_graph);
+        std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", previous_tensor);
+        eprintln!("Qwen teacher-forced positions={checked}, worst KL={worst_kl:.3e}, worst abs NLL delta={worst_nll:.3e}; eager/graph SIMT/TF32 argmax and state continuation passed");
     }
 
     #[test]

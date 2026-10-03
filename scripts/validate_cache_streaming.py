@@ -22,8 +22,10 @@ def main():
     p.add_argument('--qwen-full', action='store_true', help='Validate complete dense Qwen GPU pipeline with checkpoints')
     p.add_argument('--split-kv', action='store_true', help='Validate exact split-KV with runtime graphs and cached prefixes')
     p.add_argument('--tf32x3', action='store_true', help='Validate Llama compensated block prefill with prefix reuse')
+    p.add_argument('--qwen-prefill', action='store_true', help='Validate full Qwen block prefill with checkpoints')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
-    if args.tf32x3 and args.qwen_full: p.error('--tf32x3 currently supports only Llama')
+    if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
+    if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
@@ -35,14 +37,15 @@ def main():
     if args.qwen_full:
         if args.speculative: p.error('select only one architecture experiment')
         modes = [(next(m for m in config['models'] if m['id']=='qwen35-2b'), '0')]
-    if args.tf32x3: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
+    if args.tf32x3 and not args.qwen_prefill: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
     for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
             if kw.get('env'):
                 kw['env'] = kw['env'].copy()
                 kw['env'].update(RBITNET_PREFIX_KV='1', RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
-                                 RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='32', RBITNET_CUDA_PREFILL=block,
+                                 RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128' if args.qwen_prefill else '32', RBITNET_CUDA_PREFILL=block,
+                                 RBITNET_CUDA_QWEN_PREFILL='1' if args.qwen_prefill else '0',
                                  RBITNET_SPECULATIVE_PLD='1' if args.speculative else '0', RBITNET_SPECULATIVE='0', RBITNET_SPECULATIVE_TOKENS='15',
                                  RBITNET_CUDA_SPLIT_KV='1' if args.split_kv else '0',
                                  RBITNET_CUDA_PREFILL_TF32X3='1' if args.tf32x3 else '0',
@@ -110,12 +113,13 @@ def main():
                 used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
                 if model['id']=='llama32-1b' or args.qwen_full: assert used > 0
                 else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
-            if args.tf32x3:
+            if args.tf32x3 or args.qwen_prefill:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
                 report['cases'][-1]['all_cases_metrics_delta']=usage;save()
                 # The four requests above are warm prefix hits: correctly skip
                 # the large prefill GEMMs. Require actual use on the cold cases.
-                assert usage.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0)>0, 'compensated projections were not used'
+                if args.tf32x3: assert usage.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0)>0, 'compensated projections were not used'
+                if args.qwen_prefill: assert usage.get('rbitnet_core_gpu_prefill_blocks_total', 0)>0, 'Qwen block prefill was not used'
             print(label, 'stop and concurrency passed', flush=True)
         finally: server.close(); save()
 

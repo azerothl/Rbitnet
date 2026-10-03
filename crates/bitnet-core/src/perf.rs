@@ -164,7 +164,12 @@ pub(crate) fn record_gpu_prefill(tokens: usize, gemm_calls: u64) {
 }
 
 pub(crate) fn record_qwen_full_token() {
-    perf().gpu_qwen_full_tokens.fetch_add(1, Ordering::Relaxed);
+    record_qwen_full_tokens(1);
+}
+pub(crate) fn record_qwen_full_tokens(count: usize) {
+    perf()
+        .gpu_qwen_full_tokens
+        .fetch_add(count as u64, Ordering::Relaxed);
 }
 pub(crate) fn record_split_attention(queries: u64) {
     perf()
