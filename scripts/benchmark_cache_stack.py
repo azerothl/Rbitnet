@@ -22,8 +22,10 @@ def main():
     parser.add_argument('--output-dir', type=pathlib.Path, required=True)
     parser.add_argument('--cycles', type=int, default=4)
     parser.add_argument('--port', type=int, default=18105)
+    parser.add_argument('--qwen-full', action='store_true', help='Compare complete dense Qwen GPU pipeline and prefix cache')
     args = parser.parse_args()
     if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
+    if args.qwen_full and (args.model != 'qwen35-2b' or args.backend != 'gpu'): parser.error('--qwen-full requires dense Qwen GPU')
     root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
@@ -41,7 +43,7 @@ def main():
         rbitnet_commit=report['source_commit'] + (' + local cache-stack changes' if report['source_dirty'] else ''),
         rbitnet_branch=subprocess.check_output(['git', 'branch', '--show-current'], text=True).strip(),
         rbitnet_exe_sha256=report['binary_sha256'], cuda_quant_library_sha256=report['library_sha256'],
-        cuda_execution='per-mode cache/block ablation; see row env and execution counters')
+        cuda_execution='per-mode cache/block/full-Qwen ablation; see row env and execution counters')
     system = 'Tu es un assistant précis. Voici des notes communes à cette conversation.\n' + '\n'.join(
         f'Note {i}: Les villes ont des bibliothèques, des jardins et des musées.' for i in range(72))
     prompts = [
@@ -49,14 +51,17 @@ def main():
         [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Écris un récit de 150 mots sur un robot qui explore un musée.'}],
         [{'role': 'user', 'content': 'Quelle est la capitale de la France ? Réponds en un mot.'}],
     ]
-    modes = [('baseline', '0', '0'), ('prefix', '1', '0')]
-    if args.model == 'llama32-1b' and args.backend == 'gpu': modes += [('block', '0', '1'), ('combined', '1', '1')]
+    modes = [('baseline', '0', '0', '0'), ('prefix', '1', '0', '0')]
+    if args.model == 'llama32-1b' and args.backend == 'gpu': modes += [('block', '0', '1', '0'), ('combined', '1', '1', '0')]
+    if args.qwen_full: modes += [('full', '0', '0', '1'), ('full-prefix', '1', '0', '1')]
     original = subprocess.Popen
     baseline = {}
+    baseline_sse = {}
     def save():
         (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-    for mode, prefix, block in modes:
+    for mode, prefix, block, full in modes:
         overrides = dict(RBITNET_PREFIX_KV=prefix, RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
+                         RBITNET_CUDA_QWEN_FULL=full, RBITNET_REQUIRE_QWEN_FULL=full,
                          RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128', RBITNET_CUDA_PREFILL=block,
                          RBITNET_CUDA_PREFILL_TOKENS='128', RBITNET_REQUIRE_RESIDENT='1' if args.backend == 'gpu' and args.model == 'llama32-1b' else '0')
         def popen(*a, **kw):
@@ -85,6 +90,7 @@ def main():
                                           blocks=delta.get('rbitnet_core_gpu_prefill_blocks_total'), matches=row['matches_baseline'])), flush=True)
                     assert text and '\ufffd' not in text and row['matches_baseline'], (mode, cycle, index, text)
                     if block == '1': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native block prefill was not used'
+                    if full == '1': assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0, 'full Qwen pipeline was not used'
             messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Répète exactement : été, café, résumé, 🙂.'}]
             for label, options in [('greedy', dict(temperature=0)), ('sampling', dict(temperature=0.7, seed=42)),
                                    ('penalties', dict(temperature=0, frequency_penalty=0.2, presence_penalty=0.1))]:
@@ -97,8 +103,10 @@ def main():
                     if line == 'data: [DONE]': done = True
                     elif line.startswith('data: '): parts.append(json.loads(line[6:]).get('choices', [{}])[0].get('delta', {}).get('content', ''))
                 joined = ''.join(parts)
-                report['sse'].append(dict(mode=mode, sampling=label, request=body, text=text, sse_text=joined, done=done)); save()
+                if mode == 'baseline': baseline_sse[label] = text
+                report['sse'].append(dict(mode=mode, sampling=label, request=body, text=text, sse_text=joined, done=done, matches_baseline=text == baseline_sse[label])); save()
                 assert done and joined == text and text and '\ufffd' not in text, (mode, label, text, joined)
+                assert text == baseline_sse[label], (mode, label, 'output differs from baseline')
             stop_body = dict(model=model['id'], messages=prompts[2], max_tokens=128, temperature=0, stop=['Paris'])
             response = requests.post(server.base+'/v1/chat/completions', json=stop_body, timeout=600); response.raise_for_status()
             raw = response.json(); report['stops'].append(dict(mode=mode, request=stop_body, response=raw)); save()

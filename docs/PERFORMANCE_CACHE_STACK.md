@@ -16,6 +16,9 @@ Les optimisations de l'[épique #98](https://github.com/azerothl/Rbitnet/issues/
 | `RBITNET_MOE_TRACE_DIR=...` | Trace JSONL du routage réel. Désactiver pour mesurer les performances sans coût de journalisation. |
 | `RBITNET_CUDA_PREFILL=1` | Préremplissage Llama par blocs : GEMM quantifié SIMT, attention causale, résidus et FFN sur GPU. Désactivé par défaut. |
 | `RBITNET_CUDA_PREFILL_TOKENS=128` | Taille du bloc, bornée entre 1 et 128. Les projections partagent les tuiles de poids décodées entre tokens ; les poids complets ne sont pas déquantifiés en F32. |
+| `RBITNET_CUDA_QWEN_FULL=1` | Pipeline Qwen3.5 dense entièrement résident pour `cuda`, contexte maximal 8 192 : attention complète, blocs GDN, FFN et sortie sur un flux. Une entrée d'embedding et une position sont transférées par token ; seuls les logits ou l'ID glouton reviennent sur CPU. |
+| `RBITNET_CUDA_QWEN_FULL_GRAPH=0` | Désactive le graphe de ce pipeline pour vérifier le chemin eager. Les activations restent sur GPU. |
+| `RBITNET_REQUIRE_QWEN_FULL=1` | Refuse le chargement si le pipeline complet demandé est indisponible. Sans cette exigence, une ancienne DLL, un modèle MoE, `hybrid`, un contexte trop grand, un debug partiel ou des poids non résidents conservent le chemin antérieur et sa métadonnée de placement. |
 
 Le budget des experts est plafonné par `RBITNET_HYBRID_MAX_VRAM_MB` moins les poids non experts déjà résidents. Ce plafond ne compte pas le KV actif, les snapshots, les normes/biais et le scratch natif : il ne représente pas la consommation totale de VRAM. Les matrices d'experts gardent aussi un miroir RAM de leurs octets quantifiés.
 
@@ -43,6 +46,6 @@ Les graphes natifs utilisent des flux CUDA privés non bloquants. Une copie H2D 
 
 ## Étapes suivantes
 
-Le cache à la demande ne termine pas [#84](https://github.com/azerothl/Rbitnet/issues/84) et [#86](https://github.com/azerothl/Rbitnet/issues/86) : il manque le préchargement épinglé avec recouvrement mesuré et le choix CPU/GPU par coût. Les pipelines complets Qwen/GPT-OSS/GLM, le KV device paginé/compressé, la persistance des sessions et les forwards multi-séquences restent dans leurs tickets [#87–#96](https://github.com/azerothl/Rbitnet/issues/98).
+Le cache à la demande ne termine pas [#84](https://github.com/azerothl/Rbitnet/issues/84) et [#86](https://github.com/azerothl/Rbitnet/issues/86) : il manque le préchargement épinglé avec recouvrement mesuré et le choix CPU/GPU par coût. Le pipeline Qwen dense dispose de snapshots K/V device associés aux checkpoints GDN/convolution ; la réutilisation reste exacte au checkpoint. Les pipelines complets GPT-OSS/GLM, le KV device paginé/compressé, la persistance des sessions et les forwards multi-séquences restent dans leurs tickets [#88–#96](https://github.com/azerothl/Rbitnet/issues/98).
 
 Le prefill Llama ordinaire retourne les logits du dernier token. La nouvelle API de vérification retourne un résultat par position et permet la correction/rollback d'un draft de tokens PLD. Les [mesures spéculatives](benchmarks/2026-10-03-speculative-llama/README.md) justifient de garder `RBITNET_SPECULATIVE_PLD` désactivé par défaut : un gain sur une réponse répétitive courte ne compense pas les régressions des autres prompts. Le draft GGUF et Qwen restent ouverts dans [#97](https://github.com/azerothl/Rbitnet/issues/97).

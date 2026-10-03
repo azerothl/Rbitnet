@@ -146,6 +146,10 @@ class Server:
                 self.env_overrides["RBITNET_CUDA_QUANT_LIB"] = self.config["cuda_quant_library"]
             if self.model.get("rbitnet_architecture"):
                 self.env_overrides["RBITNET_ARCHITECTURE"] = self.model["rbitnet_architecture"]
+            custom_env = self.config.get("rbitnet_env", {})
+            if not isinstance(custom_env, dict) or any(not key.startswith("RBITNET_") or not isinstance(value, str) for key, value in custom_env.items()):
+                raise ValueError("rbitnet_env must map RBITNET_ option names to strings")
+            self.env_overrides.update(custom_env)
             # Avoid inheriting an architecture override or a registry from another experiment.
             for key in list(env):
                 if key.startswith("RBITNET_"):

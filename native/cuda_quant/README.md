@@ -79,3 +79,23 @@ cargo test --release -p bitnet-core --lib native::attention::tests
 ```
 
 Real-model results and limits: [native inference validation](../../docs/benchmarks/2026-10-03-optimized/README.md).
+
+Dense Qwen3.5 has an optional full token pipeline (`RBITNET_CUDA_QWEN_FULL=1`).
+Recurrent and full-attention contexts share a private stream and hidden vector;
+the graph reads a device position updated outside capture. Full attention includes
+per-head Q/K RMSNorm, partial NeoX RoPE, GQA, sigmoid query gating and dense FFN.
+Modes select no head, complete logits, or device argmax. The latter is used only
+when Rust sampling options permit it; seeded sampling and penalties retain Rust
+sampling. Native attention snapshots retain only used F32 K/V and pair with exact
+GDN/convolution checkpoints. All layer contexts and weights must outlive the
+pipeline, and callers must serialize access to the borrowed contexts.
+
+```powershell
+$env:RBITNET_CUDA_QUANT_SMOKE = '1'
+cargo test --release -p bitnet-core --lib native::qwen_full::tests -- --test-threads=1
+pwsh -NoProfile -File scripts/validate_qwen_full.ps1
+pwsh -NoProfile -File scripts/validate_qwen_full.ps1 -Eager
+```
+
+The mode stays opt-in. Missing new symbols retain the prior recurrent/host
+pipeline; `RBITNET_REQUIRE_QWEN_FULL=1` makes that fallback a load error.
