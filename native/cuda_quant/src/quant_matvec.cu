@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include "device_memory.cuh"
 
 namespace {
 
@@ -239,6 +240,7 @@ struct Scratch {
 thread_local Scratch g_scratch;
 
 bool ensure(size_t need, void **ptr, size_t *cap) {
+    MemoryCategoryScope category(MemoryScratch);
     if (*cap >= need && *ptr != nullptr) {
         return true;
     }
@@ -388,8 +390,8 @@ int rbitnet_cuda_quant_matvec_batch_device(unsigned ty, const void *w, size_t ro
 void *rbitnet_cuda_attention_create(size_t capacity,size_t kv_heads,size_t key_dim,size_t value_dim,size_t heads) {
     if(!capacity || capacity>8192 || !kv_heads || !heads || heads%kv_heads || !key_dim || !value_dim) return nullptr;
     auto *a=new Attention; a->capacity=capacity;a->kv_heads=kv_heads;a->key_dim=key_dim;a->value_dim=value_dim;a->heads=heads;
-    if(cudaMalloc(reinterpret_cast<void**>(&a->k),capacity*kv_heads*key_dim*sizeof(float))!=cudaSuccess
-        ||cudaMalloc(reinterpret_cast<void**>(&a->v),capacity*kv_heads*value_dim*sizeof(float))!=cudaSuccess
+    if(memory_allocate(reinterpret_cast<void**>(&a->k),capacity*kv_heads*key_dim*sizeof(float),MemoryKv)!=cudaSuccess
+        ||memory_allocate(reinterpret_cast<void**>(&a->v),capacity*kv_heads*value_dim*sizeof(float),MemoryKv)!=cudaSuccess
         ||cudaMalloc(reinterpret_cast<void**>(&a->q),heads*key_dim*sizeof(float))!=cudaSuccess
         ||cudaMalloc(reinterpret_cast<void**>(&a->y),heads*value_dim*sizeof(float))!=cudaSuccess
         ||cudaMalloc(reinterpret_cast<void**>(&a->sinks),heads*sizeof(float))!=cudaSuccess) {delete a;return nullptr;}

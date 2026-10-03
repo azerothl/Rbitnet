@@ -279,8 +279,8 @@ impl ExpertCache {
         } else {
             let mut matrices = Vec::with_capacity(3);
             for (&(ty, rows, cols), payload) in shapes.iter().zip(payloads) {
-                let matrix = CudaDeviceQuantMatrix::from_payload(
-                    Some(&self.rt),
+                let matrix = CudaDeviceQuantMatrix::from_expert_payload(
+                    &self.rt,
                     ty,
                     payload.to_vec(),
                     rows,

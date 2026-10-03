@@ -6,6 +6,8 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+mod device_memory;
+pub use device_memory::{cuda_managed_memory_stats, CudaMemoryStats};
 
 /// Backend identifiers used by runtime selection and metrics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,6 +166,7 @@ pub struct CudaRuntime {
         unsafe extern "C" fn(*mut c_void, *const c_void, usize, cudaMemcpyKind) -> cudaError_t,
     cuda_device_synchronize: unsafe extern "C" fn() -> cudaError_t,
     cuda_stream_synchronize: unsafe extern "C" fn(*mut c_void) -> cudaError_t,
+    memory: Option<device_memory::DeviceMemory>,
     cublas_create_v2: Option<unsafe extern "C" fn(*mut cublasHandle_t) -> cublasStatus_t>,
     cublas_destroy_v2: Option<unsafe extern "C" fn(cublasHandle_t) -> cublasStatus_t>,
     cublas_sgemv_v2: Option<
@@ -264,6 +267,10 @@ impl CudaRuntime {
         }
     }
 
+    pub fn managed_memory_stats(&self) -> Option<CudaMemoryStats> {
+        self.memory?.snapshot()
+    }
+
     pub fn upload_f32(self: &Arc<Self>, src: &[f32]) -> Option<CudaDeviceBuffer> {
         let nbytes = src.len().checked_mul(std::mem::size_of::<f32>())?;
         self.upload_raw(src.as_ptr().cast::<c_void>(), nbytes)
@@ -275,10 +282,19 @@ impl CudaRuntime {
         src: *const c_void,
         nbytes: usize,
     ) -> Option<CudaDeviceBuffer> {
+        self.upload_raw_category(src, nbytes, device_memory::WEIGHTS)
+    }
+
+    fn upload_raw_category(
+        self: &Arc<Self>,
+        src: *const c_void,
+        nbytes: usize,
+        category: u32,
+    ) -> Option<CudaDeviceBuffer> {
         if nbytes == 0 {
             return None;
         }
-        let ptr = self.alloc_device(nbytes)?;
+        let ptr = self.alloc_device_category(nbytes, category)?;
         if !self.copy_host_to_device(ptr, src, nbytes) {
             self.free_device(ptr);
             return None;
@@ -494,6 +510,13 @@ impl CudaRuntime {
                     break;
                 }
             }
+            let memory = match device_memory::DeviceMemory::load() {
+                Ok(memory) => memory,
+                Err(error) => {
+                    tracing::warn!(%error, "CUDA managed allocator unavailable");
+                    return None;
+                }
+            };
             return Some(Self {
                 _lib: lib,
                 _cublas_lib: cublas_lib,
@@ -502,6 +525,7 @@ impl CudaRuntime {
                 cuda_memcpy,
                 cuda_device_synchronize,
                 cuda_stream_synchronize,
+                memory,
                 cublas_create_v2,
                 cublas_destroy_v2,
                 cublas_sgemv_v2,
@@ -518,8 +542,17 @@ impl CudaRuntime {
     }
 
     fn alloc_device(&self, nbytes: usize) -> Option<*mut c_void> {
+        self.alloc_device_category(nbytes, device_memory::SCRATCH)
+    }
+
+    fn alloc_device_category(&self, nbytes: usize, category: u32) -> Option<*mut c_void> {
         let mut dev_ptr: *mut c_void = null_mut();
-        let status = unsafe { (self.cuda_malloc)(&mut dev_ptr, nbytes) };
+        let status = unsafe {
+            match self.memory {
+                Some(api) => (api.alloc)(&mut dev_ptr, nbytes, category),
+                None => (self.cuda_malloc)(&mut dev_ptr, nbytes),
+            }
+        };
         if status != CUDA_SUCCESS {
             tracing::warn!(status, nbytes, "CUDA allocation failed");
         }
@@ -529,7 +562,15 @@ impl CudaRuntime {
 
     fn free_device(&self, ptr: *mut c_void) {
         if !ptr.is_null() {
-            let _ = unsafe { (self.cuda_free)(ptr) };
+            let status = unsafe {
+                match self.memory {
+                    Some(api) => (api.free)(ptr),
+                    None => (self.cuda_free)(ptr),
+                }
+            };
+            if status != CUDA_SUCCESS {
+                tracing::warn!(status, "CUDA allocation release failed; charge retained");
+            }
         }
     }
 
@@ -679,12 +720,9 @@ impl CudaRuntime {
 
     fn roundtrip_f32(&self, src: &[f32]) -> Option<Vec<f32>> {
         let nbytes = src.len().checked_mul(std::mem::size_of::<f32>())?;
-        let mut dev_ptr: *mut c_void = null_mut();
+        let dev_ptr = self.alloc_device(nbytes)?;
         let mut out = vec![0.0f32; src.len()];
         unsafe {
-            if (self.cuda_malloc)(&mut dev_ptr, nbytes) != CUDA_SUCCESS {
-                return None;
-            }
             let ok_h2d = (self.cuda_memcpy)(
                 dev_ptr,
                 src.as_ptr().cast::<c_void>(),
@@ -698,7 +736,7 @@ impl CudaRuntime {
                 CUDA_MEMCPY_DEVICE_TO_HOST,
             ) == CUDA_SUCCESS;
             let _ = (self.cuda_device_synchronize)();
-            let _ = (self.cuda_free)(dev_ptr);
+            self.free_device(dev_ptr);
             if !ok_h2d || !ok_d2h {
                 return None;
             }
@@ -875,6 +913,41 @@ impl CudaDeviceQuantMatrix {
         out_rows: usize,
         in_cols: usize,
     ) -> crate::error::Result<Self> {
+        Self::from_payload_category(
+            rt,
+            ggml_type,
+            payload,
+            out_rows,
+            in_cols,
+            device_memory::WEIGHTS,
+        )
+    }
+
+    pub(crate) fn from_expert_payload(
+        rt: &Arc<CudaRuntime>,
+        ggml_type: u32,
+        payload: Vec<u8>,
+        out_rows: usize,
+        in_cols: usize,
+    ) -> crate::error::Result<Self> {
+        Self::from_payload_category(
+            Some(rt),
+            ggml_type,
+            payload,
+            out_rows,
+            in_cols,
+            device_memory::EXPERTS,
+        )
+    }
+
+    fn from_payload_category(
+        rt: Option<&Arc<CudaRuntime>>,
+        ggml_type: u32,
+        payload: Vec<u8>,
+        out_rows: usize,
+        in_cols: usize,
+        category: u32,
+    ) -> crate::error::Result<Self> {
         let row_bytes = crate::ggml::ggml_row_size(ggml_type, in_cols as u64)?;
         let need = row_bytes.checked_mul(out_rows).ok_or_else(|| {
             crate::error::BitNetError::Inference("quant payload size overflow".into())
@@ -886,7 +959,7 @@ impl CudaDeviceQuantMatrix {
         }
         let host = Arc::new(payload);
         let (device, rt_keep) = if let Some(rt) = rt {
-            match rt.upload_u8(&host[..need]) {
+            match rt.upload_raw_category(host.as_ptr().cast::<c_void>(), need, category) {
                 Some(buf) => (Some(Arc::new(buf)), Some(Arc::clone(rt))),
                 None => (None, Some(Arc::clone(rt))),
             }

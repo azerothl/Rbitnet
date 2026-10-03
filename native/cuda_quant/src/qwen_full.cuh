@@ -54,6 +54,9 @@ struct ResidentQwenAttention {
         allocations.push_back(p);
         return !host || (cudaMemcpyAsync(p,host,n*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess && cudaStreamSynchronize(stream)==cudaSuccess);
     }
+    template<typename T> bool alloc_kv(T *&p,size_t n) {
+        MemoryCategoryScope category(MemoryKv);return alloc(p,n);
+    }
     void matrix(unsigned i,const float *input,float *out) {
         const auto &m=matrices[i];QuantKind kind;resident_kind(m.type,kind);
         launch_quant_kernel(kind,m.weights,m.row_bytes,input,m.cols,m.rows,m.rows,out,stream);
@@ -172,7 +175,7 @@ void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig *
         || !r->alloc(r->x,c->embd) || !r->alloc(r->h,c->embd) || !r->alloc(r->q_full,qs*(1+c->gated))
         || !r->alloc(r->q,qs) || !r->alloc(r->k_raw,ks) || !r->alloc(r->k,ks) || !r->alloc(r->v,ks)
         || !r->alloc(r->attn,qs) || !r->alloc(r->projection,c->embd) || !r->alloc(r->gate,c->ffn) || !r->alloc(r->up,c->ffn)
-        || !r->alloc(r->kv_k,size_t(c->capacity)*ks) || !r->alloc(r->kv_v,size_t(c->capacity)*ks) || !r->alloc(r->position,1)
+        || !r->alloc_kv(r->kv_k,size_t(c->capacity)*ks) || !r->alloc_kv(r->kv_v,size_t(c->capacity)*ks) || !r->alloc(r->position,1)
         || !r->alloc(r->attn_norm,c->embd,an) || !r->alloc(r->ffn_norm,c->embd,fn)
         || !r->alloc(r->q_norm,c->head_dim,qn) || !r->alloc(r->k_norm,c->head_dim,kn)
         || (c->rotary && !r->alloc(r->frequency,c->rotary/2,freq))) {delete r;return nullptr;}
@@ -200,6 +203,7 @@ void *rbitnet_cuda_qwen_full_attention_snapshot(void *p) {
     auto *s=new(std::nothrow) QwenAttentionSnapshot;if(!s)return nullptr;
     s->length=r->filled;s->heads=r->cfg.kv_heads;s->dim=r->cfg.head_dim;
     size_t bytes=size_t(s->length)*s->heads*s->dim*sizeof(float);
+    MemoryCategoryScope category(MemoryPrefix);
     if(cudaMalloc(reinterpret_cast<void**>(&s->k),bytes)!=cudaSuccess || cudaMalloc(reinterpret_cast<void**>(&s->v),bytes)!=cudaSuccess
         || cudaMemcpyAsync(s->k,r->kv_k,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(s->v,r->kv_v,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess

@@ -157,6 +157,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
         );
     }
 
+    // The factory transfers its owned clone to AppState. Keeping the startup
+    // clone across axum::serve would retain the first model after unload/reload.
+    drop(engine);
     let (app, app_state) = app_factory();
     if let Some(msg) = startup_load_error {
         let mut err = app_state.last_load_error.write().await;
