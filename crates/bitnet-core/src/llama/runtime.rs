@@ -99,11 +99,24 @@ impl LlamaRuntime {
         let model = LlamaModel::from_gguf_arc_with_config(Arc::clone(&archive), backend_kind, cfg)?;
         let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
         let kv = llama_kv_from_env(&model.cfg)?;
+        let native_pages = super::resident::configured_page_limit()?;
+        if native_pages.is_some() && (backend_kind != BackendKind::Cuda || kv.as_paged().is_some())
+        {
+            return Err(BitNetError::Inference(
+                "native CUDA KV pages require CUDA dense Llama residency and no host paged KV"
+                    .into(),
+            ));
+        }
         let resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
             super::resident::Resident::new(&model)
         } else {
             None
         };
+        if native_pages.is_some() && resident.is_none() {
+            return Err(BitNetError::Inference(
+                "native CUDA KV paging unavailable or pool/context allocation refused".into(),
+            ));
+        }
         let backend = make_backend(backend_kind);
         let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
             .ok()

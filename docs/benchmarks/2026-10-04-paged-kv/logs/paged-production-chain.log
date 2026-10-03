@@ -1,0 +1,10 @@
+Switched to a new branch 'codex/paged-kv'
+Adopted F32 paging: native-build
+Adopted F32 paging: workspace
+Adopted F32 paging: clippy
+Adopted F32 paging: actual-pages-split0
+Adopted F32 paging: actual-pages-split1
+Adopted F32 paging: release
+Adopted F32 paging: quiet-ablation
+Adopted F32 paging: network
+Adopted native Llama F32 pages, actual GPU ownership, quiet ablations and network suites passed.
