@@ -60,11 +60,13 @@
       "id": "llama-3.2-1b-instruct-q4-k-m",
       "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
       "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+      "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+      "tokenizer_repo": "unsloth/Llama-3.2-1B-Instruct",
       "description": "Meta Llama 3.2 1B Instruct quantized by Unsloth; Llama loader compatible by architecture metadata.",
       "files": [
         "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
       ],
-      "notes": "HF API reports gguf.architecture=llama and context_length=131072. Needs tokenizer from the base Meta Llama 3.2 repo or a local exported tokenizer.json.",
+      "notes": "Windows CPU HTTP smoke on 2026-10-02 loaded this exact Q4_K_M file with the unsloth/Llama-3.2-1B-Instruct tokenizer and returned text, but the response was repetitive and incorrect. Quality/golden parity remains unverified; verified/tested stay false. See docs/UNSLOTH_TO_RBITNET.md and docs/validation/2026-10-02-unsloth-llama32-1b.json. Use chat format llama3. SHA-256 comes from publisher LFS metadata; pin revisions with the walkthrough for reproduction.",
       "tier": "recommended_beginner",
       "use_case": [
         "chat",

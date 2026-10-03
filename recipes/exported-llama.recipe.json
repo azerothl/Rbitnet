@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "exported-llama-cpu",
+  "description": "Serve a Llama-family GGUF exported with Unsloth or a Hugging Face converter",
+  "model": {
+    "gguf": "./models/exported-llama/model.gguf",
+    "tokenizer": "./models/exported-llama/tokenizer.json",
+    "architecture": "llama"
+  },
+  "env": {
+    "RBITNET_BACKEND": "cpu",
+    "RBITNET_CHAT_FORMAT": "llama3",
+    "RBITNET_LLAMA_WEIGHT_MODE": "auto",
+    "RBITNET_MAX_CONCURRENT": "1",
+    "RBITNET_BIND": "127.0.0.1:18079",
+    "RBITNET_STUB": "0",
+    "RBITNET_TOY": "0"
+  },
+  "notes": "Run from the repository root after following docs/UNSLOTH_TO_RBITNET.md. Paths are relative to the working directory. llama3 is for Llama 3 Instruct exports; use the training chat format for other models. Verify your own export's SHA-256 before serving: recipe/serve do not enforce the CLI download trusted-mode checks."
+}

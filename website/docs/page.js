@@ -3,6 +3,8 @@ const SITE_DOCS = new Set([
   "usage",
   "status-and-roadmap",
   "native-first",
+  "training-and-compatibility",
+  "unsloth-to-rbitnet",
   "integrations",
   "env-reference",
   "limitations",
@@ -73,7 +75,7 @@ function rewriteDocHref(href) {
     const hash = href.includes("#") ? `#${href.split("#")[1]}` : "";
     return `page.html?doc=${encodeURIComponent(slug)}${hash}`;
   }
-  return `https://github.com/azerothl/Rbitnet/blob/main/docs/${base}`;
+  return new URL(href, "https://github.com/azerothl/Rbitnet/blob/main/docs/").href;
 }
 
 async function loadManifestNav(active) {

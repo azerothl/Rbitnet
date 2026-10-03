@@ -88,14 +88,15 @@ fn resolve_python() -> Result<PathBuf, String> {
 /// Print a compact checklist for HF checkpoint → GGUF → Rbitnet.
 pub fn print_export_gguf_hint(checkpoint: Option<&Path>) {
     eprintln!(
-        "Rbitnet loads Llama-shaped GGUF files only. Convert Hugging Face Safetensors checkpoints with"
+        "Rbitnet consumes supported GGUF architectures. Export Llama-family Safetensors checkpoints with"
     );
     eprintln!(
         "the **llama.cpp** tools for your revision (script names change over time). Upstream:"
     );
-    eprintln!("  https://github.com/ggerganov/llama.cpp");
+    eprintln!("  https://github.com/ggml-org/llama.cpp");
     eprintln!();
-    eprintln!("Full guide: docs/TRAINING_AND_COMPATIBILITY.md");
+    eprintln!("Walkthrough: docs/UNSLOTH_TO_RBITNET.md");
+    eprintln!("Compatibility: docs/TRAINING_AND_COMPATIBILITY.md");
     if let Some(p) = checkpoint {
         if !p.exists() {
             eprintln!(
