@@ -1,0 +1,9 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+Teacher-forced positions=48, worst KL=2.880e-11, worst abs NLL delta=4.761e-6; argmax and logits within tolerance
+test llama::resident::tests::optional_real_tensor_prefill_teacher_forcing_matches_simt ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 2.72s

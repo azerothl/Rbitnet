@@ -1,0 +1,5 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+   Compiling bitnet-server v0.1.0 (E:\devs\Rbitnet\crates\bitnet-server)
+   Compiling rbitnet-cli v0.1.0 (E:\devs\Rbitnet\crates\rbitnet-cli)
+    Finished `release` profile [optimized] target(s) in 14.78s

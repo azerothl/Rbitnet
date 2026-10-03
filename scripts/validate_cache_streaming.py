@@ -21,18 +21,21 @@ def main():
     p.add_argument('--speculative', action='store_true', help='Validate native Llama PLD together with prefix reuse')
     p.add_argument('--qwen-full', action='store_true', help='Validate complete dense Qwen GPU pipeline with checkpoints')
     p.add_argument('--split-kv', action='store_true', help='Validate exact split-KV with runtime graphs and cached prefixes')
+    p.add_argument('--tf32x3', action='store_true', help='Validate Llama compensated block prefill with prefix reuse')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
+    if args.tf32x3 and args.qwen_full: p.error('--tf32x3 currently supports only Llama')
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, split_kv=args.split_kv, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, split_kv=args.split_kv, tf32x3=args.tf32x3, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
     if args.qwen_full:
         if args.speculative: p.error('select only one architecture experiment')
         modes = [(next(m for m in config['models'] if m['id']=='qwen35-2b'), '0')]
+    if args.tf32x3: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
     for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
@@ -42,6 +45,7 @@ def main():
                                  RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='32', RBITNET_CUDA_PREFILL=block,
                                  RBITNET_SPECULATIVE_PLD='1' if args.speculative else '0', RBITNET_SPECULATIVE='0', RBITNET_SPECULATIVE_TOKENS='15',
                                  RBITNET_CUDA_SPLIT_KV='1' if args.split_kv else '0',
+                                 RBITNET_CUDA_PREFILL_TF32X3='1' if args.tf32x3 else '0',
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
@@ -49,10 +53,13 @@ def main():
         server = Server(config, model, 'rbitnet', 'gpu', root); server.log_path = root/(label+'.log')
         try:
             with patch('subprocess.Popen', popen): server.start()
+            initial_metrics=server.metrics()
             def complete(body):
                 r = requests.post(server.base+'/v1/chat/completions', json=body, timeout=300); r.raise_for_status(); return r.json()
             def request(question, **opts):
-                return dict(model=model['id'], messages=[{'role':'system', 'content':'Tu es un assistant précis. Réponds en français et commence directement ta réponse.'},
+                system='Tu es un assistant précis. Réponds en français et commence directement ta réponse.'
+                if args.tf32x3: system+='\n'+'\n'.join(f'Note {i}: Les villes ont des bibliothèques, des jardins et des musées.' for i in range(12))
+                return dict(model=model['id'], messages=[{'role':'system', 'content':system},
                                                        {'role':'user', 'content':question}], max_tokens=128, **opts)
             for mode, options in [('greedy', dict(temperature=0)), ('sampling', dict(temperature=0.7, seed=42)),
                                   ('penalties', dict(temperature=0, frequency_penalty=0.2, presence_penalty=0.1))]:
@@ -103,6 +110,12 @@ def main():
                 used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
                 if model['id']=='llama32-1b' or args.qwen_full: assert used > 0
                 else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
+            if args.tf32x3:
+                usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
+                report['cases'][-1]['all_cases_metrics_delta']=usage;save()
+                # The four requests above are warm prefix hits: correctly skip
+                # the large prefill GEMMs. Require actual use on the cold cases.
+                assert usage.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0)>0, 'compensated projections were not used'
             print(label, 'stop and concurrency passed', flush=True)
         finally: server.close(); save()
 

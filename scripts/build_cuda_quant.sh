@@ -12,7 +12,7 @@ fi
 SRC="$ROOT/native/cuda_quant/src/quant_matvec.cu"
 INC="$ROOT/native/cuda_quant/include"
 OUT="$OUT_DIR/librbitnet_cuda_quant.so"
-ARCH_FLAGS="${RBITNET_CUDA_GENCODE:--gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_86,code=sm_86 -gencode=arch=compute_89,code=sm_89}"
+ARCH_FLAGS="${RBITNET_CUDA_GENCODE:--gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_80,code=compute_80 -gencode=arch=compute_86,code=sm_86 -gencode=arch=compute_89,code=sm_89}"
 # shellcheck disable=SC2086
 "$NVCC" -shared -Xcompiler -fPIC -O3 -std=c++17 -I "$INC" -o "$OUT" "$SRC" $ARCH_FLAGS -lcudart
 ln -sfn "$(basename "$OUT")" "$OUT_DIR/librbitnet_cuda_quant.so.1" 2>/dev/null || true
