@@ -68,8 +68,16 @@ impl KvQuantFormat {
     }
 
     /// Approximate RSS for `n_pages` physical pages of K+V at this format.
-    pub fn resident_bytes_for_pages(self, n_pages: usize, page_tokens: usize, stride: usize) -> usize {
-        let per_page = self.row_bytes(stride).saturating_mul(page_tokens).saturating_mul(2);
+    pub fn resident_bytes_for_pages(
+        self,
+        n_pages: usize,
+        page_tokens: usize,
+        stride: usize,
+    ) -> usize {
+        let per_page = self
+            .row_bytes(stride)
+            .saturating_mul(page_tokens)
+            .saturating_mul(2);
         per_page.saturating_mul(n_pages)
     }
 }
@@ -79,6 +87,7 @@ pub struct KvCache {
     /// Per layer: flattened `k` / `v` with stride `n_kv * head_dim` per sequence position.
     pub k: Vec<Vec<f32>>,
     pub v: Vec<Vec<f32>>,
+    cuda_attention: Vec<Option<crate::native::attention::CudaAttention>>,
 }
 
 impl KvCache {
@@ -87,10 +96,17 @@ impl KvCache {
         let len = stride * cfg.max_seq;
         let k = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
         let v = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
-        Self { k, v }
+        Self {
+            k,
+            v,
+            cuda_attention: (0..cfg.n_layer).map(|_| None).collect(),
+        }
     }
 
     pub fn clear(&mut self) {
+        for attention in self.cuda_attention.iter_mut().flatten() {
+            attention.clear();
+        }
         for row in &mut self.k {
             row.fill(0.0);
         }
@@ -135,7 +151,9 @@ impl SharedPhysKvStore {
         quant_format: KvQuantFormat,
     ) -> Result<Self> {
         if page_tokens == 0 || max_phys_pages == 0 {
-            return Err(BitNetError::Inference("shared paged KV: bad page config".into()));
+            return Err(BitNetError::Inference(
+                "shared paged KV: bad page config".into(),
+            ));
         }
         let stride = cfg.n_kv * cfg.head_dim;
         let n_layer = cfg.n_layer;
@@ -321,9 +339,10 @@ impl PagedSeqKv {
 
     fn alloc_phys(&mut self, layer: usize) -> Result<usize> {
         if let Some(shared) = &self.shared {
-            return shared.lock().map_err(|_| {
-                BitNetError::Inference("shared phys KV lock poisoned".into())
-            })?.alloc_phys(layer);
+            return shared
+                .lock()
+                .map_err(|_| BitNetError::Inference("shared phys KV lock poisoned".into()))?
+                .alloc_phys(layer);
         }
         if let Some(id) = self.free_ids[layer].pop() {
             zero_phys_page(
@@ -471,13 +490,10 @@ impl PagedSeqKv {
             KvQuantFormat::F32 => {
                 let lb = pos / self.page_tokens;
                 let pid = self.block_phys[layer][lb];
-                let off_in_page =
-                    (pos % self.page_tokens) * self.stride + kv_head * head_dim;
+                let off_in_page = (pos % self.page_tokens) * self.stride + kv_head * head_dim;
                 if let Some(shared) = &self.shared {
                     let g = shared.lock().expect("shared phys KV lock");
-                    out.copy_from_slice(
-                        &g.phys_k[layer][pid][off_in_page..off_in_page + head_dim],
-                    );
+                    out.copy_from_slice(&g.phys_k[layer][pid][off_in_page..off_in_page + head_dim]);
                 } else {
                     out.copy_from_slice(self.k_head_slice(layer, pos, kv_head, head_dim));
                 }
@@ -498,13 +514,10 @@ impl PagedSeqKv {
             KvQuantFormat::F32 => {
                 let lb = pos / self.page_tokens;
                 let pid = self.block_phys[layer][lb];
-                let off_in_page =
-                    (pos % self.page_tokens) * self.stride + kv_head * head_dim;
+                let off_in_page = (pos % self.page_tokens) * self.stride + kv_head * head_dim;
                 if let Some(shared) = &self.shared {
                     let g = shared.lock().expect("shared phys KV lock");
-                    out.copy_from_slice(
-                        &g.phys_v[layer][pid][off_in_page..off_in_page + head_dim],
-                    );
+                    out.copy_from_slice(&g.phys_v[layer][pid][off_in_page..off_in_page + head_dim]);
                 } else {
                     out.copy_from_slice(self.v_head_slice(layer, pos, kv_head, head_dim));
                 }
@@ -605,10 +618,7 @@ impl PagedSeqKv {
 
     pub fn pool_stats(&self) -> KvPoolStats {
         if let Some(shared) = &self.shared {
-            return shared
-                .lock()
-                .map(|g| g.pool_stats())
-                .unwrap_or_default();
+            return shared.lock().map(|g| g.pool_stats()).unwrap_or_default();
         }
         self.stats.clone()
     }
@@ -624,10 +634,7 @@ impl PagedSeqKv {
     /// Resident bytes for this sequence's (or shared) physical K+V pages.
     pub fn resident_bytes(&self) -> usize {
         if let Some(shared) = &self.shared {
-            return shared
-                .lock()
-                .map(|g| g.resident_bytes())
-                .unwrap_or(0);
+            return shared.lock().map(|g| g.resident_bytes()).unwrap_or(0);
         }
         resident_bytes_for_slabs(
             self.quant_format,
@@ -646,6 +653,37 @@ pub enum KvStorage {
 }
 
 impl KvStorage {
+    pub(crate) fn attention_cuda(
+        &mut self,
+        layer: usize,
+        pos: usize,
+        first: usize,
+        q: &[f32],
+        heads: usize,
+        kv_heads: usize,
+        head: usize,
+        scale: f32,
+        out: &mut [f32],
+    ) -> Result<bool> {
+        let Self::Dense(kv) = self else {
+            return Ok(false);
+        };
+        let slot = &mut kv.cuda_attention[layer];
+        if slot.is_none() {
+            *slot = crate::native::attention::CudaAttention::new(
+                kv.k[layer].len() / (kv_heads * head),
+                kv_heads,
+                head,
+                head,
+                heads,
+            );
+        }
+        if let Some(attention) = slot {
+            attention.run(q, &kv.k[layer], &kv.v[layer], pos, first, scale, None, out)?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
     pub fn new_dense(cfg: &LlamaConfig) -> Self {
         Self::Dense(KvCache::new(cfg))
     }
@@ -821,11 +859,18 @@ impl KvStorage {
         scale: f32,
         out: &mut [f32],
     ) {
-        let mut k_tmp = vec![0.0f32; head_dim];
+        let mut k_tmp = Vec::new();
+        if !matches!(self, Self::Dense(_)) {
+            k_tmp.resize(head_dim, 0.0);
+        }
         for p in 0..=pos {
-            self.fill_k_head_values(layer, p, kv_head, head_dim, stride, &mut k_tmp);
-            let dot: f32 = q.iter().zip(k_tmp.iter()).map(|(a, b)| a * b).sum();
-            out[p] = dot * scale;
+            let k = if matches!(self, Self::Dense(_)) {
+                self.k_head_slice(layer, p, kv_head, head_dim, stride)
+            } else {
+                self.fill_k_head_values(layer, p, kv_head, head_dim, stride, &mut k_tmp);
+                &k_tmp
+            };
+            out[p] = crate::ggml::simd::dot(q, k) * scale;
         }
     }
 
@@ -974,10 +1019,7 @@ impl PagedKvPool {
     }
 
     pub fn free_phys_pages(&self) -> usize {
-        self.shared_phys
-            .lock()
-            .map(|g| g.free_pages())
-            .unwrap_or(0)
+        self.shared_phys.lock().map(|g| g.free_pages()).unwrap_or(0)
     }
 
     pub fn sequence_mut(&mut self, seq_id: u64) -> Option<&mut PagedSeqKv> {
@@ -1066,12 +1108,14 @@ fn resident_bytes_for_slabs(
         KvQuantFormat::F32 => {
             for layer in phys_k {
                 for slab in layer {
-                    bytes = bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
+                    bytes =
+                        bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
                 }
             }
             for layer in phys_v {
                 for slab in layer {
-                    bytes = bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
+                    bytes =
+                        bytes.saturating_add(slab.len().saturating_mul(std::mem::size_of::<f32>()));
                 }
             }
         }

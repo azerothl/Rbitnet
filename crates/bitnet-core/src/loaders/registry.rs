@@ -83,13 +83,7 @@ fn dispatch_gguf_executor_inner(
         );
     }
 
-    if key == "qwen35moe" {
-        if !matches!(backend_kind, BackendKind::Cuda | BackendKind::Hybrid) {
-            return Err(BitNetError::Inference(
-                "GGUF `qwen35moe`: native CUDA path requires `RBITNET_BACKEND=cuda` or `hybrid` (CPU Llama-compatible loader is unsupported for this topology)."
-                    .into(),
-            ));
-        }
+    if matches!(key.as_str(), "qwen35" | "qwen35moe") {
         return qwen35::build_qwen35_moe_executor(
             backend_kind,
             gguf,
@@ -120,11 +114,6 @@ fn dispatch_gguf_executor_inner(
     }
 
     if key == "deepseek2" {
-        if backend_kind != BackendKind::Cuda {
-            return Err(BitNetError::Inference(format!(
-                "GGUF `{key}`: CUDA backend required (`RBITNET_BACKEND=cuda`). See docs/ARCHITECTURE_GGUF_MATRIX.md."
-            )));
-        }
         return deepseek2::build_deepseek2_executor(
             backend_kind,
             gguf,
@@ -134,12 +123,7 @@ fn dispatch_gguf_executor_inner(
         );
     }
 
-    if key == "gptoss" {
-        if backend_kind != BackendKind::Cuda {
-            return Err(BitNetError::Inference(format!(
-                "GGUF `{key}`: CUDA backend required (`RBITNET_BACKEND=cuda`). See docs/ARCHITECTURE_GGUF_MATRIX.md."
-            )));
-        }
+    if matches!(key.as_str(), "gptoss" | "gpt-oss") {
         return gpt_oss::build_gptoss_executor(
             backend_kind,
             gguf,
@@ -210,15 +194,11 @@ pub fn validate_gguf_serving_bundle(
     }
 
     let tok_ok = tokenizer_dir
-        .map(|d| {
-            d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file()
-        })
+        .map(|d| d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file())
         .unwrap_or(false)
         || model_path
             .parent()
-            .map(|d| {
-                d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file()
-            })
+            .map(|d| d.join("tokenizer.json").is_file() || d.join("tokenizer.model").is_file())
             .unwrap_or(false);
     if !tok_ok {
         return Err(BitNetError::TokenizerMissing);
@@ -270,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_requires_cuda_for_qwen35moe_native() {
+    fn dispatch_qwen35moe_cpu_requires_tokenizer() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");
         let dir = tempfile::tempdir().unwrap();
@@ -284,7 +264,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
+        assert!(msg.to_ascii_lowercase().contains("tokenizer"), "msg={msg}");
     }
 
     #[test]
@@ -357,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_gptoss_requires_cuda_on_cpu() {
+    fn dispatch_gptoss_cpu_requires_tokenizer() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");
         let dir = tempfile::tempdir().unwrap();
@@ -371,11 +351,11 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
+        assert!(msg.to_ascii_lowercase().contains("tokenizer"), "msg={msg}");
     }
 
     #[test]
-    fn dispatch_deepseek2_requires_cuda_on_cpu() {
+    fn dispatch_deepseek2_cpu_requires_tokenizer() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");
         let dir = tempfile::tempdir().unwrap();
@@ -389,7 +369,7 @@ mod tests {
             Err(e) => e,
         };
         let msg = format!("{err}");
-        assert!(msg.to_ascii_lowercase().contains("cuda"), "msg={msg}");
+        assert!(msg.to_ascii_lowercase().contains("tokenizer"), "msg={msg}");
     }
 
     #[test]

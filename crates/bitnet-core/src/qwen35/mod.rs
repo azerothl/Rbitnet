@@ -1,7 +1,7 @@
-//! Native Qwen3.x MoE (hybrid linear attention / full attention + MoE).
+//! Native Qwen3.5 dense / MoE (GDN recurrent attention / gated full attention).
 //!
-//! Text-only CUDA-first path via [`crate::backend::CudaRuntime`] for heavyweight `gemv`; core math
-//! is reference CPU F32 (llama.cpp `ggml` semantics for GDN convolution + gated delta recurrence).
+//! Text-only CPU/CUDA/hybrid paths keep quantized weights mmap/device resident.
+//! GDN convolution and recurrence use CPU F32; full attention can keep KV resident on CUDA.
 
 pub mod cuda_ctx;
 pub mod executor;

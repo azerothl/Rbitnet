@@ -1,15 +1,13 @@
-//! Dispatch `deepseek2` → Llama-compatible runtime only (no stub).
+//! Dispatch `deepseek2` to the native split-MLA/routed-expert graph.
 
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::backend::{make_backend, BackendKind};
+use crate::backend::BackendKind;
 use crate::error::Result;
 use crate::gguf::GgufArchive;
-use crate::llama::LlamaModel;
-use crate::loaders::roadmap_unsupported;
 use crate::loaders::tokenizer::{resolve_tokenizer_path, resolve_tokenizer_path_for_load};
-use crate::model::{LlamaExecutor, ModelExecutor};
+use crate::model::ModelExecutor;
 
 pub fn build_deepseek2_executor(
     backend_kind: BackendKind,
@@ -24,17 +22,10 @@ pub fn build_deepseek2_executor(
         debug_assert!(tokenizer_override.is_none());
         resolve_tokenizer_path(model_path)?
     };
-    let backend = make_backend(backend_kind);
-    if LlamaModel::from_gguf_arc(Arc::clone(&gguf)).is_ok() {
-        return Ok(Box::new(LlamaExecutor::new_with_architecture_slug(
-            backend_kind,
-            backend,
-            gguf,
-            tokenizer_path,
-            "deepseek2",
-        )));
-    }
-    Err(roadmap_unsupported::roadmap_architecture_not_supported(
-        "deepseek2",
-    ))
+    Ok(Box::new(crate::native::graph::NativeExecutor::load(
+        gguf,
+        &tokenizer_path,
+        backend_kind,
+        crate::native::graph::Family::Mla,
+    )?))
 }

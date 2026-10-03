@@ -72,6 +72,23 @@ impl LoadedPromptTokenizer {
 
     /// A chat turn and the entire sequence may have different stop tokens (Llama 3).
     pub(crate) fn eos_token_ids(&self) -> Vec<u32> {
+        // Harmony's <|end|> ends an analysis message, not the assistant turn.
+        if let Self::Hf(t) = self {
+            if t.token_to_id("<|channel|>").is_some()
+                && t.token_to_id("<|message|>").is_some()
+                && t.token_to_id("<|start|>").is_some()
+            {
+                if let Some(fim_suffix) = t
+                    .token_to_id("<|fim_suffix|>")
+                    .or_else(|| t.token_to_id("<|return|>"))
+                {
+                    return [Some(fim_suffix), t.token_to_id("<|endoftext|>")]
+                        .into_iter()
+                        .flatten()
+                        .collect();
+                }
+            }
+        }
         const CANDS: &[&str] = &[
             "</s>",
             "<|endoftext|>",
@@ -79,6 +96,8 @@ impl LoadedPromptTokenizer {
             "<|end|>",
             "<|eot_id|>",
             "<|end_of_text|>",
+            "<|user|>",
+            "<|observation|>",
         ];
         let mut ids: Vec<u32> = match self {
             Self::Hf(t) => CANDS.iter().filter_map(|s| t.token_to_id(s)).collect(),
@@ -98,6 +117,28 @@ impl LoadedPromptTokenizer {
 
 #[cfg(test)]
 mod tests {
+    /// Optional real tokenizer check; fixtures contain complete IDs from llama.cpp.
+    #[test]
+    fn optional_all_prompt_ids_match_reference() {
+        let (Ok(tokenizer), Ok(fixtures)) = (
+            std::env::var("RBITNET_PROMPT_TOKENIZER"),
+            std::env::var("RBITNET_PROMPT_FIXTURES"),
+        ) else {
+            return;
+        };
+        let tokenizer =
+            super::LoadedPromptTokenizer::from_path(std::path::Path::new(&tokenizer)).unwrap();
+        let fixtures: Vec<serde_json::Value> =
+            serde_json::from_str(&std::fs::read_to_string(fixtures).unwrap()).unwrap();
+        assert!(!fixtures.is_empty());
+        for fixture in fixtures {
+            let actual = tokenizer
+                .encode_ids(fixture["prompt"].as_str().unwrap(), true)
+                .unwrap();
+            let expected: Vec<u32> = serde_json::from_value(fixture["token_ids"].clone()).unwrap();
+            assert_eq!(actual, expected, "{}: prompt IDs differ", fixture["id"]);
+        }
+    }
     use super::*;
     use tokenizers::{
         models::wordlevel::WordLevel, processors::template::TemplateProcessing, AddedToken,
@@ -154,5 +195,28 @@ mod tests {
         let tokenizer = llama3_tokenizer();
         assert_eq!(tokenizer.eos_token_ids(), [3, 4]);
         assert_eq!(tokenizer.decode_ids(&[1, 3], true).unwrap(), "Hello");
+    }
+
+    #[test]
+    fn harmony_continues_after_analysis_message_end() {
+        let vocab = [
+            ("[UNK]", 0),
+            ("<|end|>", 1),
+            ("<|return|>", 2),
+            ("<|endoftext|>", 3),
+            ("<|channel|>", 4),
+            ("<|message|>", 5),
+            ("<|start|>", 6),
+        ]
+        .into_iter()
+        .map(|(s, id)| (s.to_string(), id))
+        .collect();
+        let model = WordLevel::builder()
+            .vocab(vocab)
+            .unk_token("[UNK]".into())
+            .build()
+            .unwrap();
+        let tok = LoadedPromptTokenizer::Hf(Tokenizer::new(model));
+        assert_eq!(tok.eos_token_ids(), [2, 3]);
     }
 }

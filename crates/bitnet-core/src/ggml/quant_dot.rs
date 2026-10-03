@@ -77,7 +77,8 @@ impl QuantMatvecKernel {
         let y = match self.backend {
             QuantKernelBackend::CpuScalar => matvec_rows_scalar(ty, payload, row_bytes, x, ne1),
             QuantKernelBackend::CpuParallel
-                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) => {
+                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) =>
+            {
                 matvec_rows_parallel(ty, payload, row_bytes, x, ne1)
             }
             QuantKernelBackend::CudaQuantStub => {
@@ -124,7 +125,8 @@ impl QuantMatvecKernel {
                 matvec_rows_scalar(ggml_type, payload, row_bytes, x, ne1)
             }
             QuantKernelBackend::CpuParallel
-                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) => {
+                if ne1 >= effective_parallel_min_rows(self.parallel_min_rows, ne0, ne1) =>
+            {
                 matvec_rows_parallel(ggml_type, payload, row_bytes, x, ne1)
             }
             QuantKernelBackend::CudaQuantStub => {
@@ -172,7 +174,7 @@ fn bf16_to_f32(bits: u16) -> f32 {
 
 /// Types that have mmap row GEMV / row decode in this module (match [`dot_row`]).
 pub fn ggml_type_supported_mmap_matvec(ty: u32) -> bool {
-    matches!(ty, 0 | 1 | 2 | 8 | 12 | 14 | 30 | 34 | 35)
+    matches!(ty, 0 | 1 | 2 | 6 | 8 | 12 | 13 | 14 | 30 | 34 | 35 | 39)
 }
 
 /// Dot product of one logical row (along `ne[0]`) with `x`.
@@ -188,6 +190,7 @@ pub fn dot_row(ty: u32, row_payload: &[u8], x: &[f32]) -> Result<f32> {
         1 => dot_row_f16(row_payload, x),
         30 => dot_row_bf16(row_payload, x),
         2 => dot_row_q4_0(row_payload, x),
+        6 | 13 | 39 => dot_row_extra_quant(ty, row_payload, x),
         8 => dot_row_q8_0(row_payload, x),
         12 => dot_row_q4_k(row_payload, x),
         14 => dot_row_q6_k(row_payload, x),
@@ -197,37 +200,30 @@ pub fn dot_row(ty: u32, row_payload: &[u8], x: &[f32]) -> Result<f32> {
     }
 }
 
+fn dot_row_extra_quant(ty: u32, row: &[u8], x: &[f32]) -> Result<f32> {
+    let (elements, bytes) = types::type_layout(ty)?;
+    let mut buf = [0.0f32; 256];
+    let mut sum = 0.0;
+    for (block, xb) in row.chunks_exact(bytes).zip(x.chunks_exact(elements)) {
+        crate::ggml::dequant::decode_extra_block(ty, block, &mut buf[..elements])?;
+        sum += crate::ggml::simd::dot(&buf[..elements], xb);
+    }
+    Ok(sum)
+}
+
 fn dot_row_f32(row: &[u8], x: &[f32]) -> Result<f32> {
     if row.len() != x.len() * 4 {
         return Err(BitNetError::InvalidGguf("f32 row size".into()));
     }
-    let mut s = 0.0f32;
-    let mut i = 0;
-    while i + 4 <= x.len() {
-        let w0 = f32::from_bits(u32::from_le_bytes(
-            row[i * 4..i * 4 + 4].try_into().unwrap(),
-        ));
-        let w1 = f32::from_bits(u32::from_le_bytes(
-            row[(i + 1) * 4..(i + 1) * 4 + 4].try_into().unwrap(),
-        ));
-        let w2 = f32::from_bits(u32::from_le_bytes(
-            row[(i + 2) * 4..(i + 2) * 4 + 4].try_into().unwrap(),
-        ));
-        let w3 = f32::from_bits(u32::from_le_bytes(
-            row[(i + 3) * 4..(i + 3) * 4 + 4].try_into().unwrap(),
-        ));
-        s = w0.mul_add(x[i], s);
-        s = w1.mul_add(x[i + 1], s);
-        s = w2.mul_add(x[i + 2], s);
-        s = w3.mul_add(x[i + 3], s);
-        i += 4;
+    let mut sum = 0.0;
+    let mut buf = [0.0f32; 32];
+    for (weights, xb) in row.chunks(128).zip(x.chunks(32)) {
+        for (slot, bytes) in buf.iter_mut().zip(weights.chunks_exact(4)) {
+            *slot = f32::from_le_bytes(bytes.try_into().unwrap());
+        }
+        sum += crate::ggml::simd::dot(&buf[..xb.len()], xb);
     }
-    while i < x.len() {
-        let b = u32::from_le_bytes(row[i * 4..i * 4 + 4].try_into().unwrap());
-        s = f32::from_bits(b).mul_add(x[i], s);
-        i += 1;
-    }
-    Ok(s)
+    Ok(sum)
 }
 
 fn dot_row_f16(row: &[u8], x: &[f32]) -> Result<f32> {
@@ -267,9 +263,7 @@ fn dot_row_q4_0(row: &[u8], x: &[f32]) -> Result<f32> {
     for b in 0..nb {
         q4_0_block_dequant(&row[b * 18..b * 18 + 18], &mut buf)?;
         let xb = &x[b * QK4_0..(b + 1) * QK4_0];
-        for i in 0..QK4_0 {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -287,9 +281,7 @@ fn dot_row_q8_0(row: &[u8], x: &[f32]) -> Result<f32> {
     for b in 0..nb {
         q8_0_block_dequant(&row[b * 34..b * 34 + 34], &mut buf)?;
         let xb = &x[b * 32..(b + 1) * 32];
-        for i in 0..32 {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -307,9 +299,7 @@ fn dot_row_q6_k(row: &[u8], x: &[f32]) -> Result<f32> {
     for b in 0..nb {
         q6_k_superblock_dequant(&row[b * 210..b * 210 + 210], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
-        for i in 0..QK_K {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -327,9 +317,7 @@ fn dot_row_q4_k(row: &[u8], x: &[f32]) -> Result<f32> {
     for b in 0..nb {
         q4_k_superblock_dequant(&row[b * 144..b * 144 + 144], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
-        for i in 0..QK_K {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -350,9 +338,7 @@ fn dot_row_tq1_0(row: &[u8], x: &[f32]) -> Result<f32> {
         let o = b * BLOCK;
         decode_tq1_0_to_f32(&row[o..o + BLOCK], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
-        for i in 0..QK_K {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -373,9 +359,7 @@ fn dot_row_tq2_0(row: &[u8], x: &[f32]) -> Result<f32> {
         let o = b * BLOCK;
         decode_tq2_0_to_f32(&row[o..o + BLOCK], &mut buf)?;
         let xb = &x[b * QK_K..(b + 1) * QK_K];
-        for i in 0..QK_K {
-            acc = buf[i].mul_add(xb[i], acc);
-        }
+        acc += crate::ggml::simd::dot(&buf, xb);
     }
     Ok(acc)
 }
@@ -486,6 +470,15 @@ pub fn decode_row_to_f32(ty: u32, row_payload: &[u8], out: &mut [f32]) -> Result
             for i in 0..out.len() {
                 let h = u16::from_le_bytes(row_payload[i * 2..i * 2 + 2].try_into().unwrap());
                 out[i] = bf16_to_f32(h);
+            }
+        }
+        6 | 13 | 39 => {
+            let (elements, bytes) = types::type_layout(ty)?;
+            for (block, dst) in row_payload
+                .chunks_exact(bytes)
+                .zip(out.chunks_exact_mut(elements))
+            {
+                crate::ggml::dequant::decode_extra_block(ty, block, dst)?;
             }
         }
         2 => {
@@ -628,22 +621,23 @@ fn matvec_rows_parallel(
     }
     let chunk_rows = (ne1 + threads - 1) / threads;
     let chunk_starts: Vec<usize> = (0..ne1).step_by(chunk_rows).collect();
-    let chunk_results: Vec<std::result::Result<(usize, Vec<f32>), BitNetError>> = pool.install(|| {
-        chunk_starts
-            .par_iter()
-            .copied()
-            .map(|chunk_start| {
-                let chunk_end = (chunk_start + chunk_rows).min(ne1);
-                let mut y = vec![0.0f32; chunk_end - chunk_start];
-                for (local, o) in (chunk_start..chunk_end).enumerate() {
-                    let row_start = o * row_bytes;
-                    let row = &payload[row_start..row_start + row_bytes];
-                    y[local] = dot_row(ty, row, x)?;
-                }
-                Ok((chunk_start, y))
-            })
-            .collect()
-    });
+    let chunk_results: Vec<std::result::Result<(usize, Vec<f32>), BitNetError>> =
+        pool.install(|| {
+            chunk_starts
+                .par_iter()
+                .copied()
+                .map(|chunk_start| {
+                    let chunk_end = (chunk_start + chunk_rows).min(ne1);
+                    let mut y = vec![0.0f32; chunk_end - chunk_start];
+                    for (local, o) in (chunk_start..chunk_end).enumerate() {
+                        let row_start = o * row_bytes;
+                        let row = &payload[row_start..row_start + row_bytes];
+                        y[local] = dot_row(ty, row, x)?;
+                    }
+                    Ok((chunk_start, y))
+                })
+                .collect()
+        });
     let mut rows = Vec::with_capacity(chunk_results.len());
     for r in chunk_results {
         rows.push(r?);
@@ -661,7 +655,7 @@ type CudaQuantMatvecFn =
 
 /// GGML types with optional native CUDA quant kernels (`librbitnet_cuda_quant`).
 pub fn ggml_type_supports_cuda_quant(ty: u32) -> bool {
-    matches!(ty, 2 | 8 | 12 | 14)
+    matches!(ty, 0 | 2 | 6 | 8 | 12 | 13 | 14 | 39)
 }
 
 fn cuda_quant_symbol(ty: u32, device_resident: bool) -> Option<&'static [u8]> {
@@ -674,6 +668,14 @@ fn cuda_quant_symbol(ty: u32, device_resident: bool) -> Option<&'static [u8]> {
         (8, true) => Some(b"rbitnet_cuda_q8_0_matvec_device\0"),
         (12, true) => Some(b"rbitnet_cuda_q4_k_matvec_device\0"),
         (14, true) => Some(b"rbitnet_cuda_q6_k_matvec_device\0"),
+        (0, false) => Some(b"rbitnet_cuda_f32_matvec\0"),
+        (0, true) => Some(b"rbitnet_cuda_f32_matvec_device\0"),
+        (6, false) => Some(b"rbitnet_cuda_q5_0_matvec\0"),
+        (6, true) => Some(b"rbitnet_cuda_q5_0_matvec_device\0"),
+        (13, false) => Some(b"rbitnet_cuda_q5_k_matvec\0"),
+        (13, true) => Some(b"rbitnet_cuda_q5_k_matvec_device\0"),
+        (39, false) => Some(b"rbitnet_cuda_mxfp4_matvec\0"),
+        (39, true) => Some(b"rbitnet_cuda_mxfp4_matvec_device\0"),
         _ => None,
     }
 }
@@ -745,7 +747,7 @@ pub fn matvec_device_quant_optional(
     }
 }
 
-fn load_cuda_quant_library() -> Option<&'static Library> {
+pub(crate) fn load_cuda_quant_library() -> Option<&'static Library> {
     static LIB: OnceLock<Option<Library>> = OnceLock::new();
     LIB.get_or_init(|| {
         let mut candidates: Vec<String> = Vec::new();
@@ -776,6 +778,52 @@ fn load_cuda_quant_library() -> Option<&'static Library> {
         None
     })
     .as_ref()
+}
+
+pub(crate) fn matvec_device_quant_batch_optional(
+    ty: u32,
+    w: *mut c_void,
+    row_bytes: usize,
+    x: &[f32],
+    cols: usize,
+    rows: usize,
+    batches: usize,
+) -> Option<Result<Vec<f32>>> {
+    type Batch = unsafe extern "C" fn(
+        u32,
+        *const c_void,
+        usize,
+        *const f32,
+        usize,
+        usize,
+        usize,
+        *mut f32,
+    ) -> i32;
+    let lib = load_cuda_quant_library()?;
+    let kernel = unsafe {
+        lib.get::<Batch>(b"rbitnet_cuda_quant_matvec_batch_device\0")
+            .ok()?
+    };
+    let mut y = vec![0.0; rows.checked_mul(batches)?];
+    let status = unsafe {
+        kernel(
+            ty,
+            w,
+            row_bytes,
+            x.as_ptr(),
+            cols,
+            rows,
+            batches,
+            y.as_mut_ptr(),
+        )
+    };
+    Some(if status == 0 {
+        Ok(y)
+    } else {
+        Err(BitNetError::Inference(format!(
+            "CUDA batch matvec failed: {status}"
+        )))
+    })
 }
 
 /// True when optional `librbitnet_cuda_quant` was found (device or host symbols may still vary).

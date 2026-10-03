@@ -3,7 +3,7 @@
 use crate::error::{BitNetError, Result};
 
 /// `(blck_size_elements, block_size_bytes)` for each `ggml_type` enum value.
-fn type_layout(ty: u32) -> Result<(usize, usize)> {
+pub(crate) fn type_layout(ty: u32) -> Result<(usize, usize)> {
     let v = match ty {
         0 => (1, 4),   // F32
         1 => (1, 2),   // F16

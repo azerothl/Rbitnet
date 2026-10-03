@@ -25,6 +25,9 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 futures = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
+minijinja = { version = "2.24", features = ["json", "fuel", "loop_controls"] }
+minijinja-contrib = { version = "2.24", features = ["pycompat"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

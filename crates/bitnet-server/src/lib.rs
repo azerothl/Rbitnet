@@ -3,6 +3,7 @@
 //! See `docs/PLAN_PRODUCTION.md` for limits, metrics, and health endpoints.
 
 mod anthropic;
+mod chat_template;
 mod config;
 mod metrics;
 mod model_registry;
@@ -34,10 +35,10 @@ use bitnet_core::BitNetError;
 use bitnet_core::{clear_inference_cancel, request_inference_cancel};
 use futures::stream::{self, poll_fn, StreamExt};
 use futures::Future;
-use std::pin::pin;
-use std::task::Poll;
 use serde::Deserialize;
 use serde_json::json;
+use std::pin::pin;
+use std::task::Poll;
 use tokio::sync::{RwLock, Semaphore};
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -335,11 +336,7 @@ fn process_rss_bytes() -> Option<u64> {
         let text = std::fs::read_to_string("/proc/self/status").ok()?;
         for line in text.lines() {
             if let Some(rest) = line.strip_prefix("VmRSS:") {
-                let kb: u64 = rest
-                    .split_whitespace()
-                    .next()?
-                    .parse()
-                    .ok()?;
+                let kb: u64 = rest.split_whitespace().next()?.parse().ok()?;
                 return Some(kb.saturating_mul(1024));
             }
         }
@@ -862,9 +859,7 @@ fn validate_against_simple_schema(
                     continue;
                 };
                 if !obj.contains_key(name) {
-                    return Err(format!(
-                        "structured output missing required field '{name}'"
-                    ));
+                    return Err(format!("structured output missing required field '{name}'"));
                 }
             }
         }
@@ -945,10 +940,21 @@ pub fn build_prompt_from_messages_with_tokenizer_template(
     messages: &[ChatMessage],
     tokenizer_template: Option<&str>,
 ) -> String {
+    try_build_prompt_from_messages_with_tokenizer_template(messages, tokenizer_template)
+        .unwrap_or_else(|error| {
+            tracing::warn!(%error,"chat template render failed");
+            build_raw_prompt(messages)
+        })
+}
+
+fn try_build_prompt_from_messages_with_tokenizer_template(
+    messages: &[ChatMessage],
+    tokenizer_template: Option<&str>,
+) -> Result<String, String> {
     if let Ok(template) = std::env::var("RBITNET_CHAT_TEMPLATE") {
         let template = template.trim();
         if !template.is_empty() {
-            return apply_chat_template(template, messages);
+            return try_apply_chat_template(template, messages);
         }
     }
     let chat_format = std::env::var("RBITNET_CHAT_FORMAT")
@@ -957,19 +963,21 @@ pub fn build_prompt_from_messages_with_tokenizer_template(
         .filter(|s| !s.is_empty());
     if chat_format.is_none() {
         if let Some(template) = tokenizer_template.map(str::trim).filter(|s| !s.is_empty()) {
-            return apply_chat_template(template, messages);
+            return try_apply_chat_template(template, messages);
         }
     }
-    match chat_format
-        .unwrap_or_else(|| "raw".into())
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "llama3" => build_llama3_prompt(messages),
-        "chatml" => build_chatml_prompt(messages),
-        _ => build_raw_prompt(messages),
-    }
+    Ok(
+        match chat_format
+            .unwrap_or_else(|| "raw".into())
+            .trim()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "llama3" => build_llama3_prompt(messages),
+            "chatml" => build_chatml_prompt(messages),
+            _ => build_raw_prompt(messages),
+        },
+    )
 }
 
 fn build_raw_prompt(messages: &[ChatMessage]) -> String {
@@ -1043,14 +1051,17 @@ fn apply_simple_chat_template(template: &str, messages: &[ChatMessage]) -> Strin
         .replace("{assistant}", &assistant)
 }
 
-fn apply_chat_template(template: &str, messages: &[ChatMessage]) -> String {
+fn try_apply_chat_template(template: &str, messages: &[ChatMessage]) -> Result<String, String> {
+    if template.contains("{%") || template.contains("{{") {
+        return chat_template::render(template, messages);
+    }
     if template.contains("<|start_header_id|>") && template.contains("<|eot_id|>") {
-        return build_llama3_prompt(messages);
+        return Ok(build_llama3_prompt(messages));
     }
     if template.contains("<|im_start|>") && template.contains("<|im_end|>") {
-        return build_chatml_prompt(messages);
+        return Ok(build_chatml_prompt(messages));
     }
-    apply_simple_chat_template(template, messages)
+    Ok(apply_simple_chat_template(template, messages))
 }
 
 fn last_role_content(messages: &[ChatMessage], role: &str) -> String {
@@ -1309,10 +1320,19 @@ async fn chat_completions(
         .store(unix_now_ms(), Ordering::Relaxed);
 
     let tokenizer_chat_template = state.engine.read().await.tokenizer_chat_template();
-    let prompt = build_prompt_from_messages_with_tokenizer_template(
+    let prompt = match try_build_prompt_from_messages_with_tokenizer_template(
         &req.messages,
         tokenizer_chat_template.as_deref(),
-    );
+    ) {
+        Ok(prompt) => prompt,
+        Err(message) => {
+            return Ok((
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error":{"message":message,"type":"invalid_request_error"}})),
+            )
+                .into_response())
+        }
+    };
     let prompt_chars = prompt.chars().count();
     if prompt_chars > state.config.max_prompt_chars {
         state
@@ -1799,7 +1819,9 @@ async fn live_stream_chat_completion(
             Poll::Ready(Some(Ok(StreamEvent::Done(output)))) => {
                 let ms = start.elapsed().as_millis() as u64;
                 metrics.inference_ms_total.fetch_add(ms, Ordering::Relaxed);
-                metrics.inference_calls_total.fetch_add(1, Ordering::Relaxed);
+                metrics
+                    .inference_calls_total
+                    .fetch_add(1, Ordering::Relaxed);
                 metrics.record_backend_family_call(&backend_kind, &model_family);
                 metrics
                     .inference_ttft_ms_total
@@ -1824,10 +1846,7 @@ async fn live_stream_chat_completion(
                         "finish_reason": "stop"
                     }]
                 });
-                Poll::Ready(Some(Ok(format!(
-                    "data: {}\n\ndata: [DONE]\n\n",
-                    finish
-                ))))
+                Poll::Ready(Some(Ok(format!("data: {}\n\ndata: [DONE]\n\n", finish))))
             }
             Poll::Ready(Some(Err(msg))) => {
                 metrics.chat_errors_total.fetch_add(1, Ordering::Relaxed);
@@ -1845,7 +1864,9 @@ async fn live_stream_chat_completion(
                 if start.elapsed() > timeout_dur {
                     request_inference_cancel();
                     let _ = pin!(join).as_mut().poll(cx);
-                    metrics.inference_timeouts_total.fetch_add(1, Ordering::Relaxed);
+                    metrics
+                        .inference_timeouts_total
+                        .fetch_add(1, Ordering::Relaxed);
                     metrics.chat_errors_total.fetch_add(1, Ordering::Relaxed);
                     tracing::warn!(
                         request_id = %request_id,

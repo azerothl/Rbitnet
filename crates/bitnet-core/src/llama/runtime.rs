@@ -85,18 +85,15 @@ impl LlamaRuntime {
         let tokenizer_id = tokenizer_path.display().to_string();
         let kv_format = kv.stats().quant_format.to_string();
         let chat_format = std::env::var("RBITNET_CHAT_FORMAT").unwrap_or_else(|_| "auto".into());
-        let prefix_scope = prefix_scope_for_runtime(
-            &model_id,
-            &tokenizer_id,
-            &chat_format,
-            &kv_format,
-        );
-        let sidecar: Box<dyn KvSidecarClient> =
-            if let Ok(Some(http)) = crate::kv_sidecar::HttpKvSidecar::from_config(&KvSidecarConfig::from_env()) {
-                Box::new(http)
-            } else {
-                Box::new(NoopKvSidecar)
-            };
+        let prefix_scope =
+            prefix_scope_for_runtime(&model_id, &tokenizer_id, &chat_format, &kv_format);
+        let sidecar: Box<dyn KvSidecarClient> = if let Ok(Some(http)) =
+            crate::kv_sidecar::HttpKvSidecar::from_config(&KvSidecarConfig::from_env())
+        {
+            Box::new(http)
+        } else {
+            Box::new(NoopKvSidecar)
+        };
         Ok(Self {
             model,
             tokenizer,
@@ -178,9 +175,10 @@ impl LlamaRuntime {
         );
         if prefix_enabled {
             // 1) LCP against previous request (agent system/tools reuse).
-            if let (Some(prev_ids), Some(prev_snap)) =
-                (self.last_prefix_ids.as_ref(), self.last_prefix_snap.as_ref())
-            {
+            if let (Some(prev_ids), Some(prev_snap)) = (
+                self.last_prefix_ids.as_ref(),
+                self.last_prefix_snap.as_ref(),
+            ) {
                 let lcp = longest_common_prefix_tokens(prev_ids, &prompt_ids);
                 let min_lcp = std::env::var("RBITNET_PREFIX_KV_MIN_TOKENS")
                     .ok()
@@ -234,9 +232,7 @@ impl LlamaRuntime {
                     if let Some(snap) = cache.lookup(&key) {
                         if restore_dense_kv(&mut self.kv, snap) {
                             prefill_from = snap.token_count;
-                            crate::perf::record_prefix_hit(
-                                snap.token_count.saturating_mul(64),
-                            );
+                            crate::perf::record_prefix_hit(snap.token_count.saturating_mul(64));
                             hit = true;
                         }
                         break;
@@ -312,12 +308,16 @@ impl LlamaRuntime {
             self.last_prefix_ids = Some(prompt_ids.clone());
             self.last_prefix_snap = full_snap;
         }
-        if self.sidecar.put_prefix_blocks(&KvSidecarPut {
-            model_id: self.prefix_scope.model_id.clone(),
-            prefix_hash: crate::prefix_kv::hash_prefix_tokens(&prompt_ids),
-            token_count: prompt_ids.len(),
-            block_ids: vec![],
-        }).is_ok() {
+        if self
+            .sidecar
+            .put_prefix_blocks(&KvSidecarPut {
+                model_id: self.prefix_scope.model_id.clone(),
+                prefix_hash: crate::prefix_kv::hash_prefix_tokens(&prompt_ids),
+                token_count: prompt_ids.len(),
+                block_ids: vec![],
+            })
+            .is_ok()
+        {
             tracing::debug!("kv sidecar notified after prefill");
         }
 
@@ -342,7 +342,7 @@ impl LlamaRuntime {
         let mut pos = prompt_ids.len();
         let mut prev_text = String::new();
 
-        for _ in 0..max_tokens {
+        for step in 0..max_tokens {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
@@ -365,7 +365,9 @@ impl LlamaRuntime {
                 }
             }
             prev_text = full;
-            logits = self.decode_one(next_id, pos)?;
+            if step + 1 < max_tokens {
+                logits = self.decode_one(next_id, pos)?;
+            }
             pos += 1;
         }
         let decode_ms = t_dec.elapsed().as_millis() as u64;
@@ -395,7 +397,14 @@ impl LlamaRuntime {
     pub fn prefill_chunk(&mut self, tokens: &[u32], base_pos: usize) -> Result<Vec<f32>> {
         let mut logits = Vec::new();
         for (idx, &tid) in tokens.iter().enumerate() {
-            logits = self.decode_one(tid, base_pos + idx)?;
+            logits = self.model.forward_step(
+                &mut self.kv,
+                tid,
+                base_pos + idx,
+                self.backend.as_ref(),
+                &mut self.scratch,
+                idx + 1 == tokens.len(),
+            )?;
         }
         Ok(logits)
     }
@@ -472,10 +481,7 @@ fn llama_kv_from_env(cfg: &LlamaConfig) -> Result<KvStorage> {
 }
 
 fn longest_common_prefix_tokens(a: &[u32], b: &[u32]) -> usize {
-    a.iter()
-        .zip(b.iter())
-        .take_while(|(x, y)| x == y)
-        .count()
+    a.iter().zip(b.iter()).take_while(|(x, y)| x == y).count()
 }
 
 fn truncate_prefix_snap(
@@ -507,11 +513,7 @@ fn truncate_prefix_snap(
                 }
                 v.push(row[..keep].to_vec());
             }
-            Some(PrefixKvSnap::Dense(DenseKvSnapshot {
-                k,
-                v,
-                token_count,
-            }))
+            Some(PrefixKvSnap::Dense(DenseKvSnapshot { k, v, token_count }))
         }
         PrefixKvSnap::Paged(p) => {
             if token_count == 0 || token_count > p.token_count {

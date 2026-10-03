@@ -36,9 +36,13 @@ pub fn stitch_conv_window_mut(
         return;
     }
     let k1 = d_conv.saturating_sub(1);
-    dst[..k1 * d_inner].copy_from_slice(&hist[..k1 * d_inner.max(1)]);
-    let base = k1 * d_inner;
-    dst[base..base + d_inner].copy_from_slice(strip);
+    // History is token-major; ggml's convolution window is channel-major.
+    for channel in 0..d_inner {
+        for tap in 0..k1 {
+            dst[channel * d_conv + tap] = hist[tap * d_inner + channel];
+        }
+        dst[channel * d_conv + k1] = strip[channel];
+    }
 }
 
 #[inline]
@@ -153,5 +157,18 @@ mod tests {
         let v = vec![3.0, 4.0];
         let (attn, s1) = gated_delta_net_step(&s0, &q, &k, &v, &[0.0], 1.0, sv, false);
         assert!(s1.iter().chain(attn.iter()).all(|z| z.is_finite()));
+    }
+
+    #[test]
+    fn conv_window_transposes_time_and_channel_axes() {
+        let history = [1.0, 10.0, 2.0, 20.0];
+        let strip = [3.0, 30.0];
+        let mut window = [0.0; 6];
+        stitch_conv_window_mut(&history, &strip, &mut window, 3, 2);
+        assert_eq!(window, [1.0, 2.0, 3.0, 10.0, 20.0, 30.0]);
+        assert_eq!(
+            ssm_conv_f32(&window, &[1.0, 2.0, 3.0, 3.0, 2.0, 1.0], 3, 2),
+            [14.0, 100.0]
+        );
     }
 }

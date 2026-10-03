@@ -3,6 +3,7 @@
 use crate::error::{BitNetError, Result};
 use crate::ggml::{ggml_row_size, matvec_payload_quant, tensor_to_f32};
 use crate::gguf::{GgufArchive, GgufTensorInfo};
+use crate::native::weights::Weights;
 
 /// Embedding row `token_embd[token_id]` for matrix `[ne0=n_embd, ne1=vocab]` (Llama GGUF convention).
 pub fn token_embedding_row(
@@ -40,7 +41,8 @@ pub fn token_embedding_row(
 }
 
 /// Compute `y = W @ x` for `W.shape() == [ne0, ne1]` (contiguous GGUF stripes along `ne0`).
-pub fn quant_matmul_vec(
+pub(crate) fn weighted_matmul_vec(
+    weights: &Weights,
     payload: &[u8],
     ggml_ty: u32,
     ne0: usize,
@@ -66,11 +68,12 @@ pub fn quant_matmul_vec(
             ));
         }
     }
-    matvec_payload_quant(ggml_ty, &payload[..need], x, ne0, ne1)
+    weights.payload(&payload[..need], ggml_ty, ne0, ne1, x)
 }
 
 /// Matmul for slab `payload[slice_start..]` covering `[ne0, ne1]`.
-pub fn quant_matmul_vec_offset(
+pub(crate) fn weighted_matmul_vec_offset(
+    weights: &Weights,
     payload: &[u8],
     ggml_ty: u32,
     ne0: usize,
@@ -89,5 +92,44 @@ pub fn quant_matmul_vec_offset(
     {
         return Err(BitNetError::Inference("quant slab OOB".into()));
     }
-    quant_matmul_vec(&payload[offset..offset + total], ggml_ty, ne0, ne1, x)
+    weighted_matmul_vec(
+        weights,
+        &payload[offset..offset + total],
+        ggml_ty,
+        ne0,
+        ne1,
+        x,
+    )
+}
+
+/// CPU matrix operation retained for other architecture modules.
+pub fn quant_matmul_vec(
+    payload: &[u8],
+    ty: u32,
+    cols: usize,
+    rows: usize,
+    x: &[f32],
+) -> Result<Vec<f32>> {
+    matvec_payload_quant(ty, payload, x, cols, rows)
+}
+pub fn quant_matmul_vec_offset(
+    payload: &[u8],
+    ty: u32,
+    cols: usize,
+    rows: usize,
+    offset: usize,
+    x: &[f32],
+) -> Result<Vec<f32>> {
+    let bytes = ggml_row_size(ty, cols as u64)?
+        .checked_mul(rows)
+        .ok_or_else(|| BitNetError::Inference("matrix view overflow".into()))?;
+    let view = payload
+        .get(
+            offset
+                ..offset
+                    .checked_add(bytes)
+                    .ok_or_else(|| BitNetError::Inference("view overflow".into()))?,
+        )
+        .ok_or_else(|| BitNetError::Inference("matrix view out of bounds".into()))?;
+    matvec_payload_quant(ty, view, x, cols, rows)
 }

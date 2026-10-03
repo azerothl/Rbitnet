@@ -263,7 +263,11 @@ impl CudaRuntime {
     }
 
     /// Upload an arbitrary host byte blob (e.g. GGML quantized payload) once.
-    pub fn upload_raw(self: &Arc<Self>, src: *const c_void, nbytes: usize) -> Option<CudaDeviceBuffer> {
+    pub fn upload_raw(
+        self: &Arc<Self>,
+        src: *const c_void,
+        nbytes: usize,
+    ) -> Option<CudaDeviceBuffer> {
         if nbytes == 0 {
             return None;
         }
@@ -835,9 +839,9 @@ impl CudaDeviceQuantMatrix {
         in_cols: usize,
     ) -> crate::error::Result<Self> {
         let row_bytes = crate::ggml::ggml_row_size(ggml_type, in_cols as u64)?;
-        let need = row_bytes
-            .checked_mul(out_rows)
-            .ok_or_else(|| crate::error::BitNetError::Inference("quant payload size overflow".into()))?;
+        let need = row_bytes.checked_mul(out_rows).ok_or_else(|| {
+            crate::error::BitNetError::Inference("quant payload size overflow".into())
+        })?;
         if payload.len() < need {
             return Err(crate::error::BitNetError::Inference(
                 "quant payload truncated for device residency".into(),
@@ -889,26 +893,92 @@ impl CudaDeviceQuantMatrix {
 
     /// Prefer device-resident CUDA quant kernel; otherwise CPU payload matvec (golden parity).
     pub fn matvec(&self, x: &[f32]) -> crate::error::Result<Vec<f32>> {
+        self.matvec_rows(x, 0, self.out_rows)
+    }
+
+    /// A row-aligned view, used for selected expert slabs without uploading them again.
+    pub fn matvec_rows(
+        &self,
+        x: &[f32],
+        first_row: usize,
+        rows: usize,
+    ) -> crate::error::Result<Vec<f32>> {
+        if x.len() != self.in_cols
+            || first_row
+                .checked_add(rows)
+                .filter(|&n| n <= self.out_rows)
+                .is_none()
+        {
+            return Err(crate::error::BitNetError::Inference(
+                "quant matrix view out of bounds".into(),
+            ));
+        }
+        let offset = first_row * self.row_bytes;
         if let (Some(dev), Some(rt)) = (self.device.as_ref(), self.rt.as_ref()) {
             if let Some(result) = crate::ggml::matvec_device_quant_optional(
                 self.ggml_type,
-                dev.as_device_ptr(),
+                unsafe { dev.as_device_ptr().cast::<u8>().add(offset).cast() },
                 self.row_bytes,
                 x,
-                self.out_rows,
+                rows,
             ) {
                 let y = result?;
                 rt.record_device_resident_quant_gemv();
+                crate::perf::record_gpu_transfer((x.len() * 4) as u64, (y.len() * 4) as u64, 1);
                 return Ok(y);
             }
         }
         crate::ggml::matvec_payload_quant(
             self.ggml_type,
-            self.host.as_slice(),
+            &self.host[offset..offset + rows * self.row_bytes],
             x,
             self.in_cols,
-            self.out_rows,
+            rows,
         )
+    }
+
+    /// Independent input vector for each equally sized slab (e.g. MLA heads).
+    pub fn matvec_batch(&self, x: &[f32], rows_per_batch: usize) -> crate::error::Result<Vec<f32>> {
+        if rows_per_batch == 0 || self.out_rows % rows_per_batch != 0 {
+            return Err(crate::error::BitNetError::Inference(
+                "invalid quant batch dimensions".into(),
+            ));
+        }
+        let batches = self.out_rows / rows_per_batch;
+        if x.len() != self.in_cols.saturating_mul(batches) {
+            return Err(crate::error::BitNetError::Inference(
+                "invalid quant batch input".into(),
+            ));
+        }
+        if let (Some(dev), Some(rt)) = (self.device.as_ref(), self.rt.as_ref()) {
+            if let Some(result) = crate::ggml::matvec_device_quant_batch_optional(
+                self.ggml_type,
+                dev.as_device_ptr(),
+                self.row_bytes,
+                x,
+                self.in_cols,
+                rows_per_batch,
+                batches,
+            ) {
+                let output = result?;
+                rt.record_device_resident_quant_gemv();
+                crate::perf::record_gpu_transfer(
+                    (x.len() * 4) as u64,
+                    (output.len() * 4) as u64,
+                    1,
+                );
+                return Ok(output);
+            }
+        }
+        let mut result = Vec::with_capacity(self.out_rows);
+        for batch in 0..batches {
+            result.extend(self.matvec_rows(
+                &x[batch * self.in_cols..(batch + 1) * self.in_cols],
+                batch * rows_per_batch,
+                rows_per_batch,
+            )?);
+        }
+        Ok(result)
     }
 }
 

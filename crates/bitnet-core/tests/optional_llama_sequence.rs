@@ -1,5 +1,6 @@
 //! Real-model greedy sequence and turn-stop regression against a pinned llama.cpp reference.
 //! Set RBITNET_LLAMA_SEQUENCE_JSON, RBITNET_TEST_GGUF and RBITNET_TOKENIZER to run.
+//! Optionally set RBITNET_SEQUENCE_BACKEND=cuda to exercise native kernels on hardware.
 
 use std::{fs, path::Path, sync::Arc};
 
@@ -36,6 +37,12 @@ fn optional_llama_greedy_sequence_and_turn_stop_match_reference() {
     assert!(!spec.cases.is_empty());
     let tokenizer = Tokenizer::from_file(&tokenizer_path).unwrap();
     let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf_path)).unwrap());
+    let backend = match std::env::var("RBITNET_SEQUENCE_BACKEND").as_deref() {
+        Ok("cuda") => BackendKind::Cuda,
+        Ok("hybrid") => BackendKind::Hybrid,
+        Ok("cpu") | Err(_) => BackendKind::Cpu,
+        Ok(other) => panic!("unsupported RBITNET_SEQUENCE_BACKEND: {other}"),
+    };
     for case in spec.cases {
         // The fixture is exported from llama.cpp /tokenize and /completion, including EOT.
         assert!(
@@ -50,12 +57,8 @@ fn optional_llama_greedy_sequence_and_turn_stop_match_reference() {
             "{}: tokenizer mismatch",
             case.name
         );
-        let mut runtime = LlamaRuntime::load(
-            Arc::clone(&archive),
-            Path::new(&tokenizer_path),
-            BackendKind::Cpu,
-        )
-        .unwrap();
+        let mut runtime =
+            LlamaRuntime::load(Arc::clone(&archive), Path::new(&tokenizer_path), backend).unwrap();
         let mut logits = runtime.prefill_chunk(&case.prompt_ids, 0).unwrap();
         for (step, expected) in case.greedy_ids.iter().enumerate() {
             let got = logits

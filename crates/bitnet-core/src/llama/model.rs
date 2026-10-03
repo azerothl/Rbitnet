@@ -228,7 +228,11 @@ fn try_load_rope_inv_freq(
     )?))
 }
 
-fn rope_inv_freq_from_factors(factors: &[f32], rope_rot_dims: usize, theta: f32) -> Result<Vec<f32>> {
+fn rope_inv_freq_from_factors(
+    factors: &[f32],
+    rope_rot_dims: usize,
+    theta: f32,
+) -> Result<Vec<f32>> {
     if factors.len() != rope_rot_dims / 2
         || !theta.is_finite()
         || theta <= 0.0
@@ -337,22 +341,24 @@ impl LlamaOffloadPlan {
             })
             .trim()
             .to_ascii_lowercase();
-        let layers = hybrid_layer_policy(&policy, cfg, layer_bytes, max_bytes);
-        let layer_count = layers.iter().filter(|&&v| v).count();
-        let output = matches!(
-            std::env::var("RBITNET_HYBRID_OUTPUT").as_deref(),
-            Ok("1") | Ok("true") | Ok("yes")
+        // Reserve the vocabulary projection first: leaving it on CPU dominated CUDA decode.
+        let output_bytes = cfg.n_embd.saturating_mul(cfg.n_vocab).saturating_mul(4);
+        let output_requested = match std::env::var("RBITNET_HYBRID_OUTPUT").as_deref() {
+            Ok("0" | "false" | "no") => false,
+            Ok("1" | "true" | "yes") => true,
+            _ => kind == BackendKind::Cuda,
+        };
+        let output = output_requested && output_bytes <= max_bytes;
+        let layers = hybrid_layer_policy(
+            &policy,
+            cfg,
+            layer_bytes,
+            max_bytes.saturating_sub(if output { output_bytes } else { 0 }),
         );
-        let estimated_weight_bytes =
-            layer_count
-                .saturating_mul(layer_bytes)
-                .saturating_add(if output {
-                    cfg.n_embd
-                        .saturating_mul(cfg.n_vocab)
-                        .saturating_mul(std::mem::size_of::<f32>())
-                } else {
-                    0
-                });
+        let layer_count = layers.iter().filter(|&&v| v).count();
+        let estimated_weight_bytes = layer_count
+            .saturating_mul(layer_bytes)
+            .saturating_add(if output { output_bytes } else { 0 });
         let enabled = layer_count > 0 || output;
         let kind_label = kind.as_str();
         Self {
@@ -400,7 +406,7 @@ fn hybrid_layer_policy(
     let max_layers = if layer_bytes == 0 {
         0
     } else {
-        (max_bytes / layer_bytes).max(1).min(cfg.n_layer)
+        (max_bytes / layer_bytes).min(cfg.n_layer)
     };
     match policy {
         // Keep the first N layers for compatibility with the initial hybrid implementation.
@@ -514,18 +520,16 @@ fn maybe_cuda_quant_or_dense(
     }
     // Diagnostic ablation only: compare resident cuBLAS F32 with the native quant kernel.
     #[cfg(feature = "profile-llama")]
-    let force_dense = matches!(std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref(), Ok("1"));
+    let force_dense = matches!(
+        std::env::var("RBITNET_PROFILE_CUDA_DENSE").as_deref(),
+        Ok("1")
+    );
     #[cfg(not(feature = "profile-llama"))]
     let force_dense = false;
     if !force_dense && ggml_type_supports_cuda_quant(tensor.ggml_type) {
         let payload = archive.tensor_payload(&tensor)?.to_vec();
-        match CudaDeviceQuantMatrix::from_payload(
-            rt,
-            tensor.ggml_type,
-            payload,
-            out_rows,
-            in_cols,
-        ) {
+        match CudaDeviceQuantMatrix::from_payload(rt, tensor.ggml_type, payload, out_rows, in_cols)
+        {
             Ok(device) => {
                 tracing::debug!(
                     tensor = label.as_str(),
@@ -573,8 +577,7 @@ fn matvec_ff_embd_dense(w: &[f32], x: &[f32], n_ff: usize, n_embd: usize) -> Vec
     let mut y = vec![0.0f32; n_embd];
     if blas_runtime::blas_attention_enabled()
         && blas_runtime::blas_ready()
-        && blas_runtime::sgemv_row_major_notrans(w, n_embd, n_ff, n_ff, 1.0, x, &mut y, 0.0)
-            .is_ok()
+        && blas_runtime::sgemv_row_major_notrans(w, n_embd, n_ff, n_ff, 1.0, x, &mut y, 0.0).is_ok()
     {
         return y;
     }
@@ -786,39 +789,26 @@ fn llama_cpu_attention_one_head(
         if blas_ok {
             mask_sliding_window_scores(&mut scores, sw_start);
         } else {
-            kv.attention_scores_cpu(
-                il,
-                pos,
-                kv_h,
-                head_dim,
-                stride,
-                q_slice,
-                scale,
-                &mut scores,
-            );
+            kv.attention_scores_cpu(il, pos, kv_h, head_dim, stride, q_slice, scale, &mut scores);
             mask_sliding_window_scores(&mut scores, sw_start);
         }
     } else {
-        kv.attention_scores_cpu(
-            il,
-            pos,
-            kv_h,
-            head_dim,
-            stride,
-            q_slice,
-            scale,
-            &mut scores,
-        );
+        kv.attention_scores_cpu(il, pos, kv_h, head_dim, stride, q_slice, scale, &mut scores);
         mask_sliding_window_scores(&mut scores, sw_start);
     }
     softmax_inplace(&mut scores);
     let mut comb = vec![0.0f32; head_dim];
     let mut v_values = vec![0.0f32; head_dim];
     for p in 0..=pos {
-        kv.fill_v_head_values(il, p, kv_h, head_dim, stride, &mut v_values);
+        let values = if matches!(kv, KvStorage::Dense(_)) {
+            kv.v_head_slice(il, p, kv_h, head_dim, stride)
+        } else {
+            kv.fill_v_head_values(il, p, kv_h, head_dim, stride, &mut v_values);
+            &v_values
+        };
         let sp = scores[p];
         for i in 0..head_dim {
-            comb[i] += sp * v_values[i];
+            comb[i] += sp * values[i];
         }
     }
     (qh, comb)
@@ -915,7 +905,10 @@ impl LlamaModel {
             } else {
                 vec!["token_embd.weight".into(), "token_embd".into()]
             };
-            let label = names.first().cloned().unwrap_or_else(|| "output.weight".into());
+            let label = names
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "output.weight".into());
             maybe_cuda_quant_or_dense(
                 &archive,
                 cuda.as_ref(),
@@ -1455,6 +1448,19 @@ impl LlamaModel {
         backend: &dyn ComputeBackend,
         scratch: &mut ScratchArena,
     ) -> Result<Vec<f32>> {
+        self.forward_step(kv, token, pos, backend, scratch, true)
+    }
+
+    /// Updates all layer caches, optionally omitting the unused vocabulary projection.
+    pub(crate) fn forward_step(
+        &self,
+        kv: &mut KvStorage,
+        token: u32,
+        pos: usize,
+        backend: &dyn ComputeBackend,
+        scratch: &mut ScratchArena,
+        logits_required: bool,
+    ) -> Result<Vec<f32>> {
         let cfg = &self.cfg;
         if pos >= cfg.max_seq {
             return Err(BitNetError::Inference(
@@ -1542,15 +1548,27 @@ impl LlamaModel {
             let scale = 1.0 / (cfg.head_dim as f32).sqrt();
             let sw_start = cfg.sliding_window_key_start(pos);
 
-            if matches!(
-                backend.kind(),
-                BackendKind::Cpu | BackendKind::Hybrid
-            ) {
+            let cuda_attention = matches!(backend.kind(), BackendKind::Cuda | BackendKind::Hybrid)
+                && !matches!(
+                    std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
+                    Ok("0" | "false" | "no")
+                )
+                && kv.attention_cuda(
+                    il,
+                    pos,
+                    sw_start,
+                    &q_heads,
+                    cfg.n_head,
+                    cfg.n_kv,
+                    cfg.head_dim,
+                    scale,
+                    &mut attn_out,
+                )?;
+            // Paged/quantized KV and older native libraries use the combined CPU path.
+            if !cuda_attention {
                 let use_blas_scores =
                     blas_runtime::blas_attention_enabled() && blas_runtime::blas_ready();
-                // SAFETY: `write_layer_kv` for this layer/position finished above; attention only
-                // reads KV for `il` and positions `0..=pos` until the next layer iteration.
-                let kv_ro: &KvStorage = unsafe { &*(kv as *mut KvStorage as *const KvStorage) };
+                let kv_ro: &KvStorage = kv;
                 let mut head_parts: Vec<(usize, Vec<f32>)> = (0..cfg.n_head)
                     .into_par_iter()
                     .map(|qh| {
@@ -1573,37 +1591,6 @@ impl LlamaModel {
                 for (qh, comb) in head_parts {
                     let dst = qh * cfg.head_dim;
                     attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
-                }
-            } else {
-                for qh in 0..cfg.n_head {
-                    let kv_h = qh / n_rep;
-                    let q_slice = &q_heads[qh * cfg.head_dim..(qh + 1) * cfg.head_dim];
-                    let mut scores: Vec<f32> = {
-                        let mut k_mat = scratch.take((pos + 1) * cfg.head_dim);
-                        kv.fill_k_rows_gpu(il, pos, kv_h, cfg.head_dim, stride, &mut k_mat);
-                        let mut s = backend.matvec(&k_mat, q_slice, pos + 1, cfg.head_dim)?;
-                        scratch.recycle(k_mat);
-                        for v in &mut s {
-                            *v *= scale;
-                        }
-                        mask_sliding_window_scores(&mut s, sw_start);
-                        s
-                    };
-                    softmax_inplace(&mut scores);
-                    let mut comb = scratch.take(cfg.head_dim);
-                    let mut v_values = scratch.take(cfg.head_dim);
-                    for p in 0..=pos {
-                        kv.fill_v_head_values(il, p, kv_h, cfg.head_dim, stride, &mut v_values);
-                        let sp = scores[p];
-                        for i in 0..cfg.head_dim {
-                            comb[i] += sp * v_values[i];
-                        }
-                    }
-                    let dst = qh * cfg.head_dim;
-                    attn_out[dst..dst + cfg.head_dim].copy_from_slice(&comb);
-                    scratch.recycle(scores);
-                    scratch.recycle(comb);
-                    scratch.recycle(v_values);
                 }
             }
 
@@ -1637,6 +1624,10 @@ impl LlamaModel {
             add_residual_inplace(&mut x, &y2);
         }
 
+        if !logits_required {
+            scratch.recycle(x);
+            return Ok(Vec::new());
+        }
         let mut xn = scratch.take(n_embd);
         rmsnorm_into(&x, &self.output_norm, cfg.norm_eps, &mut xn);
         #[cfg(feature = "profile-llama")]

@@ -13,6 +13,7 @@ pub struct PerfSnapshot {
     pub gpu_upload_bytes: u64,
     pub gpu_download_bytes: u64,
     pub gpu_gemv_calls: u64,
+    pub gpu_attention_calls: u64,
     pub scratch_alloc_bytes: u64,
     pub scratch_reuse_hits: u64,
     pub kv_write_bytes: u64,
@@ -50,6 +51,7 @@ struct PerfCounters {
     gpu_upload_bytes: AtomicU64,
     gpu_download_bytes: AtomicU64,
     gpu_gemv_calls: AtomicU64,
+    gpu_attention_calls: AtomicU64,
     scratch_alloc_bytes: AtomicU64,
     scratch_reuse_hits: AtomicU64,
     kv_write_bytes: AtomicU64,
@@ -127,6 +129,10 @@ pub fn record_gpu_transfer(upload_bytes: u64, download_bytes: u64, gemv_calls: u
     p.gpu_download_bytes
         .fetch_add(download_bytes, Ordering::Relaxed);
     p.gpu_gemv_calls.fetch_add(gemv_calls, Ordering::Relaxed);
+}
+
+pub(crate) fn record_gpu_attention() {
+    perf().gpu_attention_calls.fetch_add(1, Ordering::Relaxed);
 }
 
 pub fn record_scratch_alloc(bytes: usize) {
@@ -228,8 +234,7 @@ pub fn record_scheduler_prefill_chunk(chunks: usize) {
 /// One stall-free iteration of the Sarathi-style schedule (decode-first, then prefill chunks).
 pub fn record_scheduler_stall_free_iter(budget: usize) {
     let p = perf();
-    p.scheduler_stall_free_iters
-        .fetch_add(1, Ordering::Relaxed);
+    p.scheduler_stall_free_iters.fetch_add(1, Ordering::Relaxed);
     p.scheduler_iteration_budget
         .store(budget as u64, Ordering::Relaxed);
 }
@@ -254,6 +259,7 @@ pub fn snapshot() -> PerfSnapshot {
         gpu_upload_bytes: p.gpu_upload_bytes.load(Ordering::Relaxed),
         gpu_download_bytes: p.gpu_download_bytes.load(Ordering::Relaxed),
         gpu_gemv_calls: p.gpu_gemv_calls.load(Ordering::Relaxed),
+        gpu_attention_calls: p.gpu_attention_calls.load(Ordering::Relaxed),
         scratch_alloc_bytes: p.scratch_alloc_bytes.load(Ordering::Relaxed),
         scratch_reuse_hits: p.scratch_reuse_hits.load(Ordering::Relaxed),
         kv_write_bytes: p.kv_write_bytes.load(Ordering::Relaxed),
@@ -322,6 +328,11 @@ pub fn prometheus_text() -> String {
         "rbitnet_core_gpu_gemv_calls_total",
         "GPU GEMV calls issued by bitnet-core",
         snap.gpu_gemv_calls
+    );
+    counter!(
+        "rbitnet_core_gpu_attention_calls_total",
+        "Fused resident-KV CUDA attention calls issued by bitnet-core",
+        snap.gpu_attention_calls
     );
     counter!(
         "rbitnet_core_scratch_alloc_bytes_total",

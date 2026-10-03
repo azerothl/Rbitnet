@@ -3,9 +3,12 @@
 use crate::error::{BitNetError, Result};
 use crate::ggml::{ggml_nbytes, tensor_to_f32};
 use crate::gguf::{GgufArchive, GgufTensorInfo};
+use crate::native::weights::Weights;
 
 use super::config::Qwen35Config;
-use super::qmatvec::{quant_matmul_vec, quant_matmul_vec_offset};
+use super::qmatvec::{
+    weighted_matmul_vec as quant_matmul_vec, weighted_matmul_vec_offset as quant_matmul_vec_offset,
+};
 
 fn softmax_vec(s: &mut [f32]) {
     let m = s.iter().copied().fold(f32::NEG_INFINITY, f32::max);
@@ -35,7 +38,8 @@ fn top_k_indices(scores: &[f32], k: usize) -> Vec<usize> {
 
 /// Routed experts + SiLU gated FF; returns delta hidden `[n_embd]`.
 #[allow(clippy::too_many_arguments)]
-pub fn moe_forward(
+pub(crate) fn moe_forward(
+    weights: &Weights,
     archive: &GgufArchive,
     cfg: &Qwen35Config,
     x: &[f32],
@@ -56,7 +60,7 @@ pub fn moe_forward(
     let n_exp_g = usize::try_from(gate_inp.dimensions[1])
         .map_err(|_| BitNetError::Inference("ne1 gate".into()))?;
     let gi_py = archive.tensor_payload(gate_inp)?;
-    let mut router = quant_matmul_vec(gi_py, gate_inp.ggml_type, n_emb_g, n_exp_g, x)?;
+    let mut router = quant_matmul_vec(weights, gi_py, gate_inp.ggml_type, n_emb_g, n_exp_g, x)?;
     softmax_vec(&mut router);
     let topk = topk_override.unwrap_or(cfg.n_expert_used).max(1);
     let top = top_k_indices(&router, topk);
@@ -119,8 +123,9 @@ pub fn moe_forward(
             if n_embd_f == n_embd_up && n_2ff_f >= n_ff_up * 2 {
                 let stride_fused = ggml_nbytes(&[fused_dims[0], fused_dims[1]], *fused_ty)?;
                 let fused_off = e * stride_fused;
-                let gate_up =
-                    quant_matmul_vec_offset(fused_py, *fused_ty, n_embd_f, n_2ff_f, fused_off, x)?;
+                let gate_up = quant_matmul_vec_offset(
+                    weights, fused_py, *fused_ty, n_embd_f, n_2ff_f, fused_off, x,
+                )?;
                 let mut gate = vec![0f32; n_ff_up];
                 let mut up = vec![0f32; n_ff_up];
                 gate.copy_from_slice(&gate_up[..n_ff_up]);
@@ -128,6 +133,7 @@ pub fn moe_forward(
                 (up, gate)
             } else {
                 let up = quant_matmul_vec_offset(
+                    weights,
                     up_payload,
                     up_exps.ggml_type,
                     n_embd_up,
@@ -136,6 +142,7 @@ pub fn moe_forward(
                     x,
                 )?;
                 let gate = quant_matmul_vec_offset(
+                    weights,
                     gate_payload,
                     gate_exps.ggml_type,
                     n_embd_up,
@@ -147,6 +154,7 @@ pub fn moe_forward(
             }
         } else {
             let up = quant_matmul_vec_offset(
+                weights,
                 up_payload,
                 up_exps.ggml_type,
                 n_embd_up,
@@ -155,6 +163,7 @@ pub fn moe_forward(
                 x,
             )?;
             let gate = quant_matmul_vec_offset(
+                weights,
                 gate_payload,
                 gate_exps.ggml_type,
                 n_embd_up,
@@ -168,6 +177,7 @@ pub fn moe_forward(
         let hidden: Vec<f32> = gu.iter().zip(silu_g.iter()).map(|(u, g)| u * g).collect();
 
         let y = quant_matmul_vec_offset(
+            weights,
             down_payload,
             down_exps.ggml_type,
             n_ff_dn,
@@ -183,7 +193,8 @@ pub fn moe_forward(
     Ok(acc)
 }
 
-pub fn shared_expert_forward(
+pub(crate) fn shared_expert_forward(
+    weights: &Weights,
     archive: &GgufArchive,
     cfg: &Qwen35Config,
     x: &[f32],
@@ -207,15 +218,22 @@ pub fn shared_expert_forward(
     let down_py = archive.tensor_payload(down_w)?;
 
     let n_ff = cfg.n_ff_shexp.max(1);
-    let up = quant_matmul_vec(up_py, up_w.ggml_type, cfg.n_embd, n_ff, x)?;
-    let gate = quant_matmul_vec(gate_py, gate_w.ggml_type, cfg.n_embd, n_ff, x)?;
+    let up = quant_matmul_vec(weights, up_py, up_w.ggml_type, cfg.n_embd, n_ff, x)?;
+    let gate = quant_matmul_vec(weights, gate_py, gate_w.ggml_type, cfg.n_embd, n_ff, x)?;
     let silu_gate = silu(&gate);
     let hidden: Vec<f32> = up
         .iter()
         .zip(silu_gate.iter())
         .map(|(u, gi)| u * gi)
         .collect();
-    let mut y = quant_matmul_vec(down_py, down_w.ggml_type, n_ff, cfg.n_embd, &hidden)?;
+    let mut y = quant_matmul_vec(
+        weights,
+        down_py,
+        down_w.ggml_type,
+        n_ff,
+        cfg.n_embd,
+        &hidden,
+    )?;
     for v in &mut y {
         *v *= g;
     }
