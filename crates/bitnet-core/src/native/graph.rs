@@ -16,6 +16,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+#[path = "gpt_full.rs"]
+mod gpu_full;
+
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Family {
     GptOss,
@@ -266,6 +269,8 @@ struct LayerKv {
 }
 pub(crate) struct Runtime {
     cfg: Config,
+    // CUDA graphs borrow expert contexts and matrix addresses. Drop them first.
+    gpu_full: Option<gpu_full::GpuFull>,
     weights: Weights,
     tokenizer: LoadedPromptTokenizer,
     kv: Vec<LayerKv>,
@@ -505,9 +510,18 @@ impl Runtime {
                 std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
                 Ok("0" | "false" | "no")
             );
-        let gpu_head = super::head::GpuHead::new(&weights, "output.weight", cfg.eps);
+        let gpu_full = gpu_full::GpuFull::new(&weights, &cfg, &gpu_moe, kind);
+        if std::env::var("RBITNET_REQUIRE_GPT_FULL").as_deref() == Ok("1") && gpu_full.is_none() {
+            return Err(BitNetError::Inference("fully resident GPT-OSS unavailable: requires CUDA, supported native DLL, CPU quant SIMD, all fixed expert banks and attention/output weights within budget".into()));
+        }
+        let gpu_head = if gpu_full.is_none() {
+            super::head::GpuHead::new(&weights, "output.weight", cfg.eps)
+        } else {
+            None
+        };
         Ok(Self {
             cfg,
+            gpu_full,
             weights,
             tokenizer,
             kv,
@@ -843,6 +857,12 @@ impl Runtime {
             c.vocab,
             &mut x,
         )?;
+        if let Some(full) = &mut self.gpu_full {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            return full.run(&x, pos, logits, greedy);
+        }
         for il in 0..self.cfg.layers {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -909,7 +929,8 @@ impl Runtime {
         }
         let mut logits = Vec::new();
         let mut next_token = None;
-        let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
+        let gpu_greedy = (self.gpu_full.is_some() || self.gpu_head.is_some())
+            && sampling.device_greedy_eligible();
         for (pos, &id) in ids.iter().enumerate() {
             (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
         }
@@ -1021,10 +1042,11 @@ impl ModelExecutor for NativeExecutor {
     }
     fn offload_metadata(&self) -> Option<String> {
         self.runtime.lock().ok().map(|r| {
-            format!(
-                "resident quantized weights: {} MiB; resident output head: {}; remaining matrices execute on CPU",
-                r.weights.resident_bytes / (1024 * 1024),r.gpu_head.is_some()
-            )
+            if let Some(full)=&r.gpu_full {
+                format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: true; fixed expert banks; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
+            } else {
+                format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: false; resident output head: {}; resident routed expert layers: {}; attention GPU enabled: {}; remaining operations execute on CPU; context capacity: {}",r.weights.resident_bytes/(1024*1024),r.gpu_head.is_some(),r.gpu_moe.iter().filter(|m|m.is_some()).count(),r.use_gpu_attention,r.cfg.max_seq)
+            }
         })
     }
     fn generate_with_timings(
@@ -1059,6 +1081,308 @@ impl ModelExecutor for NativeExecutor {
 
 #[cfg(test)]
 mod tests {
+    struct ScopedEnv(Vec<(String, Option<std::ffi::OsString>)>);
+    impl ScopedEnv {
+        fn new(keys: &[&str]) -> Self {
+            Self(
+                keys.iter()
+                    .map(|&k| (k.to_owned(), std::env::var_os(k)))
+                    .collect(),
+            )
+        }
+    }
+    impl Drop for ScopedEnv {
+        fn drop(&mut self) {
+            for (k, v) in &self.0 {
+                if let Some(v) = v {
+                    std::env::set_var(k, v);
+                } else {
+                    std::env::remove_var(k);
+                }
+            }
+        }
+    }
+    #[test]
+    fn opt_in_gpt_full_real_layer_diagnosis() {
+        use super::*;
+        if std::env::var("RBITNET_GPT_TRACE_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let _env = ScopedEnv::new(&[
+            "RBITNET_CUDA_GPT_FULL",
+            "RBITNET_REQUIRE_GPT_FULL",
+            "RBITNET_CUDA_SPLIT_KV",
+        ]);
+        let gguf = std::env::var("RBITNET_GPT_TEST_GGUF").unwrap();
+        let tokenizer = std::env::var("RBITNET_GPT_TEST_TOKENIZER").unwrap();
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        std::env::set_var("RBITNET_CUDA_GPT_FULL", "0");
+        std::env::set_var("RBITNET_REQUIRE_GPT_FULL", "0");
+        let mut r = Runtime::load(
+            Arc::clone(&archive),
+            Path::new(&tokenizer),
+            BackendKind::Cuda,
+            Family::GptOss,
+        )
+        .unwrap();
+        let ids:Vec<_>=r.tokenizer.encode_ids(&"Paris est la capitale de la France. Un robot visite une bibliothèque et lit des livres. ".repeat(40),true).unwrap().into_iter().take(273).collect();
+        let mut embeddings = Vec::new();
+        let mut expected = Vec::new();
+        let mut raw_scores = Vec::new();
+        let mut routes = Vec::new();
+        for (pos, &id) in ids.iter().enumerate() {
+            let c = &r.cfg;
+            let mut x = vec![0.0; c.embd];
+            crate::ggml::embedding_row_mmap(
+                &r.weights.archive,
+                r.weights.tensor("token_embd.weight").unwrap(),
+                id as usize,
+                c.embd,
+                c.vocab,
+                &mut x,
+            )
+            .unwrap();
+            embeddings.push(x.clone());
+            let mut hidden = Vec::new();
+            let mut scores = Vec::new();
+            let mut selected = Vec::new();
+            for il in 0..r.cfg.layers {
+                let h = r.rms(il, "attn_norm", &x).unwrap();
+                let attn = r.attention(il, pos, &h).unwrap();
+                add(&mut x, &attn).unwrap();
+                let h = r.rms(il, "post_attention_norm", &x).unwrap();
+                let raw = r.linear(il, "ffn_gate_inp", &h).unwrap();
+                let bias = r.weights.dense(&format!("blk.{il}.exp_probs_b.bias")).ok();
+                let mut ids: Vec<_> = (0..r.cfg.experts).collect();
+                ids.sort_by(|&a, &b| {
+                    (raw[b] + bias.map(|v| v[b]).unwrap_or(0.0))
+                        .total_cmp(&(raw[a] + bias.map(|v| v[a]).unwrap_or(0.0)))
+                        .then(a.cmp(&b))
+                });
+                ids.truncate(r.cfg.used);
+                selected.push(ids);
+                scores.push(raw);
+                let ffn = r.moe(il, &h).unwrap();
+                add(&mut x, &ffn).unwrap();
+                hidden.push(x.clone());
+            }
+            expected.push(hidden);
+            raw_scores.push(scores);
+            routes.push(selected);
+        }
+        let embd = r.cfg.embd;
+        let experts = r.cfg.experts;
+        let used = r.cfg.used;
+        drop(r);
+        std::env::set_var("RBITNET_CUDA_GPT_FULL", "1");
+        std::env::set_var("RBITNET_REQUIRE_GPT_FULL", "1");
+        std::env::set_var("RBITNET_CUDA_SPLIT_KV", "0");
+        let mut r = Runtime::load(
+            archive,
+            Path::new(&tokenizer),
+            BackendKind::Cuda,
+            Family::GptOss,
+        )
+        .unwrap();
+        let mut mismatches = 0;
+        for (pos, x) in embeddings.iter().enumerate() {
+            let trace = r.gpu_full.as_mut().unwrap().trace(x, pos, experts, used);
+            for (il, row) in trace.chunks_exact(embd + experts + used).enumerate() {
+                let ids: Vec<_> = row[embd + experts..].iter().map(|&v| v as usize).collect();
+                let diff = row[..embd]
+                    .iter()
+                    .zip(&expected[pos][il])
+                    .map(|(&a, &b)| (a - b).abs())
+                    .fold(0.0f32, f32::max);
+                if ids != routes[pos][il] {
+                    mismatches += 1;
+                    eprintln!("pos={pos} layer={il} hidden_max_abs={diff:.6} actual_ids={ids:?} expected_ids={:?} actual_logits={:?} expected_logits={:?}",routes[pos][il],&row[embd..embd+experts],raw_scores[pos][il]);
+                } else if [0, 127, 128, 254, 255, 256, 272].contains(&pos) {
+                    eprintln!("pos={pos} layer={il} hidden_max_abs={diff:.6} routes_match");
+                }
+            }
+        }
+        eprintln!("GPT route disagreements={mismatches}");
+    }
+
+    #[test]
+    fn opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset() {
+        use super::*;
+        if std::env::var("RBITNET_GPT_FULL_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let gguf = std::env::var("RBITNET_GPT_TEST_GGUF").unwrap();
+        let tokenizer = std::env::var("RBITNET_GPT_TEST_TOKENIZER").unwrap();
+        let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+        let corpus=["Paris est la capitale de la France. Un robot visite une bibliothèque et lit des livres. ".repeat(40),"fn somme(values: &[i32]) -> i32 { values.iter().sum() } // vérifier les cas vides et les valeurs négatives\n".repeat(40)];
+        let prompts=["<|start|>user<|message|>Quelle est la capitale de la France ? Réponds en un mot.<|end|><|start|>assistant<|channel|>final<|message|>","<|start|>user<|message|>Écris une fonction Python qui additionne deux nombres.<|end|><|start|>assistant<|channel|>final<|message|>"];
+        let samples = [
+            SamplingOptions::from_temperature(0.0),
+            SamplingOptions {
+                seed: Some(42),
+                ..SamplingOptions::from_temperature(0.7)
+            },
+            SamplingOptions {
+                frequency_penalty: 0.1,
+                presence_penalty: 0.1,
+                seed: Some(7),
+                ..SamplingOptions::from_temperature(0.0)
+            },
+        ];
+        let observed = [0, 1, 7, 15, 31, 63, 127, 128, 255, 256, 271, 272];
+        // Keep all environment changes scoped even when an assertion unwinds.
+        struct Env(Vec<(String, Option<std::ffi::OsString>)>);
+        impl Drop for Env {
+            fn drop(&mut self) {
+                for (k, v) in &self.0 {
+                    if let Some(v) = v {
+                        std::env::set_var(k, v);
+                    } else {
+                        std::env::remove_var(k);
+                    }
+                }
+            }
+        }
+        let _env = Env([
+            "RBITNET_CUDA_GPT_FULL",
+            "RBITNET_REQUIRE_GPT_FULL",
+            "RBITNET_CUDA_GPT_FULL_GRAPH",
+            "RBITNET_CUDA_SPLIT_KV",
+            "RBITNET_MOE_CACHE_MB",
+        ]
+        .into_iter()
+        .map(|k| (k.to_owned(), std::env::var_os(k)))
+        .collect());
+        std::env::set_var("RBITNET_MOE_CACHE_MB", "0");
+        std::env::set_var("RBITNET_CUDA_GPT_FULL", "0");
+        std::env::set_var("RBITNET_REQUIRE_GPT_FULL", "0");
+        let mut reference = Runtime::load(
+            Arc::clone(&archive),
+            Path::new(&tokenizer),
+            BackendKind::Cuda,
+            Family::GptOss,
+        )
+        .unwrap();
+        eprintln!(
+            "GPT reference resident weights {} MiB; fixed expert layers {}/{}",
+            reference.weights.resident_bytes / (1024 * 1024),
+            reference.gpu_moe.iter().flatten().count(),
+            reference.cfg.layers
+        );
+        let inputs: Vec<Vec<u32>> = corpus
+            .iter()
+            .map(|p| {
+                reference
+                    .tokenizer
+                    .encode_ids(p, true)
+                    .unwrap()
+                    .into_iter()
+                    .take(273)
+                    .collect()
+            })
+            .collect();
+        assert!(inputs.iter().all(|v| v.len() == 273));
+        let mut expected = Vec::new();
+        for ids in &inputs {
+            let mut outputs = Vec::new();
+            for (pos, &id) in ids.iter().enumerate() {
+                let (logits, _) = reference
+                    .forward(id, pos, observed.contains(&pos), false)
+                    .unwrap();
+                if observed.contains(&pos) {
+                    outputs.push(logits);
+                }
+            }
+            expected.push(outputs);
+        }
+        let mut texts = Vec::new();
+        for prompt in prompts {
+            for sampling in &samples {
+                texts.push(reference.generate(prompt, 32, *sampling, None).unwrap().0);
+            }
+        }
+        drop(reference);
+        let mut worst_kl = 0.0f64;
+        let mut worst_nll = 0.0f64;
+        for (graphs, split) in [("0", "0"), ("1", "0"), ("1", "1")] {
+            std::env::set_var("RBITNET_CUDA_GPT_FULL", "1");
+            std::env::set_var("RBITNET_REQUIRE_GPT_FULL", "1");
+            std::env::set_var("RBITNET_CUDA_GPT_FULL_GRAPH", graphs);
+            std::env::set_var("RBITNET_CUDA_SPLIT_KV", split);
+            let mut actual = Runtime::load(
+                Arc::clone(&archive),
+                Path::new(&tokenizer),
+                BackendKind::Cuda,
+                Family::GptOss,
+            )
+            .unwrap();
+            assert!(actual.gpu_full.is_some());
+            for (case, ids) in inputs.iter().enumerate() {
+                let mut n = 0;
+                for (pos, &id) in ids.iter().enumerate() {
+                    let (got, _) = actual
+                        .forward(id, pos, observed.contains(&pos), false)
+                        .unwrap();
+                    if !observed.contains(&pos) {
+                        continue;
+                    }
+                    let expected = &expected[case][n];
+                    n += 1;
+                    let argmax = |x: &[f32]| {
+                        x.iter()
+                            .enumerate()
+                            .max_by(|a, b| a.1.total_cmp(b.1))
+                            .unwrap()
+                            .0
+                    };
+                    assert_eq!(
+                        argmax(&got),
+                        argmax(expected),
+                        "corpus {case} position {pos} graphs {graphs} split {split}"
+                    );
+                    for (i, (&a, &b)) in got.iter().zip(expected).enumerate() {
+                        assert!((a-b).abs()<=0.003*(1.0+b.abs()),"corpus={case} pos={pos} graphs={graphs} split={split} token={i}: {a} vs {b}");
+                    }
+                    let logprob = |x: &[f32]| {
+                        let max = x.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
+                        let total =
+                            x.iter().map(|&v| (v as f64 - max).exp()).sum::<f64>().ln() + max;
+                        x.iter().map(|&v| v as f64 - total).collect::<Vec<_>>()
+                    };
+                    let p = logprob(expected);
+                    let q = logprob(&got);
+                    let kl = p
+                        .iter()
+                        .zip(&q)
+                        .map(|(&p, &q)| p.exp() * (p - q))
+                        .sum::<f64>()
+                        .max(0.0);
+                    let id = ids.get(pos + 1).copied().unwrap_or(ids[pos]) as usize;
+                    let nll = (p[id] - q[id]).abs();
+                    worst_kl = worst_kl.max(kl);
+                    worst_nll = worst_nll.max(nll);
+                    assert!(
+                        kl <= 1e-5 && nll <= 1e-3,
+                        "KL={kl} NLL_delta={nll}, corpus {case}, pos {pos}"
+                    );
+                }
+            }
+            let mut n = 0;
+            for prompt in prompts {
+                for sampling in &samples {
+                    let got = actual.generate(prompt, 32, *sampling, None).unwrap().0;
+                    assert_eq!(got, texts[n], "graphs {graphs} split {split} sample {n}");
+                    n += 1;
+                }
+            }
+            eprintln!("GPT-OSS real teacher-forcing + six generations passed graphs={graphs}, split={split}");
+            drop(actual);
+        }
+        eprintln!(
+            "GPT real worst KL={worst_kl:.3e}, worst absolute target NLL delta={worst_nll:.3e}"
+        );
+    }
+
     #[test]
     fn mla_rotates_consecutive_pairs_and_gpt_oss_rotates_halves() {
         let mut cfg = super::Config {

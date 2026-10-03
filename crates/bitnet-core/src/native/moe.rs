@@ -63,6 +63,11 @@ pub(super) struct GpuMoe {
     experts: usize,
 }
 impl GpuMoe {
+    // The whole-token graph borrows only immutable, fully resident expert banks.
+    // Cached banks require lease acquisition between router and expert execution.
+    pub(super) fn fixed_context_address(&self) -> Option<usize> {
+        matches!(self.storage, Storage::Fixed { .. }).then_some(self.context)
+    }
     pub fn new(
         weights: &Weights,
         layer: usize,

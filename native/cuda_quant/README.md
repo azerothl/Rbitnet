@@ -172,3 +172,33 @@ between blocks, and advances valid lengths only after successful synchronization
 State cannot be truncated like dense KV. Diagnostic `*_prefill_check` entrypoints
 share these production layer functions for independent FP64 oracles; their
 temporary host transfers/allocations are excluded from performance measurements.
+
+`RBITNET_CUDA_GPT_FULL=1` enables a complete fixed-bank GPT-OSS token pipeline
+(`gpt_full.cuh`), including biased Q/K/V and output projections, partial NeoX/
+YaRN, GQA, alternating sliding windows, attention sinks, router top-k/selected
+softmax, biased OAI expert FFNs, RMS/residuals and output projection/argmax.
+One embedding/position upload and one final logits/ID download are synchronized
+per token. Three reusable graphs share one private stream and fixed K/V buffers;
+position zero resets validity and reads exclude stale/future keys. Sinks contribute
+to the denominator only, also in split-KV attention.
+
+Router ties keep the lower expert ID, with `total_cmp` order (unlike output argmax
+ties). Near-tied experts can amplify a small rounding difference into a different
+model path. The Rust wrapper selects the configured AVX2/AVX512 F32 accumulator
+width; ordered RMS reductions and host-precomputed rotary sin/cos retain the
+existing numerical order without per-layer host traffic. This bounds numerical
+differences in the tested cases; it is not a universal bit-exactness guarantee.
+
+Expert contexts are borrowed exclusively and temporarily alias the full stream/
+hidden buffers during enqueue, with all fields restored after capture. Rust drops
+the full graph before its expert contexts and immutable weight owners. Dynamic
+expert caches, partial placement, unsupported variants and missing DLL symbols
+keep the previous runtime. `RBITNET_REQUIRE_GPT_FULL=1` makes that a load error;
+`RBITNET_CUDA_GPT_FULL_GRAPH=0` uses eager execution. The feature is off by default,
+has no block prefill or session snapshot API yet, and does not complete #88's
+dynamic-cache integration. The actual-token counter is
+`rbitnet_core_gpu_gpt_full_tokens_total`; prototype/legacy fallback reports zero.
+
+`gpt_full_hidden_check`, `gpt_full_layers_check` and `gpt_router_check` are
+diagnostic APIs sharing production enqueue/router kernels. Their host transfers
+and temporary allocations are excluded from throughput measurements.
