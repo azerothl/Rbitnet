@@ -1,0 +1,1114 @@
+//! Opt-in host/disk prefix checkpoints. Native transfers are owned by the caller.
+//! RAM budgets are per runtime; optional disk quotas span managed namespaces.
+//! No SSD access occurs inside token decoding.
+mod global_quota;
+use crate::portable_envelope::{self, Compatibility, HostCheckpoint};
+use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
+use std::fs::{File, OpenOptions};
+use std::io;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+
+#[derive(Clone, Debug)]
+pub(crate) struct Policy {
+    pub directory: PathBuf,
+    pub ram_bytes: usize,
+    pub disk_bytes: usize,
+    pub global_disk_bytes: Option<usize>,
+    pub entries: usize,
+    pub retention: Duration,
+}
+impl Policy {
+    pub fn from_env() -> io::Result<Option<Self>> {
+        if !matches!(
+            std::env::var("RBITNET_CONTEXT_TIERS").as_deref(),
+            Ok("1" | "true")
+        ) {
+            return Ok(None);
+        }
+        fn number(name: &str, default: usize) -> io::Result<usize> {
+            match std::env::var(name) {
+                Ok(value) => value
+                    .trim()
+                    .parse()
+                    .map_err(|_| invalid("invalid context budget")),
+                Err(_) => Ok(default),
+            }
+        }
+        let directory = std::env::var_os("RBITNET_CONTEXT_DIR")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+            .ok_or_else(|| invalid("RBITNET_CONTEXT_DIR is required for context tiers"))?;
+        let mib = |name, default| {
+            number(name, default)?
+                .checked_mul(1024 * 1024)
+                .ok_or_else(|| invalid("context budget overflow"))
+        };
+        let policy = Self {
+            directory,
+            ram_bytes: mib("RBITNET_CONTEXT_RAM_MB", 256)?,
+            disk_bytes: mib("RBITNET_CONTEXT_DISK_MB", 2048)?,
+            global_disk_bytes: if std::env::var_os("RBITNET_CONTEXT_DISK_GLOBAL_MB").is_some() {
+                Some(mib("RBITNET_CONTEXT_DISK_GLOBAL_MB", 2048)?)
+            } else {
+                None
+            },
+            entries: number("RBITNET_CONTEXT_ENTRIES", 64)?,
+            retention: Duration::from_secs(number("RBITNET_CONTEXT_TTL_SECS", 1800)? as u64),
+        };
+        if policy.ram_bytes == 0
+            || policy.entries == 0
+            || policy.entries > 4096
+            || policy.retention.is_zero()
+        {
+            return Err(invalid(
+                "context RAM, entry count and TTL must be positive and bounded",
+            ));
+        }
+        Ok(Some(policy))
+    }
+}
+fn invalid(message: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, message)
+}
+fn linked(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x400 != 0;
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+// Create only one managed component after its parent has been checked. On
+// Windows retain an un-followed handle without delete sharing, so the component
+// cannot be renamed/replaced while this store uses paths below it.
+fn owned_directory(path: &Path) -> io::Result<File> {
+    match std::fs::create_dir(path) {
+        Ok(()) => (),
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => (),
+        Err(error) => return Err(error),
+    }
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.is_dir() || linked(&metadata) {
+        return Err(invalid(
+            "managed checkpoint directory must be a real directory",
+        ));
+    }
+    #[cfg(windows)]
+    let handle = {
+        use std::os::windows::fs::OpenOptionsExt;
+        OpenOptions::new()
+            .access_mode(0x80) // FILE_READ_ATTRIBUTES
+            .share_mode(0x1 | 0x2) // read/write sharing; no deletion or rename
+            .custom_flags(0x02000000 | 0x00200000) // BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+            .open(path)?
+    };
+    #[cfg(not(windows))]
+    let handle = File::open(path)?;
+    let opened = handle.metadata()?;
+    if !opened.is_dir() || linked(&opened) {
+        return Err(invalid("opened checkpoint directory must not redirect"));
+    }
+    Ok(handle)
+}
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|value| format!("{value:02x}")).collect()
+}
+fn address(name: &str) -> bool {
+    name.len() == 64
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+}
+
+fn interrupted_write_name(name: &str) -> bool {
+    let Some(body) = name
+        .strip_prefix('.')
+        .and_then(|value| value.strip_suffix(".tmp"))
+    else {
+        return false;
+    };
+    let mut parts = body.split('-');
+    matches!(parts.next(), Some(value) if address(value))
+        && matches!(parts.next(), Some(value) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) && value.parse::<u32>().is_ok())
+        && matches!(parts.next(), Some(value) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) && value.parse::<u64>().is_ok())
+        && parts.next().is_none()
+}
+
+/// A borrow owns its payload even if a cache entry is evicted. Its bytes stay charged
+/// until the last lease is dropped, preventing hidden over-budget active snapshots.
+pub(crate) struct Lease {
+    pub checkpoint: HostCheckpoint,
+    charged: Arc<AtomicUsize>,
+    bytes: usize,
+}
+impl Drop for Lease {
+    fn drop(&mut self) {
+        self.charged.fetch_sub(self.bytes, Ordering::AcqRel);
+    }
+}
+struct Entry {
+    tokens: Vec<u32>,
+    payload_bytes: usize,
+    file: Option<PathBuf>,
+    file_bytes: usize,
+    host: Option<Arc<Lease>>,
+    created: SystemTime,
+    used: u64,
+}
+#[derive(Default, Clone, Debug, serde::Serialize)]
+pub(crate) struct Stats {
+    pub ram_hits: u64,
+    pub disk_hits: u64,
+    pub misses: u64,
+    pub writes: u64,
+    pub write_failures: u64,
+    pub read_failures: u64,
+    pub captures: u64,
+    pub capture_refusals: u64,
+    pub evictions: u64,
+    pub read_ns: u64,
+    pub write_ns: u64,
+}
+pub(crate) struct Store {
+    key: Compatibility,
+    policy: Policy,
+    directory: PathBuf,
+    // Exclusive OS lock isolates cooperative runtimes and is released by process exit.
+    _directory_lock: File,
+    _managed_directories: [File; 2],
+    entries: BTreeMap<String, Entry>,
+    charged: Arc<AtomicUsize>,
+    disk_used: usize,
+    clock: u64,
+    pub stats: Stats,
+}
+impl Store {
+    pub fn open(key: Compatibility, policy: Policy) -> io::Result<Self> {
+        let identity = hex(&Sha256::digest(serde_json::to_vec(&key)?));
+        std::fs::create_dir_all(&policy.directory)?;
+        let format_directory = policy.directory.join("rbitnet-state-v1");
+        let format_guard = owned_directory(&format_directory)?;
+        let directory = format_directory.join(identity);
+        let namespace_guard = owned_directory(&directory)?;
+        let lock_path = directory.join(".owner.lock");
+        match std::fs::symlink_metadata(&lock_path) {
+            Ok(metadata) if linked(&metadata) || !metadata.is_file() => {
+                return Err(invalid("checkpoint lock must be a regular unlinked file"));
+            }
+            Ok(_) => (),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error),
+        }
+        let mut lock_options = OpenOptions::new();
+        lock_options
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            lock_options.share_mode(0x1 | 0x2).custom_flags(0x00200000);
+        }
+        let lock = lock_options.open(lock_path)?;
+        let metadata = lock.metadata()?;
+        if linked(&metadata) || !metadata.is_file() {
+            return Err(invalid("opened checkpoint lock must not redirect"));
+        }
+        lock.try_lock()
+            .map_err(|error| io::Error::new(io::ErrorKind::WouldBlock, error.to_string()))?;
+        let mut store = Self {
+            key,
+            policy,
+            directory,
+            _directory_lock: lock,
+            _managed_directories: [format_guard, namespace_guard],
+            entries: BTreeMap::new(),
+            charged: Arc::new(AtomicUsize::new(0)),
+            disk_used: 0,
+            clock: 0,
+            stats: Stats::default(),
+        };
+        // Header inspection is bounded indexing only. Integrity and all identities
+        // are checked again by read_checkpoint before any payload reaches CUDA.
+        let scan_limit = store.policy.entries.saturating_mul(4) + 32;
+        let scanned = std::fs::read_dir(&store.directory)?
+            .take(scan_limit + 1)
+            .collect::<io::Result<Vec<_>>>()?;
+        if scanned.len() > scan_limit {
+            return Err(invalid(
+                "checkpoint namespace exceeds bounded scan; replay required",
+            ));
+        }
+        for item in scanned {
+            let path = item.path();
+            // An exclusive namespace lock proves no cooperative writer is alive.
+            // Reclaim only this format's generated temporary names after a crash.
+            if path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(interrupted_write_name)
+            {
+                let metadata = std::fs::symlink_metadata(&path)?;
+                if !metadata.is_file() || metadata.file_type().is_symlink() {
+                    return Err(invalid("derived checkpoint temporary is not regular"));
+                }
+                std::fs::remove_file(&path)?;
+                continue;
+            }
+            let Some(stem) = path.file_stem().and_then(|value| value.to_str()) else {
+                continue;
+            };
+            if path.extension().and_then(|value| value.to_str()) != Some("state") || !address(stem)
+            {
+                continue;
+            }
+            let metadata = std::fs::symlink_metadata(&path)?;
+            if !metadata.is_file() || metadata.file_type().is_symlink() {
+                return Err(invalid("derived checkpoint object is not regular"));
+            }
+            let info = match portable_envelope::inspect_checkpoint(
+                &path,
+                &store.key,
+                store.policy.ram_bytes,
+            ) {
+                Ok(info) => info,
+                Err(_) => {
+                    // Invalid, incompatible or oversized derived objects must not
+                    // accumulate outside the disk quota after a process restart.
+                    std::fs::remove_file(&path)?;
+                    continue;
+                }
+            };
+            let created = metadata.modified()?;
+            let Ok(file_bytes) = usize::try_from(metadata.len()) else {
+                continue;
+            };
+            store.disk_used = store
+                .disk_used
+                .checked_add(file_bytes)
+                .ok_or_else(|| invalid("disk accounting overflow"))?;
+            store.entries.insert(
+                stem.into(),
+                Entry {
+                    tokens: info.tokens,
+                    payload_bytes: info.payload_bytes,
+                    file: Some(path.clone()),
+                    file_bytes,
+                    host: None,
+                    created,
+                    used: 0,
+                },
+            );
+        }
+        store.expire()?;
+        store.trim_disk(0, None)?;
+        store.trim_entries()?;
+        Ok(store)
+    }
+    pub fn ram_used(&self) -> usize {
+        self.charged.load(Ordering::Acquire)
+    }
+    pub fn disk_used(&self) -> usize {
+        self.disk_used
+    }
+    fn remove(&mut self, id: &str) -> io::Result<()> {
+        // Only generated content-addressed files inside the exclusively locked namespace.
+        if let Some(entry) = self.entries.get(id) {
+            if let Some(file) = &entry.file {
+                if file.parent() != Some(self.directory.as_path()) || !address(id) {
+                    return Err(invalid("unowned checkpoint path"));
+                }
+                match std::fs::remove_file(file) {
+                    Ok(()) => (),
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => (),
+                    Err(error) => return Err(error),
+                }
+            }
+        }
+        if let Some(entry) = self.entries.remove(id) {
+            self.disk_used = self.disk_used.saturating_sub(entry.file_bytes);
+            self.stats.evictions += 1;
+        }
+        Ok(())
+    }
+    fn expire(&mut self) -> io::Result<()> {
+        let now = SystemTime::now();
+        let ids: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|(_, entry)| {
+                now.duration_since(entry.created).unwrap_or_default() >= self.policy.retention
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in ids {
+            self.remove(&id)?;
+        }
+        Ok(())
+    }
+    fn trim_entries(&mut self) -> io::Result<()> {
+        while self.entries.len() > self.policy.entries {
+            let id = self
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.used)
+                .map(|(id, _)| id.clone())
+                .unwrap();
+            self.remove(&id)?;
+        }
+        Ok(())
+    }
+    fn trim_disk(&mut self, incoming: usize, protect: Option<&str>) -> io::Result<()> {
+        if incoming > self.policy.disk_bytes {
+            return Err(invalid("checkpoint exceeds disk budget"));
+        }
+        while self.disk_used.saturating_add(incoming) > self.policy.disk_bytes {
+            let id = self
+                .entries
+                .iter()
+                .filter(|(id, entry)| entry.file.is_some() && Some(id.as_str()) != protect)
+                .min_by_key(|(_, entry)| entry.used)
+                .map(|(id, _)| id.clone())
+                .ok_or_else(|| invalid("disk budget cannot be reclaimed"))?;
+            self.remove(&id)?;
+        }
+        Ok(())
+    }
+    fn persist(&mut self, tokens: &[u32], values: &[f32], bound: usize) -> io::Result<PathBuf> {
+        let quota = self
+            .policy
+            .global_disk_bytes
+            .map(|limit| global_quota::Guard::open(self.directory.parent().unwrap(), limit))
+            .transpose()?;
+        self.trim_disk(bound, None)?;
+        if let Some(quota) = &quota {
+            while !quota.reserve(&self.directory, bound)? {
+                let id = self
+                    .entries
+                    .iter()
+                    .filter(|(_, entry)| entry.file.is_some())
+                    .min_by_key(|(_, entry)| entry.used)
+                    .map(|(id, _)| id.clone())
+                    .ok_or_else(|| invalid("global disk quota held by active namespaces"))?;
+                self.remove(&id)?;
+            }
+        }
+        // The global OS lock remains held through temporary allocation, rename
+        // and metadata publication; a competing writer cannot spend this space.
+        portable_envelope::write_checkpoint(
+            &self.directory,
+            &self.key,
+            tokens,
+            values,
+            self.policy.ram_bytes,
+        )
+    }
+    fn reserve_ram(&mut self, bytes: usize) -> bool {
+        if bytes == 0 || bytes > self.policy.ram_bytes {
+            return false;
+        }
+        while self.ram_used().saturating_add(bytes) > self.policy.ram_bytes {
+            let id = self
+                .entries
+                .iter()
+                .filter(|(_, entry)| {
+                    entry
+                        .host
+                        .as_ref()
+                        .is_some_and(|lease| Arc::strong_count(lease) == 1)
+                })
+                .min_by_key(|(_, entry)| entry.used)
+                .map(|(id, _)| id.clone());
+            let Some(id) = id else { return false };
+            self.entries.get_mut(&id).unwrap().host = None;
+            if self.entries[&id].file.is_none() {
+                // With no cold copy the prefix is no longer cached. Retaining
+                // its token index would falsely suppress the next capture.
+                self.entries.remove(&id);
+                self.stats.evictions += 1;
+            }
+        }
+        self.charged.fetch_add(bytes, Ordering::AcqRel);
+        true
+    }
+    /// Capture at a validated prefill boundary. Allocation and pending active leases
+    /// share the host budget; failed transfers never produce usable entries.
+    pub fn capture(
+        &mut self,
+        tokens: &[u32],
+        bytes: usize,
+        fill: impl FnOnce(&mut [f32]) -> io::Result<()>,
+    ) -> io::Result<bool> {
+        self.expire()?;
+        if tokens.is_empty() || tokens.len() > 8192 || bytes % 4 != 0 {
+            return Err(invalid("invalid capture geometry"));
+        }
+        if self.entries.values().any(|entry| entry.tokens == tokens) {
+            return Ok(true);
+        }
+        if !self.reserve_ram(bytes) {
+            self.stats.capture_refusals += 1;
+            return Ok(false);
+        }
+        // Own the charge before allocation so every error path releases it.
+        let mut lease = Lease {
+            checkpoint: HostCheckpoint {
+                tokens: tokens.to_vec(),
+                values: Vec::new(),
+            },
+            charged: Arc::clone(&self.charged),
+            bytes,
+        };
+        lease
+            .checkpoint
+            .values
+            .try_reserve_exact(bytes / 4)
+            .map_err(|_| invalid("host snapshot allocation refused"))?;
+        lease.checkpoint.values.resize(bytes / 4, 0.0);
+        fill(&mut lease.checkpoint.values)?;
+        if lease
+            .checkpoint
+            .values
+            .iter()
+            .any(|value| !value.is_finite())
+        {
+            return Err(invalid("non-finite capture"));
+        }
+        let id = hex(&Sha256::digest(serde_json::to_vec(tokens)?));
+        let mut file = None;
+        let mut file_bytes = 0;
+        if self.policy.disk_bytes > 0 {
+            // Reserve the complete sealed object and its temporary write, not just tensor bytes.
+            let bound = portable_envelope::sealed_size(&self.key, tokens, bytes)?;
+            let started = std::time::Instant::now();
+            match self.persist(tokens, &lease.checkpoint.values, bound) {
+                Ok(path) => {
+                    file_bytes = usize::try_from(std::fs::metadata(&path)?.len())
+                        .map_err(|_| invalid("sealed size overflow"))?;
+                    file = Some(path);
+                    self.disk_used += file_bytes;
+                    self.stats.writes += 1;
+                }
+                Err(error) => {
+                    self.stats.write_failures += 1;
+                    tracing::warn!(%error,"context persistence failed; host checkpoint/replay remains available");
+                }
+            }
+            self.stats.write_ns = self
+                .stats
+                .write_ns
+                .saturating_add(started.elapsed().as_nanos().min(u64::MAX as u128) as u64);
+        }
+        self.clock = self.clock.saturating_add(1);
+        self.entries.insert(
+            id,
+            Entry {
+                tokens: tokens.to_vec(),
+                payload_bytes: bytes,
+                file,
+                file_bytes,
+                host: Some(Arc::new(lease)),
+                created: SystemTime::now(),
+                used: self.clock,
+            },
+        );
+        self.stats.captures += 1;
+        self.trim_entries()?;
+        Ok(true)
+    }
+    pub fn lookup(
+        &mut self,
+        tokens: &[u32],
+        expected: impl Fn(usize) -> usize,
+    ) -> io::Result<Option<Arc<Lease>>> {
+        self.expire()?;
+        let id = self
+            .entries
+            .iter()
+            .filter(|(_, entry)| tokens.starts_with(&entry.tokens))
+            .max_by_key(|(_, entry)| (entry.tokens.len(), entry.used))
+            .map(|(id, _)| id.clone());
+        let Some(id) = id else {
+            self.stats.misses += 1;
+            return Ok(None);
+        };
+        let bytes = self.entries[&id].payload_bytes;
+        let length = self.entries[&id].tokens.len();
+        if bytes != expected(length) {
+            self.stats.read_failures += 1;
+            self.remove(&id)?;
+            return Ok(None);
+        }
+        self.clock = self.clock.saturating_add(1);
+        self.entries.get_mut(&id).unwrap().used = self.clock;
+        if let Some(host) = self.entries[&id].host.as_ref() {
+            self.stats.ram_hits += 1;
+            return Ok(Some(Arc::clone(host)));
+        }
+        let Some(file) = self.entries[&id].file.clone() else {
+            self.stats.misses += 1;
+            return Ok(None);
+        };
+        if !self.reserve_ram(bytes) {
+            self.stats.misses += 1;
+            return Ok(None);
+        }
+        let mut lease = Lease {
+            checkpoint: HostCheckpoint {
+                tokens: Vec::new(),
+                values: Vec::new(),
+            },
+            charged: Arc::clone(&self.charged),
+            bytes,
+        };
+        let started = std::time::Instant::now();
+        let read =
+            portable_envelope::read_checkpoint(&file, &self.key, self.policy.ram_bytes, bytes);
+        self.stats.read_ns = self
+            .stats
+            .read_ns
+            .saturating_add(started.elapsed().as_nanos().min(u64::MAX as u128) as u64);
+        match read {
+            Ok(checkpoint) => {
+                if checkpoint.tokens != self.entries[&id].tokens {
+                    self.stats.read_failures += 1;
+                    self.remove(&id)?;
+                    return Ok(None);
+                }
+                lease.checkpoint = checkpoint;
+                let lease = Arc::new(lease);
+                self.entries.get_mut(&id).unwrap().host = Some(Arc::clone(&lease));
+                self.stats.disk_hits += 1;
+                Ok(Some(lease))
+            }
+            Err(error) => {
+                self.stats.read_failures += 1;
+                self.remove(&id)?;
+                tracing::warn!(%error,"invalid persisted context; prompt will be replayed");
+                Ok(None)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+    fn key() -> Compatibility {
+        Compatibility {
+            model_sha256: [1; 32],
+            tokenizer_sha256: [2; 32],
+            native_library_sha256: [3; 32],
+            execution_config_sha256: [4; 32],
+            layout: "fixture-f32-v1".into(),
+        }
+    }
+    fn policy(directory: &Path, ram_bytes: usize) -> Policy {
+        Policy {
+            directory: directory.into(),
+            ram_bytes,
+            disk_bytes: 65536,
+            global_disk_bytes: None,
+            entries: 8,
+            retention: Duration::from_secs(1800),
+        }
+    }
+    fn capture(store: &mut Store, tokens: &[u32], value: f32) -> bool {
+        store
+            .capture(tokens, 64, |values| {
+                values.fill(value);
+                Ok(())
+            })
+            .unwrap()
+    }
+    #[test]
+    fn global_quota_process_holder_fixture() {
+        let Some(root) = std::env::var_os("RBITNET_QUOTA_TEST_ROOT") else {
+            return;
+        };
+        let root = PathBuf::from(root);
+        let mut configuration = policy(&root, 128);
+        configuration.global_disk_bytes =
+            Some(portable_envelope::sealed_size(&key(), &[1], 64).unwrap());
+        let mut store = Store::open(key(), configuration).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.writes, 1);
+        std::fs::write(root.join("holder-ready"), b"sealed and owner locked").unwrap();
+        // The parent deliberately terminates this process after publication.
+        // Bound the wait so an interrupted parent never leaves an orphan fixture.
+        std::thread::sleep(Duration::from_secs(30));
+        panic!("parent failed to terminate quota holder");
+    }
+    #[test]
+    fn global_quota_other_process_is_protected_and_killed_owner_can_be_reclaimed() {
+        struct Holder(std::process::Child);
+        impl Drop for Holder {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let root = tempfile::tempdir().unwrap();
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--exact",
+                "context_tiers::tests::global_quota_process_holder_fixture",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env("RBITNET_QUOTA_TEST_ROOT", root.path());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let mut holder = Holder(command.spawn().unwrap());
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !root.path().join("holder-ready").exists() {
+            assert!(
+                holder.0.try_wait().unwrap().is_none(),
+                "holder exited early"
+            );
+            assert!(Instant::now() < deadline, "holder publication timed out");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut configuration = policy(root.path(), 128);
+        configuration.global_disk_bytes = Some(bound);
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut store = Store::open(other, configuration).unwrap();
+        let format = root.path().join("rbitnet-state-v1");
+        let objects = || {
+            std::fs::read_dir(&format)
+                .unwrap()
+                .filter(|entry| entry.as_ref().unwrap().file_type().unwrap().is_dir())
+                .flat_map(|namespace| std::fs::read_dir(namespace.unwrap().path()).unwrap())
+                .map(|entry| entry.unwrap().path())
+                .filter(|path| path.extension().and_then(|v| v.to_str()) == Some("state"))
+                .collect::<Vec<_>>()
+        };
+        let original = objects();
+        assert_eq!(original.len(), 1);
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        assert_eq!(objects(), original);
+        let held = store.lookup(&[2, 3], |_| 64).unwrap().unwrap();
+        holder.0.kill().unwrap();
+        assert!(!holder.0.wait().unwrap().success());
+        assert!(capture(&mut store, &[3], 3.0));
+        assert_eq!(store.stats.writes, 1);
+        assert_eq!(store.disk_used(), bound);
+        assert!(!original[0].exists());
+        let physical: u64 = objects()
+            .iter()
+            .map(|path| std::fs::metadata(path).unwrap().len())
+            .sum();
+        assert_eq!(physical, bound as u64);
+        assert!(held.checkpoint.values.iter().all(|v| *v == 2.0));
+        eprintln!("GLOBAL_QUOTA_CROSS_PROCESS_DONE active protected; killed owner reclaimed; physical cap exact; RAM lease intact");
+    }
+    #[test]
+    fn global_quota_counts_active_namespaces_and_reclaims_only_idle_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let mut first = Store::open(key(), p.clone()).unwrap();
+        assert!(capture(&mut first, &[1], 1.0));
+        assert_eq!(first.disk_used(), bound);
+        let held = first.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        let old_file = first.entries.values().next().unwrap().file.clone().unwrap();
+        let note = first.directory.join("keep.txt");
+        std::fs::write(&note, b"unmanaged note").unwrap();
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut second = Store::open(other, p).unwrap();
+        assert!(capture(&mut second, &[2], 2.0));
+        assert_eq!(
+            second.disk_used(),
+            0,
+            "active namespace may not be reclaimed"
+        );
+        assert_eq!(second.stats.write_failures, 1);
+        assert!(old_file.exists());
+        drop(first);
+        assert!(capture(&mut second, &[3], 3.0));
+        assert_eq!(second.disk_used(), bound);
+        assert!(!old_file.exists());
+        assert_eq!(std::fs::read(&note).unwrap(), b"unmanaged note");
+        assert!(held.checkpoint.values.iter().all(|value| *value == 1.0));
+    }
+    #[test]
+    fn global_quota_reclaims_own_lru_without_losing_active_host_leases() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let mut store = Store::open(key(), p).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        let held = store.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.disk_used(), bound);
+        assert_eq!(store.stats.writes, 2);
+        assert!(held.checkpoint.values.iter().all(|value| *value == 1.0));
+    }
+    #[test]
+    fn global_quota_contention_and_conflicting_caps_keep_ram_checkpoint() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        let quota = global_quota::Guard::open(store.directory.parent().unwrap(), 65536).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        drop(quota);
+        store.policy.global_disk_bytes = Some(131072);
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.stats.write_failures, 2);
+        assert_eq!(store.disk_used(), 0);
+        assert!(store.lookup(&[2, 3], |_| 64).unwrap().is_some());
+    }
+    #[test]
+    fn global_quota_io_refusal_does_not_discard_host_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        // An actual filesystem refusal, not a simulated successful disk write.
+        let lock = store.directory.parent().unwrap().join(".disk-quota.lock");
+        std::fs::create_dir(&lock).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        let held = store.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        assert!(held.checkpoint.values.iter().all(|v| *v == 1.0));
+    }
+    #[test]
+    fn global_quota_charges_interrupted_writes_in_inactive_namespace() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let first = Store::open(key(), p.clone()).unwrap();
+        let temporary = first
+            .directory
+            .join(format!(".{}-123-456.tmp", "a".repeat(64)));
+        std::fs::write(&temporary, vec![0u8; bound]).unwrap();
+        drop(first);
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut second = Store::open(other, p).unwrap();
+        assert!(capture(&mut second, &[1], 2.0));
+        assert!(!temporary.exists());
+        assert_eq!(second.disk_used(), bound);
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn global_quota_refuses_redirected_foreign_namespace_without_touching_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("root");
+        let outside = parent.path().join("outside");
+        std::fs::create_dir(&outside).unwrap();
+        let note = outside.join(format!("{}.state", "c".repeat(64)));
+        std::fs::write(&note, b"preserve outside object").unwrap();
+        let mut p = policy(&root, 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        let link = store.directory.parent().unwrap().join("b".repeat(64));
+        redirect_directory(&link, &outside);
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(std::fs::read(&note).unwrap(), b"preserve outside object");
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+    }
+    #[cfg(any(windows, unix))]
+    fn redirect_directory(link: &Path, target: &Path) {
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, link).unwrap();
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            // Paths are passed as child environment values, never shell code.
+            let status = std::process::Command::new("pwsh")
+                .args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path $env:RBITNET_TEST_JUNCTION_LINK -Target $env:RBITNET_TEST_JUNCTION_TARGET | Out-Null"])
+                .env("RBITNET_TEST_JUNCTION_LINK", link)
+                .env("RBITNET_TEST_JUNCTION_TARGET", target)
+                .creation_flags(0x08000000)
+                .status()
+                .unwrap();
+            assert!(status.success(), "create owned temporary test junction");
+        }
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn redirected_format_directory_is_refused_before_namespace_creation() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("configured-root");
+        let outside = parent.path().join("outside-cache");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let note = outside.join("keep.txt");
+        std::fs::write(&note, b"preserve outside contents").unwrap();
+        let link = root.join("rbitnet-state-v1");
+        redirect_directory(&link, &outside);
+        assert!(
+            Store::open(key(), policy(&root, 128)).is_err(),
+            "redirected managed format accepted"
+        );
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(std::fs::read(&note).unwrap(), b"preserve outside contents");
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn redirected_namespace_is_refused_without_touching_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let format = parent.path().join("rbitnet-state-v1");
+        let outside = parent.path().join("outside-cache");
+        std::fs::create_dir(&format).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let identity = hex(&Sha256::digest(serde_json::to_vec(&key()).unwrap()));
+        let link = format.join(identity);
+        redirect_directory(&link, &outside);
+        assert!(Store::open(key(), policy(parent.path(), 128)).is_err());
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+    }
+    #[cfg(unix)]
+    #[test]
+    fn dangling_lock_link_is_refused_without_creating_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let store = Store::open(key(), policy(parent.path(), 128)).unwrap();
+        let lock = store.directory.join(".owner.lock");
+        drop(store);
+        std::fs::remove_file(&lock).unwrap();
+        let outside = parent.path().join("must-not-be-created");
+        std::os::unix::fs::symlink(&outside, &lock).unwrap();
+        assert!(!lock.exists());
+        assert!(Store::open(key(), policy(parent.path(), 128)).is_err());
+        assert!(!outside.exists());
+        std::fs::remove_file(lock).unwrap();
+    }
+    #[cfg(windows)]
+    #[test]
+    fn live_windows_directory_handles_prevent_rename_until_store_drop() {
+        let parent = tempfile::tempdir().unwrap();
+        let mut store = Store::open(key(), policy(parent.path(), 128)).unwrap();
+        assert!(capture(&mut store, &[1, 2], 0.5));
+        let format = parent.path().join("rbitnet-state-v1");
+        let moved = parent.path().join("moved-format");
+        let moved_namespace = format.join("moved-namespace");
+        assert!(std::fs::rename(&format, &moved).is_err());
+        assert!(std::fs::rename(&store.directory, &moved_namespace).is_err());
+        assert!(!moved.exists() && !moved_namespace.exists());
+        let restored = store.lookup(&[1, 2, 3], |_| 64).unwrap().unwrap();
+        assert_eq!(restored.checkpoint.values, vec![0.5; 16]);
+        drop(restored);
+        drop(store);
+        std::fs::rename(&format, &moved).unwrap();
+        assert!(moved.is_dir() && !format.exists());
+    }
+    #[test]
+    fn restart_reclaims_interrupted_writes_and_malformed_objects_without_removing_notes() {
+        let directory = tempfile::tempdir().unwrap();
+        let configuration = policy(directory.path(), 128);
+        let mut store = Store::open(key(), configuration.clone()).unwrap();
+        assert!(capture(&mut store, &[1, 2], 0.5));
+        let namespace = store.directory.clone();
+        let temporary = namespace.join(format!(".{}-1234-9.tmp", "a".repeat(64)));
+        let malformed = namespace.join(format!("{}.state", "b".repeat(64)));
+        let note = namespace.join("user-note.tmp");
+        let unrelated = namespace.join(format!(".{}-1234-not-a-counter.tmp", "c".repeat(64)));
+        for path in [&temporary, &malformed, &note, &unrelated] {
+            std::fs::write(path, b"interrupted or user content").unwrap();
+        }
+        drop(store);
+        let mut reopened = Store::open(key(), configuration).unwrap();
+        assert!(!temporary.exists());
+        assert!(!malformed.exists());
+        assert_eq!(
+            std::fs::read(&note).unwrap(),
+            b"interrupted or user content"
+        );
+        assert!(unrelated.exists());
+        assert!(reopened.lookup(&[1, 2, 3], |_| 64).unwrap().is_some());
+        let physical_owned_bytes: usize = std::fs::read_dir(namespace)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("state"))
+            .map(|path| std::fs::metadata(path).unwrap().len() as usize)
+            .sum();
+        assert_eq!(reopened.disk_used(), physical_owned_bytes);
+        assert!(reopened.disk_used() <= reopened.policy.disk_bytes);
+    }
+    #[test]
+    fn held_payload_remains_charged_and_cannot_be_evicted_to_hide_memory() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut store = Store::open(key(), policy(directory.path(), 64)).unwrap();
+        assert!(capture(&mut store, &[1, 2], 0.5));
+        let held = store.lookup(&[1, 2, 3], |_| 64).unwrap().unwrap();
+        assert!(!capture(&mut store, &[7, 8], 1.0));
+        assert_eq!(store.ram_used(), 64);
+        assert_eq!(held.checkpoint.values, vec![0.5; 16]);
+        drop(held);
+        assert!(capture(&mut store, &[7, 8], 1.0));
+        assert_eq!(store.ram_used(), 64);
+        let restored = store.lookup(&[1, 2, 3], |_| 64).unwrap().unwrap();
+        assert_eq!(restored.checkpoint.values, vec![0.5; 16]);
+        assert_eq!(store.stats.disk_hits, 1);
+    }
+    #[test]
+    fn failed_capture_releases_pending_charge_and_never_creates_a_checkpoint() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut store = Store::open(key(), policy(directory.path(), 128)).unwrap();
+        assert!(store
+            .capture(&[1], 64, |values| {
+                values.fill(9.0);
+                Err(io::Error::new(
+                    io::ErrorKind::Interrupted,
+                    "transfer interrupted",
+                ))
+            })
+            .is_err());
+        assert_eq!(store.ram_used(), 0);
+        assert_eq!(store.disk_used(), 0);
+        assert!(store.lookup(&[1, 2], |_| 64).unwrap().is_none());
+        assert!(store
+            .capture(&[1], 64, |values| {
+                values.fill(f32::NAN);
+                Ok(())
+            })
+            .is_err());
+        assert_eq!(store.ram_used(), 0);
+    }
+    #[test]
+    fn host_only_eviction_allows_a_fresh_capture_of_the_same_prefix() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut configuration = policy(directory.path(), 64);
+        configuration.disk_bytes = 0;
+        let mut store = Store::open(key(), configuration).unwrap();
+        assert!(capture(&mut store, &[1, 2], 0.5));
+        assert!(capture(&mut store, &[3, 4], 0.75));
+        assert!(store.lookup(&[1, 2, 5], |_| 64).unwrap().is_none());
+        assert_eq!(store.entries.len(), 1);
+        assert!(capture(&mut store, &[1, 2], 1.25));
+        let recaptured = store.lookup(&[1, 2, 5], |_| 64).unwrap().unwrap();
+        assert_eq!(recaptured.checkpoint.values, vec![1.25; 16]);
+        assert_eq!(store.stats.captures, 3);
+        assert_eq!(store.stats.writes, 0);
+        assert_eq!(store.ram_used(), 64);
+        assert_eq!(store.disk_used(), 0);
+    }
+    #[test]
+    fn restart_releases_lock_and_restores_only_exact_identity_and_full_prefix() {
+        let directory = tempfile::tempdir().unwrap();
+        let configuration = policy(directory.path(), 128);
+        {
+            let mut store = Store::open(key(), configuration.clone()).unwrap();
+            assert!(capture(&mut store, &[1, 2, 3], 0.25));
+            assert!(Store::open(key(), configuration.clone()).is_err());
+        }
+        let mut reopened = Store::open(key(), configuration.clone()).unwrap();
+        assert!(reopened.lookup(&[1, 2, 9], |_| 64).unwrap().is_none());
+        let saved = reopened.lookup(&[1, 2, 3, 4], |_| 64).unwrap().unwrap();
+        assert_eq!(saved.checkpoint.tokens, [1, 2, 3]);
+        assert_eq!(saved.checkpoint.values, vec![0.25; 16]);
+        assert_eq!(reopened.stats.disk_hits, 1);
+        for field in 0..4 {
+            let mut other = key();
+            match field {
+                0 => other.model_sha256[0] ^= 1,
+                1 => other.tokenizer_sha256[0] ^= 1,
+                2 => other.native_library_sha256[0] ^= 1,
+                _ => other.execution_config_sha256[0] ^= 1,
+            };
+            let mut isolated = Store::open(other, configuration.clone()).unwrap();
+            assert!(isolated.lookup(&[1, 2, 3, 4], |_| 64).unwrap().is_none());
+        }
+    }
+    #[test]
+    fn corrupted_or_wrong_size_payload_is_refused_before_use_and_can_be_recaptured() {
+        let directory = tempfile::tempdir().unwrap();
+        let configuration = policy(directory.path(), 128);
+        let file = {
+            let mut store = Store::open(key(), configuration.clone()).unwrap();
+            assert!(capture(&mut store, &[1, 2], 0.5));
+            store.entries.values().next().unwrap().file.clone().unwrap()
+        };
+        let mut raw = std::fs::read(&file).unwrap();
+        let last = raw.len() - 1;
+        raw[last] ^= 1;
+        std::fs::write(&file, raw).unwrap();
+        let mut reopened = Store::open(key(), configuration).unwrap();
+        assert!(reopened.lookup(&[1, 2, 3], |_| 64).unwrap().is_none());
+        assert_eq!(reopened.ram_used(), 0);
+        assert_eq!(reopened.stats.read_failures, 1);
+        assert!(capture(&mut reopened, &[1, 2], 0.75));
+        assert!(reopened.lookup(&[1, 2, 3], |_| 128).unwrap().is_none());
+        assert_eq!(reopened.ram_used(), 0);
+    }
+    #[test]
+    fn disk_quota_failure_keeps_host_state_and_disabled_disk_does_not_persist() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut configuration = policy(directory.path(), 128);
+        configuration.disk_bytes = 32;
+        let mut store = Store::open(key(), configuration.clone()).unwrap();
+        assert!(capture(&mut store, &[1], 0.5));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        assert!(store.lookup(&[1, 2], |_| 64).unwrap().is_some());
+        drop(store);
+        configuration.disk_bytes = 0;
+        let mut host_only = Store::open(key(), configuration.clone()).unwrap();
+        assert!(capture(&mut host_only, &[2], 0.5));
+        assert_eq!(host_only.stats.writes, 0);
+        drop(host_only);
+        let mut restarted = Store::open(key(), configuration).unwrap();
+        assert!(restarted.lookup(&[2, 3], |_| 64).unwrap().is_none());
+    }
+    #[test]
+    fn retention_and_entry_limits_reclaim_only_derived_cache_objects() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut configuration = policy(directory.path(), 128);
+        configuration.entries = 1;
+        let mut store = Store::open(key(), configuration).unwrap();
+        assert!(capture(&mut store, &[1], 0.5));
+        assert!(capture(&mut store, &[2], 0.75));
+        assert_eq!(store.entries.len(), 1);
+        assert!(store.disk_used() <= store.policy.disk_bytes);
+        let note = store.directory.join("user-note.txt");
+        std::fs::write(&note, "keep").unwrap();
+        for entry in store.entries.values_mut() {
+            entry.created = SystemTime::UNIX_EPOCH;
+        }
+        store.expire().unwrap();
+        assert_eq!(store.ram_used(), 0);
+        assert_eq!(store.disk_used(), 0);
+        assert_eq!(std::fs::read_to_string(note).unwrap(), "keep");
+    }
+}

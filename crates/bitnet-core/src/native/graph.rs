@@ -1380,6 +1380,11 @@ impl NativeExecutor {
         family: Family,
     ) -> Result<Self> {
         let id = archive.suggested_openai_model_id();
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
         let runtime = Runtime::load(archive, tokenizer, kind, family)?;
         Ok(Self {
             kind,
@@ -1856,3 +1861,10 @@ mod async_profile_tests;
 #[cfg(test)]
 #[path = "async_config_tests.rs"]
 mod async_config_tests;
+
+#[cfg(test)]
+#[path = "gpt_norm_runtime_tests.rs"]
+mod gpt_norm_runtime_tests;
+#[cfg(test)]
+#[path = "gpt_norm_tests.rs"]
+mod gpt_norm_tests;

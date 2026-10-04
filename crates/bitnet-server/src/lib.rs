@@ -475,8 +475,12 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
         .into_response();
     }
     let eng = state.engine.read().await;
-    let model_id = eng
-        .openai_model_id()
+    let model_id = state
+        .expected_request_model_id
+        .read()
+        .await
+        .clone()
+        .or_else(|| eng.openai_model_id())
         .unwrap_or_else(|| "rbitnet-stub".into());
     let mut metadata = eng.model_metadata();
     if !eng.has_gguf() && eng.openai_model_id().is_none() {
@@ -794,9 +798,15 @@ async fn reload_single_engine(
         apply_runtime_config_env().map_err(|e| format!("invalid runtime config: {e}"))?;
         Arc::new(Engine::from_env().map_err(|e| format!("failed to init engine from env: {e:?}"))?)
     };
-    let model_id = new_engine
-        .openai_model_id()
-        .unwrap_or_else(|| "rbitnet-stub".into());
+    let model_id = if state.config.require_model_match {
+        crate::run::standalone_model_id(
+            new_engine.openai_model_id(),
+            std::env::var("RBITNET_ACTIVE_MODEL_ID").ok().as_deref(),
+        )
+    } else {
+        new_engine.openai_model_id()
+    }
+    .unwrap_or_else(|| "rbitnet-stub".into());
     {
         let mut eng = state.engine.write().await;
         state

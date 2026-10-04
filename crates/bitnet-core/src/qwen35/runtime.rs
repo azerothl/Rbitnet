@@ -53,6 +53,8 @@ pub struct Qwen35Runtime {
     cuda_graph_enabled: bool,
     prefixes: PrefixStore<SavedPrefix>,
     prefix_supported: bool,
+    draft: Option<spec_serving::DraftRuntime>,
+    context_tier: Option<crate::context_native::Handle>,
 }
 
 fn must_tensor(archive: &GgufArchive, name: &str) -> Result<GgufTensorInfo> {
@@ -125,12 +127,21 @@ impl Qwen35Runtime {
                 .flatten()
                 .map(|g| g.extra_weights_bytes)
                 .sum::<usize>()
+            + self.draft_resident_weights_bytes()
     }
     pub(crate) fn context_capacity(&self) -> usize {
         self.cfg.max_seq
     }
 
     pub fn load(
+        archive: Arc<GgufArchive>,
+        tokenizer_path: &Path,
+        backend_kind: BackendKind,
+    ) -> Result<Self> {
+        Self::load_with_optional_draft(archive, tokenizer_path, backend_kind)
+    }
+
+    fn load_without_draft(
         archive: Arc<GgufArchive>,
         tokenizer_path: &Path,
         backend_kind: BackendKind,
@@ -287,6 +298,26 @@ impl Qwen35Runtime {
         if prefix::enabled() && !prefix_supported {
             tracing::warn!("Qwen prefix reuse unavailable with this CUDA DLL");
         }
+        let context_tier = if crate::context_native::enabled() {
+            if gpu_full.is_none()
+                || std::env::var("RBITNET_QWEN_SPECULATIVE").as_deref() == Ok("1")
+                || std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1")
+                || cfg.max_seq > 8192
+            {
+                return Err(BitNetError::NotImplemented("context tiers require full dense Native Qwen CUDA without TF32/speculative decoding and capacity <= 8192"));
+            }
+            let configuration = format!(
+                "{:?};split={:?};tensor={:?};head={:?}",
+                cfg,
+                std::env::var("RBITNET_CUDA_SPLIT_KV"),
+                std::env::var("RBITNET_CUDA_PREFILL_TF32X3"),
+                std::env::var("RBITNET_CUDA_HEAD")
+            );
+            crate::context_native::Handle::new("qwen", &archive, tokenizer_path, &configuration)
+                .map_err(|error| BitNetError::Inference(format!("context tiers: {error}")))?
+        } else {
+            None
+        };
         Ok(Self {
             cfg,
             archive,
@@ -307,6 +338,8 @@ impl Qwen35Runtime {
             cuda_graph_enabled,
             prefixes: PrefixStore::from_env(),
             prefix_supported,
+            draft: None,
+            context_tier,
         })
     }
 
@@ -327,6 +360,9 @@ impl Qwen35Runtime {
         mut events: Option<&mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
         sampling.validate_structured_output()?;
+        if self.draft.is_some() {
+            return self.generate_with_owned_draft(prompt, max_tokens, sampling, events);
+        }
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
@@ -386,6 +422,19 @@ impl Qwen35Runtime {
                 crate::perf::record_prefix_cache_miss();
             }
         }
+        if matched == 0 {
+            if let (Some(tier), Some(gpu)) = (&mut self.context_tier, &self.gpu_full) {
+                let reusable = &prompt_ids[..prompt_ids.len().saturating_sub(1)];
+                match unsafe {
+                    tier.restore(gpu.portable_context() as *mut std::ffi::c_void, reusable)
+                } {
+                    Ok(length) => matched = length,
+                    Err(error) => {
+                        tracing::warn!(%error, "Qwen context restore refused; recomputing prompt")
+                    }
+                }
+            }
+        }
         let mut logits = Vec::new();
         let mut next_token = None;
         let gpu_greedy = (self.gpu_head.is_some() || self.gpu_full.is_some())
@@ -394,7 +443,8 @@ impl Qwen35Runtime {
         let checkpoint_interval = env_opt_usize("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS")
             .unwrap_or(256)
             .max(1);
-        let checkpoint_enabled = prefix::enabled() && self.prefix_supported;
+        let checkpoint_enabled =
+            (prefix::enabled() && self.prefix_supported) || self.context_tier.is_some();
         let capacity = self.gpu_full.as_ref().map_or(1, |g| g.prefill_capacity());
         let mut pos = matched;
         while pos < prompt_ids.len() {
@@ -409,7 +459,10 @@ impl Qwen35Runtime {
                 // the end state of a block. Stop at each intended checkpoint.
                 let checkpoint =
                     (pos / checkpoint_interval + 1).saturating_mul(checkpoint_interval);
-                end = end.min(checkpoint).min(prompt_ids.len() - 1);
+                if prefix::enabled() && self.prefix_supported {
+                    end = end.min(checkpoint);
+                }
+                end = end.min(prompt_ids.len() - 1);
             }
             let count = end - pos;
             (logits, next_token) = if count > 1 {
@@ -432,7 +485,10 @@ impl Qwen35Runtime {
             pos = end;
             if checkpoint_enabled
                 && pos < prompt_ids.len()
-                && (pos == prompt_ids.len() - 1 || pos % checkpoint_interval == 0)
+                && (pos == prompt_ids.len() - 1
+                    || (prefix::enabled()
+                        && self.prefix_supported
+                        && pos % checkpoint_interval == 0))
             {
                 self.save_prefix(&prompt_ids[..pos])?;
             }
@@ -494,6 +550,15 @@ impl Qwen35Runtime {
     }
 
     fn save_prefix(&mut self, tokens: &[u32]) -> Result<()> {
+        if tokens.len() >= 8 {
+            if let (Some(tier), Some(gpu)) = (&mut self.context_tier, &self.gpu_full) {
+                if let Err(error) =
+                    unsafe { tier.capture(gpu.portable_context() as *mut std::ffi::c_void, tokens) }
+                {
+                    tracing::warn!(%error, "Qwen context capture refused; normal decoding remains available");
+                }
+            }
+        }
         if self.prefixes.contains(tokens) {
             return Ok(());
         }
@@ -1258,3 +1323,20 @@ mod sequence_tests {
         }
     }
 }
+
+#[path = "spec_decode.rs"]
+mod spec_decode;
+
+#[path = "spec_serving.rs"]
+mod spec_serving;
+
+#[cfg(test)]
+#[path = "spec_tests.rs"]
+mod spec_tests;
+
+#[cfg(test)]
+#[path = "context_tests.rs"]
+mod context_tests;
+#[cfg(test)]
+#[path = "spec_decode_tests.rs"]
+mod spec_decode_tests;

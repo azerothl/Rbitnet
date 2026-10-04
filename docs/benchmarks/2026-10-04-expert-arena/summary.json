@@ -1,0 +1,485 @@
+{
+  "capture_sha256": {
+    "gpt-oss-20b-512": "5957b23f9a1696d7fa32dbe34c6afc80be0195c879038d1bf7a96e933c36fd1b",
+    "gpt-oss-20b-8192": "cc29442660c7974962d74c6058cb94be78fc13f508080eb92015fadc1137b52b",
+    "glm47-flash-512": "3d5dc5c87b03e1cbb5bfcf2987c061751466c9ef2ecf2bbb57130c28dc6f8102",
+    "glm47-flash-8192": "79b5b75b8ec2c0faba88e4ead1f9091dcfe1d047ecaa75fde2a11e789dcf8eb3"
+  },
+  "rows": [
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 512,
+      "mode": "sync",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11390930944,
+        "gpu_global_baseline_mib": 2127.0,
+        "gpu_global_peak_mib": 4361.0,
+        "gpu_global_peak_delta_mib": 2234.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 8.833807013886094,
+          "measured_tps": [
+            8.895684203210786,
+            8.771929824561404
+          ],
+          "wall_ms": [
+            34701.8463000004,
+            34881.79310000123
+          ]
+        },
+        "code": {
+          "median_tps": 8.809091627737429,
+          "measured_tps": [
+            8.754531153819848,
+            8.86365210165501
+          ],
+          "wall_ms": [
+            35735.20929999904,
+            35601.269000000684
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 1796761020.0,
+        "rbitnet_core_cuda_managed_allocations_total": 765.0
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 512,
+      "mode": "async-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11419734016,
+        "gpu_global_baseline_mib": 2100.0,
+        "gpu_global_peak_mib": 4370.0,
+        "gpu_global_peak_delta_mib": 2270.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 8.135250116652127,
+          "measured_tps": [
+            8.131630773140207,
+            8.138869460164049
+          ],
+          "wall_ms": [
+            37917.281599999114,
+            37881.8285999987
+          ]
+        },
+        "code": {
+          "median_tps": 8.071381478766309,
+          "measured_tps": [
+            8.072653884964682,
+            8.070109072567934
+          ],
+          "wall_ms": [
+            38970.651100000396,
+            39066.95310000032
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 1796761020.0,
+        "rbitnet_core_cuda_managed_allocations_total": 765.0
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 512,
+      "mode": "arena-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11419582464,
+        "gpu_global_baseline_mib": 2100.0,
+        "gpu_global_peak_mib": 4144.0,
+        "gpu_global_peak_delta_mib": 2044.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 8.127768235386911,
+          "measured_tps": [
+            8.118736521628822,
+            8.136799949145
+          ],
+          "wall_ms": [
+            37745.12160000086,
+            37831.299299999955
+          ]
+        },
+        "code": {
+          "median_tps": 8.157825761751376,
+          "measured_tps": [
+            8.171603677221654,
+            8.144047846281097
+          ],
+          "wall_ms": [
+            38707.75479999975,
+            38787.15679999914
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 1796776380.0,
+        "rbitnet_core_cuda_managed_allocations_total": 646.0
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 8192,
+      "mode": "sync",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11396108288,
+        "gpu_global_baseline_mib": 2117.0,
+        "gpu_global_peak_mib": 15293.0,
+        "gpu_global_peak_delta_mib": 13176.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 75.07700474491566,
+          "measured_tps": [
+            76.96933253156945,
+            73.18467695826186
+          ],
+          "wall_ms": [
+            3735.0901999998314,
+            3815.9735999997793
+          ]
+        },
+        "code": {
+          "median_tps": 71.212443854584,
+          "measured_tps": [
+            71.62842753217683,
+            70.79646017699115
+          ],
+          "wall_ms": [
+            4037.3149999995803,
+            4179.06480000056
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 9847253820.0,
+        "rbitnet_core_cuda_managed_allocations_total": 2592.0
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 8192,
+      "mode": "async-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11427426304,
+        "gpu_global_baseline_mib": 2121.0,
+        "gpu_global_peak_mib": 15291.0,
+        "gpu_global_peak_delta_mib": 13170.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 75.41129489606305,
+          "measured_tps": [
+            74.7227086981903,
+            76.09988109393579
+          ],
+          "wall_ms": [
+            3797.3158000004332,
+            3767.054800000551
+          ]
+        },
+        "code": {
+          "median_tps": 70.69991524942844,
+          "measured_tps": [
+            70.40704070407041,
+            70.99278979478646
+          ],
+          "wall_ms": [
+            4122.976700000436,
+            4087.763700001233
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 9847253820.0,
+        "rbitnet_core_cuda_managed_allocations_total": 2592.0
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "expert_budget_mib": 8192,
+      "mode": "arena-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11420295168,
+        "gpu_global_baseline_mib": 2117.0,
+        "gpu_global_peak_mib": 11791.0,
+        "gpu_global_peak_delta_mib": 9674.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 76.3723422244769,
+          "measured_tps": [
+            76.41791044776119,
+            76.3267740011926
+          ],
+          "wall_ms": [
+            3728.544800000236,
+            3739.922000000661
+          ]
+        },
+        "code": {
+          "median_tps": 71.24970177324852,
+          "measured_tps": [
+            71.3091922005571,
+            71.19021134593993
+          ],
+          "wall_ms": [
+            4060.785300000134,
+            4086.000299999796
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 9847503036.0,
+        "rbitnet_core_cuda_managed_allocations_total": 646.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 512,
+      "mode": "sync",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17926742016,
+        "gpu_global_baseline_mib": 2106.0,
+        "gpu_global_peak_mib": 5234.0,
+        "gpu_global_peak_delta_mib": 3128.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 5.244709055523304,
+          "measured_tps": [
+            5.267272951730382,
+            5.222145159316225
+          ],
+          "wall_ms": [
+            48068.969100000686,
+            48081.09279999917
+          ]
+        },
+        "code": {
+          "median_tps": 5.266741136031808,
+          "measured_tps": [
+            5.274000824062629,
+            5.259481448000986
+          ],
+          "wall_ms": [
+            48924.79730000014,
+            48851.14220000105
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 2119338756.0,
+        "rbitnet_core_cuda_managed_allocations_total": 420148.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 512,
+      "mode": "async-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17938141184,
+        "gpu_global_baseline_mib": 2184.0,
+        "gpu_global_peak_mib": 5317.0,
+        "gpu_global_peak_delta_mib": 3133.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 8.517439553837608,
+          "measured_tps": [
+            8.51063829787234,
+            8.524240809802876
+          ],
+          "wall_ms": [
+            29725.85749999962,
+            29437.27829999989
+          ]
+        },
+        "code": {
+          "median_tps": 8.390661957890849,
+          "measured_tps": [
+            8.436037698543466,
+            8.345286217238232
+          ],
+          "wall_ms": [
+            30103.583599999183,
+            30413.537100001122
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 2114988804.0,
+        "rbitnet_core_cuda_managed_allocations_total": 1405.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 512,
+      "mode": "arena-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17937043456,
+        "gpu_global_baseline_mib": 2069.0,
+        "gpu_global_peak_mib": 4959.0,
+        "gpu_global_peak_delta_mib": 2890.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 8.46840886536553,
+          "measured_tps": [
+            8.46840886536553,
+            8.46840886536553
+          ],
+          "wall_ms": [
+            29667.256600001565,
+            29560.606499999267
+          ]
+        },
+        "code": {
+          "median_tps": 8.441888459147702,
+          "measured_tps": [
+            8.43325866385558,
+            8.450518254439823
+          ],
+          "wall_ms": [
+            30171.242899999925,
+            30186.877600001026
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 2114988804.0,
+        "rbitnet_core_cuda_managed_allocations_total": 1145.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 8192,
+      "mode": "sync",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17940463616,
+        "gpu_global_baseline_mib": 2069.0,
+        "gpu_global_peak_mib": 15001.0,
+        "gpu_global_peak_delta_mib": 12932.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 26.983396760023577,
+          "measured_tps": [
+            27.515047291487534,
+            26.45174622855962
+          ],
+          "wall_ms": [
+            9951.306200000545,
+            9914.222600000357
+          ]
+        },
+        "code": {
+          "median_tps": 23.585774829555923,
+          "measured_tps": [
+            23.585774829555923,
+            23.585774829555923
+          ],
+          "wall_ms": [
+            11144.773500000156,
+            10985.30490000121
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 10172353284.0,
+        "rbitnet_core_cuda_managed_allocations_total": 48766.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 8192,
+      "mode": "async-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17951223808,
+        "gpu_global_baseline_mib": 2078.0,
+        "gpu_global_peak_mib": 15683.0,
+        "gpu_global_peak_delta_mib": 13605.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 31.124723578870192,
+          "measured_tps": [
+            31.067961165048544,
+            31.18148599269184
+          ],
+          "wall_ms": [
+            8295.216999998956,
+            8330.527400001301
+          ]
+        },
+        "code": {
+          "median_tps": 28.648280967390427,
+          "measured_tps": [
+            28.70598788966136,
+            28.5905740451195
+          ],
+          "wall_ms": [
+            9026.167899999564,
+            8991.189399999712
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 10168150788.0,
+        "rbitnet_core_cuda_managed_allocations_total": 5353.0
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "expert_budget_mib": 8192,
+      "mode": "arena-demand",
+      "memory": {
+        "peak_process_tree_rss_bytes": 17940791296,
+        "gpu_global_baseline_mib": 2078.0,
+        "gpu_global_peak_mib": 12647.0,
+        "gpu_global_peak_delta_mib": 10569.0
+      },
+      "tasks": {
+        "story": {
+          "median_tps": 31.08692767086928,
+          "measured_tps": [
+            31.03030303030303,
+            31.143552311435524
+          ],
+          "wall_ms": [
+            8307.930200000555,
+            8270.251599999028
+          ]
+        },
+        "code": {
+          "median_tps": 28.802903623047506,
+          "measured_tps": [
+            28.82882882882883,
+            28.776978417266186
+          ],
+          "wall_ms": [
+            8949.592600001779,
+            8955.516500001977
+          ]
+        }
+      },
+      "managed": {
+        "rbitnet_core_cuda_managed_peak_bytes": 10168150788.0,
+        "rbitnet_core_cuda_managed_allocations_total": 1145.0
+      }
+    }
+  ],
+  "protocol": "Same CLI/library; one warm cycle plus two measured cycles; 128 tokens, four system notes, ctx2048; all modes demand-only.",
+  "limits": [
+    "Global sampled GPU memory is not process VRAM; OS/driver allocations affect it.",
+    "Arena reduces physical allocation calls, without dynamic compaction or changed expert admission.",
+    "No statistical confidence from two measured cycles; no independent engine-parity claim.",
+    "This is a quiet-capture analysis, not the full numerical/network proof manifest."
+  ]
+}

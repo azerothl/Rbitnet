@@ -1,0 +1,584 @@
+{
+  "files": {
+    "manifest.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\manifest.json",
+      "sha256": "02e76d7150bdd547b1b35ee11d86912185a840111df8910622899afdcd4c8918"
+    },
+    "summary.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\summary.json",
+      "sha256": "77fe30fd15fc2674bb664ca8c59069ac82a7d9f6d27bc1039e612089a839a8e8"
+    },
+    "replay.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\replay.json",
+      "sha256": "eab795bbd2f644098e00b70bed47fff466baaf9f4a791e863837e971a2aae655"
+    },
+    "imported-capture.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\imported-capture.json",
+      "sha256": "c8aad256f63f5517345fb64e68a6dd0a5af9ec493cb10ed1a0d7d4d5379cb90f"
+    },
+    "resume.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\resume.json",
+      "sha256": "5d44f3d48f73c2187570dca61939bc883636e1c87f7687849d99b202456f6154"
+    },
+    "quiet/gpt-oss-20b-cache512/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\gpt-oss-20b-cache512\\results.json",
+      "sha256": "2940a043544a175ec2bbf2736b88c2c1c653c6ef32dd9134e8ac308cf8606abc"
+    },
+    "quiet/gpt-oss-20b-cache8192/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\gpt-oss-20b-cache8192\\results.json",
+      "sha256": "d203defbbfc864165235c04a1946bc38a33c4b5e2c5de4d9a1ca936b5aed8234"
+    },
+    "quiet/glm47-flash-cache512/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\glm47-flash-cache512\\results.json",
+      "sha256": "6e4f8d817486602d084e94c807e71e1d905cf48bb7257b9bf8e599ef6ce14cd3"
+    },
+    "quiet/glm47-flash-cache8192/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\glm47-flash-cache8192\\results.json",
+      "sha256": "bc16aef6fff179ae33ec84e94c9e9183f8f4b50540a972393d9e5e587a55d550"
+    },
+    "traced/gpt-oss-20b-cache512/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\gpt-oss-20b-cache512\\results.json",
+      "sha256": "363f0f3d6801b52fc4b3e57494b1225649a1e9b6e8cd251cab6b8ae4737e2cef"
+    },
+    "traced/gpt-oss-20b-cache8192/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\gpt-oss-20b-cache8192\\results.json",
+      "sha256": "b7bfbd5841c55ccb10c1703e1e39ea5c8e2014651dd6e0e5aa8c9e469155a2d1"
+    },
+    "traced/glm47-flash-cache512/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\glm47-flash-cache512\\results.json",
+      "sha256": "e2ef3c42dd8f94d5140e71c18586ff7ac41c6612639a1a5b98aca45f38f9fb7a"
+    },
+    "traced/glm47-flash-cache8192/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\glm47-flash-cache8192\\results.json",
+      "sha256": "052135f746884e15d059c7ff9ccb6ef9eecc49d8b3f0eb7a6136add2129f3e00"
+    },
+    "live/gpt-oss-20b-lru/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\gpt-oss-20b-lru\\results.json",
+      "sha256": "8260a7efa894bee0d42283d507c0c6ef8d57f0f9f9509d86a47d9a5911ec0ba5"
+    },
+    "live/gpt-oss-20b-lfu/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\gpt-oss-20b-lfu\\results.json",
+      "sha256": "76e98d258b7b2c977b1dc8724562ebc1492743aee38541397bd22d89fc06a810"
+    },
+    "live/gpt-oss-20b-least-stale/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\gpt-oss-20b-least-stale\\results.json",
+      "sha256": "e7e3b0d6db9b0c18bed2737eecc8b0ab5ede5503a5e310df760ffdd2eb649216"
+    },
+    "live/glm47-flash-lru/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\glm47-flash-lru\\results.json",
+      "sha256": "a6bb6bf12b4baf762b4d0441a8d0871a06aa4e310538229094af2fc9e767beb7"
+    },
+    "live/glm47-flash-lfu/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\glm47-flash-lfu\\results.json",
+      "sha256": "2e0751c5d2f24d939102e61fe7571fae6a0cd325f71748bf1b8dc33649cb3a8b"
+    },
+    "live/glm47-flash-least-stale/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\live\\glm47-flash-least-stale\\results.json",
+      "sha256": "f29fc98953777b04b2a817b457988e8298371e5c0974a07b2963a35ccfd1a963"
+    },
+    "traces/gpt-oss-20b-cache512/lru.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache512\\lru\\gpt-oss-9712-0.jsonl.gz",
+      "sha256": "ce5c44b4a703cd2d85b47293b390418bb8fbccd144d75c6f6f1b81637a519274"
+    },
+    "traces/gpt-oss-20b-cache512/lfu.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache512\\lfu\\gpt-oss-54920-0.jsonl.gz",
+      "sha256": "92f5ac91791e11e9bd311b19e0c0e4fef5d6233d05690318098909f38b6f71f7"
+    },
+    "traces/gpt-oss-20b-cache512/least-stale.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache512\\least-stale\\gpt-oss-48132-0.jsonl.gz",
+      "sha256": "5cc9eefb71a450bbcff20f8fd1eedb3eb5384a67761da189f8a4ed311056a14b"
+    },
+    "traces/gpt-oss-20b-cache8192/lru.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache8192\\lru\\gpt-oss-18548-0.jsonl.gz",
+      "sha256": "9d39889324ba379096f4d98c79aca7dfce8a86165ddf6692a81e693ccb26b0aa"
+    },
+    "traces/gpt-oss-20b-cache8192/lfu.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache8192\\lfu\\gpt-oss-17720-0.jsonl.gz",
+      "sha256": "fdc6c051e56db3e62f1e6cae43a07fef55b5198b5b09487c99381a56e6df278e"
+    },
+    "traces/gpt-oss-20b-cache8192/least-stale.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\gpt-oss-20b-cache8192\\least-stale\\gpt-oss-60892-0.jsonl.gz",
+      "sha256": "6d8c9ff17f1204ce328d70d08f82306f4b12d3a4418f321ca1fb864a9f3cfd2b"
+    },
+    "traces/glm47-flash-cache512/lru.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache512\\lru\\deepseek2-47276-0.jsonl.gz",
+      "sha256": "3af8632927e6237b6e36f985b61164b8d222cdee2847b10f8ac7014876b1abc7"
+    },
+    "traces/glm47-flash-cache512/lfu.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache512\\lfu\\deepseek2-52568-0.jsonl.gz",
+      "sha256": "1049409da03f0049aac9b56b8ee140031eee6b75cc7e7de27197cd0bbb9ff9af"
+    },
+    "traces/glm47-flash-cache512/least-stale.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache512\\least-stale\\deepseek2-19280-0.jsonl.gz",
+      "sha256": "e8ed1522728773130b15156137602300d218a9e85fe73fcc8680f5546b53ccca"
+    },
+    "traces/glm47-flash-cache8192/lru.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache8192\\lru\\deepseek2-53796-0.jsonl.gz",
+      "sha256": "13f86d1a67030cb0c5ac588f16092168a9f35dba0cc67e32e408cada3cef2e4f"
+    },
+    "traces/glm47-flash-cache8192/lfu.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache8192\\lfu\\deepseek2-48580-0.jsonl.gz",
+      "sha256": "13a8dc1eebfe48af1357b89538a4e60bd5b8592125419f6d5087c1839aa093bb"
+    },
+    "traces/glm47-flash-cache8192/least-stale.jsonl.gz": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traces\\glm47-flash-cache8192\\least-stale\\deepseek2-18392-0.jsonl.gz",
+      "sha256": "c5eecb15dd1bb9d63ea52dd356f30b6612744809dea822fa1893fc84960615e9"
+    },
+    "negative/original-results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-original-failure\\results.json",
+      "sha256": "8b642b4335648abc11a17ce28679fdf19e4d68cc5e56bd50dd96d8fc1ba25c99"
+    },
+    "negative/original-quiet-glm47-flash-cache8192.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-original-failure\\quiet-glm47-flash-cache8192.log",
+      "sha256": "d8d8a42b561a69464da5089bcae863bd24a1178c977c0c9e62ed1b880400d4db"
+    },
+    "negative/original-manifest.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-original-failure\\manifest.json",
+      "sha256": "dcac0556f537fbabc1bbe8febbdee24f7a0e250c249ab9cae01fa3d5623c00cd"
+    },
+    "diagnostics/focused-repeat-comparison.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-diagnostic-01\\comparison.json",
+      "sha256": "6adf87444a4cda6fb2a1c2afd4f24e5ec34c62e4ee486abbb4954e395a8f82fc"
+    },
+    "diagnostics/manifest.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\manifest.json",
+      "sha256": "9c7d77d9bfaaac0cfa9063c9c00538a5efcac4ab6fda81eb7e03ffe739e6d41f"
+    },
+    "diagnostics/attention-memcheck.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\attention-memcheck.log",
+      "sha256": "f6d11cb0dcc3196e69611efc38d3cba8a093022e21ad0b0b6baa63ff7b80e94a"
+    },
+    "diagnostics/attention-racecheck.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\attention-racecheck.log",
+      "sha256": "312359ce698ff4883ce10e851fc944571bf1f44eb48f8dcceac267e451a85401"
+    },
+    "diagnostics/compile.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\compile.log",
+      "sha256": "e6f93f1a75262a0b7439c9d8b4a4f318c4f232996c315f418f2dbc79e708ac72"
+    },
+    "diagnostics/actual.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\actual.log",
+      "sha256": "0b9028b2fd5be91e66aab1e6c59c4c9d45e268c78ccffa72d3e5456ee0c5f4b2"
+    },
+    "diagnostics/glm_policy_logits.rs": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-glm-policy-logits\\crates\\bitnet-core\\src\\native\\glm_policy_logits.rs",
+      "sha256": "c1ebc9044c033f0fbb58a5e728c22bb68b0523268a60942a677b6daf5adb926a"
+    },
+    "diagnostics/network-pre-correction.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-network-pre-correction-gpt-lru.json",
+      "sha256": "93cbdb1e8965952b2624eac3d87c1ba243f5df539f1805822b1a8c7e59977f01"
+    },
+    "diagnostics/network-pre-correction.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-network-executed-ce6420e7ffd47223d160507883fc8ffcfd3b9d582a37de7e52ab07d7b89ff79d.py",
+      "sha256": "ce6420e7ffd47223d160507883fc8ffcfd3b9d582a37de7e52ab07d7b89ff79d"
+    },
+    "source/benchmark.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-study-harness\\benchmark.py",
+      "sha256": "6220e46dd8fc4282c034b9739b46625c940da8976af376704e1080853a11fb80"
+    },
+    "source/live.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-study-harness\\live.py",
+      "sha256": "d50fbf4ee2e8564871a916900e5287783c8f6ae73a5d4fa3759b437968f1153c"
+    },
+    "source/atomic_journal.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\atomic_journal.py",
+      "sha256": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c"
+    },
+    "source/resume_policy.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\resume_policy.py",
+      "sha256": "8241727ce9e05d397b3fb1cdf3f3365bcb1598f7bd9e07116ea564c3d1773752"
+    }
+  },
+  "traces": [
+    {
+      "path": "traces/gpt-oss-20b-cache512/lru.jsonl.gz",
+      "compressed_sha256": "ce5c44b4a703cd2d85b47293b390418bb8fbccd144d75c6f6f1b81637a519274",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/gpt-oss-20b-cache512/lfu.jsonl.gz",
+      "compressed_sha256": "92f5ac91791e11e9bd311b19e0c0e4fef5d6233d05690318098909f38b6f71f7",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/gpt-oss-20b-cache512/least-stale.jsonl.gz",
+      "compressed_sha256": "5cc9eefb71a450bbcff20f8fd1eedb3eb5384a67761da189f8a4ed311056a14b",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/gpt-oss-20b-cache8192/lru.jsonl.gz",
+      "compressed_sha256": "9d39889324ba379096f4d98c79aca7dfce8a86165ddf6692a81e693ccb26b0aa",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800
+      },
+      "replay": {
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/gpt-oss-20b-cache8192/lfu.jsonl.gz",
+      "compressed_sha256": "fdc6c051e56db3e62f1e6cae43a07fef55b5198b5b09487c99381a56e6df278e",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400
+      },
+      "replay": {
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/gpt-oss-20b-cache8192/least-stale.jsonl.gz",
+      "compressed_sha256": "6d8c9ff17f1204ce328d70d08f82306f4b12d3a4418f321ca1fb864a9f3cfd2b",
+      "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+      "observed": {
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800
+      },
+      "replay": {
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache512/lru.jsonl.gz",
+      "compressed_sha256": "3af8632927e6237b6e36f985b61164b8d222cdee2847b10f8ac7014876b1abc7",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache512/lfu.jsonl.gz",
+      "compressed_sha256": "1049409da03f0049aac9b56b8ee140031eee6b75cc7e7de27197cd0bbb9ff9af",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache512/least-stale.jsonl.gz",
+      "compressed_sha256": "e8ed1522728773130b15156137602300d218a9e85fe73fcc8680f5546b53ccca",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400
+      },
+      "replay": {
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache8192/lru.jsonl.gz",
+      "compressed_sha256": "13f86d1a67030cb0c5ac588f16092168a9f35dba0cc67e32e408cada3cef2e4f",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928
+      },
+      "replay": {
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache8192/lfu.jsonl.gz",
+      "compressed_sha256": "13a8dc1eebfe48af1357b89538a4e60bd5b8592125419f6d5087c1839aa093bb",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056
+      },
+      "replay": {
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      }
+    },
+    {
+      "path": "traces/glm47-flash-cache8192/least-stale.jsonl.gz",
+      "compressed_sha256": "c5eecb15dd1bb9d63ea52dd356f30b6612744809dea822fa1893fc84960615e9",
+      "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+      "observed": {
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040
+      },
+      "replay": {
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    }
+  ],
+  "scope": "Raw evidence bytes preserved; source adapters only change test fixture paths. The unresolved negative result is included, not corrected.",
+  "generated": {
+    "README.md": "d7b4231b353c69e54bc26c2691f6d33aacb4ea11c60fc98d494cd0690c77e979",
+    ".gitattributes": "e7950d7ba02e29286841e18a33ea0400a23d05dd9c5acedbfab2f8a3b71bc0e0",
+    "source/test_policy_network_options.py": "f060b0530c2f4a56ac3493355abcf7fcb72eaa1b95f5cfdc1f8ff4bb48bb3e6e"
+  }
+}

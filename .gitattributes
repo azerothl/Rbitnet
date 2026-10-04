@@ -1,4 +1,57 @@
+# Keep bytes used by the encoded-KV evidence stable across Windows checkouts.
+native/cuda_quant/src/kv_storage.cuh text eol=lf
+native/cuda_quant/src/kv_attention_oracle.cuh text eol=lf
+native/cuda_quant/src/llama_resident.cuh text eol=lf
+native/cuda_quant/src/paged_kernels.cuh text eol=lf
+native/cuda_quant/src/paged_pool.cuh text eol=lf
+native/cuda_quant/src/quant_matvec.cu text eol=lf
+native/cuda_quant/include/rbitnet_cuda_quant.h text eol=lf
+crates/bitnet-core/src/llama/resident.rs text eol=lf
+crates/bitnet-core/src/llama/runtime.rs text eol=lf
+crates/bitnet-core/src/llama/resident/quantized_tests.rs text eol=lf
+crates/bitnet-core/src/llama/resident/canonical_tests.rs text eol=lf
+crates/bitnet-core/src/llama/resident/quantized_long_tests.rs text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.json text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.md text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.gz -text
+.gitattributes text eol=lf
+docs/benchmarks/2026-10-04-continuous-llama/raw/** -text
 
+docs/benchmarks/2026-10-04-performance-stack-fresh/raw/** -text
+docs/benchmarks/2026-10-04-performance-stack-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-performance-stack-fresh/harness/** -text
+docs/benchmarks/2026-10-04-stack-comparison-first/raw/** -text
+docs/benchmarks/2026-10-04-stack-comparison-first/harness/** -text
+docs/benchmarks/2026-10-04-stack-comparison-first/receipt.json -text
+docs/benchmarks/2026-10-04-context-namespace-fresh/raw/** -text
+docs/benchmarks/2026-10-04-context-namespace-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-context-namespace-fresh/harness/** -text
+docs/benchmarks/2026-10-04-context-global-quota-fresh/raw/** -text
+docs/benchmarks/2026-10-04-context-global-quota-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-context-global-quota-fresh/harness/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/raw/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/harness/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/raw/** -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/harness/** -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/raw/** -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/harness/** -text
+# Preserve measured arena source and evidence bytes on Windows.
+crates/bitnet-core/src/backend.rs text eol=lf
+crates/bitnet-core/src/backend/async_upload.rs text eol=lf
+crates/bitnet-core/src/backend/expert_arena.rs text eol=lf
+crates/bitnet-core/src/native/weights.rs text eol=lf
+crates/bitnet-core/src/native/expert_cache/async_cache.rs text eol=lf
+crates/bitnet-core/src/native/expert_cache/async_cache/arena_tests.rs text eol=lf
+crates/bitnet-core/src/native/async_runtime_tests.rs text eol=lf
+docs/benchmarks/2026-10-04-expert-arena/raw/** -text
+docs/benchmarks/2026-10-04-expert-arena/*.json -text
+docs/benchmarks/2026-10-04-expert-arena/harness/*.py -text
+docs/benchmarks/2026-10-04-expert-arena-fresh/raw/** -text
+docs/benchmarks/2026-10-04-expert-arena-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-expert-arena-fresh/harness/** -text
 docs/benchmarks/2026-10-04-structured-guards/raw/** -text
 docs/benchmarks/2026-10-04-structured-guards/receipt.json -text
 docs/benchmarks/2026-10-04-structured-guards/harness/** -text

@@ -1,0 +1,4 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-glm-policy-logits\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-glm-policy-logits\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 16.06s
+  Executable unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
