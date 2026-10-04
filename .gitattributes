@@ -20,15 +20,12 @@ docs/benchmarks/2026-10-04-continuous-llama/raw/** -text
 docs/benchmarks/2026-10-04-performance-stack-fresh/raw/** -text
 docs/benchmarks/2026-10-04-performance-stack-fresh/receipt.json -text
 docs/benchmarks/2026-10-04-performance-stack-fresh/harness/** -text
-
 docs/benchmarks/2026-10-04-stack-comparison-first/raw/** -text
 docs/benchmarks/2026-10-04-stack-comparison-first/harness/** -text
 docs/benchmarks/2026-10-04-stack-comparison-first/receipt.json -text
-
 docs/benchmarks/2026-10-04-context-namespace-fresh/raw/** -text
 docs/benchmarks/2026-10-04-context-namespace-fresh/receipt.json -text
 docs/benchmarks/2026-10-04-context-namespace-fresh/harness/** -text
-
 docs/benchmarks/2026-10-04-context-global-quota-fresh/raw/** -text
 docs/benchmarks/2026-10-04-context-global-quota-fresh/receipt.json -text
 docs/benchmarks/2026-10-04-context-global-quota-fresh/harness/** -text
@@ -38,3 +35,6 @@ docs/benchmarks/2026-10-04-native-llama-comparison/receipt.json -text
 docs/benchmarks/2026-10-04-kv-tf32-guard/raw/** -text
 docs/benchmarks/2026-10-04-kv-tf32-guard/receipt.json -text
 docs/benchmarks/2026-10-04-kv-tf32-guard/harness/** -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/raw/** -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/harness/** -text
