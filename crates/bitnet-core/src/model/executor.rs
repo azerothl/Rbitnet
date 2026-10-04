@@ -495,6 +495,7 @@ impl ModelExecutor for BitNetExecutor {
                 prompt_tokens: 0,
                 completion_tokens,
                 speculative_attempted: false,
+                finish_reason: Default::default(),
             },
         }))
     }

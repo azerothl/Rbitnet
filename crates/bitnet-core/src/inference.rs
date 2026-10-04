@@ -502,6 +502,7 @@ impl Engine {
                     prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
+                    finish_reason: crate::timings::GenerationFinishReason::Stop,
                 },
             });
         }
@@ -521,6 +522,7 @@ impl Engine {
                     prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
+                    finish_reason: Default::default(),
                 },
             });
         }
@@ -584,6 +586,7 @@ impl Engine {
                     prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
+                    finish_reason: crate::timings::GenerationFinishReason::Stop,
                 },
             }))?;
             return Ok(());
@@ -619,6 +622,7 @@ impl Engine {
                     prompt_tokens: 0,
                     completion_tokens,
                     speculative_attempted: false,
+                    finish_reason: Default::default(),
                 },
             }))?;
             return Ok(());

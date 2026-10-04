@@ -42,6 +42,9 @@ impl StreamStop {
         let release = self.pending.len() - keep;
         self.pending.drain(..release).collect()
     }
+    pub fn stopped(&self) -> bool {
+        self.stopped
+    }
     pub fn finish(&mut self) -> String {
         std::mem::take(&mut self.pending)
     }

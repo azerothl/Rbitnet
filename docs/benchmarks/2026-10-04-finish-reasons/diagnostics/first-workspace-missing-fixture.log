@@ -1,0 +1,425 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling windows-sys v0.61.2
+   Compiling fnv v1.0.7
+   Compiling serde v1.0.228
+   Compiling tracing v0.1.44
+   Compiling zerocopy v0.8.48
+   Compiling thiserror v2.0.18
+   Compiling monostate v0.1.18
+   Compiling thiserror v1.0.69
+   Compiling futures-sink v0.3.32
+   Compiling slab v0.4.12
+   Compiling equivalent v1.0.2
+   Compiling base64 v0.22.1
+   Compiling hashbrown v0.17.0
+   Compiling try-lock v0.2.5
+   Compiling windows-strings v0.5.1
+   Compiling windows-result v0.4.1
+   Compiling darling_core v0.20.11
+   Compiling sentencepiece v0.11.3
+   Compiling futures-channel v0.3.32
+   Compiling want v0.3.1
+   Compiling sync_wrapper v1.0.2
+   Compiling ipnet v2.12.0
+   Compiling zerofrom v0.1.7
+   Compiling stable_deref_trait v1.2.1
+   Compiling iri-string v0.7.12
+   Compiling futures-util v0.3.32
+   Compiling windows-registry v0.6.1
+   Compiling axum-core v0.5.6
+   Compiling yoke v0.8.2
+   Compiling zeroize v1.8.2
+   Compiling litemap v0.8.2
+   Compiling spm_precompiled v0.1.4
+   Compiling compact_str v0.9.0
+   Compiling dary_heap v0.3.9
+   Compiling tinytemplate v1.2.1
+   Compiling serde_urlencoded v0.7.1
+   Compiling zerovec v0.11.6
+   Compiling writeable v0.6.3
+   Compiling indexmap v2.14.0
+   Compiling zerotrie v0.2.4
+   Compiling rustls-pki-types v1.14.0
+   Compiling minijinja v2.24.0
+   Compiling utf8_iter v1.0.4
+   Compiling untrusted v0.9.0
+   Compiling icu_normalizer_data v2.2.0
+   Compiling ring v0.17.14
+   Compiling icu_properties_data v2.2.0
+   Compiling subtle v2.6.1
+   Compiling winapi v0.3.9
+   Compiling encoding_rs v0.8.35
+   Compiling tinystr v0.8.3
+   Compiling potential_utf v0.1.5
+   Compiling webpki-roots v1.0.7
+   Compiling simd-adler32 v0.3.9
+   Compiling icu_collections v2.2.0
+   Compiling icu_locale_core v2.2.0
+   Compiling adler2 v2.0.1
+   Compiling crc32fast v1.5.0
+   Compiling miniz_oxide v0.8.9
+   Compiling darling_core v0.23.0
+   Compiling base64ct v1.8.3
+   Compiling scopeguard v1.2.0
+   Compiling lock_api v0.4.14
+   Compiling flate2 v1.1.9
+   Compiling pem-rfc7468 v1.0.0
+   Compiling parking_lot_core v0.9.12
+   Compiling byteorder v1.5.0
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.1.5
+   Compiling icu_provider v2.2.0
+   Compiling option-ext v0.2.0
+   Compiling parking_lot v0.12.5
+   Compiling der v0.8.0
+   Compiling webpki-root-certs v1.0.7
+   Compiling ureq-proto v0.6.0
+   Compiling itertools v0.13.0
+   Compiling icu_properties v2.2.0
+   Compiling darling_macro v0.20.11
+   Compiling rustls-webpki v0.103.15
+   Compiling icu_normalizer v2.2.0
+   Compiling socks v0.3.4
+   Compiling crossterm_winapi v0.9.1
+   Compiling minijinja-contrib v2.24.0
+   Compiling darling v0.20.11
+   Compiling futures-executor v0.3.32
+   Compiling rustls v0.23.45
+   Compiling derive_builder_core v0.20.2
+   Compiling hashbrown v0.15.5
+   Compiling unicode-width v0.1.14
+   Compiling futures v0.3.32
+   Compiling unit-prefix v0.5.2
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling ahash v0.8.12
+   Compiling idna_adapter v1.2.1
+   Compiling utf8-zero v0.8.1
+   Compiling unicode-truncate v1.1.0
+   Compiling rand_chacha v0.9.0
+   Compiling rand_chacha v0.3.1
+   Compiling idna v1.1.0
+   Compiling lru v0.12.5
+   Compiling crossterm v0.28.1
+   Compiling strum v0.26.3
+   Compiling darling_macro v0.23.0
+   Compiling ciborium-ll v0.2.2
+   Compiling compact_str v0.8.1
+   Compiling num_cpus v1.17.0
+   Compiling rand v0.9.4
+   Compiling rand v0.8.6
+   Compiling cassowary v0.3.0
+   Compiling urlencoding v2.1.3
+   Compiling derive_builder_macro v0.20.2
+   Compiling ciborium v0.2.2
+   Compiling url v2.5.8
+   Compiling darling v0.23.0
+   Compiling derive_builder v0.20.2
+   Compiling instability v0.3.12
+   Compiling anstyle-query v1.1.5
+   Compiling anstyle-wincon v3.0.11
+   Compiling tokenizers v0.21.4
+   Compiling mio v1.2.0
+   Compiling tempfile v3.27.0
+   Compiling socket2 v0.6.3
+   Compiling winapi-util v0.1.11
+   Compiling is-terminal v0.4.17
+   Compiling anstream v1.0.0
+   Compiling same-file v1.0.6
+   Compiling nu-ansi-term v0.50.3
+   Compiling schannel v0.1.29
+   Compiling dirs-sys v0.5.0
+   Compiling console v0.16.3
+   Compiling walkdir v2.5.0
+   Compiling dirs v6.0.0
+   Compiling ratatui v0.29.0
+   Compiling clap_builder v4.6.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling tokio v1.52.1
+   Compiling native-tls v0.2.18
+   Compiling indicatif v0.18.4
+   Compiling ureq v2.12.1
+   Compiling ureq v3.3.0
+   Compiling clap v4.6.1
+   Compiling criterion v0.5.1
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core)
+   Compiling tokio-util v0.7.18
+   Compiling tower v0.5.3
+   Compiling tokio-rustls v0.26.4
+   Compiling tokio-native-tls v0.3.1
+warning: fields `query` and `trim` are never read
+  --> crates\bitnet-core\src\llama\resident.rs:81:5
+   |
+79 | struct Pages {
+   |        ----- fields in this struct
+80 |     limit: u32,
+81 |     query: QueryPages,
+   |     ^^^^^
+82 |     trim: TrimPages,
+   |     ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `page_stats` and `trim_pages` are never used
+   --> crates\bitnet-core\src\llama\resident.rs:398:19
+    |
+174 | impl Resident {
+    | ------------- methods in this implementation
+...
+398 |     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
+    |                   ^^^^^^^^^^
+...
+411 |     pub(crate) fn trim_pages(&mut self) -> Result<()> {
+    |                   ^^^^^^^^^^
+
+   Compiling h2 v0.4.16
+   Compiling tower-http v0.6.8
+   Compiling hyper v1.9.0
+warning: `bitnet-core` (lib) generated 2 warnings
+   Compiling hyper-util v0.1.20
+   Compiling axum v0.8.9
+   Compiling hyper-rustls v0.27.9
+   Compiling hyper-tls v0.6.0
+   Compiling reqwest v0.12.28
+   Compiling hf-hub v0.5.0
+   Compiling bitnet-server v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-server)
+   Compiling rbitnet-proxy v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\rbitnet-proxy)
+   Compiling rbitnet-cli v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\rbitnet-cli)
+   Compiling rbitnet-runner v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\rbitnet-runner)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 35.83s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\bitnet_core-7b82105f446f8d4b.exe)
+
+running 152 tests
+test backend::async_upload::tests::optional_async_mixed_q4_q6_refill_keeps_capacity_and_original_bytes ... ok
+test backend::async_upload::tests::optional_async_upload_publishes_only_after_events_and_drains_on_drop ... ok
+test backend::async_upload::tests::pinned_staging_uses_exact_matrix_span_even_with_trailing_host_bytes ... ok
+test backend::device_memory::tests::opt_in_shared_allocator_bounds_views_native_rollback_fallback_and_concurrent_admission ... ok
+test backend::mapped_quant_tests::mapped_quant_rejects_invalid_spans_and_row_geometry ... ok
+test backend::mapped_quant_tests::mapped_quant_spans_keep_archive_alive_without_vec_mirrors ... ok
+test backend::mapped_quant_tests::optional_mapped_quant_gpu_rows_refill_and_leases ... ok
+test backend::transfer_tests::auto_selection_respects_mixtral_cpu_executor_without_gpu_probe ... ok
+test backend::transfer_tests::loader_only_prototypes_never_claim_native_acceleration ... ok
+test backend::transfer_tests::optional_native_completion_guard_finishes_pinned_download_on_early_return ... ok
+test backend::transfer_tests::optional_pageable_upload_and_refill_finish_before_private_stream_consumption ... ok
+test cancel::tests::cancel_flag_roundtrip ... ok
+test context_capacity::tests::reserve_complete_request_without_overflow_and_use_client_error ... ok
+test context_capacity::tests::runtime_caps_distinguish_training_request_and_family_limit ... ok
+test fused_batch::tests::batch_one_equals_single_row ... ok
+test fused_batch::tests::env_flag_off_by_default ... ok
+test fused_batch::tests::tiny_batch_matches_sequential ... ok
+test ggml::dequant::mxfp4_tests::mxfp4_one_block_shape ... ok
+test ggml::dequant::mxfp4_tests::q5_k_high_bits_follow_pairs_of_32_values ... ok
+test ggml::dequant::q6_k_tests::q6_k_signed_scales_match_known_ggml_values ... ok
+test ggml::quant_dot::tests::q4_0_row_matches_dense_dot ... ok
+test ggml::quant_dot::tests::q4_k_row_dot_matches_full_dequant ... ok
+test ggml::quant_dot::tests::q6_k_row_dot_matches_full_dequant ... ok
+test ggml::quant_dot::tests::tq1_0_row_dot_matches_full_dequant ... ok
+test ggml::quant_dot::tests::tq2_0_row_dot_matches_full_dequant ... ok
+test ggml::quant_simd::tests::packed_register_dots_match_independently_dequantized_weights ... ok
+test ggml::simd::tests::dispatch_matches_reference_with_tail_and_cancellation ... ok
+test gguf::parse::tests::align_works ... ok
+test inference::tests::embedded_gguf_chat_template_works_without_tokenizer_config ... ok
+test inference::tests::stub_always_works ... ok
+test inference::tests::stub_engine_is_ready ... ok
+test inference::tests::toy_mode_complete_and_model_id ... ok
+test kernels::tests::cuda_mvp_symbol_matches_reference ... ok
+test kernels::tests::i2s_and_tl2_match_i8_reference ... ok
+test kernels::tests::microbench_reports_bit_exact ... ok
+test kernels::tests::tiny_matvec ... ok
+test llama::kv_storage::tests::q4_roundtrip_preserves_sign ... ok
+test llama::kv_storage::tests::q8_roundtrip_preserves_row_shape ... ok
+test llama::model::rope_norm_tests::rope_gguf_factors_divide_analytic_frequencies ... ok
+test llama::model::rope_norm_tests::rope_invalid_factors_are_rejected ... ok
+test llama::model::rope_norm_tests::rope_norm_rotates_adjacent_pairs ... ok
+test llama::model::rope_norm_tests::rope_pos_zero_is_identity ... ok
+test llama::resident::paged_tests::optional_native_paged_owner_variants_and_snapshot_outlives_root ... ok
+test llama::resident::paged_tests::optional_native_paged_shared_prefix_cow_graph_block_split_and_reclaim ... ok
+test llama::resident::tests::optional_real_tensor_prefill_teacher_forcing_matches_simt ... ok
+test llama::resident::tests::optional_real_verification_logits_argmax_and_rollback_match_serial ... ok
+test llama::runtime::stream_tests::utf8_fragments_wait_for_complete_characters_and_flush_at_stop ... ok
+test llama::slim_attention::tests::sliding_window_subsequence_matches_masked_baseline ... ok
+test llama::slim_attention::tests::slim_attention_flag_defaults_off ... ok
+test llama::slim_attention::tests::tile_tokens_from_env_defaults ... ok
+test llama::slim_attention::tests::tiled_matches_baseline_odd_seq_and_tile ... ok
+test llama::slim_attention::tests::tiled_matches_baseline_on_toy_tensors ... ok
+test llama::speculative::finish_tests::eos_inside_verification_and_budget_exhaustion_are_distinct ... ok
+test llama::speculative::tests::cost_guard_ignores_cold_setup_and_keeps_only_profitable_blocks ... ok
+test llama::speculative::tests::delta_draft_acceptance_and_correction_preserve_known_target_distribution ... ok
+test llama::speculative::tests::rollback_boundary_tracks_all_first_and_partial_rejections_eos_and_budget ... ok
+test llama::speculative::tests::token_lookup_prefers_longest_recent_match_without_inventing_tokens ... ok
+test loaders::arch_key::tests::normalize_slug_trims_and_lowercases ... ok
+test loaders::arch_key::tests::resolve_model_family_llama_override_overrides_slugs ... ok
+test loaders::arch_key::tests::resolve_reads_general_architecture_when_auto ... ok
+test loaders::arch_key::tests::resolve_respects_rbitnet_architecture_override ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::internal_controls_preserve_multi_turn_ids_and_plain_text_normalization ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::malformed_proto_is_refused_without_dropping_unknown_fields_or_wrapping_lengths ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::mismatched_vocabulary_ids_or_embedding_rows_are_refused ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_actual_mistral_sentencepiece_ids_and_generations_match_hf ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::optional_trained_sentencepiece_reference_ids_normalizer_and_metadata ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_bos_eos_flags_match_metadata_and_do_not_duplicate_templates ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::sentencepiece_skip_special_false_exposes_controls_without_replacing_normalizer ... ok
+test loaders::prompt_tokenizer::sentencepiece_codec::tests::word_model_refuses_lost_interior_controls_instead_of_encoding_unk ... ok
+test loaders::prompt_tokenizer::tests::harmony_continues_after_analysis_message_end ... ok
+test loaders::prompt_tokenizer::tests::llama3_formatted_prompt_has_exactly_one_bos ... ok
+test loaders::prompt_tokenizer::tests::llama3_stops_on_both_turn_and_sequence_end ... ok
+test loaders::prompt_tokenizer::tests::optional_all_prompt_ids_match_reference ... ok
+test loaders::registry::tests::dispatch_bitnet_native_requires_tokenizer_not_not_impl ... ok
+test loaders::registry::tests::dispatch_deepseek2_cpu_requires_tokenizer ... ok
+test loaders::registry::tests::dispatch_glm4moe_cuda_requires_tokenizer ... ok
+test loaders::registry::tests::dispatch_glm4moe_requires_cuda_on_cpu ... ok
+test loaders::registry::tests::dispatch_gptoss_cpu_requires_tokenizer ... ok
+test loaders::registry::tests::dispatch_llama_override_skips_block_but_needs_tokenizer ... ok
+test loaders::registry::tests::dispatch_qwen35moe_cpu_requires_tokenizer ... ok
+test loaders::registry::tests::dispatch_qwen35moe_cuda_requires_tokenizer ... ok
+test loaders::registry::tests::dispatch_qwen3_cpu_requires_tokenizer_not_llama_metadata ... ok
+test loaders::roadmap_unsupported::tests::refuse_message_mentions_override_for_mistagged_llama ... ok
+test loaders::roadmap_unsupported::tests::refuse_message_names_arch_and_moe_mla_gap ... ok
+test memory_budget::tests::ok_under_all_caps ... ok
+test memory_budget::tests::refuse_when_over_vram_mb ... ok
+test memory_budget::tests::refuse_when_total_over_load_cap ... ok
+test memory_budget::tests::refuse_when_weights_over_cap ... ok
+test mixtral::moe::tests::top_k_picks_highest_scores ... ok
+test model::toy::tests::toy_is_deterministic ... ok
+test native::attention::tests::opt_in_attention_matches_gqa_sinks_window_and_restored_prefix ... ok
+test native::cache_policy::tests::temporal_and_layer_policies_disagree_on_future_and_current_slots ... ok
+test native::expert_cache::async_cache::tests::optional_async_pool_uses_one_budget_protects_ready_and_pending_and_drains_unload ... ok
+test native::expert_cache::tests::optional_expert_cache_protects_leases_reuses_slots_and_enforces_budget ... ok
+test native::graph::async_config_tests::optional_async_configuration_refuses_silent_fallback_and_releases ... ok
+test native::graph::async_profile_tests::optional_async_real_gpt_warmed_cuda_profiler_range ... ok
+test native::graph::async_runtime_tests::real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime ... ok
+test native::graph::gpt_block_runtime_tests::actual_gpt_block_and_fusion_logits_seeded_outputs_prefixes_and_cancellation ... ok
+test native::graph::gpt_segmented_runtime_tests::opt_in_gpt_segmented_real_teacher_forcing_greedy_seed_penalty_reset_and_prefix ... ok
+test native::graph::gpu_full::tests::full_graph_matches_f64_biases_sinks_windows_rope_gqa_reset_and_output_modes ... ok
+test native::graph::gpu_full::tests::gpt_block_all_positions_modes_tails_f64_and_prefix_continuation ... ok
+test native::graph::gpu_full::tests::router_matches_total_cmp_ties_nan_signed_zero_and_selected_softmax ... ok
+test native::graph::gpu_full::tests::segmented_gpt_f64_dynamic_and_cpu_graphs_prefix_generation_and_cancel ... ok
+test native::graph::gpu_mla::tests::compressed_attention_matches_f64_with_different_key_value_widths_at_tile_boundaries ... ok
+test native::graph::gpu_mla::tests::quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_prefix ... ok
+test native::graph::gpu_mla::tests::sigmoid_softmax_group_selection_preserves_ids_ties_bias_and_normalization ... ok
+test native::graph::mla_runtime_tests::opt_in_mla_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+test native::graph::mla_runtime_tests::opt_in_real_mla_cpu_routed_fallback_preserves_logits_sampling_and_prefix ... ok
+test native::graph::moe_policy_runtime_tests::real_moe_cpu_and_adaptive_cost_preserve_logits_generations_prefix_and_model_lifetime ... ok
+test native::graph::state_budget::tests::reservation_overflow_is_rejected ... ok
+test native::graph::tests::mla_rotates_consecutive_pairs_and_gpt_oss_rotates_halves ... ok
+test native::graph::tests::opt_in_gpt_full_real_layer_diagnosis ... ok
+test native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+test native::head::tests::opt_in_head_preserves_f64_logits_large_vocab_nan_ties_and_input_changes ... ok
+test native::moe::fused_tests::fused_fixed_dynamic_all_formats_mixed_bias_graph_refill_matches_original_bits_and_f64 ... ok
+test native::moe::grouped_tests::optional_grouped_moe_exact_serial_bits_all_formats_router_slots_tails_graphs_and_f64 ... ok
+test native::moe::tests::opt_in_routed_graph_matches_f64_experts_biases_and_selection_changes ... ok
+test native::moe_cost::tests::fixed_policies_and_calibration_are_explicit_and_probes_are_bounded ... ok
+test native::moe_cost::tests::invalid_samples_and_clock_noise_cannot_create_negative_costs ... ok
+test native::moe_cost::tests::measured_copy_cost_can_reverse_a_gpu_preference_without_changing_ids ... ok
+test native::moe_metrics::tests::labels_escape_quotes_backslashes_and_line_breaks ... ok
+test native::moe_metrics::tests::unload_prunes_scoped_counters_without_retaining_model_weights ... ok
+test native::ordered_tests::opt_in_ordered_gemm_matches_original_bits_all_formats_tails_and_f64 ... ok
+test native::output::tests::harmony_analysis_is_not_a_finished_answer ... ok
+test native::prefix::tests::byte_budget_lru_and_replacement_release_owned_snapshots ... ok
+test native::prefix::tests::recurrent_checkpoints_cannot_be_truncated_but_attention_can ... ok
+test native::quant_gemm::opt_in_compensated_gemm_matches_f64_all_formats_and_dynamic_ranges ... ok
+test native::quant_gemm::optional_real_gguf_gemm_accuracy_and_cuda_event_cost ... ok
+test native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore ... ok
+test native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence ... ok
+test native::split_attention::opt_in_split_kv_matches_f64_across_tiles_graph_positions_and_causality ... ok
+test prefix_kv::tests::agent_style_prefix_hit_rate_after_warmup ... ok
+test prefix_kv::tests::cache_roundtrip ... ok
+test prefix_kv::tests::key_separates_model_template ... ok
+test prefix_kv::tests::prefix_hash_stable_per_process ... ok
+test prefix_kv::tests::radix_lru_evicts_oldest_leaf ... ok
+test prefix_kv::tests::radix_returns_longest_scoped_prefix ... ok
+test qwen35::gdn::tests::conv_window_transposes_time_and_channel_axes ... ok
+test qwen35::gdn::tests::gdn_updates_state ... ok
+test qwen35::gdn::tests::inplace_recurrence_preserves_reference_f32_state_and_outputs ... ok
+test qwen35::gdn::tests::ssm_conv_smoke_matches_dot ... ok
+test qwen35::runtime::sequence_tests::optional_qwen_greedy_ids_text_and_sequence_reset_match_reference ... ok
+test qwen35::runtime::sequence_tests::optional_qwen_prefix_checkpoints_restore_kv_gdn_and_convolution_after_divergence ... ok
+test qwen35::runtime::sequence_tests::optional_real_block_prefill_cancellation_keeps_checkpoints_and_restarts ... ok
+test qwen35::runtime::sequence_tests::optional_real_block_prefill_teacher_forcing_matches_serial_logits_and_state ... ok
+test qwen3::config::tests::qwen3_config_reads_qwen_metadata ... ok
+test qwen3::runtime::tests::qwen3_runtime_reports_missing_q_norm_tensor ... ok
+test sampling::tests::json_mask_starts_with_object_or_array ... ok
+test sampling::tests::presence_penalty_can_change_greedy_choice ... ok
+test sampling::tests::top_p_zero_keeps_argmax_bucket ... ok
+test scheduler::tests::pld_copies_continuation_after_suffix_ngram ... ok
+test timings::finish_tests::legacy_statistics_are_unknown_and_phase_reason_survives_both_combiners ... ok
+
+test result: ok. 152 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests\backend_conformance.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\backend_conformance-2a9c854e37077e01.exe)
+
+running 7 tests
+test backend_auto_detect_resolves_without_panic ... ok
+test backend_default_is_auto_detect ... ok
+test backend_factory_resolves_all_targets ... ok
+test backend_intel_alias_maps_to_vulkan ... ok
+test backend_numeric_parity_cpu_vs_stubs ... ok
+test cpu_matvec_matches_golden_vector ... ok
+test device_resident_gemv_metric_defaults_zero_without_cuda ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.33s
+
+     Running tests\cuda_quant_residency.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\cuda_quant_residency-935c9338be324bed.exe)
+
+running 7 tests
+test cuda_quant_types_match_optional_kernel_abi ... ok
+test device_quant_matrix_cpu_fallback_matches_payload_golden ... ok
+test device_quant_matrix_matches_full_dequant_row_dots ... ok
+test device_resident_quant_metric_defaults_zero_without_cuda ... ok
+test opt_in_all_formats_views_batches_and_concurrent_calls ... ok
+test opt_in_concurrent_model_runtime_loading_and_uploads ... ok
+test opt_in_device_resident_quant_kernel_when_lib_present ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\golden_kernels.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\golden_kernels-bd3cb12c3c961904.exe)
+
+running 1 test
+test golden_matvec_3x4 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\gpt_cuda_profile.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\gpt_cuda_profile-39c452b892831f19.exe)
+
+running 1 test
+test optional_gpt_block_warmed_cuda_profile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\kv_storage_paged.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\kv_storage_paged-2ddae24dd4dfc49e.exe)
+
+running 10 tests
+test kv_storage_dense_gpu_fill_matches_rows ... ok
+test paged_kv_pool_opens_multiple_sequences ... ok
+test paged_pool_reuses_phys_after_clear ... ok
+test paged_seq_roundtrip_matches_dense_offsets ... ok
+test q8_attention_scores_close_to_f32 ... ok
+test q8_paged_resident_bytes_beat_f32 ... ok
+test q8_paged_roundtrip_within_int8_error ... ok
+test shared_kv_storage_attention_scores_match_dense ... ok
+test shared_pool_clear_returns_pages_and_reuses ... ok
+test shared_pool_concurrency_uses_fewer_pages_than_dense_estimate ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\mixtral_moe_golden_ci.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\mixtral_moe_golden_ci-0c55f03a79a164c3.exe)
+
+running 3 tests
+test mixtral_hybrid_is_cpu_and_unsupported_gpu_requests_fail_during_load ... ok
+test mixtral_moe_engine_complete_one_token ... ok
+test mixtral_moe_synthetic_greedy_matches_checked_in_golden ... FAILED
+
+failures:
+
+---- mixtral_moe_synthetic_greedy_matches_checked_in_golden stdout ----
+
+thread 'mixtral_moe_synthetic_greedy_matches_checked_in_golden' (3396) panicked at crates\bitnet-core\tests\mixtral_moe_golden_ci.rs:29:41:
+checked-in mixtral synthetic golden: Os { code: 3, kind: NotFound, message: "Le chemin d’accès spécifié est introuvable." }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    mixtral_moe_synthetic_greedy_matches_checked_in_golden
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+error: test failed, to rerun pass `-p bitnet-core --test mixtral_moe_golden_ci`

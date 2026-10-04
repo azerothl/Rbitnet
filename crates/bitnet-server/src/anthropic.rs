@@ -56,7 +56,7 @@ pub struct MessagesResponse {
     pub role: &'static str,
     pub content: Vec<ContentBlock>,
     pub model: String,
-    pub stop_reason: &'static str,
+    pub stop_reason: Option<&'static str>,
     pub usage: Usage,
 }
 
@@ -147,7 +147,11 @@ pub async fn messages(
             text: output.text,
         }],
         model: req.model,
-        stop_reason: "end_turn",
+        stop_reason: match output.stats.finish_reason {
+            bitnet_core::timings::GenerationFinishReason::Stop => Some("end_turn"),
+            bitnet_core::timings::GenerationFinishReason::Length => Some("max_tokens"),
+            bitnet_core::timings::GenerationFinishReason::Unknown => None,
+        },
         usage: Usage {
             input_tokens: output.stats.prompt_tokens,
             output_tokens: output.stats.completion_tokens,
@@ -280,7 +284,7 @@ async fn live_stream_messages(
                 let message_delta = json!({
                     "type": "message_delta",
                     "delta": {
-                        "stop_reason": "end_turn",
+                        "stop_reason": match output.stats.finish_reason {bitnet_core::timings::GenerationFinishReason::Stop=>Some("end_turn"),bitnet_core::timings::GenerationFinishReason::Length=>Some("max_tokens"),bitnet_core::timings::GenerationFinishReason::Unknown=>None},
                         "stop_sequence": serde_json::Value::Null
                     },
                     "usage": {

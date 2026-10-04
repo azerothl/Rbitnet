@@ -453,6 +453,7 @@ impl Qwen35Runtime {
         let mut rng = seeded_rng(sampling.seed);
         let mut pos = prompt_ids.len();
 
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for step in 0..max_tokens {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -461,6 +462,7 @@ impl Qwen35Runtime {
                 .take()
                 .unwrap_or_else(|| sample_token(&logits, &sampling, &gen, &mut rng));
             if eos_ids.contains(&next_id) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             gen.push(next_id);
@@ -485,6 +487,7 @@ impl Qwen35Runtime {
             decode_ms,
             prompt_tokens: prompt_ids.len() as u32,
             completion_tokens: gen.len() as u32,
+            finish_reason,
         };
         Ok((text, phases))
     }

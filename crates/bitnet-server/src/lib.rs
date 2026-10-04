@@ -1315,7 +1315,7 @@ async fn completions(
             "text": text,
             "index": 0,
             "logprobs": serde_json::Value::Null,
-            "finish_reason": "stop"
+            "finish_reason": chat_body["choices"][0]["finish_reason"].clone()
         }],
         "usage": chat_body["usage"].clone()
     }))
@@ -1711,7 +1711,12 @@ async fn chat_completions(
         }
     };
 
+    let original_len = output.text.len();
     let text = apply_stop_sequences(output.text, req.stop.as_ref());
+    let mut stats = output.stats;
+    if text.len() < original_len {
+        stats.finish_reason = bitnet_core::timings::GenerationFinishReason::Stop;
+    }
     if let Some(rf) = req.response_format.as_ref() {
         if let Err(msg) = validate_structured_output(&text, rf) {
             state
@@ -1735,7 +1740,7 @@ async fn chat_completions(
                 .into_response());
         }
     }
-    Ok(json_completion(&request_model, &text, &output.stats).into_response())
+    Ok(json_completion(&request_model, &text, &stats).into_response())
 }
 
 pub fn unix_now() -> u64 {
@@ -1769,7 +1774,7 @@ fn json_completion(model: &str, text: &str, stats: &InferenceStats) -> impl Into
         "choices": [{
             "index": 0,
             "message": { "role": "assistant", "content": text },
-            "finish_reason": "stop"
+            "finish_reason": stats.finish_reason.openai()
         }],
         "usage": {
             "prompt_tokens": pt,
@@ -1903,7 +1908,7 @@ async fn live_stream_chat_completion(
                     "choices": [{
                         "index": 0,
                         "delta": {},
-                        "finish_reason": "stop"
+                        "finish_reason": if stop_filter.stopped(){Some("stop")}else{output.stats.finish_reason.openai()}
                     }]
                 });
                 let tail = stop_filter.finish();
@@ -1994,7 +1999,7 @@ fn stream_completion(model: &str, full_text: &str) -> Response {
             "choices": [{
                 "index": 0,
                 "delta": {},
-                "finish_reason": "stop"
+                "finish_reason": serde_json::Value::Null
             }]
         });
         Ok::<_, std::convert::Infallible>(format!("data: {}\n\n", finish))
