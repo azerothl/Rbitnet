@@ -1,88 +1,32 @@
-# Stubs / MVP audit (epic #24)
+# Audit des chemins réels, prototypes et replis — #24
 
-Inventory of paths that are stubs, intentional smoke modes, shipped MVPs, or still open.
-Last reviewed: **2026-10-02** against `main` (post #72 SlimAttention decode + #73/#75 MoE close + #74 CUDA Gate E).
+Revu le **3 octobre 2026**, après les lots cache, spéculation et Qwen résident. Un ancien ticket fermé ou une bibliothèque détectée ne prouve pas la prise en charge matérielle. Les recherches `stub/MVP/TODO/unimplemented/not implemented/fake/parity` dans core, serveur et CLI ont été recoupées avec les dispatchers, executors, APIs natives et chemins SSE.
 
-**Scope of this refresh:** resolve a leftover merge conflict in this file, mark [#25](https://github.com/azerothl/Rbitnet/issues/25) closed, and leave epic [#24](https://github.com/azerothl/Rbitnet/issues/24) open **only** while GPU [#22](https://github.com/azerothl/Rbitnet/issues/22) hardware remainder remains.
+| Chemin | Comportement réel | Limite / suivi |
+|---|---|---|
+| CPU | GGUF natif et kernels quantifiés mmap. | Layouts listés dans ARCHITECTURE_GGUF_MATRIX ; pas tous les exports. |
+| CUDA | Kernels quantifiés, attention, graphes Llama ; récurrence Qwen, pipeline dense Qwen complet opt-in ; FFN experts GPT-OSS/GLM résidents en partie. | [Preuves matérielles](benchmarks/2026-10-03-qwen-full/README.md). Pipelines MoE complets : #88/#89. |
+| Hybrid | Placement CUDA réel avec budget et repli CPU. Qwen3/Mixtral restent CPU, avec accelerated=false et métadonnée explicite. | Préchargement et choix par coût : #84/#86. |
+| ROCm | Prototype hipBLAS F32 ; pas de kernels quantifiés/attention/pipeline device portés. | Aucun benchmark GGUF AMD validé sur le matériel actuel ; #22 ouvert. |
+| Vulkan / Metal / Intel | Probes diagnostiques et calculs de bas niveau CPU ; une bibliothèque trouvée ne signifie pas accélération. Chargement GGUF explicite refusé. | Kernels GPU non implémentés ; Intel/oneAPI/Level Zero restent aliases de prototype Vulkan ; #22. |
+| Auto | CUDA/ROCm implémentés puis CPU ; ignore probes Vulkan/Metal. Mixtral et Qwen3 dense choisissent CPU sans probe GPU. | Demande GPU explicite pour ces architectures refusée au chargement, pas réinterprétée en auto. |
+| Llama / Qwen3 / Mixtral | Inférence réelle ; Llama goldens réels, Qwen3/Mixtral goldens synthétiques CI. Readiness Qwen3/Mixtral validée au chargement. | Qwen3/Mixtral CPU uniquement ; SSE attend la complétion puis un delta, sans streaming incrémental. |
+| Qwen3.5 | GDN + attention gated CPU/CUDA/hybrid ; [pipeline dense complet](benchmarks/2026-10-03-qwen-full/README.md) opt-in. | MoE non validé sur GGUF réel ; prefill matriciel Qwen absent (#95). |
+| GPT-OSS / deepseek2 | GPT-OSS20B et GLM4.7Flash split MLA/MoE réellement chargés et comparés. | Autres layouts non automatiquement compatibles. Tag glm4moe distinct, limité aux tensors Llama compatibles. #88/#89. |
+| Cache de réponses | PREFIX_CACHE garde des réponses complètes. | Ne réutilise aucun tenseur KV. |
+| Cache de préfixes | Llama CPU dense/pagé, GPU K/V ; Qwen checkpoints K/V + GDN + convolution. | [Preuves](benchmarks/2026-10-03-cache-foundation/README.md). Qwen exige la longueur exacte du checkpoint récurrent. Pas de SSD (#94). |
+| Experts à la demande | Groupes gate/up/down quantifiés, leases, budget, LRU/LFU/Least-Stale, repli FFN CPU. | [Pilote et régressions](benchmarks/2026-10-03-cache-foundation/README.md). Pas de préchargement asynchrone/choix par coût ; budget non global (#84/#86). |
+| Prefill matriciel | Llama GEMM SIMT opt-in avec attention causale et état device. | Pas de Tensor Cores ni Qwen/MoE matriciel ; attention entièrement tuilée à traiter (#95). |
+| Spéculation | Llama PLD tokens, vérification matricielle par position, sampler cible, graphes, correction/rollback. Architectures/DLL incompatibles : génération ordinaire, compteurs spéculatifs faux retirés. | [No-go activation générale](benchmarks/2026-10-03-speculative-llama/README.md). Draft GGUF et rollback Qwen absents (#97). |
+| Scheduling continu | Decode-first, budget d'itération, hooks et compteurs de vagues. Primitive CPU dense_matvec_multi_seq réelle. | Executors sérialisés, parfois régénération de préfixe ; pas de batch GPU. Ancien #46 fermé ne termine pas #96. |
+| KV paginé / Q8 / SlimAttention | Prototypes CPU et Llama CPU/hybrid opt-in. | Graphes GPU : K/V F32 denses. Pages/formats device : #92/#93. KIVI historique no-go ne valide pas un cache GPU compressé. |
+| Tokenizer | tokenizer.json et SentencePiece tokenizer.model directs. | Manquant/invalide bloque readiness ; templates propres au modèle. |
+| BitNet | b1.58 Llama-shaped, mmap TQ1_0/TQ2_0 CPU ; helpers I2_S/TL2 de microbench. | bitnet_cuda_matvec_mvp appelle CPU. Registry de recherche distinct de production GGUF ; pas de TQ1/TQ2 CUDA validé. |
 
-## Epic #24 checklist (status map)
+La disponibilité d'un backend de bas niveau reste une capacité, pas la preuve que toutes les opérations du modèle s'exécutent sur GPU. Les métadonnées de placement, compteurs réels et scripts matériels précisent les chemins partiels. Une erreur native est remontée ; aucun état CPU divergent n'est substitué au milieu d'une séquence.
 
-| Theme | Status | Owner issue |
-|-------|--------|-------------|
-| Audit: exhaustive stubs / MVP / silent fake parity | **This document** | [#24](https://github.com/azerothl/Rbitnet/issues/24) |
-| Prefix-KV real (shared-prefix reuse) | **Shipped** | [#17](https://github.com/azerothl/Rbitnet/issues/17) — not response-cache-only |
-| Continuous batching **fused** multi-seq | **Stalled / closed** | [#46](https://github.com/azerothl/Rbitnet/issues/46) — kernel + scheduler hook shipped; e2e concurrency gain stalled → [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md); GPU fused = #22 |
-| Speculative beyond scheduler MVP | **Partial / deferred** | PLD / n-gram shipped (#18); Lookahead **wontfix for now** → [#44](https://github.com/azerothl/Rbitnet/issues/44) / [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md) |
-| Roadmap loaders / non-Llama / MoE | **Exit met (#25 closed)** | Qwen3 dense golden CI (#73) + Mixtral MoE `/v1` e2e + CI golden (#75); roadmap tags still Llama-shaped-or-refuse; DeepSeek MLA = follow-up |
-| GPU backends | **Open (serving tok/s)** | [#22](https://github.com/azerothl/Rbitnet/issues/22) — Gate E lib + device kernels shipped/hardware-smoked; Vulkan/Metal stubs; full greedy token published rows still optional |
-| SlimAttention / KIVI | **Shipped proto + decode opt-in** | [#39](https://github.com/azerothl/Rbitnet/issues/39) closed — `RBITNET_SLIM_ATTENTION=1` wired into Llama CPU/hybrid decode; KIVI no-go |
-| `tokenizer.model` without manual conversion | **Shipped** | SentencePiece path in `prompt_tokenizer.rs`; prefer `tokenizer.json` |
-| Each conversion updates LIMITATIONS / STATUS | **Ongoing** | Required on each child issue close |
+Les modes intentionnels restent explicites : STUB fournit une réponse synthétique marquée ; TOY un petit LM F32 sans GGUF. Leur backend effectif est CPU. LoadFailed et unload idle remplacent l'engine sans prouver la validité d'un modèle ; readiness bloque les erreurs de chargement. Le SSE natif Llama/Qwen3.5/GPT-OSS/GLM suit la génération, tandis que le fallback ModelExecutor attend la complétion puis un delta.
 
-## Intentional smoke paths (keep; not “fake support”)
+Les métriques utilisent le working set Linux /proc ou Windows PSAPI. La VRAM par processus est encore **non mesurée** : le placeholder constant process_vram_bytes=0 est supprimé, remplacé par une disponibilité à zéro. [Migration du contrat](AKASHA_METRICS.md).
 
-| Path | Status | Notes |
-|------|--------|-------|
-| `RBITNET_STUB=1` | **Smoke only** | Synthetic HTTP completions; CI / API overhead. Documented as non-model. |
-| `RBITNET_TOY=1` | **Smoke only** | Tiny in-process F32 LM; no GGUF. |
-| Idle unload → stub engine | **Ops feature** | `RBITNET_IDLE_UNLOAD_SECS`; swaps to stub after idle. |
-
-## Backends
-
-| Backend | Status | Action |
-|---------|--------|--------|
-| `auto` | **Default** | `RBITNET_BACKEND` unset/`auto` → `BackendKind::detect_best()` (CUDA→ROCm→Metal→Vulkan→CPU). |
-| `cpu` | **Production path** | Explicit pin for reproducible benches / golden; fallback when no accelerator probes. |
-| `cuda` | **Partial (Gate E HW)** | Device-resident f32 + **quant** via shipped `native/cuda_quant` (`*_matvec_device`); Llama cuda/hybrid prefer quant residency; FA/attention GPU still open → [#22](https://github.com/azerothl/Rbitnet/issues/22). |
-| `rocm` | **Partial (f32 GEMV)** | hipBLAS SGEMV when HIP loads; else CPU. Quant device path not yet. |
-| `vulkan` / `metal` / `intel` | **Parity stubs** | Library probe may set `is_native_accelerated`; **matvec still CPU**. `intel` aliases to Vulkan. |
-| `hybrid` | **Partial** | Prefers quant residency over densify when type supported; placement budgets + CPU fallback (#22 Gate E). |
-
-## Serving / KV / speculative (native CPU stack)
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Prefix **response** cache (`RBITNET_PREFIX_CACHE`) | **Shipped (MVP)** | Full responses only — distinct from KV reuse. |
-| Prefix **KV** (`RBITNET_PREFIX_KV`) | **Shipped** | Dense/paged snaps + radix LRU + LCP agent reuse + `rbitnet_core_prefix_hit` (#17). **Present** — do not claim absent. |
-| Continuous batching schedule | **Shipped (MVP)** | Stall-free Sarathi (#21); decode-first + chunked prefill. |
-| Continuous batching fused multi-seq | **Stalled** | #46: kernel + hook shipped; e2e sequential executors — [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md); GPU fused = #22. |
-| Speculative decoding | **Shipped (PLD)** | PLD / n-gram draft + verify/accept (#18); Lookahead wontfix (#44). |
-| Paged KV / pool | **Shipped** | E2E opt-in (#16 era). |
-| KV Q8 | **Shipped** | Compact CPU pages (#20). |
-| SlimAttention 1D tiling / KIVI | **Shipped (opt-in decode)** | Proto + KIVI no-go (#39); decode uses tiled path when `RBITNET_SLIM_ATTENTION=1`. |
-| BitNet ternary kernels | **Shipped (microbench)** | I2_S / TL2 (#19). |
-| Non-Llama dense / Mixtral MoE | **Shipped (spike exit)** | Qwen3 dense golden CI + Mixtral MoE `/v1` e2e (#25 closed). |
-| Roadmap loaders (`glm4moe`, `gptoss`, `deepseek2`) | **Clear refuse / Llama-shaped only** | DeepSeek MLA / broader MoE = follow-up (not silent stubs). |
-| `tokenizer.model` | **Shipped** | SentencePiece path; `tokenizer.json` preferred. |
-
-## Remaining work (issue map)
-
-- [x] **[#46](https://github.com/azerothl/Rbitnet/issues/46)** — Fused multi-seq: spike + **stall decision** ([FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md)); true Llama batched forward deferred; GPU via #22.
-- [ ] **[#22](https://github.com/azerothl/Rbitnet/issues/22)** — CUDA quant lib + device kernels + auto/ROCm increments landed; remaining: published end-to-end tok/s on curated GGUF, Vulkan/Metal beyond stubs, GPU attention/KV.
-- [x] **[#25](https://github.com/azerothl/Rbitnet/issues/25)** — Closed after [#73](https://github.com/azerothl/Rbitnet/pull/73) + [#75](https://github.com/azerothl/Rbitnet/pull/75) (Qwen3 dense golden CI + Mixtral MoE `/v1` e2e).
-- [x] **[#39](https://github.com/azerothl/Rbitnet/issues/39)** — SlimAttention tiled CPU attention (+ KIVI no-go); decode opt-in wired.
-- [x] **[#44](https://github.com/azerothl/Rbitnet/issues/44)** — Lookahead Decoding **wontfix for now** — [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
-- Keep stub/toy clearly labeled forever (do not remove — CI depends on them).
-
-### Blocker (keeps epic #24 open)
-
-| Blocker | Why epic #24 stays open |
-|---------|-------------------------|
-| **#22** | Non-CPU backends still parity stubs / incomplete measured CUDA; Gate E is API+CI-safe only — hardware token path + published numbers + ROCm/Metal remain. |
-
-## Docs sync
-
-- [LIMITATIONS.md](LIMITATIONS.md) — PREFIX_CACHE vs PREFIX_KV; fused multi-seq **stalled**; architecture table (Qwen3 + Mixtral supported; DeepSeek MLA not implemented).
-- [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — serving pipeline + SlimAttention decode opt-in; remaining stubs → #22 only.
-- [INFERENCE_STACK_V2.md](INFERENCE_STACK_V2.md) — Phase E includes PLD + KV Q8 + BitNet microbench + SlimAttention decode wire.
-- [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md) — #46 stall decision.
-- [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md) — #22 acceptance gates A–E.
-
-## Exit criteria (epic #24)
-
-| Criterion | State |
-|-----------|-------|
-| Exhaustive stub audit | **This document** (refreshed 2026-10-02 post #72–#75; conflict markers removed) |
-| No path *announced as supported* is a silent stub | **Improved** — CPU / MoE spike paths closed or labeled; **remainder = #22 only** |
-| Unsupported listed as unsupported | **Yes** for DeepSeek MLA / GPU hardware / fused e2e gain / Lookahead / KIVI |
-| Close epic | **Only when #22 exits** (or is explicitly deferred) |
+#24 reste ouvert pendant les conversions requises, avec #22 et #83–#97 ; il ne se résume plus au seul matériel #22. Les tests CPU avec early return GPU, les probes et les tickets historiques fermés ne suffisent pas à promouvoir un chemin matériel. Chaque livraison publie code, contrôles actifs, mesures et replis.

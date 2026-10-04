@@ -73,6 +73,12 @@ fn dispatch_gguf_executor_inner(
         resolve_architecture_key(&gguf)
     };
 
+    if matches!(backend_kind, BackendKind::Vulkan | BackendKind::Metal) {
+        return Err(BitNetError::Inference(format!(
+            "GGUF `{key}`: {} GPU inference is not implemented; use cpu or an implemented CUDA/ROCm backend", backend_kind.as_str()
+        )));
+    }
+
     if key == "bitnet" {
         return bitnet::build_bitnet_executor(
             backend_kind,

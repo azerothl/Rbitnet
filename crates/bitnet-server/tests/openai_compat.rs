@@ -404,6 +404,38 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
     .unwrap();
     assert!(ready_text.contains("LoadFailed"), "{ready_text}");
 
+    // Neither unary nor streaming routes may manufacture a stub completion.
+    for path in ["/v1/chat/completions", "/v1/completions", "/v1/messages"] {
+        for streaming in [false, true] {
+            let body = serde_json::json!({"model":"rbitnet-stub", "prompt":"hello",
+                "messages":[{"role":"user","content":"hello"}], "max_tokens":8,
+                "stream":streaming});
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(path)
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                http::StatusCode::SERVICE_UNAVAILABLE,
+                "{path} stream={streaming}"
+            );
+            let bytes = response.into_body().collect().await.unwrap().to_bytes();
+            let error: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(error["error"]["code"], "LoadFailed");
+            if path == "/v1/messages" {
+                assert_eq!(error["type"], "error");
+            }
+        }
+    }
+
     // Successful reload (stub from env) clears LoadFailed.
     let res = app
         .clone()
@@ -427,6 +459,7 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
         );
     }
     let ready = app
+        .clone()
         .oneshot(
             Request::builder()
                 .uri("/ready")
@@ -436,6 +469,43 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
         .await
         .expect("ready after reload");
     assert!(ready.status().is_success());
+    let response = app.oneshot(Request::builder().method("POST").uri("/v1/chat/completions")
+        .header("content-type","application/json")
+        .body(Body::from(r#"{"model":"rbitnet-stub","messages":[{"role":"user","content":"hello"}],"max_tokens":8}"#)).unwrap()).await.unwrap();
+    assert!(
+        response.status().is_success(),
+        "explicit stub reload remains usable"
+    );
+}
+
+#[tokio::test]
+async fn unloaded_model_does_not_become_a_completion_stub() {
+    // The retained intent is independent of model-match validation, whose id is
+    // cleared by single-model idle eviction. Simulate that post-eviction state.
+    let engine = Arc::new(bitnet_core::inference::stub_engine());
+    let (app, state) =
+        create_app_with_expected_model(engine, Arc::new(ServerConfig::test_defaults()), None);
+    state
+        .requires_loaded_model
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+    let ready = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ready.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+    let response = app.oneshot(Request::builder().method("POST").uri("/v1/chat/completions")
+        .header("content-type","application/json")
+        .body(Body::from(r#"{"model":"any-id","messages":[{"role":"user","content":"hello"}],"max_tokens":8}"#)).unwrap()).await.unwrap();
+    assert_eq!(response.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let error: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(error["error"]["code"], "ModelUnloaded");
 }
 
 #[tokio::test]
@@ -731,6 +801,24 @@ async fn akasha_contract_metrics_series_present() {
         assert!(
             text.contains(series),
             "Akasha contract missing series `{series}` in /metrics:\n{text}"
+        );
+    }
+    assert!(text.contains("rbitnet_process_vram_measurement_available 0\n"));
+    assert!(
+        !text.contains("rbitnet_process_vram_bytes "),
+        "unmeasured VRAM must not be reported as zero"
+    );
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    {
+        let rss = text
+            .lines()
+            .find_map(|line| line.strip_prefix("rbitnet_process_rss_bytes "))
+            .expect("OS working set required")
+            .parse::<u64>()
+            .unwrap();
+        assert!(
+            rss > 0,
+            "working set must be measured from this test process"
         );
     }
 

@@ -63,10 +63,65 @@ fn mixtral_moe_engine_complete_one_token() {
     let engine = Engine::load_path_with_overrides(&gguf, Some(&tok), Some("mixtral"))
         .expect("Engine::load_path_with_overrides mixtral");
     assert_eq!(engine.model_metadata().architecture, "mixtral");
+    assert!(
+        !engine.model_metadata().backend_accelerated,
+        "CPU-only Mixtral must not claim GPU work"
+    );
     assert!(engine.is_ready());
     let out = engine
         .complete_detailed_with_options("Hello", 1, SamplingOptions::from_temperature(0.0))
         .expect("complete");
     assert_eq!(out.stats.prompt_tokens, 1);
     assert!(out.stats.completion_tokens <= 1);
+}
+
+#[test]
+fn mixtral_hybrid_is_cpu_and_unsupported_gpu_requests_fail_during_load() {
+    use bitnet_core::backend::BackendKind;
+    use bitnet_core::loaders::dispatch_gguf_executor_for_load;
+    let dir = tempfile::tempdir().unwrap();
+    let gguf = dir.path().join("mixtral-tiny.gguf");
+    let tok = dir.path().join("tokenizer.json");
+    write_tiny_mixtral_gguf(&gguf).unwrap();
+    write_wordlevel_tokenizer(&tok).unwrap();
+    let archive = Arc::new(GgufArchive::mmap_path(&gguf).unwrap());
+    let load = |backend| {
+        dispatch_gguf_executor_for_load(
+            backend,
+            Arc::clone(&archive),
+            &gguf,
+            Some(&tok),
+            Some("mixtral"),
+        )
+    };
+    for backend in [
+        BackendKind::Cuda,
+        BackendKind::Rocm,
+        BackendKind::Vulkan,
+        BackendKind::Metal,
+    ] {
+        let error = match load(backend) {
+            Ok(_) => panic!("unsupported GPU request loaded"),
+            Err(e) => e,
+        };
+        assert!(
+            error.to_string().contains("unsupported")
+                || error.to_string().contains("not implemented"),
+            "{error}"
+        );
+    }
+    let hybrid = load(BackendKind::Hybrid).unwrap();
+    assert!(hybrid.is_ready());
+    assert!(!hybrid.backend_accelerated());
+    assert!(hybrid.offload_metadata().unwrap().contains("CPU fallback"));
+    assert!(!hybrid
+        .generate_with_timings("Hello", 1, SamplingOptions::from_temperature(0.0))
+        .unwrap()
+        .0
+        .is_empty());
+    std::fs::remove_file(&tok).unwrap();
+    assert!(
+        load(BackendKind::Cpu).is_err(),
+        "readiness must validate the tokenizer during load"
+    );
 }

@@ -46,7 +46,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CHAT_TEMPLATE` | (none) | Custom Jinja or simple placeholder template (`{messages}`, `{prompt}`, `{system}`, `{user}`, `{assistant}`); overrides format and discovered template. Invalid Jinja is an HTTP 400. |
 | `RBITNET_STUB` | off | Synthetic completions; no weights. |
 | `RBITNET_TOY` | off | Tiny in-process toy LM; no GGUF. |
-| `RBITNET_BACKEND` | `auto` | Default **`auto`**: detect CUDA→ROCm→Metal→Vulkan→CPU. Explicit: `cpu`, `cuda`, `hybrid`, `rocm`, `vulkan` (aliases: `intel`, `oneapi`, `level-zero`), `metal`. See [USAGE.md](USAGE.md), [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). |
+| `RBITNET_BACKEND` | `auto` | Default **`auto`**: CUDA→ROCm→CPU, architecture-aware CPU selection for Qwen3/Mixtral. Explicit `cpu`, `cuda`, `hybrid`, `rocm`; unsupported GPU requests fail during load. `vulkan` (aliases `intel`, `oneapi`, `level-zero`) and `metal` have diagnostic prototypes only and are refused for GGUF inference. See [USAGE.md](USAGE.md), [GPU_NATIVE_ROADMAP.md](GPU_NATIVE_ROADMAP.md). |
 | `RBITNET_CUDA_QUANT_LIB` | unset | Absolute path to `rbitnet_cuda_quant64.dll` / `librbitnet_cuda_quant.so` for Gate E device kernels (`native/cuda_quant`). |
 | `RBITNET_CUDA_ATTENTION` | on for native CUDA/hybrid dense KV | `0`/`false`/`no` forces CPU attention. Fused all-head GQA/MQA, sliding window and sinks; resident F32 KV, maximum CUDA capacity 8192. Missing symbols/unsupported cache fall back to CPU. |
 | `RBITNET_MAX_SEQ` | `8192` for native Qwen/GPT/MLA | Positive context capacity, capped by the model's metadata; CUDA attention above 8192 falls back to CPU. Does not change the existing Llama configuration. |

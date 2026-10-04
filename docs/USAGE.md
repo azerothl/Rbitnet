@@ -64,7 +64,7 @@ Laptop example (~8 GiB host, TinyLlama-class):
 export RBITNET_MAX_LOAD_BYTES=$((3*1024*1024*1024))
 export RBITNET_BUDGET_MAX_SEQ=2048
 # optional soft VRAM planning for hybrid (GPU path still #22):
-# Default is auto (CUDA→ROCm→Metal→Vulkan→CPU). Pin for reproducibility:
+# Default is auto (CUDA→ROCm→CPU, CPU for Qwen3/Mixtral). Pin for reproducibility:
 # export RBITNET_BACKEND=cpu
 # export RBITNET_BACKEND=hybrid RBITNET_HYBRID_MAX_VRAM_MB=512 RBITNET_HYBRID_POLICY=auto
 ```
@@ -310,7 +310,7 @@ Invoke-WebRequest `
   -Body "{}"
 ```
 
-**LoadFailed without process restart (akasha-os P16 pattern):** if the initial GGUF load fails (bad path, OOM, unsupported MoE/MLA → see issue #25), `rbitnet-server` still binds HTTP with a stub engine. `GET /health` stays `200`; `GET /ready` returns `503` with a `LoadFailed` message and a hint to retry. Fix the path/env, then `POST /v1/admin/reload` — no need to kill the process. Failed reload responses include `"code":"LoadFailed"`.
+**LoadFailed without process restart (akasha-os P16 pattern):** if the initial GGUF load fails (bad path, OOM, unsupported architecture/backend), the server still binds HTTP. `GET /health` stays `200`; `GET /ready` and inference requests return `503` with `LoadFailed` until a successful `POST /v1/admin/reload`. Unary and SSE chat, completions and messages routes cannot return a synthetic stub completion after this failure. A failed reload preserves a previously valid loaded model, which remains usable. After idle/admin eviction of a real model, readiness and inference return `503 ModelUnloaded`; registry chat selection can reload its model automatically. An explicit `RBITNET_STUB=1` smoke server remains usable. Failed admin reload responses include `"code":"LoadFailed"`.
 
 Reload a registry model:
 

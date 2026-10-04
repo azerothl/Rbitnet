@@ -31,36 +31,42 @@ impl BackendKind {
     }
 
     pub fn from_env() -> Self {
-        // Default `auto`: pick the best available accelerator, else CPU.
         let raw = std::env::var("RBITNET_BACKEND").unwrap_or_else(|_| "auto".into());
-        match raw.trim().to_ascii_lowercase().as_str() {
-            "cpu" => BackendKind::Cpu,
-            "cuda" => BackendKind::Cuda,
-            "hybrid" | "cpu-gpu" | "gpu-cpu" => BackendKind::Hybrid,
-            "rocm" => BackendKind::Rocm,
-            "vulkan" | "intel" | "level-zero" | "oneapi" => BackendKind::Vulkan,
-            "metal" => BackendKind::Metal,
-            "auto" | "detect" | "gpu" | "" => Self::detect_best(),
-            _ => Self::detect_best(),
+        Self::select_from_value(&raw, "", Self::detect_best)
+    }
+
+    /// Automatic selection must account for what the model executor implements.
+    /// Explicit accelerator requests remain explicit and are validated at load.
+    pub(crate) fn from_env_for_architecture(architecture: &str) -> Self {
+        let raw = std::env::var("RBITNET_BACKEND").unwrap_or_else(|_| "auto".into());
+        Self::select_from_value(&raw, architecture, Self::detect_best)
+    }
+
+    fn select_from_value(raw: &str, architecture: &str, detect: impl FnOnce() -> Self) -> Self {
+        let explicit = match raw.trim().to_ascii_lowercase().as_str() {
+            "cpu" => Some(Self::Cpu),
+            "cuda" => Some(Self::Cuda),
+            "hybrid" | "cpu-gpu" | "gpu-cpu" => Some(Self::Hybrid),
+            "rocm" => Some(Self::Rocm),
+            "vulkan" | "intel" | "level-zero" | "oneapi" => Some(Self::Vulkan),
+            "metal" => Some(Self::Metal),
+            _ => None,
+        };
+        match explicit {
+            Some(kind) => kind,
+            None if matches!(architecture, "mixtral" | "qwen3") => Self::Cpu,
+            None => detect(),
         }
     }
 
-    /// Prefer CUDA → ROCm → Metal → Vulkan when the runtime libs probe successfully; else CPU.
-    ///
-    /// Used by `RBITNET_BACKEND=auto`. Detection only probes libraries — it does not claim
-    /// full GPU inference for Vulkan/Metal (still parity stubs for matvec beyond CUDA/ROCm).
+    /// Prefer implemented CUDA/ROCm compute backends; else CPU. Loader-only
+    /// Vulkan/Metal prototypes must not win automatic inference selection.
     pub fn detect_best() -> Self {
         if CudaRuntime::try_load().is_some() {
             return BackendKind::Cuda;
         }
         if RocmBackend::runtime_available() {
             return BackendKind::Rocm;
-        }
-        if MetalBackend::runtime_available() {
-            return BackendKind::Metal;
-        }
-        if VulkanBackend::runtime_available() {
-            return BackendKind::Vulkan;
         }
         BackendKind::Cpu
     }
@@ -1419,6 +1425,10 @@ pub struct VulkanBackend {
 }
 
 impl VulkanBackend {
+    /// A library probe is diagnostic; this prototype still computes on CPU.
+    pub fn runtime_detected(&self) -> bool {
+        self.runtime_loaded
+    }
     /// Probe system Vulkan loader (Intel discrete/iGPU often via this path — #22).
     pub(crate) fn runtime_available() -> bool {
         ["vulkan-1.dll", "libvulkan.so", "libvulkan.dylib"]
@@ -1441,7 +1451,7 @@ impl ComputeBackend for VulkanBackend {
         BackendKind::Vulkan
     }
     fn is_native_accelerated(&self) -> bool {
-        self.runtime_loaded
+        false
     }
 
     fn alloc(&self, len: usize) -> Result<Vec<f32>> {
@@ -1469,6 +1479,10 @@ pub struct MetalBackend {
 }
 
 impl MetalBackend {
+    /// A library probe is diagnostic; this prototype still computes on CPU.
+    pub fn runtime_detected(&self) -> bool {
+        self.runtime_loaded
+    }
     pub(crate) fn runtime_available() -> bool {
         ["Metal.framework/Metal", "libMetal.dylib"]
             .iter()
@@ -1490,7 +1504,7 @@ impl ComputeBackend for MetalBackend {
         BackendKind::Metal
     }
     fn is_native_accelerated(&self) -> bool {
-        self.runtime_loaded
+        false
     }
 
     fn alloc(&self, len: usize) -> Result<Vec<f32>> {
@@ -1523,6 +1537,58 @@ pub fn make_backend(kind: BackendKind) -> Box<dyn ComputeBackend> {
 
 #[cfg(test)]
 mod transfer_tests {
+    #[test]
+    fn auto_selection_respects_mixtral_cpu_executor_without_gpu_probe() {
+        use super::BackendKind;
+        for raw in ["auto", "detect", "gpu", "", "unknown", " AUTO "] {
+            assert_eq!(
+                BackendKind::select_from_value(raw, "mixtral", || panic!(
+                    "CPU-only architecture must not probe GPU"
+                )),
+                BackendKind::Cpu
+            );
+            assert_eq!(
+                BackendKind::select_from_value(raw, "qwen3", || panic!(
+                    "CPU-only architecture must not probe GPU"
+                )),
+                BackendKind::Cpu
+            );
+            assert_eq!(
+                BackendKind::select_from_value(raw, "qwen35", || BackendKind::Cuda),
+                BackendKind::Cuda
+            );
+        }
+        for (raw, expected) in [
+            ("cpu", BackendKind::Cpu),
+            ("cuda", BackendKind::Cuda),
+            ("hybrid", BackendKind::Hybrid),
+            ("rocm", BackendKind::Rocm),
+            ("intel", BackendKind::Vulkan),
+            ("metal", BackendKind::Metal),
+        ] {
+            assert_eq!(
+                BackendKind::select_from_value(raw, "mixtral", || panic!(
+                    "explicit backend must remain explicit"
+                )),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn loader_only_prototypes_never_claim_native_acceleration() {
+        use super::{ComputeBackend, CpuBackend, MetalBackend, VulkanBackend};
+        let v = VulkanBackend {
+            cpu: CpuBackend,
+            runtime_loaded: true,
+        };
+        let m = MetalBackend {
+            cpu: CpuBackend,
+            runtime_loaded: true,
+        };
+        assert!(v.runtime_detected() && m.runtime_detected());
+        assert!(!v.is_native_accelerated() && !m.is_native_accelerated());
+    }
     #[test]
     fn optional_pageable_upload_and_refill_finish_before_private_stream_consumption() {
         if std::env::var("RBITNET_CUDA_QUANT_SMOKE").as_deref() != Ok("1") {
