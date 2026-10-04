@@ -58,3 +58,15 @@ docs/benchmarks/2026-10-04-structured-guards/harness/** -text
 docs/benchmarks/2026-10-04-gpt-norm-fresh/raw/** -text
 docs/benchmarks/2026-10-04-gpt-norm-fresh/receipt.json -text
 docs/benchmarks/2026-10-04-gpt-norm-fresh/harness/** -text
+docs/benchmarks/2026-10-04-adaptive-nucleus-fresh/raw/** -text
+docs/benchmarks/2026-10-04-adaptive-nucleus-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-adaptive-nucleus-fresh/harness/** -text
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/raw/** -text
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/harness/** -text
+
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/sampling-http.csv -text
+
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/publication.json -text
+
+docs/benchmarks/2026-10-04-nucleus-combined-fresh/analysis/** -text
