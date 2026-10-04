@@ -1,0 +1,131 @@
+{
+  "files": {
+    "manifest.json": {
+      "sha256": "7332d4b5055a1595330298c07f33651770e638ade67f92c03928159c91d2865f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\manifest.json"
+    },
+    "logs/native-build.log": {
+      "sha256": "d15eabfd055192b07b5a3a0482ed109bc5490590762f07156e9721b3868b6c33",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\native-build.log"
+    },
+    "logs/check.log": {
+      "sha256": "1a5806dd059da3716a3ce423cdb3c547f6fa879c20b3915b210bcbdafd0fa416",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\check.log"
+    },
+    "logs/clippy.log": {
+      "sha256": "7125810c84b9a1c4494c7036b8773aae760780cb05131f37765d7e27bb2e8af3",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\clippy.log"
+    },
+    "logs/actual-f64-all-formats.log": {
+      "sha256": "b96c6bf44aee8ce20503c541f193df01505d9527de32933f298e1eaf0f454372",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\actual-f64-all-formats.log"
+    },
+    "logs/actual-gpt.log": {
+      "sha256": "c09421c5796f838ec301a31f8aa83de14fd8e1d0f0d0f7ee8ec25d2a30cdc2e8",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\actual-gpt.log"
+    },
+    "logs/actual-glm.log": {
+      "sha256": "a0e39d7aea036e68c0585ff9ab03c2e9b1cbaf8c07ab2400eedefda15384b3b0",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\actual-glm.log"
+    },
+    "logs/release.log": {
+      "sha256": "b2435a795baf1206c47b07ca3ffebef521139cda6ed781346b2eb1df4f7bc06a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\release.log"
+    },
+    "logs/network-gpt-oss-20b.log": {
+      "sha256": "4c5b7d88d7558eb8fe4ac357f88a78f0d84883d637c3462ff31a941d10bf5a14",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\network-gpt-oss-20b.log"
+    },
+    "logs/network-glm47-flash.log": {
+      "sha256": "0d4a1701a0bf0522f00a8c829c9f2bf95b2cc9f60e6c6144793179edd5df298f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\network-glm47-flash.log"
+    },
+    "ablation/gpt-fixed/results.json": {
+      "sha256": "c298585a1fef0465386d202ae00a1500aafd6425bdbb817c6ffa4c7a5f87622e",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\ablation\\gpt-fixed\\results.json"
+    },
+    "ablation/gpt-segmented/results.json": {
+      "sha256": "1cb3a0c48b9f7096d1db8a593f87996b0e1aebf4992c2992e8652c6f113b95f5",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\ablation\\gpt-segmented\\results.json"
+    },
+    "ablation/glm-fixed/results.json": {
+      "sha256": "d7975bf4000cd4e4f0ee05e33c7a110fdf15571c5563cf0a0bdc9b1c484a2982",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\ablation\\glm-fixed\\results.json"
+    },
+    "ablation/glm-cache/results.json": {
+      "sha256": "510e2a0efbad9f52143becbd38ee7252d87c26f06a29c4153a85a2d1ea5f0a2d",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\ablation\\glm-cache\\results.json"
+    },
+    "live/gpt-oss-20b/results.json": {
+      "sha256": "fe59628a21aa2a3072cd6e51fca55bc4644e66ec05eedba702519c9737c3e7be",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\live\\gpt-oss-20b\\results.json"
+    },
+    "live/glm47-flash/results.json": {
+      "sha256": "75ede4851f9d9b2f164ed27fa1d6ee94e0618972067cb100965958159585ed60",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\live\\glm47-flash\\results.json"
+    },
+    "source/benchmark.py": {
+      "sha256": "302a10a26972e05c78a56664f6dbed23a8d1474719abdfb505906a2afe08c5ee",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-harness\\benchmark.py"
+    },
+    "source/live.py": {
+      "sha256": "feb187b0b06174233439f6bdf56a2ef6ee099e27f21b750d4dc948d19cd4a9bd",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-harness\\live.py"
+    },
+    "diagnostics/check_parallel_fusion.py": {
+      "sha256": "488796171f8bd0b13f20e7fd79d3eec90d44c9048bf6d2c4cf7d017ea7fd10b6",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check_parallel_fusion.py"
+    },
+    "experimental/crates/bitnet-core/src/native/graph.rs": {
+      "sha256": "50865c89d8d21b11723d061fb6f900035c57a6e9c01ac7d4c6a19dbec7ecfa8e",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-parallel-fusion\\crates\\bitnet-core\\src\\native\\graph.rs"
+    },
+    "experimental/crates/bitnet-core/src/native/moe.rs": {
+      "sha256": "9b1c2bc563636851e95fa2b2f44bacbf0c5d44e49c3e464a4f0e468a24a5bc8a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-parallel-fusion\\crates\\bitnet-core\\src\\native\\moe.rs"
+    },
+    "experimental/crates/bitnet-core/src/native/parallel_fused_tests.rs": {
+      "sha256": "7c6d53107460aed59b46b8411572533a675187e58f29224623058fb3f0954126",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-parallel-fusion\\crates\\bitnet-core\\src\\native\\parallel_fused_tests.rs"
+    },
+    "experimental/crates/bitnet-core/src/native/parallel_gpt_tests.rs": {
+      "sha256": "236fab88e3a289256bfa3192acd5be13c6dc2d47a0e1770820ac6352055d1a90",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-parallel-fusion\\crates\\bitnet-core\\src\\native\\parallel_gpt_tests.rs"
+    },
+    "experimental/crates/bitnet-core/src/native/parallel_mla_tests.rs": {
+      "sha256": "3168f07ae906070821c32bbd4d6d9f56d5c66f7a0e85fb8dbc1e45e802d9f421",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check-parallel-fusion\\crates\\bitnet-core\\src\\native\\parallel_mla_tests.rs"
+    },
+    "diagnostics/build.ps1": {
+      "sha256": "0c6bf420931d0b6e821a806282fff26c6fced02ddfb7eaa63e8b203b046700f0",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\native\\build.ps1"
+    },
+    "experimental/native/cuda_quant/src/moe_fused.cuh": {
+      "sha256": "a26dcdd5dca5478b09134515a1a66cb3dfe626d9cf9ef8d5bb7651587288475a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\native\\moe_fused.cuh"
+    },
+    "experimental/native/cuda_quant/src/moe_parallel_fused.cuh": {
+      "sha256": "c2ef2543e9283c9a473f435835adc4f62fe6244a6fb2bc7bc7a14dea0554e67f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\native\\moe_parallel_fused.cuh"
+    },
+    "experimental/native/cuda_quant/src/moe_resident.cuh": {
+      "sha256": "8bc80d817b014c73a2b049eef2bd388c0abcf171dec3b0d8cefe67d5a3085367",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\parallel-fusion-proof\\native\\moe_resident.cuh"
+    }
+  },
+  "experimental_modified_paths": [
+    "crates/bitnet-core/src/native/graph.rs",
+    "crates/bitnet-core/src/native/moe.rs",
+    "crates/bitnet-core/src/native/parallel_fused_tests.rs",
+    "crates/bitnet-core/src/native/parallel_gpt_tests.rs",
+    "crates/bitnet-core/src/native/parallel_mla_tests.rs",
+    "native/cuda_quant/src/moe_fused.cuh",
+    "native/cuda_quant/src/moe_parallel_fused.cuh",
+    "native/cuda_quant/src/moe_resident.cuh"
+  ],
+  "generated": {
+    "README.md": "90f319334394f1272bb254a2837aeadc8fcf6b0dfb8a835de947163a75d82cd8",
+    ".gitattributes": "26adfb60699ab4be86ae4098c1203d5b0132707e2ab57ee8c4f70649d5643059"
+  },
+  "scope": "Non-adopted parallel fusion experiment; no production kernel or Rust changes."
+}
