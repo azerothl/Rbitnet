@@ -144,22 +144,7 @@ impl ContinuousLlama {
                 "continuous workspace failed; a fresh engine is required",
             ));
         }
-        let structured = std::env::var("RBITNET_STRUCTURED_OUTPUT")
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_lowercase();
-        if sampling.structured_json
-            || matches!(
-                structured.as_str(),
-                "json" | "tool" | "tool-call" | "tool_call"
-            )
-        {
-            // The legacy mask interprets token IDs as ASCII. It is not a
-            // validated grammar for this model's subword vocabulary.
-            return Err(failure(
-                "continuous Llama structured-output grammar is not validated",
-            ));
-        }
+        sampling.validate_structured_output()?;
         if self.waiting.len() + self.completed.len() >= self.maximum_queued {
             return Err(failure("continuous pending/result queue full"));
         }

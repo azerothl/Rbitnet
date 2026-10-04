@@ -619,7 +619,7 @@ fn matvec_rows_scalar(
     Ok(y)
 }
 
-fn matvec_rows_parallel(
+fn matvec_rows_parallel_original(
     ty: u32,
     payload: &[u8],
     row_bytes: usize,
@@ -759,37 +759,55 @@ pub fn matvec_device_quant_optional(
     }
 }
 
+struct LoadedCudaLibrary {
+    library: Library,
+    identity: Option<[u8; 32]>,
+}
+static CUDA_QUANT_LIBRARY: OnceLock<Option<LoadedCudaLibrary>> = OnceLock::new();
+
+pub(crate) fn cuda_quant_library_identity() -> Option<[u8; 32]> {
+    let _ = load_cuda_quant_library();
+    CUDA_QUANT_LIBRARY.get()?.as_ref()?.identity
+}
 pub(crate) fn load_cuda_quant_library() -> Option<&'static Library> {
-    static LIB: OnceLock<Option<Library>> = OnceLock::new();
-    LIB.get_or_init(|| {
-        let mut candidates: Vec<String> = Vec::new();
-        if let Ok(explicit) = std::env::var("RBITNET_CUDA_QUANT_LIB") {
-            let trimmed = explicit.trim();
-            if !trimmed.is_empty() {
-                candidates.push(trimmed.to_string());
+    CUDA_QUANT_LIBRARY
+        .get_or_init(|| {
+            let mut candidates: Vec<String> = Vec::new();
+            if let Ok(explicit) = std::env::var("RBITNET_CUDA_QUANT_LIB") {
+                let trimmed = explicit.trim();
+                if !trimmed.is_empty() {
+                    candidates.push(trimmed.to_string());
+                }
             }
-        }
-        for path in [
-            "rbitnet_cuda_quant64.dll",
-            "rbitnet_cuda_quant.dll",
-            "librbitnet_cuda_quant.so",
-            "librbitnet_cuda_quant.dylib",
-            "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
-            "native/cuda_quant/build/rbitnet_cuda_quant.dll",
-            "native/cuda_quant/build/librbitnet_cuda_quant.so",
-            "native/cuda_quant/build/librbitnet_cuda_quant.dylib",
-        ] {
-            candidates.push(path.to_string());
-        }
-        for path in candidates {
-            if let Ok(lib) = unsafe { Library::new(path.as_str()) } {
-                tracing::info!(path = %path, "loaded librbitnet_cuda_quant");
-                return Some(lib);
+            for path in [
+                "rbitnet_cuda_quant64.dll",
+                "rbitnet_cuda_quant.dll",
+                "librbitnet_cuda_quant.so",
+                "librbitnet_cuda_quant.dylib",
+                "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
+                "native/cuda_quant/build/rbitnet_cuda_quant.dll",
+                "native/cuda_quant/build/librbitnet_cuda_quant.so",
+                "native/cuda_quant/build/librbitnet_cuda_quant.dylib",
+            ] {
+                candidates.push(path.to_string());
             }
-        }
-        None
-    })
-    .as_ref()
+            for path in candidates {
+                use sha2::Digest;
+                let identity = std::fs::read(&path)
+                    .ok()
+                    .map(|bytes| sha2::Sha256::digest(&bytes).into());
+                if let Ok(lib) = unsafe { Library::new(path.as_str()) } {
+                    tracing::info!(path = %path, "loaded librbitnet_cuda_quant");
+                    return Some(LoadedCudaLibrary {
+                        library: lib,
+                        identity,
+                    });
+                }
+            }
+            None
+        })
+        .as_ref()
+        .map(|loaded| &loaded.library)
 }
 
 pub(crate) fn matvec_device_quant_batch_optional(
@@ -967,5 +985,176 @@ mod tests {
         let ref_dot: f32 = dense.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
         let q = dot_row(35, &payload, &x).unwrap();
         assert!((q - ref_dot).abs() < 1e-5, "q={q} ref={ref_dot}");
+    }
+}
+
+fn matvec_rows_parallel(
+    ty: u32,
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    static DIRECT: OnceLock<bool> = OnceLock::new();
+    if *DIRECT.get_or_init(|| std::env::var("RBITNET_CPU_DIRECT_ROWS").as_deref() == Ok("1")) {
+        matvec_rows_direct(ty, payload, row_bytes, x, ne1)
+    } else {
+        matvec_rows_parallel_original(ty, payload, row_bytes, x, ne1)
+    }
+}
+/// Write disjoint output bands directly. Each row retains its original dot
+/// kernel and accumulation order; no intermediate result vectors are merged.
+static DIRECT_ROW_CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+#[doc(hidden)]
+pub fn direct_row_calls() -> u64 {
+    DIRECT_ROW_CALLS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+fn matvec_rows_direct(
+    ty: u32,
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    DIRECT_ROW_CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let pool = quant_matvec_thread_pool();
+    let threads = pool.current_num_threads().min(ne1.max(1));
+    if threads <= 1 || ne1 < 2 {
+        return matvec_rows_scalar(ty, payload, row_bytes, x, ne1);
+    }
+    let chunk_rows = ne1.div_ceil(threads);
+    let mut output = vec![0.0f32; ne1];
+    pool.install(|| {
+        output
+            .par_chunks_mut(chunk_rows)
+            .enumerate()
+            .try_for_each(|(chunk, rows)| -> Result<()> {
+                let first = chunk * chunk_rows;
+                for (local, target) in rows.iter_mut().enumerate() {
+                    let start = (first + local) * row_bytes;
+                    *target = dot_row(ty, &payload[start..start + row_bytes], x)?;
+                }
+                Ok(())
+            })
+    })?;
+    Ok(output)
+}
+
+#[cfg(test)]
+mod direct_row_tests {
+    use super::*;
+
+    #[test]
+    fn cpu_direct_rows_match_original_bits_across_quant_formats_and_tail_bands() {
+        let x = (0..512)
+            .map(|i| ((i * 13 % 71) as f32 - 35.) / 256.)
+            .collect::<Vec<_>>();
+        let mut cases = 0;
+        for ty in [0, 2, 6, 8, 12, 13, 14, 39] {
+            let (elements, block_bytes) = types::type_layout(ty).unwrap();
+            let row_bytes = (x.len() / elements) * block_bytes;
+            for rows in [0, 1, 7, 17, 33, 65] {
+                let mut payload = vec![0u8; row_bytes * rows];
+                for (i, byte) in payload.iter_mut().enumerate() {
+                    *byte = ((i * 37 + 11) % 256) as u8;
+                }
+                if ty == 0 {
+                    for (i, bytes) in payload.chunks_exact_mut(4).enumerate() {
+                        bytes
+                            .copy_from_slice(&(((i * 11 % 113) as f32 - 56.) / 256.).to_le_bytes());
+                    }
+                } else {
+                    for block in payload.chunks_exact_mut(block_bytes) {
+                        let scale = half::f16::from_f32(0.0625).to_le_bytes();
+                        match ty {
+                            2 | 6 | 8 => block[..2].copy_from_slice(&scale),
+                            12 | 13 => {
+                                block[..2].copy_from_slice(&scale);
+                                block[2..4]
+                                    .copy_from_slice(&half::f16::from_f32(0.015625).to_le_bytes());
+                            }
+                            14 => block[208..210].copy_from_slice(&scale),
+                            39 => block[0] = 127,
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+                let original =
+                    matvec_rows_parallel_original(ty, &payload, row_bytes, &x, rows).unwrap();
+                let actual = matvec_rows_direct(ty, &payload, row_bytes, &x, rows).unwrap();
+                assert!(
+                    original.iter().all(|x| x.is_finite()),
+                    "finite fixture {ty}/{rows}"
+                );
+                assert_eq!(
+                    actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    original.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    "type={ty}, rows={rows}"
+                );
+                cases += 1;
+            }
+        }
+        assert_eq!(cases, 48);
+        println!("CPU_DIRECT_ROWS_BITS_DONE formats=8 tail_shapes=6 cases=48");
+    }
+
+    #[test]
+    fn optional_actual_cpu_direct_rows_match_original_gguf_matrices() {
+        if std::env::var("RBITNET_CPU_DIRECT_ROWS_REAL_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let archive = GgufArchive::mmap_path(std::path::Path::new(
+            &std::env::var("RBITNET_TEST_GGUF").unwrap(),
+        ))
+        .unwrap();
+        let mut cases = 0;
+        for tensor in archive
+            .tensors
+            .iter()
+            .filter(|t| t.dimensions.len() >= 2 && ggml_type_supported_mmap_matvec(t.ggml_type))
+            .take(12)
+        {
+            let columns = tensor.dimensions[0] as usize;
+            let available = tensor.dimensions[1] as usize;
+            let row_bytes = crate::ggml::ggml_row_size(tensor.ggml_type, columns as u64).unwrap();
+            let payload = archive.tensor_payload(tensor).unwrap();
+            let x = (0..columns)
+                .map(|i| ((i * 13 % 71) as f32 - 35.) / 256.)
+                .collect::<Vec<_>>();
+            for rows in [1, 7, 17, 33, 65].map(|rows| rows.min(available)) {
+                let original = matvec_rows_parallel_original(
+                    tensor.ggml_type,
+                    &payload[..rows * row_bytes],
+                    row_bytes,
+                    &x,
+                    rows,
+                )
+                .unwrap();
+                let actual = matvec_rows_direct(
+                    tensor.ggml_type,
+                    &payload[..rows * row_bytes],
+                    row_bytes,
+                    &x,
+                    rows,
+                )
+                .unwrap();
+                assert!(
+                    original.iter().all(|x| x.is_finite()),
+                    "finite actual {}",
+                    tensor.name
+                );
+                assert_eq!(
+                    actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    original.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    "{} rows={rows}",
+                    tensor.name
+                );
+                cases += 1;
+            }
+        }
+        assert_eq!(cases, 60);
+        println!("CPU_DIRECT_ROWS_ACTUAL_DONE matrices=12 cases=60 exact_bits=true");
     }
 }

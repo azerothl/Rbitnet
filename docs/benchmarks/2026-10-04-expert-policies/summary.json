@@ -1,0 +1,2990 @@
+{
+  "protocol": {
+    "notes": 4,
+    "output_tokens": 128,
+    "cycles": 3,
+    "context": 2048,
+    "trace_collection_excluded_from_quiet_timings": true
+  },
+  "known_failures": [
+    {
+      "status": "unresolved_experimental",
+      "model": "glm47-flash",
+      "cache_mib": 8192,
+      "policy": "least-stale",
+      "cycle": 1,
+      "prompt": 0,
+      "result_sha256": "8b642b4335648abc11a17ce28679fdf19e4d68cc5e56bd50dd96d8fc1ba25c99",
+      "result_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-original-failure\\results.json",
+      "diagnosis_manifest_sha256": "9c7d77d9bfaaac0cfa9063c9c00538a5efcac4ab6fda81eb7e03ffe739e6d41f",
+      "diagnosis_manifest_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-logits-proof\\manifest.json",
+      "repeated_http_capture_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-diagnostic-02\\results.json",
+      "repeated_http_capture_sha256": "bc16aef6fff179ae33ec84e94c9e9183f8f4b50540a972393d9e5e587a55d550",
+      "consequence": "A complete subsequent HTTP capture and exact diagnostic cannot erase the original mismatch. Least-Stale is not validated for default adoption; root LRU default unchanged. Independent non-MoE experiments may continue."
+    }
+  ],
+  "cases": [
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20852.0,
+          "decode_ms": 14446.0,
+          "decode_tokens_per_second": 8.860584244773639,
+          "http_wall_ms": 35301.5890000097,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 31341855300.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20390.0,
+          "decode_ms": 14494.0,
+          "decode_tokens_per_second": 8.831240513315855,
+          "http_wall_ms": 34911.785399977816,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 30930936900.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 20621.0,
+          "minimum": 20390.0,
+          "maximum": 20852.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14470.0,
+          "minimum": 14446.0,
+          "maximum": 14494.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.845912379044748,
+          "minimum": 8.831240513315855,
+          "maximum": 8.860584244773639
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 35106.68719999376,
+          "minimum": 34911.785399977816,
+          "maximum": 35301.5890000097
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 389596262400.0,
+          "minimum": 389596262400.0,
+          "maximum": 389596262400.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 31136396100.0,
+          "minimum": 30930936900.0,
+          "maximum": 31341855300.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21193.0,
+          "decode_ms": 14560.0,
+          "decode_tokens_per_second": 8.791208791208792,
+          "http_wall_ms": 35775.15030000359,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 31700253000.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21626.0,
+          "decode_ms": 14658.0,
+          "decode_tokens_per_second": 8.732432801200709,
+          "http_wall_ms": 36294.9567999749,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 32246685600.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 21409.5,
+          "minimum": 21193.0,
+          "maximum": 21626.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14609.0,
+          "minimum": 14560.0,
+          "maximum": 14658.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.76182079620475,
+          "minimum": 8.732432801200709,
+          "maximum": 8.791208791208792
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 36035.05354998924,
+          "minimum": 35775.15030000359,
+          "maximum": 36294.9567999749
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 399748608000.0,
+          "minimum": 399748608000.0,
+          "maximum": 399748608000.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 31973469300.0,
+          "minimum": 31700253000.0,
+          "maximum": 32246685600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 9302.0,
+          "decode_ms": 1642.0,
+          "decode_tokens_per_second": 8.526187576126675,
+          "http_wall_ms": 10947.344899992459,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9751202500.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 9240.0,
+          "decode_ms": 1612.0,
+          "decode_tokens_per_second": 8.6848635235732,
+          "http_wall_ms": 10876.287799997954,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9679646700.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 9271.0,
+          "minimum": 9240.0,
+          "maximum": 9302.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1627.0,
+          "minimum": 1612.0,
+          "maximum": 1642.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.605525549849938,
+          "minimum": 8.526187576126675,
+          "maximum": 8.6848635235732
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 10911.816349995206,
+          "minimum": 10876.287799997954,
+          "maximum": 10947.344899992459
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 121828147200.0,
+          "minimum": 121828147200.0,
+          "maximum": 121828147200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 9715424600.0,
+          "minimum": 9679646700.0,
+          "maximum": 9751202500.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20225.0,
+          "decode_ms": 14282.0,
+          "decode_tokens_per_second": 8.962330205853522,
+          "http_wall_ms": 34525.08590000798,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 30610808700.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20534.0,
+          "decode_ms": 15022.0,
+          "decode_tokens_per_second": 8.520836107043003,
+          "http_wall_ms": 35559.2209000024,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 31622567100.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 20379.5,
+          "minimum": 20225.0,
+          "maximum": 20534.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14652.0,
+          "minimum": 14282.0,
+          "maximum": 15022.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.741583156448263,
+          "minimum": 8.520836107043003,
+          "maximum": 8.962330205853522
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 35042.15340000519,
+          "minimum": 34525.08590000798,
+          "maximum": 35559.2209000024
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 389596262400.0,
+          "minimum": 389596262400.0,
+          "maximum": 389596262400.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 31116687900.0,
+          "minimum": 30610808700.0,
+          "maximum": 31622567100.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21281.0,
+          "decode_ms": 14220.0,
+          "decode_tokens_per_second": 9.0014064697609,
+          "http_wall_ms": 35518.74959998531,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 31516837500.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21433.0,
+          "decode_ms": 14366.0,
+          "decode_tokens_per_second": 8.909926214673535,
+          "http_wall_ms": 35815.50050000078,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 31804460500.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 21357.0,
+          "minimum": 21281.0,
+          "maximum": 21433.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14293.0,
+          "minimum": 14220.0,
+          "maximum": 14366.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.955666342217217,
+          "minimum": 8.909926214673535,
+          "maximum": 9.0014064697609
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 35667.12504999305,
+          "minimum": 35518.74959998531,
+          "maximum": 35815.50050000078
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 399748608000.0,
+          "minimum": 399748608000.0,
+          "maximum": 399748608000.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 31660649000.0,
+          "minimum": 31516837500.0,
+          "maximum": 31804460500.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 8958.0,
+          "decode_ms": 1665.0,
+          "decode_tokens_per_second": 8.408408408408409,
+          "http_wall_ms": 10640.586399997119,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9467224500.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 9377.0,
+          "decode_ms": 1577.0,
+          "decode_tokens_per_second": 8.877615726062142,
+          "http_wall_ms": 10970.069700008025,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9780944600.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 9167.5,
+          "minimum": 8958.0,
+          "maximum": 9377.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1621.0,
+          "minimum": 1577.0,
+          "maximum": 1665.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.643012067235276,
+          "minimum": 8.408408408408409,
+          "maximum": 8.877615726062142
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 10805.328050002572,
+          "minimum": 10640.586399997119,
+          "maximum": 10970.069700008025
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 121828147200.0,
+          "minimum": 121828147200.0,
+          "maximum": 121828147200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 9624084550.0,
+          "minimum": 9467224500.0,
+          "maximum": 9780944600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20600.0,
+          "decode_ms": 14189.0,
+          "decode_tokens_per_second": 9.021072661921206,
+          "http_wall_ms": 34791.76700001699,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 30893036200.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 20470.0,
+          "decode_ms": 14303.0,
+          "decode_tokens_per_second": 8.949171502481997,
+          "http_wall_ms": 34776.44169999985,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 29472.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 389596262400.0,
+          "entire_request_upload_ns": 30880484900.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 20535.0,
+          "minimum": 20470.0,
+          "maximum": 20600.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14246.0,
+          "minimum": 14189.0,
+          "maximum": 14303.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.985122082201602,
+          "minimum": 8.949171502481997,
+          "maximum": 9.021072661921206
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 34784.10435000842,
+          "minimum": 34776.44169999985,
+          "maximum": 34791.76700001699
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 389596262400.0,
+          "minimum": 389596262400.0,
+          "maximum": 389596262400.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 30886760550.0,
+          "minimum": 30880484900.0,
+          "maximum": 30893036200.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21128.0,
+          "decode_ms": 14678.0,
+          "decode_tokens_per_second": 8.72053413271563,
+          "http_wall_ms": 35809.733300004154,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 31800969600.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 21096.0,
+          "decode_ms": 14282.0,
+          "decode_tokens_per_second": 8.962330205853522,
+          "http_wall_ms": 35395.0068000122,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 30240.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 399748608000.0,
+          "entire_request_upload_ns": 31398976700.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 21112.0,
+          "minimum": 21096.0,
+          "maximum": 21128.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 14480.0,
+          "minimum": 14282.0,
+          "maximum": 14678.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.841432169284577,
+          "minimum": 8.72053413271563,
+          "maximum": 8.962330205853522
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 35602.370050008176,
+          "minimum": 35395.0068000122,
+          "maximum": 35809.733300004154
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 399748608000.0,
+          "minimum": 399748608000.0,
+          "maximum": 399748608000.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 31599973150.0,
+          "minimum": 31398976700.0,
+          "maximum": 31800969600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 9337.0,
+          "decode_ms": 1633.0,
+          "decode_tokens_per_second": 8.573178199632578,
+          "http_wall_ms": 10973.305199993774,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9793902000.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 9156.0,
+          "decode_ms": 1554.0,
+          "decode_tokens_per_second": 9.00900900900901,
+          "http_wall_ms": 10735.261399997398,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 9216.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 121828147200.0,
+          "entire_request_upload_ns": 9546482500.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 9246.5,
+          "minimum": 9156.0,
+          "maximum": 9337.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1593.5,
+          "minimum": 1554.0,
+          "maximum": 1633.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 8.791093604320793,
+          "minimum": 8.573178199632578,
+          "maximum": 9.00900900900901
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 10854.283299995586,
+          "minimum": 10735.261399997398,
+          "maximum": 10973.305199993774
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 121828147200.0,
+          "minimum": 121828147200.0,
+          "maximum": 121828147200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 9670192250.0,
+          "minimum": 9546482500.0,
+          "maximum": 9793902000.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 1994.0,
+          "decode_ms": 1630.0,
+          "decode_tokens_per_second": 78.52760736196319,
+          "http_wall_ms": 3627.166299993405,
+          "entire_request_cache_hits": 29368.0,
+          "entire_request_cache_misses": 104.0,
+          "entire_request_cache_hit_fraction": 0.996471226927253,
+          "entire_request_upload_bytes": 1374796800.0,
+          "entire_request_upload_ns": 105860600.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 1994.0,
+          "decode_ms": 1718.0,
+          "decode_tokens_per_second": 74.50523864959256,
+          "http_wall_ms": 3738.086600002134,
+          "entire_request_cache_hits": 29368.0,
+          "entire_request_cache_misses": 104.0,
+          "entire_request_cache_hit_fraction": 0.996471226927253,
+          "entire_request_upload_bytes": 1374796800.0,
+          "entire_request_upload_ns": 111813200.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 1994.0,
+          "minimum": 1994.0,
+          "maximum": 1994.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1674.0,
+          "minimum": 1630.0,
+          "maximum": 1718.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 76.51642300577788,
+          "minimum": 74.50523864959256,
+          "maximum": 78.52760736196319
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 3682.6264499977697,
+          "minimum": 3627.166299993405,
+          "maximum": 3738.086600002134
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 1374796800.0,
+          "minimum": 1374796800.0,
+          "maximum": 1374796800.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 108836900.0,
+          "minimum": 105860600.0,
+          "maximum": 111813200.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 2233.0,
+          "decode_ms": 1729.0,
+          "decode_tokens_per_second": 74.03123192596877,
+          "http_wall_ms": 3979.3174999940675,
+          "entire_request_cache_hits": 29942.0,
+          "entire_request_cache_misses": 298.0,
+          "entire_request_cache_hit_fraction": 0.9901455026455026,
+          "entire_request_upload_bytes": 3939321600.0,
+          "entire_request_upload_ns": 301794400.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 2316.0,
+          "decode_ms": 1773.0,
+          "decode_tokens_per_second": 72.19402143260011,
+          "http_wall_ms": 4092.369799996959,
+          "entire_request_cache_hits": 29942.0,
+          "entire_request_cache_misses": 298.0,
+          "entire_request_cache_hit_fraction": 0.9901455026455026,
+          "entire_request_upload_bytes": 3939321600.0,
+          "entire_request_upload_ns": 335556900.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 2274.5,
+          "minimum": 2233.0,
+          "maximum": 2316.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1751.0,
+          "minimum": 1729.0,
+          "maximum": 1773.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 73.11262667928443,
+          "minimum": 72.19402143260011,
+          "maximum": 74.03123192596877
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 4035.8436499955133,
+          "minimum": 3979.3174999940675,
+          "maximum": 4092.369799996959
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 3939321600.0,
+          "minimum": 3939321600.0,
+          "maximum": 3939321600.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 318675650.0,
+          "minimum": 301794400.0,
+          "maximum": 335556900.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 1033.0,
+          "decode_ms": 179.0,
+          "decode_tokens_per_second": 78.2122905027933,
+          "http_wall_ms": 1214.8684000130743,
+          "entire_request_cache_hits": 9050.0,
+          "entire_request_cache_misses": 166.0,
+          "entire_request_cache_hit_fraction": 0.9819878472222222,
+          "entire_request_upload_bytes": 2194387200.0,
+          "entire_request_upload_ns": 162817600.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 1041.0,
+          "decode_ms": 182.0,
+          "decode_tokens_per_second": 76.92307692307692,
+          "http_wall_ms": 1225.8182000077795,
+          "entire_request_cache_hits": 9050.0,
+          "entire_request_cache_misses": 166.0,
+          "entire_request_cache_hit_fraction": 0.9819878472222222,
+          "entire_request_upload_bytes": 2194387200.0,
+          "entire_request_upload_ns": 167240600.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 1037.0,
+          "minimum": 1033.0,
+          "maximum": 1041.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 180.5,
+          "minimum": 179.0,
+          "maximum": 182.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 77.56768371293511,
+          "minimum": 76.92307692307692,
+          "maximum": 78.2122905027933
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 1220.343300010427,
+          "minimum": 1214.8684000130743,
+          "maximum": 1225.8182000077795
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 2194387200.0,
+          "minimum": 2194387200.0,
+          "maximum": 2194387200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 165029100.0,
+          "minimum": 162817600.0,
+          "maximum": 167240600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 2011.0,
+          "decode_ms": 1587.0,
+          "decode_tokens_per_second": 80.65532451165721,
+          "http_wall_ms": 3622.1260000020266,
+          "entire_request_cache_hits": 29410.0,
+          "entire_request_cache_misses": 62.0,
+          "entire_request_cache_hit_fraction": 0.9978963083604777,
+          "entire_request_upload_bytes": 819590400.0,
+          "entire_request_upload_ns": 63476400.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 2128.0,
+          "decode_ms": 1637.0,
+          "decode_tokens_per_second": 78.19181429444104,
+          "http_wall_ms": 3768.286399979843,
+          "entire_request_cache_hits": 29411.0,
+          "entire_request_cache_misses": 61.0,
+          "entire_request_cache_hit_fraction": 0.9979302388707926,
+          "entire_request_upload_bytes": 806371200.0,
+          "entire_request_upload_ns": 69719500.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 2069.5,
+          "minimum": 2011.0,
+          "maximum": 2128.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 1612.0,
+          "minimum": 1587.0,
+          "maximum": 1637.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 79.42356940304913,
+          "minimum": 78.19181429444104,
+          "maximum": 80.65532451165721
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 3695.2061999909347,
+          "minimum": 3622.1260000020266,
+          "maximum": 3768.286399979843
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 812980800.0,
+          "minimum": 806371200.0,
+          "maximum": 819590400.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 66597950.0,
+          "minimum": 63476400.0,
+          "maximum": 69719500.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 2329.0,
+          "decode_ms": 3415.0,
+          "decode_tokens_per_second": 37.48169838945827,
+          "http_wall_ms": 5761.557799996808,
+          "entire_request_cache_hits": 28304.0,
+          "entire_request_cache_misses": 1936.0,
+          "entire_request_cache_hit_fraction": 0.935978835978836,
+          "entire_request_upload_bytes": 25592371200.0,
+          "entire_request_upload_ns": 1995830000.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 2236.0,
+          "decode_ms": 3354.0,
+          "decode_tokens_per_second": 38.1633870005963,
+          "http_wall_ms": 5606.446199992206,
+          "entire_request_cache_hits": 28307.0,
+          "entire_request_cache_misses": 1933.0,
+          "entire_request_cache_hit_fraction": 0.9360780423280424,
+          "entire_request_upload_bytes": 25552713600.0,
+          "entire_request_upload_ns": 1923005300.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 2282.5,
+          "minimum": 2236.0,
+          "maximum": 2329.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 3384.5,
+          "minimum": 3354.0,
+          "maximum": 3415.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 37.82254269502729,
+          "minimum": 37.48169838945827,
+          "maximum": 38.1633870005963
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 5684.001999994507,
+          "minimum": 5606.446199992206,
+          "maximum": 5761.557799996808
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 25572542400.0,
+          "minimum": 25552713600.0,
+          "maximum": 25592371200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 1959417650.0,
+          "minimum": 1923005300.0,
+          "maximum": 1995830000.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 959.0,
+          "decode_ms": 182.0,
+          "decode_tokens_per_second": 76.92307692307692,
+          "http_wall_ms": 1158.759000012651,
+          "entire_request_cache_hits": 9184.0,
+          "entire_request_cache_misses": 32.0,
+          "entire_request_cache_hit_fraction": 0.9965277777777778,
+          "entire_request_upload_bytes": 423014400.0,
+          "entire_request_upload_ns": 35793900.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 922.0,
+          "decode_ms": 174.0,
+          "decode_tokens_per_second": 80.45977011494253,
+          "http_wall_ms": 1112.1276000048965,
+          "entire_request_cache_hits": 9184.0,
+          "entire_request_cache_misses": 32.0,
+          "entire_request_cache_hit_fraction": 0.9965277777777778,
+          "entire_request_upload_bytes": 423014400.0,
+          "entire_request_upload_ns": 32758600.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 940.5,
+          "minimum": 922.0,
+          "maximum": 959.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 178.0,
+          "minimum": 174.0,
+          "maximum": 182.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 78.69142351900973,
+          "minimum": 76.92307692307692,
+          "maximum": 80.45977011494253
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 1135.4433000087738,
+          "minimum": 1112.1276000048965,
+          "maximum": 1158.759000012651
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 423014400.0,
+          "minimum": 423014400.0,
+          "maximum": 423014400.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34276250.0,
+          "minimum": 32758600.0,
+          "maximum": 35793900.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 3715.0,
+          "decode_ms": 2632.0,
+          "decode_tokens_per_second": 48.632218844984806,
+          "http_wall_ms": 6350.626800005557,
+          "entire_request_cache_hits": 26833.0,
+          "entire_request_cache_misses": 2639.0,
+          "entire_request_cache_hit_fraction": 0.9104573832790445,
+          "entire_request_upload_bytes": 34885468800.0,
+          "entire_request_upload_ns": 2721100800.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 180,
+          "completion_tokens": 128,
+          "prefill_ms": 3751.0,
+          "decode_ms": 2518.0,
+          "decode_tokens_per_second": 50.833995234312944,
+          "http_wall_ms": 6294.262700015679,
+          "entire_request_cache_hits": 26833.0,
+          "entire_request_cache_misses": 2639.0,
+          "entire_request_cache_hit_fraction": 0.9104573832790445,
+          "entire_request_upload_bytes": 34885468800.0,
+          "entire_request_upload_ns": 2670289300.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 3733.0,
+          "minimum": 3715.0,
+          "maximum": 3751.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 2575.0,
+          "minimum": 2518.0,
+          "maximum": 2632.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 49.73310703964887,
+          "minimum": 48.632218844984806,
+          "maximum": 50.833995234312944
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 6322.444750010618,
+          "minimum": 6294.262700015679,
+          "maximum": 6350.626800005557
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 34885468800.0,
+          "minimum": 34885468800.0,
+          "maximum": 34885468800.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 2695695050.0,
+          "minimum": 2670289300.0,
+          "maximum": 2721100800.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 4042.0,
+          "decode_ms": 2987.0,
+          "decode_tokens_per_second": 42.852360227653165,
+          "http_wall_ms": 7032.95690001687,
+          "entire_request_cache_hits": 27279.0,
+          "entire_request_cache_misses": 2961.0,
+          "entire_request_cache_hit_fraction": 0.9020833333333333,
+          "entire_request_upload_bytes": 39142051200.0,
+          "entire_request_upload_ns": 3211151200.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 188,
+          "completion_tokens": 128,
+          "prefill_ms": 4024.0,
+          "decode_ms": 2910.0,
+          "decode_tokens_per_second": 43.986254295532646,
+          "http_wall_ms": 6953.44759998261,
+          "entire_request_cache_hits": 27279.0,
+          "entire_request_cache_misses": 2961.0,
+          "entire_request_cache_hit_fraction": 0.9020833333333333,
+          "entire_request_upload_bytes": 39142051200.0,
+          "entire_request_upload_ns": 3143205400.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 4033.0,
+          "minimum": 4024.0,
+          "maximum": 4042.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 2948.5,
+          "minimum": 2910.0,
+          "maximum": 2987.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 43.419307261592905,
+          "minimum": 42.852360227653165,
+          "maximum": 43.986254295532646
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 6993.20224999974,
+          "minimum": 6953.44759998261,
+          "maximum": 7032.95690001687
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 39142051200.0,
+          "minimum": 39142051200.0,
+          "maximum": 39142051200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 3177178300.0,
+          "minimum": 3143205400.0,
+          "maximum": 3211151200.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 1698.0,
+          "decode_ms": 311.0,
+          "decode_tokens_per_second": 45.01607717041801,
+          "http_wall_ms": 2011.098499991931,
+          "entire_request_cache_hits": 8290.0,
+          "entire_request_cache_misses": 926.0,
+          "entire_request_cache_hit_fraction": 0.8995225694444444,
+          "entire_request_upload_bytes": 12240979200.0,
+          "entire_request_upload_ns": 931094400.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 82,
+          "completion_tokens": 14,
+          "prefill_ms": 1680.0,
+          "decode_ms": 307.0,
+          "decode_tokens_per_second": 45.60260586319218,
+          "http_wall_ms": 2004.726599989226,
+          "entire_request_cache_hits": 8290.0,
+          "entire_request_cache_misses": 926.0,
+          "entire_request_cache_hit_fraction": 0.8995225694444444,
+          "entire_request_upload_bytes": 12240979200.0,
+          "entire_request_upload_ns": 920976400.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 1689.0,
+          "minimum": 1680.0,
+          "maximum": 1698.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 309.0,
+          "minimum": 307.0,
+          "maximum": 311.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 45.30934151680509,
+          "minimum": 45.01607717041801,
+          "maximum": 45.60260586319218
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 2007.9125499905786,
+          "minimum": 2004.726599989226,
+          "maximum": 2011.098499991931
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 12240979200.0,
+          "minimum": 12240979200.0,
+          "maximum": 12240979200.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 926035400.0,
+          "minimum": 920976400.0,
+          "maximum": 931094400.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23997.0,
+          "decode_ms": 24277.0,
+          "decode_tokens_per_second": 5.272480125221403,
+          "http_wall_ms": 48290.54439999982,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 34334732800.0,
+          "entire_request_managed_allocations": 66294.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23416.0,
+          "decode_ms": 24314.0,
+          "decode_tokens_per_second": 5.264456691617998,
+          "http_wall_ms": 47745.976000000155,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 34068526700.0,
+          "entire_request_managed_allocations": 66294.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 23706.5,
+          "minimum": 23416.0,
+          "maximum": 23997.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24295.5,
+          "minimum": 24277.0,
+          "maximum": 24314.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.2684684084197,
+          "minimum": 5.264456691617998,
+          "maximum": 5.272480125221403
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 48018.26019999999,
+          "minimum": 47745.976000000155,
+          "maximum": 48290.54439999982
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 266221780992.0,
+          "minimum": 266221780992.0,
+          "maximum": 266221780992.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34201629750.0,
+          "minimum": 34068526700.0,
+          "maximum": 34334732800.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 66294.0,
+          "minimum": 66294.0,
+          "maximum": 66294.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 24821.0,
+          "decode_ms": 24076.0,
+          "decode_tokens_per_second": 5.316497757102509,
+          "http_wall_ms": 48911.73919999983,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 34848266700.0,
+          "entire_request_managed_allocations": 67599.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 24454.0,
+          "decode_ms": 24354.0,
+          "decode_tokens_per_second": 5.2558101338589145,
+          "http_wall_ms": 48811.13900000037,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 34798194900.0,
+          "entire_request_managed_allocations": 67599.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 24637.5,
+          "minimum": 24454.0,
+          "maximum": 24821.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24215.0,
+          "minimum": 24076.0,
+          "maximum": 24354.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.286153945480711,
+          "minimum": 5.2558101338589145,
+          "maximum": 5.316497757102509
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 48861.4391000001,
+          "minimum": 48811.13900000037,
+          "maximum": 48911.73919999983
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 271462367232.0,
+          "minimum": 271462367232.0,
+          "maximum": 271462367232.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34823230800.0,
+          "minimum": 34798194900.0,
+          "maximum": 34848266700.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 67599.0,
+          "minimum": 67599.0,
+          "maximum": 67599.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lru",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3811.0,
+          "decode_ms": 181.0,
+          "decode_tokens_per_second": 5.524861878453039,
+          "http_wall_ms": 4006.9524000000456,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2939287000.0,
+          "entire_request_managed_allocations": 5742.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3785.0,
+          "decode_ms": 179.0,
+          "decode_tokens_per_second": 5.58659217877095,
+          "http_wall_ms": 3982.349100000647,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2916382400.0,
+          "entire_request_managed_allocations": 5742.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 3798.0,
+          "minimum": 3785.0,
+          "maximum": 3811.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 180.0,
+          "minimum": 179.0,
+          "maximum": 181.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.555727028611994,
+          "minimum": 5.524861878453039,
+          "maximum": 5.58659217877095
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 3994.6507500003463,
+          "minimum": 3982.349100000647,
+          "maximum": 4006.9524000000456
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 23058579456.0,
+          "minimum": 23058579456.0,
+          "maximum": 23058579456.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 2927834700.0,
+          "minimum": 2916382400.0,
+          "maximum": 2939287000.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 5742.0,
+          "minimum": 5742.0,
+          "maximum": 5742.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23050.0,
+          "decode_ms": 24215.0,
+          "decode_tokens_per_second": 5.285979764608713,
+          "http_wall_ms": 47268.77460000014,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 33767784900.0,
+          "entire_request_managed_allocations": 66294.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23572.0,
+          "decode_ms": 24648.0,
+          "decode_tokens_per_second": 5.19311911716975,
+          "http_wall_ms": 48236.3277000004,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 34307534300.0,
+          "entire_request_managed_allocations": 66294.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 23311.0,
+          "minimum": 23050.0,
+          "maximum": 23572.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24431.5,
+          "minimum": 24215.0,
+          "maximum": 24648.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.239549440889231,
+          "minimum": 5.19311911716975,
+          "maximum": 5.285979764608713
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 47752.551150000276,
+          "minimum": 47268.77460000014,
+          "maximum": 48236.3277000004
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 266221780992.0,
+          "minimum": 266221780992.0,
+          "maximum": 266221780992.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34037659600.0,
+          "minimum": 33767784900.0,
+          "maximum": 34307534300.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 66294.0,
+          "minimum": 66294.0,
+          "maximum": 66294.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 24199.0,
+          "decode_ms": 24343.0,
+          "decode_tokens_per_second": 5.2581851045475085,
+          "http_wall_ms": 48568.89870000032,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 34606371200.0,
+          "entire_request_managed_allocations": 67599.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 24735.0,
+          "decode_ms": 24125.0,
+          "decode_tokens_per_second": 5.305699481865285,
+          "http_wall_ms": 48874.820900000486,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 34747885600.0,
+          "entire_request_managed_allocations": 67599.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 24467.0,
+          "minimum": 24199.0,
+          "maximum": 24735.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24234.0,
+          "minimum": 24125.0,
+          "maximum": 24343.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.281942293206397,
+          "minimum": 5.2581851045475085,
+          "maximum": 5.305699481865285
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 48721.8598000004,
+          "minimum": 48568.89870000032,
+          "maximum": 48874.820900000486
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 271462367232.0,
+          "minimum": 271462367232.0,
+          "maximum": 271462367232.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34677128400.0,
+          "minimum": 34606371200.0,
+          "maximum": 34747885600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 67599.0,
+          "minimum": 67599.0,
+          "maximum": 67599.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "lfu",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3891.0,
+          "decode_ms": 180.0,
+          "decode_tokens_per_second": 5.555555555555555,
+          "http_wall_ms": 4087.0457999999417,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2984799200.0,
+          "entire_request_managed_allocations": 5742.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3723.0,
+          "decode_ms": 176.0,
+          "decode_tokens_per_second": 5.681818181818182,
+          "http_wall_ms": 3902.1104000003106,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2845492600.0,
+          "entire_request_managed_allocations": 5742.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 3807.0,
+          "minimum": 3723.0,
+          "maximum": 3891.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 178.0,
+          "minimum": 176.0,
+          "maximum": 180.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.6186868686868685,
+          "minimum": 5.555555555555555,
+          "maximum": 5.681818181818182
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 3994.578100000126,
+          "minimum": 3902.1104000003106,
+          "maximum": 4087.0457999999417
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 23058579456.0,
+          "minimum": 23058579456.0,
+          "maximum": 23058579456.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 2915145900.0,
+          "minimum": 2845492600.0,
+          "maximum": 2984799200.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 5742.0,
+          "minimum": 5742.0,
+          "maximum": 5742.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23603.0,
+          "decode_ms": 24091.0,
+          "decode_tokens_per_second": 5.3131874974056705,
+          "http_wall_ms": 47698.07909999963,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 33984216900.0,
+          "entire_request_managed_allocations": 66294.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 23917.0,
+          "decode_ms": 24203.0,
+          "decode_tokens_per_second": 5.288600586704128,
+          "http_wall_ms": 48123.34370000008,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 46736.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 266221780992.0,
+          "entire_request_upload_ns": 34230462100.0,
+          "entire_request_managed_allocations": 66294.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 23760.0,
+          "minimum": 23603.0,
+          "maximum": 23917.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24147.0,
+          "minimum": 24091.0,
+          "maximum": 24203.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.3008940420549,
+          "minimum": 5.288600586704128,
+          "maximum": 5.3131874974056705
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 47910.711399999855,
+          "minimum": 47698.07909999963,
+          "maximum": 48123.34370000008
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 266221780992.0,
+          "minimum": 266221780992.0,
+          "maximum": 266221780992.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34107339500.0,
+          "minimum": 33984216900.0,
+          "maximum": 34230462100.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 66294.0,
+          "minimum": 66294.0,
+          "maximum": 66294.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 25021.0,
+          "decode_ms": 24209.0,
+          "decode_tokens_per_second": 5.287289850881903,
+          "http_wall_ms": 49245.50949999957,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 35021256900.0,
+          "entire_request_managed_allocations": 67599.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 24864.0,
+          "decode_ms": 24091.0,
+          "decode_tokens_per_second": 5.3131874974056705,
+          "http_wall_ms": 48972.407100000055,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 47656.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 271462367232.0,
+          "entire_request_upload_ns": 34784432900.0,
+          "entire_request_managed_allocations": 67599.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 24942.5,
+          "minimum": 24864.0,
+          "maximum": 25021.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 24150.0,
+          "minimum": 24091.0,
+          "maximum": 24209.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.300238674143786,
+          "minimum": 5.287289850881903,
+          "maximum": 5.3131874974056705
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 49108.95829999981,
+          "minimum": 48972.407100000055,
+          "maximum": 49245.50949999957
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 271462367232.0,
+          "minimum": 271462367232.0,
+          "maximum": 271462367232.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 34902844900.0,
+          "minimum": 34784432900.0,
+          "maximum": 35021256900.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 67599.0,
+          "minimum": 67599.0,
+          "maximum": 67599.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 512,
+      "policy": "least-stale",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3850.0,
+          "decode_ms": 181.0,
+          "decode_tokens_per_second": 5.524861878453039,
+          "http_wall_ms": 4046.245600000475,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2942137800.0,
+          "entire_request_managed_allocations": 5742.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 3826.0,
+          "decode_ms": 183.0,
+          "decode_tokens_per_second": 5.46448087431694,
+          "http_wall_ms": 4023.2709000001705,
+          "entire_request_cache_hits": 0.0,
+          "entire_request_cache_misses": 4048.0,
+          "entire_request_cache_hit_fraction": 0.0,
+          "entire_request_upload_bytes": 23058579456.0,
+          "entire_request_upload_ns": 2942272400.0,
+          "entire_request_managed_allocations": 5742.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 3838.0,
+          "minimum": 3826.0,
+          "maximum": 3850.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 182.0,
+          "minimum": 181.0,
+          "maximum": 183.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 5.494671376384989,
+          "minimum": 5.46448087431694,
+          "maximum": 5.524861878453039
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 4034.7582500003227,
+          "minimum": 4023.2709000001705,
+          "maximum": 4046.245600000475
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 23058579456.0,
+          "minimum": 23058579456.0,
+          "maximum": 23058579456.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 2942205100.0,
+          "minimum": 2942137800.0,
+          "maximum": 2942272400.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 5742.0,
+          "minimum": 5742.0,
+          "maximum": 5742.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 5398.0,
+          "decode_ms": 4965.0,
+          "decode_tokens_per_second": 25.780463242698893,
+          "http_wall_ms": 10379.945799999972,
+          "entire_request_cache_hits": 42590.0,
+          "entire_request_cache_misses": 4146.0,
+          "entire_request_cache_hit_fraction": 0.9112889421431016,
+          "entire_request_upload_bytes": 23633952768.0,
+          "entire_request_upload_ns": 3072367800.0,
+          "entire_request_managed_allocations": 6111.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 5352.0,
+          "decode_ms": 5187.0,
+          "decode_tokens_per_second": 24.677077308656255,
+          "http_wall_ms": 10559.642200000098,
+          "entire_request_cache_hits": 42590.0,
+          "entire_request_cache_misses": 4146.0,
+          "entire_request_cache_hit_fraction": 0.9112889421431016,
+          "entire_request_upload_bytes": 23633952768.0,
+          "entire_request_upload_ns": 3062316300.0,
+          "entire_request_managed_allocations": 6111.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 5375.0,
+          "minimum": 5352.0,
+          "maximum": 5398.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 5076.0,
+          "minimum": 4965.0,
+          "maximum": 5187.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 25.228770275677576,
+          "minimum": 24.677077308656255,
+          "maximum": 25.780463242698893
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 10469.794000000034,
+          "minimum": 10379.945799999972,
+          "maximum": 10559.642200000098
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 23633952768.0,
+          "minimum": 23633952768.0,
+          "maximum": 23633952768.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 3067342050.0,
+          "minimum": 3062316300.0,
+          "maximum": 3072367800.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 6111.0,
+          "minimum": 6111.0,
+          "maximum": 6111.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 5798.0,
+          "decode_ms": 5552.0,
+          "decode_tokens_per_second": 23.054755043227665,
+          "http_wall_ms": 11365.012000000093,
+          "entire_request_cache_hits": 42692.0,
+          "entire_request_cache_misses": 4964.0,
+          "entire_request_cache_hit_fraction": 0.8958368306194393,
+          "entire_request_upload_bytes": 28270632960.0,
+          "entire_request_upload_ns": 3646121800.0,
+          "entire_request_managed_allocations": 7434.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 5934.0,
+          "decode_ms": 5724.0,
+          "decode_tokens_per_second": 22.36198462613557,
+          "http_wall_ms": 11673.033899999951,
+          "entire_request_cache_hits": 42692.0,
+          "entire_request_cache_misses": 4964.0,
+          "entire_request_cache_hit_fraction": 0.8958368306194393,
+          "entire_request_upload_bytes": 28270632960.0,
+          "entire_request_upload_ns": 3784621400.0,
+          "entire_request_managed_allocations": 7434.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 5866.0,
+          "minimum": 5798.0,
+          "maximum": 5934.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 5638.0,
+          "minimum": 5552.0,
+          "maximum": 5724.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 22.70836983468162,
+          "minimum": 22.36198462613557,
+          "maximum": 23.054755043227665
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 11519.022950000022,
+          "minimum": 11365.012000000093,
+          "maximum": 11673.033899999951
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 28270632960.0,
+          "minimum": 28270632960.0,
+          "maximum": 28270632960.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 3715371600.0,
+          "minimum": 3646121800.0,
+          "maximum": 3784621400.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 7434.0,
+          "minimum": 7434.0,
+          "maximum": 7434.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lru",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 1064.0,
+          "decode_ms": 44.0,
+          "decode_tokens_per_second": 22.727272727272727,
+          "http_wall_ms": 1125.6837999999334,
+          "entire_request_cache_hits": 3315.0,
+          "entire_request_cache_misses": 733.0,
+          "entire_request_cache_hit_fraction": 0.8189229249011858,
+          "entire_request_upload_bytes": 4181409792.0,
+          "entire_request_upload_ns": 532205400.0,
+          "entire_request_managed_allocations": 1086.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 1123.0,
+          "decode_ms": 40.0,
+          "decode_tokens_per_second": 25.0,
+          "http_wall_ms": 1178.5431999999219,
+          "entire_request_cache_hits": 3315.0,
+          "entire_request_cache_misses": 733.0,
+          "entire_request_cache_hit_fraction": 0.8189229249011858,
+          "entire_request_upload_bytes": 4181409792.0,
+          "entire_request_upload_ns": 567643800.0,
+          "entire_request_managed_allocations": 1086.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 1093.5,
+          "minimum": 1064.0,
+          "maximum": 1123.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 42.0,
+          "minimum": 40.0,
+          "maximum": 44.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 23.863636363636363,
+          "minimum": 22.727272727272727,
+          "maximum": 25.0
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 1152.1134999999276,
+          "minimum": 1125.6837999999334,
+          "maximum": 1178.5431999999219
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 4181409792.0,
+          "minimum": 4181409792.0,
+          "maximum": 4181409792.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 549924600.0,
+          "minimum": 532205400.0,
+          "maximum": 567643800.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 1086.0,
+          "minimum": 1086.0,
+          "maximum": 1086.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 5110.0,
+          "decode_ms": 10432.0,
+          "decode_tokens_per_second": 12.269938650306749,
+          "http_wall_ms": 15545.761699999957,
+          "entire_request_cache_hits": 37747.0,
+          "entire_request_cache_misses": 8989.0,
+          "entire_request_cache_hit_fraction": 0.8076643272851763,
+          "entire_request_upload_bytes": 51196575744.0,
+          "entire_request_upload_ns": 6904331800.0,
+          "entire_request_managed_allocations": 14376.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 5104.0,
+          "decode_ms": 10236.0,
+          "decode_tokens_per_second": 12.504884720593981,
+          "http_wall_ms": 15356.591600000002,
+          "entire_request_cache_hits": 37747.0,
+          "entire_request_cache_misses": 8989.0,
+          "entire_request_cache_hit_fraction": 0.8076643272851763,
+          "entire_request_upload_bytes": 51196575744.0,
+          "entire_request_upload_ns": 6833299700.0,
+          "entire_request_managed_allocations": 14376.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 5107.0,
+          "minimum": 5104.0,
+          "maximum": 5110.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 10334.0,
+          "minimum": 10236.0,
+          "maximum": 10432.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 12.387411685450365,
+          "minimum": 12.269938650306749,
+          "maximum": 12.504884720593981
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 15451.17664999998,
+          "minimum": 15356.591600000002,
+          "maximum": 15545.761699999957
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 51196575744.0,
+          "minimum": 51196575744.0,
+          "maximum": 51196575744.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 6868815750.0,
+          "minimum": 6833299700.0,
+          "maximum": 6904331800.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 14376.0,
+          "minimum": 14376.0,
+          "maximum": 14376.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 5669.0,
+          "decode_ms": 10316.0,
+          "decode_tokens_per_second": 12.40791004265219,
+          "http_wall_ms": 16002.183299999957,
+          "entire_request_cache_hits": 37853.0,
+          "entire_request_cache_misses": 9803.0,
+          "entire_request_cache_hit_fraction": 0.7942966258183649,
+          "entire_request_upload_bytes": 55663607808.0,
+          "entire_request_upload_ns": 7387926500.0,
+          "entire_request_managed_allocations": 15132.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 5691.0,
+          "decode_ms": 10330.0,
+          "decode_tokens_per_second": 12.39109390125847,
+          "http_wall_ms": 16024.475699999926,
+          "entire_request_cache_hits": 37853.0,
+          "entire_request_cache_misses": 9803.0,
+          "entire_request_cache_hit_fraction": 0.7942966258183649,
+          "entire_request_upload_bytes": 55663607808.0,
+          "entire_request_upload_ns": 7469320400.0,
+          "entire_request_managed_allocations": 15132.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 5680.0,
+          "minimum": 5669.0,
+          "maximum": 5691.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 10323.0,
+          "minimum": 10316.0,
+          "maximum": 10330.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 12.399501971955331,
+          "minimum": 12.39109390125847,
+          "maximum": 12.40791004265219
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 16013.329499999942,
+          "minimum": 16002.183299999957,
+          "maximum": 16024.475699999926
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 55663607808.0,
+          "minimum": 55663607808.0,
+          "maximum": 55663607808.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 7428623450.0,
+          "minimum": 7387926500.0,
+          "maximum": 7469320400.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 15132.0,
+          "minimum": 15132.0,
+          "maximum": 15132.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "lfu",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 964.0,
+          "decode_ms": 56.0,
+          "decode_tokens_per_second": 17.857142857142858,
+          "http_wall_ms": 1022.9033000000527,
+          "entire_request_cache_hits": 3482.0,
+          "entire_request_cache_misses": 566.0,
+          "entire_request_cache_hit_fraction": 0.8601778656126482,
+          "entire_request_upload_bytes": 3261652992.0,
+          "entire_request_upload_ns": 443406500.0,
+          "entire_request_managed_allocations": 930.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 849.0,
+          "decode_ms": 53.0,
+          "decode_tokens_per_second": 18.867924528301888,
+          "http_wall_ms": 917.2891000000618,
+          "entire_request_cache_hits": 3482.0,
+          "entire_request_cache_misses": 566.0,
+          "entire_request_cache_hit_fraction": 0.8601778656126482,
+          "entire_request_upload_bytes": 3261652992.0,
+          "entire_request_upload_ns": 413198000.0,
+          "entire_request_managed_allocations": 930.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 906.5,
+          "minimum": 849.0,
+          "maximum": 964.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 54.5,
+          "minimum": 53.0,
+          "maximum": 56.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 18.362533692722373,
+          "minimum": 17.857142857142858,
+          "maximum": 18.867924528301888
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 970.0962000000573,
+          "minimum": 917.2891000000618,
+          "maximum": 1022.9033000000527
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 3261652992.0,
+          "minimum": 3261652992.0,
+          "maximum": 3261652992.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 428302250.0,
+          "minimum": 413198000.0,
+          "maximum": 443406500.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 930.0,
+          "minimum": 930.0,
+          "maximum": 930.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 0,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 6293.0,
+          "decode_ms": 6795.0,
+          "decode_tokens_per_second": 18.8373804267844,
+          "http_wall_ms": 13103.047500000002,
+          "entire_request_cache_hits": 31488.0,
+          "entire_request_cache_misses": 15248.0,
+          "entire_request_cache_hit_fraction": 0.6737418692228688,
+          "entire_request_upload_bytes": 86919045120.0,
+          "entire_request_upload_ns": 7112062100.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 127,
+          "completion_tokens": 128,
+          "prefill_ms": 6303.0,
+          "decode_ms": 6666.0,
+          "decode_tokens_per_second": 19.2019201920192,
+          "http_wall_ms": 12971.794299999943,
+          "entire_request_cache_hits": 31488.0,
+          "entire_request_cache_misses": 15248.0,
+          "entire_request_cache_hit_fraction": 0.6737418692228688,
+          "entire_request_upload_bytes": 86919045120.0,
+          "entire_request_upload_ns": 7059850500.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 6298.0,
+          "minimum": 6293.0,
+          "maximum": 6303.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 6730.5,
+          "minimum": 6666.0,
+          "maximum": 6795.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 19.0196503094018,
+          "minimum": 18.8373804267844,
+          "maximum": 19.2019201920192
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 13037.420899999972,
+          "minimum": 12971.794299999943,
+          "maximum": 13103.047500000002
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 86919045120.0,
+          "minimum": 86919045120.0,
+          "maximum": 86919045120.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 7085956300.0,
+          "minimum": 7059850500.0,
+          "maximum": 7112062100.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 1,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 6716.0,
+          "decode_ms": 7009.0,
+          "decode_tokens_per_second": 18.262234270224,
+          "http_wall_ms": 13740.905899999916,
+          "entire_request_cache_hits": 31444.0,
+          "entire_request_cache_misses": 16212.0,
+          "entire_request_cache_hit_fraction": 0.6598119858989424,
+          "entire_request_upload_bytes": 92269928448.0,
+          "entire_request_upload_ns": 7598766600.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 132,
+          "completion_tokens": 128,
+          "prefill_ms": 6741.0,
+          "decode_ms": 6902.0,
+          "decode_tokens_per_second": 18.54534917415242,
+          "http_wall_ms": 13646.116200000051,
+          "entire_request_cache_hits": 31444.0,
+          "entire_request_cache_misses": 16212.0,
+          "entire_request_cache_hit_fraction": 0.6598119858989424,
+          "entire_request_upload_bytes": 92269928448.0,
+          "entire_request_upload_ns": 7537145000.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 6728.5,
+          "minimum": 6716.0,
+          "maximum": 6741.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 6955.5,
+          "minimum": 6902.0,
+          "maximum": 7009.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 18.40379172218821,
+          "minimum": 18.262234270224,
+          "maximum": 18.54534917415242
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 13693.511049999983,
+          "minimum": 13646.116200000051,
+          "maximum": 13740.905899999916
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 92269928448.0,
+          "minimum": 92269928448.0,
+          "maximum": 92269928448.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 7567955800.0,
+          "minimum": 7537145000.0,
+          "maximum": 7598766600.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "requested_cache_mib": 8192,
+      "policy": "least-stale",
+      "prompt": 2,
+      "samples": [
+        {
+          "cycle": 1,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 997.0,
+          "decode_ms": 60.0,
+          "decode_tokens_per_second": 16.666666666666668,
+          "http_wall_ms": 1081.0666999999512,
+          "entire_request_cache_hits": 2797.0,
+          "entire_request_cache_misses": 1251.0,
+          "entire_request_cache_hit_fraction": 0.6909584980237155,
+          "entire_request_upload_bytes": 7133921280.0,
+          "entire_request_upload_ns": 621769500.0,
+          "entire_request_managed_allocations": 0.0
+        },
+        {
+          "cycle": 2,
+          "prompt_tokens": 21,
+          "completion_tokens": 1,
+          "prefill_ms": 983.0,
+          "decode_ms": 56.0,
+          "decode_tokens_per_second": 17.857142857142858,
+          "http_wall_ms": 1060.3689000000713,
+          "entire_request_cache_hits": 2797.0,
+          "entire_request_cache_misses": 1251.0,
+          "entire_request_cache_hit_fraction": 0.6909584980237155,
+          "entire_request_upload_bytes": 7133921280.0,
+          "entire_request_upload_ns": 612387700.0,
+          "entire_request_managed_allocations": 0.0
+        }
+      ],
+      "summary": {
+        "prefill_ms": {
+          "n": 2,
+          "median": 990.0,
+          "minimum": 983.0,
+          "maximum": 997.0
+        },
+        "decode_ms": {
+          "n": 2,
+          "median": 58.0,
+          "minimum": 56.0,
+          "maximum": 60.0
+        },
+        "decode_tokens_per_second": {
+          "n": 2,
+          "median": 17.261904761904763,
+          "minimum": 16.666666666666668,
+          "maximum": 17.857142857142858
+        },
+        "http_wall_ms": {
+          "n": 2,
+          "median": 1070.7178000000113,
+          "minimum": 1060.3689000000713,
+          "maximum": 1081.0666999999512
+        },
+        "entire_request_upload_bytes": {
+          "n": 2,
+          "median": 7133921280.0,
+          "minimum": 7133921280.0,
+          "maximum": 7133921280.0
+        },
+        "entire_request_upload_ns": {
+          "n": 2,
+          "median": 617078600.0,
+          "minimum": 612387700.0,
+          "maximum": 621769500.0
+        },
+        "entire_request_managed_allocations": {
+          "n": 2,
+          "median": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      }
+    }
+  ],
+  "limits": [
+    "One earlier quiet GLM 8192 MiB Least-Stale cycle diverged from LRU. It is preserved as unresolved negative evidence; subsequent passing captures do not establish reliable correctness or justify adoption.",
+    "Two measured repetitions after one warmup, reported separately for each prompt; no significance claim.",
+    "2048 is the context capacity; actual prompt/output tokens appear in each sample.",
+    "Allocation, expert hit/miss and upload counters cover the entire request, including prefill and decode.",
+    "Decode token rate comes from phase metrics; HTTP wall time and SSE first content time have different scopes.",
+    "Trace collection is separate from these quiet latency captures; no speculative/prefetch/async variant here.",
+    "Resumed captures predate atomic journal saving. Binary/library hashes and full protocols are checked, but original per-capture harness hashes were not recorded.",
+    "This is a same-engine placement study; the final fresh Ollama/llama.cpp comparison remains pending."
+  ]
+}

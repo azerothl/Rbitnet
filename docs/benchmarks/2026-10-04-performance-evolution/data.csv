@@ -1,0 +1,51 @@
+﻿figure,panel,model,step,metric,value,status,source
+history,cpu,llama32-1b,Initial / 7eca9ad,decode_tokens_per_second,1.5931494573334661,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,cpu,llama32-1b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,16.904384574749077,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,cpu,llama32-1b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,38.55421686746988,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,cpu,qwen35-2b,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,cpu,qwen35-2b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,10.533245556287032,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,cpu,qwen35-2b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,16.736401673640167,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,cpu,gpt-oss-20b,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,cpu,gpt-oss-20b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,3.7105751391465676,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,cpu,gpt-oss-20b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,11.725906925613778,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,cpu,glm47-flash,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,cpu,glm47-flash,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,4.969715794378009,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,cpu,glm47-flash,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,8.016032064128256,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,gpu,llama32-1b,Initial / 7eca9ad,decode_tokens_per_second,4.1934215699122,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,gpu,llama32-1b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,53.96290050590219,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,gpu,llama32-1b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,477.6119402985075,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,gpu,qwen35-2b,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,gpu,qwen35-2b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,38.50782190132371,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,gpu,qwen35-2b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,144.79638009049773,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,gpu,gpt-oss-20b,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,gpu,gpt-oss-20b,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,22.06896551724138,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,gpu,gpt-oss-20b,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,56.4373897707231,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+history,gpu,glm47-flash,Initial / 7eca9ad,decode_tokens_per_second,,error,E:\devs\Rbitnet\docs\benchmarks\2026-10-03\summary.json
+history,gpu,glm47-flash,Architectures + SIMD / c5e5a8a + modifications,decode_tokens_per_second,9.054895302773062,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-optimized\summary.json
+history,gpu,glm47-flash,CUDA résident / FFN / ab520d0 + modifications,decode_tokens_per_second,14.04741000877963,ok,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-parity-round2\summary.json
+ablations,1. Llama — attention par tuiles KV (#103),llama32-1b,Référence,Tokens/s de décodage,85.93651400362756,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-split-kv\llama-summary.json
+ablations,1. Llama — attention par tuiles KV (#103),llama32-1b,Split KV,Tokens/s de décodage,377.02585458962346,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-split-kv\llama-summary.json
+ablations,2. Qwen — attention par tuiles KV (#103),qwen35-2b,Référence,Tokens/s de décodage,100.82711292294138,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-split-kv\qwen-summary.json
+ablations,2. Qwen — attention par tuiles KV (#103),qwen35-2b,Split KV,Tokens/s de décodage,233.1511839708561,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-split-kv\qwen-summary.json
+ablations,3. GPT-OSS — pipeline résident (#106),gpt-oss-20b,Référence,Tokens/s de décodage,39.107348492059494,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-gpt-full\summary.json
+ablations,3. GPT-OSS — pipeline résident (#106),gpt-oss-20b,Résident,Tokens/s de décodage,58.86410980342396,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-gpt-full\summary.json
+ablations,3. GPT-OSS — pipeline résident (#106),gpt-oss-20b,Résident / + split KV,Tokens/s de décodage,90.61948038148395,measured,E:\devs\Rbitnet\docs\benchmarks\2026-10-03-gpt-full\summary.json
+ablations,4. GPT-OSS — normalisation ordonnée (#124),gpt-oss-20b,Avant,Tokens/s de décodage,92.21902017291066,measured,E:\devs\Rbitnet\target\performance-cache\gpt-norm-delivery-proof\analysis.json
+ablations,4. GPT-OSS — normalisation ordonnée (#124),gpt-oss-20b,Après,Tokens/s de décodage,118.02676552111143,measured,E:\devs\Rbitnet\target\performance-cache\gpt-norm-delivery-proof\analysis.json
+ablations,5. CPU — sortie directe des lignes (prototype),four-models,Llama,Indice de débit — référence = 100,106.15365775416153,measured,E:\devs\Rbitnet\target\performance-cache\cpu-direct-rows-proof\analysis.json
+ablations,5. CPU — sortie directe des lignes (prototype),four-models,Qwen,Indice de débit — référence = 100,97.02672007628918,measured,E:\devs\Rbitnet\target\performance-cache\cpu-direct-rows-proof\analysis.json
+ablations,5. CPU — sortie directe des lignes (prototype),four-models,GPT-OSS,Indice de débit — référence = 100,101.62026986517813,measured,E:\devs\Rbitnet\target\performance-cache\cpu-direct-rows-proof\analysis.json
+ablations,5. CPU — sortie directe des lignes (prototype),four-models,GLM,Indice de débit — référence = 100,99.05320618862649,measured,E:\devs\Rbitnet\target\performance-cache\cpu-direct-rows-proof\analysis.json
+ablations,6. Qwen — décodage spéculatif (#123),qwen35-2b,Cible seule,Tokens/s de décodage,235.2941176470588,measured,E:\devs\Rbitnet\target\performance-cache\qwen-serving-proof\analysis.json
+ablations,6. Qwen — décodage spéculatif (#123),qwen35-2b,Draft 1,Tokens/s de décodage,142.7007194942039,measured,E:\devs\Rbitnet\target\performance-cache\qwen-serving-proof\analysis.json
+ablations,6. Qwen — décodage spéculatif (#123),qwen35-2b,Draft 4,Tokens/s de décodage,92.22979163887186,measured,E:\devs\Rbitnet\target\performance-cache\qwen-serving-proof\analysis.json
+ablations,6. Qwen — décodage spéculatif (#123),qwen35-2b,Draft 8,Tokens/s de décodage,62.61059300339255,measured,E:\devs\Rbitnet\target\performance-cache\qwen-serving-proof\analysis.json
+ablations,7. Llama — batching continu (#120),llama32-1b,Sérialisé,Débit TOTAL HTTP — tokens/s,140.6177380196512,measured,C:\Users\azero\.codex\worktrees\llama-continuous-delivery\Rbitnet\docs\benchmarks\2026-10-04-llama-continuous-fresh\summary.json
+ablations,7. Llama — batching continu (#120),llama32-1b,Dense / 1 slot,Débit TOTAL HTTP — tokens/s,137.72601870919834,measured,C:\Users\azero\.codex\worktrees\llama-continuous-delivery\Rbitnet\docs\benchmarks\2026-10-04-llama-continuous-fresh\summary.json
+ablations,7. Llama — batching continu (#120),llama32-1b,Dense / 4 slots,Débit TOTAL HTTP — tokens/s,169.58047337078136,measured,C:\Users\azero\.codex\worktrees\llama-continuous-delivery\Rbitnet\docs\benchmarks\2026-10-04-llama-continuous-fresh\summary.json
+ablations,7. Llama — batching continu (#120),llama32-1b,Dense / 8 slots,Débit TOTAL HTTP — tokens/s,186.81449585219275,measured,C:\Users\azero\.codex\worktrees\llama-continuous-delivery\Rbitnet\docs\benchmarks\2026-10-04-llama-continuous-fresh\summary.json
+ablations,7. Llama — batching continu (#120),llama32-1b,Pagé / 8 slots,Débit TOTAL HTTP — tokens/s,185.35906600921442,measured,C:\Users\azero\.codex\worktrees\llama-continuous-delivery\Rbitnet\docs\benchmarks\2026-10-04-llama-continuous-fresh\summary.json
+ablations,8. MoE — arène d’experts (#121),GPT-OSS / GLM,GPT-OSS / asynchrone,Pic GPU GLOBAL − niveau initial (MiB),13170.0,measured,E:\devs\Rbitnet\target\performance-cache\expert-arena-proof\quiet-analysis.json
+ablations,8. MoE — arène d’experts (#121),GPT-OSS / GLM,GPT-OSS / + arène,Pic GPU GLOBAL − niveau initial (MiB),9674.0,measured,E:\devs\Rbitnet\target\performance-cache\expert-arena-proof\quiet-analysis.json
+ablations,8. MoE — arène d’experts (#121),GPT-OSS / GLM,GLM / asynchrone,Pic GPU GLOBAL − niveau initial (MiB),13605.0,measured,E:\devs\Rbitnet\target\performance-cache\expert-arena-proof\quiet-analysis.json
+ablations,8. MoE — arène d’experts (#121),GPT-OSS / GLM,GLM / + arène,Pic GPU GLOBAL − niveau initial (MiB),10569.0,measured,E:\devs\Rbitnet\target\performance-cache\expert-arena-proof\quiet-analysis.json

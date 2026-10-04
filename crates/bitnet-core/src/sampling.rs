@@ -12,11 +12,28 @@ pub struct SamplingOptions {
     pub seed: Option<u64>,
     pub frequency_penalty: f32,
     pub presence_penalty: f32,
-    /// When true, apply the JSON/tool FSM mask (also enabled by `RBITNET_STRUCTURED_OUTPUT`).
+    /// Requests structured generation, currently refused by high-level engines.
     pub structured_json: bool,
 }
 
 impl SamplingOptions {
+    /// The ASCII-ID research mask does not constrain GGUF subword tokenizers.
+    /// Reject structured generation until a tokenizer-aware grammar is validated.
+    pub fn validate_structured_output(&self) -> crate::error::Result<()> {
+        let mode = std::env::var("RBITNET_STRUCTURED_OUTPUT").unwrap_or_default();
+        if self.structured_json
+            || matches!(
+                mode.trim().to_ascii_lowercase().as_str(),
+                "json" | "tool" | "tool-call" | "tool_call"
+            )
+        {
+            return Err(crate::error::BitNetError::NotImplemented(
+                "structured JSON/tool generation requires a validated tokenizer-aware grammar",
+            ));
+        }
+        Ok(())
+    }
+
     /// GPU greedy reduction is equivalent only when no host-side logits mask or
     /// repetition adjustment is required. top_p and seed are inert at temp<=0.
     pub(crate) fn device_greedy_eligible(&self) -> bool {
@@ -53,6 +70,8 @@ impl Default for SamplingOptions {
 }
 
 /// Sample one token from logits, applying penalties before temperature/top-p.
+/// The ASCII-ID mask is a low-level research fixture; real model entry points
+/// must validate structured-output support before calling this sampler.
 #[must_use]
 pub fn sample_token(
     logits: &[f32],

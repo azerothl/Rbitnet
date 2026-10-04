@@ -3,10 +3,13 @@
 #include <vector>
 #include <new>
 #include "split_attention.cuh"
+#include "kv_storage.cuh"
 #include "paged_pool.cuh"
 #include "paged_kernels.cuh"
 
 namespace {
+void launch_ordered_gemm(QuantKind,const uint8_t*,size_t,const float*,unsigned,unsigned,unsigned,float*,cudaStream_t,unsigned);
+
 __global__ void resident_norm(float *x,const float *weights,float epsilon,unsigned n,float *y,const float *residual=nullptr) {
     x+=size_t(blockIdx.x)*n;y+=size_t(blockIdx.x)*n;if(residual)residual+=size_t(blockIdx.x)*n;
     __shared__ float sums[8];
@@ -138,7 +141,7 @@ struct ResidentLlama {
     bool split_kv=false;
     bool tf32_prefill=false;
     unsigned tensor_gemm_calls=0;
-    unsigned filled=0;
+    unsigned filled=0,kv_format=0;size_t kv_layer_bytes=0;unsigned *kv_invalid=nullptr;bool kv_poisoned=false;
     cudaStream_t stream=nullptr;
     cudaGraph_t graphs[3]={};
     cudaGraphExec_t executable[3]={};
@@ -165,6 +168,21 @@ struct ResidentLlama {
     template<typename T> bool alloc_kv(T *&ptr,size_t count) {
         MemoryCategoryScope category(MemoryKv);return alloc(ptr,count);
     }
+    bool alloc_kv_bytes(float *&ptr,size_t bytes) {
+        MemoryCategoryScope category(MemoryKv);
+        if(!bytes || cudaMalloc(reinterpret_cast<void**>(&ptr),bytes)!=cudaSuccess)return false;
+        allocations.push_back(ptr);return true;
+    }
+    template<unsigned Format,bool Paged> void encoded_layer_t(float *q,float *k,const float *v,unsigned layer,unsigned count,float *scratch,float *out) {
+        EncodedKvView<Format,Paged> view{paged?nullptr:reinterpret_cast<float*>(reinterpret_cast<char*>(kv_k)+layer*kv_layer_bytes),
+            paged?nullptr:reinterpret_cast<float*>(reinterpret_cast<char*>(kv_v)+layer*kv_layer_bytes),paged?paged->table_k:nullptr,paged?paged->table_v:nullptr,
+            layer,cfg.layers,cfg.capacity,cfg.kv_heads,cfg.head_dim};
+        launch_encoded_kv(view,q,k,v,frequency,position,cfg.heads,cfg.rotary,cfg.window,count,split_kv,scratch,out,kv_invalid,stream);
+    }
+    void encoded_layer(float *q,float *k,const float *v,unsigned layer,unsigned count,float *scratch,float *out) {
+        if(kv_format==1) {if(paged)encoded_layer_t<1,true>(q,k,v,layer,count,scratch,out);else encoded_layer_t<1,false>(q,k,v,layer,count,scratch,out);}
+        else {if(paged)encoded_layer_t<2,true>(q,k,v,layer,count,scratch,out);else encoded_layer_t<2,false>(q,k,v,layer,count,scratch,out);}
+    }
     void matrix(const RbitnetLlamaMatrix &m,const float *input,float *result) {
         QuantKind kind; resident_kind(m.type,kind);
         launch_quant_kernel(kind,m.weights,m.row_bytes,input,m.cols,m.rows,m.rows,result,stream);
@@ -175,7 +193,8 @@ struct ResidentLlama {
         for(unsigned il=0;il<cfg.layers;il++) {
             const auto &layer=layers[il];
             matrix(layer.q,h,q);matrix(layer.k,h,k);matrix(layer.v,h,v);
-            if(paged) {
+            if(kv_format)encoded_layer(q,k,v,il,1,attention_scratch,attn);
+            else if(paged) {
                 paged_resident_rope_kv<<<((cfg.heads+cfg.kv_heads)*(cfg.head_dim/2)+255)/256,256,0,stream>>>(q,k,v,paged->table_k,paged->table_v,il,frequency,position,cfg.heads,cfg.kv_heads,cfg.head_dim,cfg.rotary);
                 if(split_kv)launch_paged_split_attention(paged->table_k,paged->table_v,il,q,position,cfg.kv_heads,cfg.heads,cfg.head_dim,cfg.window,1.0f/sqrtf(float(cfg.head_dim)),cfg.capacity,1,attention_scratch,attn,stream);
                 else paged_resident_attention<<<cfg.heads,128,cfg.capacity*sizeof(float),stream>>>(paged->table_k,paged->table_v,il,q,position,cfg.kv_heads,cfg.heads,cfg.head_dim,cfg.window,1.0f/sqrtf(float(cfg.head_dim)),attn);
@@ -211,7 +230,7 @@ bool llama_paged_variant(ResidentLlama *r) {
 struct LlamaSnapshot {
     std::unique_ptr<PagedKvSnapshot> paged;
     uint64_t owner=0;
-    unsigned layers=0,kv_heads=0,head_dim=0,length=0;
+    unsigned layers=0,kv_heads=0,head_dim=0,length=0,format=0;
     float *k=nullptr,*v=nullptr;
     ~LlamaSnapshot() {if(k)cudaFree(k);if(v)cudaFree(v);}
 };
@@ -235,26 +254,26 @@ std::vector<unsigned char> llama_paged_model_key(const RbitnetLlamaConfig &c,
 }
 
 static void *llama_create_impl(const RbitnetLlamaConfig *cfg,const RbitnetLlamaLayer *layers,
-    const RbitnetLlamaMatrix *output,const float *out_norm,const float *frequency,unsigned page_limit,const ResidentLlama *peer,unsigned variants) {
+    const RbitnetLlamaMatrix *output,const float *out_norm,const float *frequency,unsigned page_limit,const ResidentLlama *peer,unsigned variants,unsigned format=0) {
     if(!cfg || !layers || !output || !out_norm || !frequency || !cfg->embd || !cfg->ffn || !cfg->vocab || !cfg->layers || !cfg->heads || !cfg->kv_heads || cfg->heads%cfg->kv_heads || cfg->head_dim%2 || cfg->heads*cfg->head_dim!=cfg->embd || !cfg->rotary || cfg->rotary%2 || cfg->rotary>cfg->head_dim || !cfg->capacity || cfg->capacity>8192)return nullptr;
     if(cfg->embd>32768 || cfg->ffn>1048576 || cfg->vocab>1048576 || cfg->layers>256
         || cfg->heads>1024 || cfg->kv_heads>cfg->heads || cfg->head_dim>4096
         || size_t(cfg->heads)*cfg->head_dim!=cfg->embd || !output->weights)return nullptr;
     for(unsigned i=0;i<cfg->layers;i++)if(!layers[i].attn_norm || !layers[i].ffn_norm)return nullptr;
-    if(variants>3 || page_limit>65536 || (peer && (!page_limit || !peer->paged)))return nullptr;
+    if(format>2 || (format && (cfg->head_dim%32 || (variants&2))) || variants>3 || page_limit>65536 || (peer && (!page_limit || !peer->paged)))return nullptr;
     auto *r=new(std::nothrow) ResidentLlama;
     if(!r)return nullptr;
     if(!r->identity) {delete r;return nullptr;}
     if(page_limit) {
         try {
-            auto key=llama_paged_model_key(*cfg,layers,*output,out_norm,frequency);
+            auto key=llama_paged_model_key(*cfg,layers,*output,out_norm,frequency);key.push_back(static_cast<unsigned char>(format));
             std::shared_ptr<PhysicalKvPool> pool;
             if(peer) {
                 pool=peer->paged->pool;
                 if(pool->limit!=page_limit || pool->model_key!=key || pool->split!=bool(variants&1)
                     || pool->tf32_mode!=int(bool(variants&2)&&tf32_prefill_supported())) {delete r;return nullptr;}
             } else {
-                pool=std::make_shared<PhysicalKvPool>(cfg->layers,cfg->kv_heads*cfg->head_dim,page_limit);
+                pool=std::make_shared<PhysicalKvPool>(cfg->layers,cfg->kv_heads*cfg->head_dim,page_limit,format,cfg->head_dim);
                 pool->model_key=std::move(key);
                 pool->split=bool(variants&1);
                 pool->tf32_mode=bool(variants&2)&&tf32_prefill_supported();
@@ -263,6 +282,7 @@ static void *llama_create_impl(const RbitnetLlamaConfig *cfg,const RbitnetLlamaL
             if(!r->paged || !r->paged->init(pool)) {delete r;return nullptr;}
         } catch(const std::bad_alloc&) {delete r;return nullptr;}
     }
+    r->kv_format=format;r->kv_layer_bytes=encoded_kv_plane_bytes(format,size_t(cfg->capacity)*cfg->kv_heads*cfg->head_dim,cfg->head_dim);
     try {r->batch_model_key=llama_paged_model_key(*cfg,layers,*output,out_norm,frequency);}
     catch(const std::bad_alloc&) {delete r;return nullptr;}
     r->cfg=*cfg;r->output=*output;r->layers.assign(layers,layers+cfg->layers);r->use_graphs=cfg->graphs!=0;
@@ -277,10 +297,11 @@ static void *llama_create_impl(const RbitnetLlamaConfig *cfg,const RbitnetLlamaL
     if(!r->alloc(r->x,cfg->embd) || !r->alloc(r->h,cfg->embd) || !r->alloc(r->q,cfg->embd)
         || !r->alloc(r->k,cfg->kv_heads*cfg->head_dim) || !r->alloc(r->v,cfg->kv_heads*cfg->head_dim)
         || !r->alloc(r->attn,cfg->embd) || !r->alloc(r->projection,cfg->embd) || !r->alloc(r->gate,cfg->ffn)
-        || !r->alloc(r->up,cfg->ffn) || !r->alloc(r->logits,cfg->vocab) || (!r->paged && (!r->alloc_kv(r->kv_k,kv) || !r->alloc_kv(r->kv_v,kv)))
+        || !r->alloc(r->up,cfg->ffn) || !r->alloc(r->logits,cfg->vocab) || (!r->paged && (!r->alloc_kv_bytes(r->kv_k,r->kv_layer_bytes*cfg->layers) || !r->alloc_kv_bytes(r->kv_v,r->kv_layer_bytes*cfg->layers)))
         || !r->alloc(r->out_norm,cfg->embd,out_norm) || !r->alloc(r->frequency,cfg->rotary/2,frequency)
         || !r->alloc(r->position,1) || !r->alloc(r->maxima,(cfg->vocab+255)/256) || !r->alloc(r->ids,(cfg->vocab+255)/256)
         || !r->alloc(r->maximum,1) || !r->alloc(r->token,1)) {delete r;return nullptr;}
+    if(format && !r->alloc(r->kv_invalid,1)) {delete r;return nullptr;}
     if(r->split_kv && !r->alloc(r->attention_scratch,r->attention_scratch_size)) {delete r;return nullptr;}
     for(auto &layer:r->layers) {
         float *norm=nullptr;
@@ -301,11 +322,15 @@ void *rbitnet_cuda_llama_create_paged(const RbitnetLlamaConfig *cfg,const Rbitne
     if(!limit)return nullptr;
     return llama_create_impl(cfg,layers,output,norm,freq,limit,static_cast<const ResidentLlama*>(peer),variants);
 }
+void *rbitnet_cuda_llama_create_kv(const RbitnetLlamaConfig *cfg,const RbitnetLlamaLayer *layers,
+    const RbitnetLlamaMatrix *output,const float *norm,const float *freq,unsigned limit,const void *peer,unsigned variants,unsigned format) {
+    return llama_create_impl(cfg,layers,output,norm,freq,limit,static_cast<const ResidentLlama*>(peer),variants,format);
+}
 int rbitnet_cuda_llama_paged_stats(const void *context,RbitnetPagedKvStats *out) {
     auto *r=static_cast<const ResidentLlama*>(context);if(!r || !r->paged || !out)return 1;
     auto &pool=*r->paged->pool;std::lock_guard<std::mutex> lock(pool.mutex);
     *out={};out->allocated_pages=pool.pages.size();out->peak_pages=pool.peak_pages;
-    out->limit_pages=pool.limit;out->bytes_per_page=size_t(pool.layers)*pool.stride*llama_page_tokens*8;
+    out->limit_pages=pool.limit;out->bytes_per_page=2*encoded_kv_plane_bytes(pool.format,size_t(pool.layers)*pool.stride*llama_page_tokens,pool.dim);
     out->allocations=pool.allocations;out->reuses=pool.reuses;out->cow_pages=pool.copies;out->refusals=pool.refusals;
     for(auto &p:pool.pages) {auto refs=p.use_count()-1;if(refs)out->referenced_pages++;out->references+=refs;}
     for(auto &p:r->paged->active)if(p)out->active_pages++;
@@ -324,7 +349,7 @@ unsigned rbitnet_cuda_llama_tensor_gemm_calls(void *p) {
     auto *r=static_cast<ResidentLlama*>(p);return r?r->tensor_gemm_calls:0;
 }
 int rbitnet_cuda_llama_configure_tensor_prefill(void *p,unsigned enabled) {
-    auto *r=static_cast<ResidentLlama*>(p);if(!r || enabled>1 || r->block || r->filled)return 1;
+    auto *r=static_cast<ResidentLlama*>(p);if(!r || enabled>1 || (r->kv_format && enabled) || r->block || r->filled)return 1;
     const bool wanted=enabled && tf32_prefill_supported();
     if(r->paged) {
         auto &pool=*r->paged->pool;std::lock_guard<std::mutex> lock(pool.mutex);
@@ -343,8 +368,9 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(!llama_paged_variant(r))return 15;
     if(pos==0) {
         if(r->paged && !r->paged->reset(r->stream))return 13;
-        r->filled=0;
+        r->filled=0;r->kv_poisoned=false;
     }if(pos!=r->filled)return 2;
+    if(r->kv_format) {if(r->kv_poisoned)return 16;r->kv_poisoned=true;if(cudaMemsetAsync(r->kv_invalid,0,sizeof(unsigned),r->stream)!=cudaSuccess)return 16;}
     if(r->paged && !r->paged->prepare(pos,count,r->stream))return 14;
     const auto &c=r->cfg;unsigned stride=c.kv_heads*c.head_dim;
     if(!r->block) {
@@ -358,21 +384,23 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 4;
     unsigned tensor_calls=0;
     auto uses_tensor=[&](const RbitnetLlamaMatrix &m) {return use_tf32_prefill(m.cols,m.rows,count,r->tf32_prefill);};
-    for(const auto &layer:r->layers)for(const auto &m:{layer.q,layer.k,layer.v,layer.out,layer.gate,layer.up,layer.down})tensor_calls+=uses_tensor(m);
-    if(mode && all)tensor_calls+=uses_tensor(r->output);
+    for(const auto &layer:r->layers)for(const auto &m:{layer.q,layer.k,layer.v,layer.out,layer.gate,layer.up,layer.down})tensor_calls+=!r->kv_format && uses_tensor(m);
+    if(mode && all)tensor_calls+=!r->kv_format && uses_tensor(r->output);
     bool use_graph=all && r->use_graphs;
     if(!use_graph || !r->verify_executable[mode-1][count]) {
     if(use_graph && cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 9;
     auto matrix=[&](const RbitnetLlamaMatrix &m,const float *x,float *y) {
         QuantKind kind;resident_kind(m.type,kind);
-        launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,r->stream,uses_tensor(m));
+        if(r->kv_format)launch_ordered_gemm(kind,static_cast<const uint8_t*>(m.weights),m.row_bytes,x,m.cols,m.rows,count,y,r->stream,0);
+        else launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,r->stream,uses_tensor(m));
     };
     size_t layer_stride=size_t(stride)*c.capacity;
     resident_norm<<<count,256,0,r->stream>>>(p[0],r->layers[0].attn_norm,c.epsilon,c.embd,p[1]);
     for(unsigned il=0;il<c.layers;il++) {
         const auto &l=r->layers[il];matrix(l.q,p[1],p[2]);matrix(l.k,p[1],p[3]);matrix(l.v,p[1],p[4]);
         dim3 rope(((c.heads+c.kv_heads)*(c.head_dim/2)+255)/256,count);
-        if(r->paged) {
+        if(r->kv_format)r->encoded_layer(p[2],p[3],p[4],il,count,r->block_attention_scratch,p[5]);
+        else if(r->paged) {
             paged_resident_rope_kv<<<rope,256,0,r->stream>>>(p[2],p[3],p[4],r->paged->table_k,r->paged->table_v,il,r->frequency,r->position,c.heads,c.kv_heads,c.head_dim,c.rotary);
             if(r->split_kv)launch_paged_split_attention(r->paged->table_k,r->paged->table_v,il,p[2],r->position,c.kv_heads,c.heads,c.head_dim,c.window,1.0f/sqrtf(float(c.head_dim)),c.capacity,count,r->block_attention_scratch,p[5],r->stream);
             else paged_resident_attention<<<dim3(c.heads,count),128,c.capacity*sizeof(float),r->stream>>>(r->paged->table_k,r->paged->table_v,il,p[2],r->position,c.kv_heads,c.heads,c.head_dim,c.window,1.0f/sqrtf(float(c.head_dim)),p[5]);
@@ -417,7 +445,10 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(cudaGetLastError()!=cudaSuccess)return 5;
     if(mode==1 && cudaMemcpyAsync(logits,all?r->block->verify_logits:r->logits,size_t(all?count:1)*c.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
     if(mode==2 && cudaMemcpyAsync(token,all?r->block->verify_tokens:r->token,size_t(all?count:1)*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
+    unsigned invalid=0;
+    if(r->kv_format && cudaMemcpyAsync(&invalid,r->kv_invalid,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 16;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
+    if(invalid)return 16;r->kv_poisoned=false;
     r->filled=pos+count;r->tensor_gemm_calls=tensor_calls;completion.dismiss();return 0;
 }
 int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *token) {
@@ -428,7 +459,7 @@ int rbitnet_cuda_llama_verify(void *context,const float *embeddings,unsigned pos
 }
 int rbitnet_cuda_llama_truncate(void *context,unsigned length) {
     auto *r=static_cast<ResidentLlama*>(context);
-    if(!r || length>r->filled)return 1;
+    if(!r || length>r->filled || r->kv_poisoned)return 1;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
     // Dense causal attention never reads the discarded tail. Later writes replace it.
     if(r->paged && !r->paged->truncate(length,r->stream))return 3;
@@ -437,23 +468,22 @@ int rbitnet_cuda_llama_truncate(void *context,unsigned length) {
 void rbitnet_cuda_llama_snapshot_destroy(void *snapshot) {delete static_cast<LlamaSnapshot*>(snapshot);}
 void *rbitnet_cuda_llama_snapshot(void *context,unsigned length) {
     auto *r=static_cast<ResidentLlama*>(context);
-    if(!r || !length || length>r->filled)return nullptr;
+    if(!r || !length || length>r->filled || r->kv_poisoned)return nullptr;
     auto *s=new(std::nothrow) LlamaSnapshot;if(!s)return nullptr;
-    s->owner=r->identity;s->layers=r->cfg.layers;s->kv_heads=r->cfg.kv_heads;s->head_dim=r->cfg.head_dim;s->length=length;
+    s->format=r->kv_format;s->owner=r->identity;s->layers=r->cfg.layers;s->kv_heads=r->cfg.kv_heads;s->head_dim=r->cfg.head_dim;s->length=length;
     if(r->paged) {
         if(!llama_paged_variant(r)) {delete s;return nullptr;}
         if(cudaStreamSynchronize(r->stream)!=cudaSuccess) {delete s;return nullptr;}
         s->paged=r->paged->snapshot(length);
         if(!s->paged) {delete s;return nullptr;}return s;
     }
-    size_t stride=size_t(s->kv_heads)*s->head_dim,span=size_t(length)*stride,bytes=span*s->layers*sizeof(float);
+    size_t span=size_t(length)*s->kv_heads*s->head_dim,plane=encoded_kv_plane_bytes(s->format,span,s->head_dim),bytes=plane*s->layers;
     MemoryCategoryScope category(MemoryPrefix);
-    if(cudaMalloc(reinterpret_cast<void**>(&s->k),bytes)!=cudaSuccess
-        || cudaMalloc(reinterpret_cast<void**>(&s->v),bytes)!=cudaSuccess) {delete s;return nullptr;}
+    if(cudaMalloc(reinterpret_cast<void**>(&s->k),bytes)!=cudaSuccess || cudaMalloc(reinterpret_cast<void**>(&s->v),bytes)!=cudaSuccess) {delete s;return nullptr;}
     for(unsigned i=0;i<s->layers;i++) {
-        size_t src=size_t(i)*r->cfg.capacity*stride,dst=size_t(i)*span;
-        if(cudaMemcpyAsync(s->k+dst,r->kv_k+src,span*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
-            || cudaMemcpyAsync(s->v+dst,r->kv_v+src,span*sizeof(float),cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess) {
+        size_t capacity_elements=size_t(r->cfg.capacity)*s->kv_heads*s->head_dim;
+        if(!encoded_kv_copy_prefix(reinterpret_cast<char*>(s->k)+i*plane,span,reinterpret_cast<char*>(r->kv_k)+i*r->kv_layer_bytes,capacity_elements,span,s->head_dim,s->format,r->stream)
+            || !encoded_kv_copy_prefix(reinterpret_cast<char*>(s->v)+i*plane,span,reinterpret_cast<char*>(r->kv_v)+i*r->kv_layer_bytes,capacity_elements,span,s->head_dim,s->format,r->stream)) {
             cudaStreamSynchronize(r->stream);delete s;return nullptr;
         }
     }
@@ -463,23 +493,24 @@ void *rbitnet_cuda_llama_snapshot(void *context,unsigned length) {
 int rbitnet_cuda_llama_restore(void *context,const void *snapshot,unsigned length) {
     auto *r=static_cast<ResidentLlama*>(context);auto *s=static_cast<const LlamaSnapshot*>(snapshot);
     if(!r || !s || ((!r->paged || !s->paged) && s->owner!=r->identity) || !length || length>s->length || length>r->cfg.capacity
-        || s->layers!=r->cfg.layers || s->kv_heads!=r->cfg.kv_heads || s->head_dim!=r->cfg.head_dim)return 1;
+        || s->format!=r->kv_format || s->layers!=r->cfg.layers || s->kv_heads!=r->cfg.kv_heads || s->head_dim!=r->cfg.head_dim)return 1;
     NativeCallCompletion completion(r->stream);
     if(r->paged || s->paged) {
         if(!llama_paged_variant(r))return 5;
         if(!r->paged || !s->paged || !r->paged->restore(*s->paged,length,r->stream))return 4;
-        r->filled=length;completion.dismiss();return 0;
+        r->filled=length;r->kv_poisoned=false;completion.dismiss();return 0;
     }
-    size_t stride=size_t(s->kv_heads)*s->head_dim,bytes=size_t(length)*stride*sizeof(float);
+    size_t span=size_t(length)*s->kv_heads*s->head_dim,saved_elements=size_t(s->length)*s->kv_heads*s->head_dim;
+    size_t capacity_elements=size_t(r->cfg.capacity)*s->kv_heads*s->head_dim,saved_plane=encoded_kv_plane_bytes(s->format,saved_elements,s->head_dim);
+    r->kv_poisoned=r->kv_format!=0;
     for(unsigned i=0;i<s->layers;i++) {
-        size_t src=size_t(i)*s->length*stride,dst=size_t(i)*r->cfg.capacity*stride;
-        if(cudaMemcpyAsync(r->kv_k+dst,s->k+src,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
-            || cudaMemcpyAsync(r->kv_v+dst,s->v+src,bytes,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess) {
+        if(!encoded_kv_copy_prefix(reinterpret_cast<char*>(r->kv_k)+i*r->kv_layer_bytes,capacity_elements,reinterpret_cast<char*>(s->k)+i*saved_plane,saved_elements,span,s->head_dim,s->format,r->stream)
+            || !encoded_kv_copy_prefix(reinterpret_cast<char*>(r->kv_v)+i*r->kv_layer_bytes,capacity_elements,reinterpret_cast<char*>(s->v)+i*saved_plane,saved_elements,span,s->head_dim,s->format,r->stream)) {
             cudaStreamSynchronize(r->stream);return 2;
         }
     }
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;
-    r->filled=length;
+    r->filled=length;r->kv_poisoned=false;
     completion.dismiss();return 0;
 }
 int rbitnet_cuda_llama_step(void *context,const float *embedding,unsigned pos,unsigned mode,float *logits,unsigned *token) {
@@ -489,9 +520,10 @@ int rbitnet_cuda_llama_step(void *context,const float *embedding,unsigned pos,un
     if(!llama_paged_variant(r))return 15;
     if(pos==0) {
         if(r->paged && !r->paged->reset(r->stream))return 13;
-        r->filled=0;
+        r->filled=0;r->kv_poisoned=false;
     }
     if(pos!=r->filled)return 2;
+    if(r->kv_format) {if(r->kv_poisoned)return 16;r->kv_poisoned=true;if(cudaMemsetAsync(r->kv_invalid,0,sizeof(unsigned),r->stream)!=cudaSuccess)return 16;}
     if(r->paged && !r->paged->prepare(pos,1,r->stream))return 14;
     if(cudaMemcpyAsync(r->x,embedding,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 3;
     if(r->use_graphs) {
@@ -507,7 +539,10 @@ int rbitnet_cuda_llama_step(void *context,const float *embedding,unsigned pos,un
     if(mode==1 && cudaMemcpyAsync(logits,r->logits,r->cfg.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 9;
     if(mode==2 && cudaMemcpyAsync(token,r->token,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 10;
     // Host input lifetimes and cancellation boundaries remain explicit, including prefill.
+    unsigned invalid=0;
+    if(r->kv_format && cudaMemcpyAsync(&invalid,r->kv_invalid,sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 16;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 11;
+    if(invalid)return 16;r->kv_poisoned=false;
     r->filled=pos+1;
     completion.dismiss();return 0;
 }

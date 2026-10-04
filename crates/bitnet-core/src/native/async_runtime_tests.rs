@@ -23,6 +23,8 @@ fn real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime()
     std::env::set_var("RBITNET_REQUIRE_GPT_FULL", "0");
     std::env::set_var("RBITNET_REQUIRE_MLA_FULL", "0");
     std::env::set_var("RBITNET_MOE_EXECUTION", "cache");
+    let arena_requested = crate::backend::expert_arena::from_env().unwrap();
+    std::env::set_var("RBITNET_MOE_ARENA", "0");
     std::env::set_var("RBITNET_MOE_ASYNC", "0");
     let mut reference = Runtime::load(
         Arc::clone(&archive),
@@ -92,6 +94,14 @@ fn real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime()
     let mut worst_kl = 0.0f64;
     let mut worst_nll = 0.0f64;
     for policy in ["off", "demand", "previous-pass"] {
+        std::env::set_var(
+            "RBITNET_MOE_ARENA",
+            if arena_requested && policy != "off" {
+                "1"
+            } else {
+                "0"
+            },
+        );
         std::env::set_var("RBITNET_MOE_EXECUTION", "cache");
         std::env::set_var("RBITNET_MOE_ASYNC", if policy == "off" { "0" } else { "1" });
         std::env::set_var(
