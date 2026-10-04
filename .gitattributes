@@ -10,3 +10,7 @@ docs/benchmarks/2026-10-04-expert-arena/raw/** -text
 docs/benchmarks/2026-10-04-expert-arena/*.json -text
 docs/benchmarks/2026-10-04-expert-arena/harness/*.py -text
 .gitattributes text eol=lf
+
+docs/benchmarks/2026-10-04-expert-arena-fresh/raw/** -text
+docs/benchmarks/2026-10-04-expert-arena-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-expert-arena-fresh/harness/** -text
