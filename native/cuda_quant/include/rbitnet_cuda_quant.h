@@ -162,6 +162,17 @@ RBITNET_CUDA_API void *rbitnet_cuda_qwen_full_create(unsigned embd,unsigned voca
 RBITNET_CUDA_API void rbitnet_cuda_qwen_full_destroy(void*);
 /* mode=0 no output; 1 logits; 2 argmax. One synchronization per token. */
 RBITNET_CUDA_API int rbitnet_cuda_qwen_full_step(void*,const float*,unsigned,unsigned,float*,unsigned*);
+/* Optional causal dense Qwen block prefill. Configure once before inference.
+ * A failed workspace allocation leaves the serial pipeline usable. The last
+ * token alone produces logits/argmax; recurrent state is advanced exactly count. */
+RBITNET_CUDA_API int rbitnet_cuda_qwen_configure_prefill(void*,unsigned enabled,unsigned tensor);
+RBITNET_CUDA_API unsigned rbitnet_cuda_qwen_prefill_capacity(void*);
+RBITNET_CUDA_API unsigned rbitnet_cuda_qwen_tensor_gemm_calls(void*);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_full_prefill(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
+/* Diagnostic host-array layer block runner, sharing production enqueue kernels.
+ * Temporary workspace allocation is for numerical oracles, not a hot path. */
+RBITNET_CUDA_API int rbitnet_cuda_qwen_recurrent_prefill_check(void*,const float*,unsigned,unsigned,float*);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_attention_prefill_check(void*,const float*,unsigned,unsigned,float*);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_full_restored(void*,unsigned length);
 /* Number of layers actually configured with the optional split-KV kernels. */
 RBITNET_CUDA_API unsigned rbitnet_cuda_llama_split_attention_layers(void*);

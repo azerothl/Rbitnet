@@ -75,7 +75,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         let bytes = rt.resident_weights_bytes();
         let (gpu, total, head) = rt.gpu_execution_summary();
         if rt.has_full_gpu_pipeline() {
-            return Some(format!("native dense Qwen CUDA token pipeline; {} MiB quantized weights resident; all attention/recurrent layers and output head on GPU; one embedding upload per token, logits or token ID download", bytes / (1024 * 1024)));
+            return Some(format!("native dense Qwen CUDA pipeline; {} MiB quantized weights resident; all attention/recurrent layers and output head on GPU; prefill block capacity {}; one embedding upload per block or decoded token, last logits or token ID download", bytes / (1024 * 1024), rt.gpu_prefill_capacity()));
         }
         Some(format!("native qwen35 graph; {} MiB quantized weights resident on CUDA; {gpu}/{total} recurrent blocks resident; resident output head: {head}; remaining operations use the existing CPU/GPU path", bytes / (1024 * 1024)))
     }

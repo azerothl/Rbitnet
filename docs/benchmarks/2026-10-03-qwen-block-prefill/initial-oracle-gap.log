@@ -1,0 +1,37 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 10.94s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+
+thread 'native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore' (50872) panicked at crates\bitnet-core\src\native\qwen_full.rs:922:29:
+type=12 graphs=0 block=64 pos=101 element=0: 2482.1587 vs 2480.9322203876814
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore ... FAILED
+test native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence ... Qwen block format=0 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000021730772470363036
+Qwen block format=0 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000001888508740499617
+Qwen block format=0 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000019932534423006132
+Qwen block format=2 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013467678350309598
+Qwen block format=2 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000011005598476998557
+Qwen block format=2 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013159589151712225
+Qwen block format=6 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000016312405826113263
+Qwen block format=6 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000023390047321214524
+Qwen block format=6 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000013122662623210601
+Qwen block format=8 head=32 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002287025679947874
+Qwen block format=8 head=128 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.0000002444383211397394
+Qwen block format=8 head=256 graphs=0: serial and blocks 7/16/33/64/128/reset passed, serial max abs error=0.00000024023638145465043
+
+thread 'native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence' (59452) panicked at crates\bitnet-core\src\native\qwen_recurrent.rs:670:33:
+format=12 head=32 graphs=0 block=33 pos=23 element=53: 0.003332615 vs 0.003389383947874691
+FAILED
+
+failures:
+
+failures:
+    native::qwen_full::tests::opt_in_full_attention_matches_f64_for_eight_formats_gating_rope_gqa_and_restore
+    native::qwen_recurrent::tests::opt_in_dense_recurrent_layer_matches_f64_and_restarts_sequence
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 99 filtered out; finished in 2.03s
+
+error: test failed, to rerun pass `-p bitnet-core --lib`

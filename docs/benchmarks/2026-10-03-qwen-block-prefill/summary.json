@@ -1,0 +1,188 @@
+{
+  "warmup_excluded": true,
+  "control_prompt_excluded": true,
+  "modes": {
+    "baseline": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 5840.904500000761,
+        "min": 5828.132199996617,
+        "max": 5862.845099996775
+      },
+      "prefill_ms": {
+        "median": 5262.0,
+        "min": 5256.0,
+        "max": 5273.0
+      },
+      "decode_ms": {
+        "median": 568.0,
+        "min": 565.0,
+        "max": 570.0
+      },
+      "upload_bytes": {
+        "median": 13170972.0,
+        "min": 13170972.0,
+        "max": 13170972.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 225.35211267605635,
+        "min": 224.56140350877192,
+        "max": 226.5486725663717
+      }
+    },
+    "block": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 2189.851950002776,
+        "min": 2181.8754999985686,
+        "max": 2202.7209000079893
+      },
+      "prefill_ms": {
+        "median": 1616.5,
+        "min": 1610.0,
+        "max": 1618.0
+      },
+      "decode_ms": {
+        "median": 568.0,
+        "min": 567.0,
+        "max": 569.0
+      },
+      "upload_bytes": {
+        "median": 13165100.0,
+        "min": 13165100.0,
+        "max": 13165100.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 225.3528111758926,
+        "min": 224.9560632688928,
+        "max": 225.7495590828924
+      }
+    },
+    "tensor": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 1381.0133499937365,
+        "min": 1373.3351999981096,
+        "max": 1399.6532000019215
+      },
+      "prefill_ms": {
+        "median": 808.5,
+        "min": 803.0,
+        "max": 813.0
+      },
+      "decode_ms": {
+        "median": 566.0,
+        "min": 565.0,
+        "max": 567.0
+      },
+      "upload_bytes": {
+        "median": 13165100.0,
+        "min": 13165100.0,
+        "max": 13165100.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 226.14840989399292,
+        "min": 225.7495590828924,
+        "max": 226.5486725663717
+      }
+    },
+    "tensor-prefix": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 590.0765999977011,
+        "min": 574.0632000088226,
+        "max": 596.4864999987185
+      },
+      "prefill_ms": {
+        "median": 5.0,
+        "min": 4.0,
+        "max": 5.0
+      },
+      "decode_ms": {
+        "median": 565.0,
+        "min": 565.0,
+        "max": 567.0
+      },
+      "upload_bytes": {
+        "median": 1049088.0,
+        "min": 1049088.0,
+        "max": 1049088.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 226.5486725663717,
+        "min": 225.7495590828924,
+        "max": 226.5486725663717
+      }
+    }
+  },
+  "response_count": 36,
+  "response_matches": 36,
+  "sse_pairs": 12,
+  "sse_matches": 12,
+  "memory": {
+    "baseline": {
+      "peak_process_tree_rss_bytes": 4438355968,
+      "gpu_global_baseline_mib": 2102.0,
+      "gpu_global_peak_mib": 4697.0,
+      "gpu_global_peak_delta_mib": 2595.0
+    },
+    "block": {
+      "peak_process_tree_rss_bytes": 4452978688,
+      "gpu_global_baseline_mib": 2087.0,
+      "gpu_global_peak_mib": 4763.0,
+      "gpu_global_peak_delta_mib": 2676.0
+    },
+    "tensor": {
+      "peak_process_tree_rss_bytes": 4452220928,
+      "gpu_global_baseline_mib": 2111.0,
+      "gpu_global_peak_mib": 4747.0,
+      "gpu_global_peak_delta_mib": 2636.0
+    },
+    "tensor-prefix": {
+      "peak_process_tree_rss_bytes": 4442501120,
+      "gpu_global_baseline_mib": 2112.0,
+      "gpu_global_peak_mib": 5059.0,
+      "gpu_global_peak_delta_mib": 2947.0
+    }
+  }
+}
