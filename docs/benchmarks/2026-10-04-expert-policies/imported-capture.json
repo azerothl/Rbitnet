@@ -1,0 +1,25 @@
+{
+  "records": [
+    {
+      "name": "quiet-glm47-flash-cache8192",
+      "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-diagnostic-02\\results.json",
+      "result_sha256": "bc16aef6fff179ae33ec84e94c9e9183f8f4b50540a972393d9e5e587a55d550",
+      "action": "reused_after_full_capture_validation"
+    },
+    {
+      "name": "quiet-glm47-flash-cache8192",
+      "action": "preserved_incomplete_capture",
+      "reason": "capture incomplete",
+      "paths": [
+        "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\quiet-glm47-flash-cache8192-1791106954282873300\\0-glm47-flash-cache8192",
+        "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\quiet-glm47-flash-cache8192-1791106954282873300\\1-quiet-glm47-flash-cache8192.log"
+      ]
+    }
+  ],
+  "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\glm-policy-diagnostic-02\\results.json",
+  "destination": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\glm47-flash-cache8192\\results.json",
+  "capture_sha256": "bc16aef6fff179ae33ec84e94c9e9183f8f4b50540a972393d9e5e587a55d550",
+  "diagnostic_manifest_sha256": "9c7d77d9bfaaac0cfa9063c9c00538a5efcac4ab6fda81eb7e03ffe739e6d41f",
+  "scope": "Byte-for-byte import of the completed original protocol using the frozen production CLI/DLL. Embedded paths describe the real measurement location.",
+  "known_failure": "Original earlier GLM Least-Stale mismatch remains unresolved and preserved; this is a passing repetition, not a correction or proof of reliability."
+}

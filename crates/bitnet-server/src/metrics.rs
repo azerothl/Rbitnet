@@ -288,6 +288,14 @@ impl ServerMetrics {
             .unwrap();
         }
 
+        writeln!(s,"# HELP rbitnet_core_cpu_direct_row_calls_total Quantized CPU matrix-vector calls writing disjoint output bands").unwrap();
+        writeln!(s, "# TYPE rbitnet_core_cpu_direct_row_calls_total counter").unwrap();
+        writeln!(
+            s,
+            "rbitnet_core_cpu_direct_row_calls_total {}",
+            bitnet_core::ggml::direct_row_calls()
+        )
+        .unwrap();
         s.push_str(&bitnet_core::perf::moe_layer_prometheus_text());
         s
     }

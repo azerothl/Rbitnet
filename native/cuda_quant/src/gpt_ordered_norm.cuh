@@ -26,4 +26,3 @@ void launch_gpt_ordered_norm(float *x,const float *weights,float epsilon,unsigne
     if(n<=8192) {gpt_norm_staged<<<count,256,size_t(n)*sizeof(float),stream>>>(x,weights,epsilon,n,y,residual);return;}
     gpt_norm_ordered<<<count,256,0,stream>>>(x,weights,epsilon,n,y,residual);
 }
-

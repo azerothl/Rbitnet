@@ -493,4 +493,7 @@ extern "C" int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,s
         && cudaStreamSynchronize(buffers.stream)==cudaSuccess ? 0 : 7;
 }
 
+#include "kv_attention_oracle.cuh"
+#include "llama_batch.cuh"
+#include "portable_state.cuh"
 #include "gpt_ordered_norm_checks.cuh"

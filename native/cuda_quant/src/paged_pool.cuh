@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Native physical F32 KV pages, shared by matching context owners.
+// Draft native physical F32 KV pages. No GPU/quality validation yet.
 #include <memory>
 #include <mutex>
 #include <limits>
@@ -13,18 +13,18 @@ uint64_t paged_pool_identity() {
 }
 struct PhysicalKvPage {
     float *k=nullptr,*v=nullptr;
-    size_t elements=0;
+    size_t elements=0,bytes=0;
     ~PhysicalKvPage() {if(k)cudaFree(k);if(v)cudaFree(v);}
-    bool init(size_t n) {
+    bool init(size_t n,unsigned format,unsigned dim) {
         if(!n || n>std::numeric_limits<size_t>::max()/sizeof(float))return false;
-        MemoryCategoryScope category(MemoryKv);elements=n;
-        return cudaMalloc(reinterpret_cast<void**>(&k),n*sizeof(float))==cudaSuccess
-            && cudaMalloc(reinterpret_cast<void**>(&v),n*sizeof(float))==cudaSuccess;
+        MemoryCategoryScope category(MemoryKv);elements=n;bytes=encoded_kv_plane_bytes(format,n,dim);if(!bytes)return false;
+        return cudaMalloc(reinterpret_cast<void**>(&k),bytes)==cudaSuccess
+            && cudaMalloc(reinterpret_cast<void**>(&v),bytes)==cudaSuccess;
     }
 };
 struct PhysicalKvPool {
     const uint64_t identity=paged_pool_identity();
-    const unsigned layers,stride,limit;
+    const unsigned layers,stride,limit,format,dim;
     std::mutex mutex;
     std::vector<unsigned char> model_key;
     bool split=false;int tf32_mode=-1;
@@ -32,14 +32,14 @@ struct PhysicalKvPool {
     // is recyclable; any active sequence/snapshot/queued copy holds another.
     std::vector<std::shared_ptr<PhysicalKvPage>> pages;
     uint64_t allocations=0,reuses=0,copies=0,refusals=0,peak_pages=0;
-    PhysicalKvPool(unsigned l,unsigned s,unsigned n):layers(l),stride(s),limit(n) {}
+    PhysicalKvPool(unsigned l,unsigned s,unsigned n,unsigned f,unsigned d):layers(l),stride(s),limit(n),format(f),dim(d) {}
     std::shared_ptr<PhysicalKvPage> acquire() {
         std::lock_guard<std::mutex> lock(mutex);
         for(auto &p:pages)if(p && p.use_count()==1) {reuses++;return p;}
         if(pages.size()>=limit) {refusals++;return {};}
         try {
             auto p=std::shared_ptr<PhysicalKvPage>(new(std::nothrow) PhysicalKvPage);
-            if(!p || !p->init(size_t(layers)*stride*llama_page_tokens)) {refusals++;return {};}
+            if(!p || !p->init(size_t(layers)*stride*llama_page_tokens,format,dim)) {refusals++;return {};}
             pages.push_back(p);allocations++;peak_pages=std::max(peak_pages,uint64_t(pages.size()));return p;
         } catch(const std::bad_alloc&) {refusals++;return {};}
     }
@@ -101,7 +101,7 @@ struct PagedKvState {
             if(!active[i] || shared) {
                 auto page=pool->acquire();if(!page)return false;
                 if(active[i]) {
-                    size_t bytes=active[i]->elements*sizeof(float);
+                    size_t bytes=active[i]->bytes;
                     if(cudaMemcpyAsync(page->k,active[i]->k,bytes,cudaMemcpyDeviceToDevice,stream)!=cudaSuccess
                         || cudaMemcpyAsync(page->v,active[i]->v,bytes,cudaMemcpyDeviceToDevice,stream)!=cudaSuccess) {
                         // The local page is destroyed before completion's guard.
