@@ -107,6 +107,13 @@ impl LlamaRuntime {
                     .into(),
             ));
         }
+        let native_format = super::resident::configured_kv_format()?;
+        if native_format != 0 && (backend_kind != BackendKind::Cuda || kv.as_paged().is_some()) {
+            return Err(BitNetError::Inference(
+                "encoded native K/V requires CUDA dense Llama residency and no host paged KV"
+                    .into(),
+            ));
+        }
         let resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
             super::resident::Resident::new(&model)
         } else {
@@ -115,6 +122,11 @@ impl LlamaRuntime {
         if native_pages.is_some() && resident.is_none() {
             return Err(BitNetError::Inference(
                 "native CUDA KV paging unavailable or pool/context allocation refused".into(),
+            ));
+        }
+        if native_format != 0 && resident.is_none() {
+            return Err(BitNetError::Inference(
+                "encoded native K/V unavailable or context allocation refused".into(),
             ));
         }
         let backend = make_backend(backend_kind);
