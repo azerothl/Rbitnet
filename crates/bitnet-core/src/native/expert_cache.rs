@@ -1,5 +1,6 @@
 //! Runtime-local cache of unchanged GGUF expert slabs. Leases protect device slots.
 use super::cache_policy::{Access, Policy};
+mod async_cache;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
 static TRACE_ID: AtomicU64 = AtomicU64::new(0);
@@ -162,12 +163,17 @@ pub(super) struct ExpertCache {
     prompt_length: usize,
     position: usize,
     metrics: Option<Arc<super::moe_metrics::Model>>,
+    async_state: Option<async_cache::AsyncState>,
 }
 impl ExpertCache {
     pub(super) fn set_metrics(&mut self, metrics: Arc<super::moe_metrics::Model>) {
         // Production attaches before the first acquisition. This also permits
         // fixtures to attach to an existing cache and obtain truthful gauges.
+        if let Some(state) = &self.async_state {
+            state.pending_gauges_clear(self);
+        }
         if let Some(previous) = self.metrics.take() {
+            previous.async_pool(0, 0, 0, false, false);
             for (key, entry) in &self.entries {
                 if let Some(layer) = previous.layer(key.0) {
                     layer.ready_experts.fetch_sub(1, Ordering::Relaxed);
@@ -186,6 +192,9 @@ impl ExpertCache {
             }
         }
         self.metrics = Some(metrics);
+        if let Some(state) = &self.async_state {
+            state.attach_gauges(self);
+        }
     }
     pub(super) fn record_lock_wait(&self, layer: usize, ns: u64) {
         if let Some(l) = self.metrics.as_ref().and_then(|m| m.layer(layer)) {
@@ -228,12 +237,24 @@ impl ExpertCache {
     }
     pub fn begin_sequence(&mut self, prompt_length: usize) {
         self.prompt_length = prompt_length;
+        if let Some(mut state) = self.async_state.take() {
+            state.begin_sequence(self);
+            self.async_state = Some(state);
+        }
     }
     pub fn begin_pass(&mut self, position: usize) {
         self.pass = self.pass.saturating_add(1);
         self.position = position;
+        if let Some(mut state) = self.async_state.take() {
+            state.begin_pass(self);
+            self.async_state = Some(state);
+        }
     }
     pub fn trace_route(&mut self, layer: usize, selected: &[usize], group_bytes: usize) {
+        if let Some(mut state) = self.async_state.take() {
+            state.routed(self, layer, selected);
+            self.async_state = Some(state);
+        }
         if let Some(trace) = &mut self.trace {
             let row = serde_json::json!({ "pass":self.pass, "position":self.position,
                 "phase":if self.position < self.prompt_length { "prefill" } else { "decode" },
@@ -282,6 +303,7 @@ impl ExpertCache {
             prompt_length: 0,
             position: 0,
             metrics: None,
+            async_state: None,
         }
     }
     fn victim(&self) -> Option<(usize, usize)> {
@@ -323,6 +345,16 @@ impl ExpertCache {
         layer: usize,
         selected: &[usize],
     ) -> Result<Option<(Vec<Arc<ExpertGroup>>, Upload)>> {
+        let prepared = if let Some(mut state) = self.async_state.take() {
+            let result = state.prepare_selected(self, layer, selected);
+            if result.is_err() {
+                state.poison(self);
+            }
+            self.async_state = Some(state);
+            result?
+        } else {
+            Upload::default()
+        };
         let pins: Vec<_> = selected
             .iter()
             .filter_map(|&expert| {
@@ -332,7 +364,7 @@ impl ExpertCache {
             })
             .collect();
         let mut leases = Vec::with_capacity(selected.len());
-        let mut uploaded = Upload::default();
+        let mut uploaded = prepared;
         for &expert in selected {
             let Some((group, upload)) = self.acquire_with_upload(layer, expert)? else {
                 return Ok(None);
@@ -357,6 +389,14 @@ impl ExpertCache {
         layer: usize,
         expert: usize,
     ) -> Result<Option<(Arc<ExpertGroup>, Upload)>> {
+        if let Some(mut state) = self.async_state.take() {
+            let result = state.acquire(self, (layer, expert));
+            if result.is_err() {
+                state.poison(self);
+            }
+            self.async_state = Some(state);
+            return result;
+        }
         self.clock = self.clock.wrapping_add(1);
         if let Some(entry) = self.entries.get_mut(&(layer, expert)) {
             entry.access.touched = self.clock;
@@ -515,6 +555,12 @@ impl ExpertCache {
 
 impl Drop for ExpertCache {
     fn drop(&mut self) {
+        if let Some(state) = &self.async_state {
+            state.pending_gauges_clear(self);
+        }
+        if let Some(metrics) = &self.metrics {
+            metrics.async_pool(0, 0, 0, false, false);
+        }
         if let Some(metrics) = &self.metrics {
             for (key, entry) in &self.entries {
                 if let Some(l) = metrics.layer(key.0) {

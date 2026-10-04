@@ -6,6 +6,7 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+pub(crate) mod async_upload;
 mod device_memory;
 pub use device_memory::{cuda_managed_memory_stats, CudaMemoryStats};
 

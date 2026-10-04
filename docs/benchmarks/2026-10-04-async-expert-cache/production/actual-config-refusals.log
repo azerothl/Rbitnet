@@ -1,0 +1,19 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+test native::graph::async_config_tests::optional_async_configuration_refuses_silent_fallback_and_releases ... ASYNC_CONFIG_REFUSAL RBITNET_MOE_ASYNC=1: inference error: async expert cache requires CUDA/hybrid and cache execution policy; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_CACHE_MB=0: inference error: async expert cache requires a positive expert budget, supported MoE architecture and native dynamic API; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_CUDA_MOE=0: inference error: async expert cache requires a positive expert budget, supported MoE architecture and native dynamic API; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_EXECUTION=cpu: inference error: async expert cache requires CUDA/hybrid and cache execution policy; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_EXECUTION=adaptive: inference error: async expert cache requires CUDA/hybrid and cache execution policy; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_PREFETCH=unknown: inference error: RBITNET_MOE_PREFETCH must be off or previous-pass; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_PINNED_SLOTS=3: inference error: async cache needs one or two pinned slots; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_PINNED_SLOTS=invalid: inference error: invalid pinned slot count; physical categories unchanged
+ASYNC_CONFIG_REFUSAL RBITNET_MOE_ASYNC=yes: inference error: RBITNET_MOE_ASYNC must be 0 or 1; physical categories unchanged
+ASYNC_CONFIG_REFUSAL nine actual admission checks passed; disabled CPU path retained
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 149 filtered out; finished in 0.24s
+
