@@ -17,3 +17,6 @@ pub use quant_dot::{
 pub(crate) use quant_dot::{cuda_quant_library_identity, load_cuda_quant_library};
 pub(crate) use quant_simd::f32_accumulator_lanes;
 pub use types::{ggml_nbytes, ggml_row_size};
+
+#[doc(hidden)]
+pub use quant_dot::direct_row_calls;
