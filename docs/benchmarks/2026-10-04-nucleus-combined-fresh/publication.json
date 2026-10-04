@@ -1,0 +1,16 @@
+{
+  "compiled_head": "084122f1c9195a46ea7e48db8d0247c679bb9ae5",
+  "publication_head": "67b5d37cc8f1e516c7d0a7fab2e57ae44bab4631",
+  "compiled_paths_unchanged": 240,
+  "files": {
+    "sampling-http.csv": "a99bc09e9eb901d583a0a2676549770ffc0febf1131e7c7b217ca0681dc83c49",
+    "sampling-http.png": "ddeec6207d9a5f64d906a49f7f0f71db8bdd810d85c911ac48830982f525c8c7",
+    "sampling-http.pdf": "9f00ddaacc08c6e901b4323435a8a398189a4371b797ef4647bd92a7235fab7f",
+    "analysis/report_nucleus_combined.py": "7d448e932a8dc645f0c32e9321645f8425aaa98f5b9d7af7161a92c113283b27"
+  },
+  "raw_results_sha256": "a6aa9db48866579bf50282cab1c4783bd3a0e498859b0c56b3c17fb14d2dbb5b",
+  "limits": [
+    "Same compiled source after documentation and ancestry reconciliation.",
+    "Plot generator uses original private paths, which require adaptation."
+  ]
+}
