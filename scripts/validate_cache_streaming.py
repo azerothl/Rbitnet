@@ -27,16 +27,21 @@ def main():
     p.add_argument('--moe-cache', type=int, help='Validate actual dynamic MoE leases, disconnects and serialized concurrency with this MiB budget')
     p.add_argument('--moe-model', choices=['gpt-oss-20b','glm47-flash'], default='gpt-oss-20b')
     p.add_argument('--device-mib', type=int, default=12288)
+    p.add_argument('--mla-full', action='store_true', help='Validate compressed MLA segmented graphs, dynamic expert admission and prefix restore')
+    p.add_argument('--expect-cpu-routed', action='store_true', help='Require MLA routed FFNs to fall back to CPU under an explicitly too-small expert cache')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     if args.qwen_prefill and not args.qwen_full: p.error('--qwen-prefill requires --qwen-full')
     if args.tf32x3 and args.qwen_full and not args.qwen_prefill: p.error('select --qwen-prefill for Qwen Tensor Core validation')
     if args.gpt_full and (args.qwen_full or args.tf32x3 or args.speculative): p.error('select only one architecture experiment')
     if args.moe_cache is not None and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative or args.moe_cache<=0): p.error('select a positive MoE cache budget as a separate experiment')
+    if args.mla_full and (args.gpt_full or args.qwen_full or args.tf32x3 or args.speculative):p.error('select only MLA')
+    if args.expect_cpu_routed and (not args.mla_full or args.moe_cache is None):p.error('--expect-cpu-routed requires --mla-full and an explicit cache budget')
+    if args.mla_full:args.moe_model='glm47-flash'
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, moe_cache_mib=args.moe_cache, cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, qwen_full=args.qwen_full, gpt_full=args.gpt_full, split_kv=args.split_kv, tf32x3=args.tf32x3, moe_cache_mib=args.moe_cache, mla_full=args.mla_full, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
@@ -46,6 +51,7 @@ def main():
     if args.tf32x3 and not args.qwen_prefill: modes = [(next(m for m in config['models'] if m['id']=='llama32-1b'), '1')]
     if args.gpt_full: modes = [(next(m for m in config['models'] if m['id']=='gpt-oss-20b'), '0')]
     if args.moe_cache is not None: modes = [(next(m for m in config['models'] if m['id']==args.moe_model), '0')]
+    if args.mla_full: modes=[(next(m for m in config['models'] if m['id']=='glm47-flash'),'0')]
     for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
@@ -60,14 +66,18 @@ def main():
                                  RBITNET_MAX_CONCURRENT='4')
                 kw['env'].update(RBITNET_CUDA_QWEN_FULL='1' if args.qwen_full else '0', RBITNET_REQUIRE_QWEN_FULL='1' if args.qwen_full else '0')
                 kw['env'].update(RBITNET_CUDA_GPT_FULL='1' if args.gpt_full else '0',RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full else '0',RBITNET_MOE_CACHE_MB='0')
-                if args.moe_cache is not None:
-                    kw['env'].update(RBITNET_MOE_CACHE_MB=str(args.moe_cache),RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
+                if args.moe_cache is not None or args.mla_full:
+                    kw['env'].update(RBITNET_MOE_CACHE_MB=str(args.moe_cache or 0),RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
+                kw['env'].update(RBITNET_CUDA_MLA_FULL='1' if args.mla_full else '0',RBITNET_REQUIRE_MLA_FULL='1' if args.mla_full else '0')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
             return original(*a, **kw)
         server = Server(config, model, 'rbitnet', 'gpu', root); server.log_path = root/(label+'.log')
         try:
             with patch('subprocess.Popen', popen): server.start()
             initial_metrics=server.metrics()
+            if args.mla_full:
+                loaded=requests.get(server.base+'/v1/models',timeout=10).json()
+                assert 'resident MLA attention/router/head: true' in json.dumps(loaded),loaded
             def complete(body):
                 r = requests.post(server.base+'/v1/chat/completions', json=body, timeout=300); r.raise_for_status(); return r.json()
             def request(question, **opts):
@@ -123,7 +133,7 @@ def main():
             if args.gpt_full: assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0
             if args.split_kv:
                 used=delta.get('rbitnet_core_gpu_split_attention_queries_total', 0)
-                if model['id']=='llama32-1b' or args.qwen_full or args.gpt_full: assert used > 0
+                if model['id']=='llama32-1b' or args.qwen_full or args.gpt_full or args.mla_full: assert used > 0
                 else: assert used == 0, 'partial Qwen must not claim the full-attention split kernels'
             if args.tf32x3 or args.qwen_prefill:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
@@ -135,8 +145,13 @@ def main():
             if args.moe_cache is not None:
                 usage={k:after.get(k,0)-initial_metrics.get(k,0) for k in after}
                 report['cases'][-1]['all_cases_metrics_delta']=usage;save()
-                assert usage.get('rbitnet_core_expert_cache_evictions_total',0)>0, 'test must exercise actual slot reuse'
-                assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)>0
+                if args.mla_full:assert usage.get('rbitnet_core_gpu_mla_full_tokens_total',0)>0
+                if args.expect_cpu_routed:
+                    assert usage.get('rbitnet_core_native_moe_fallback_layers_total',0)>0, 'CPU routed fallback was not exercised'
+                    assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)==0, 'tiny-cache test must route all FFNs on CPU'
+                else:
+                    assert usage.get('rbitnet_core_expert_cache_evictions_total',0)>0, 'test must exercise actual slot reuse'
+                    assert usage.get('rbitnet_core_native_moe_resident_layers_total',0)>0
                 assert after['rbitnet_core_cuda_managed_live_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
                 assert after['rbitnet_core_cuda_managed_peak_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']
             print(label, 'stop and concurrency passed', flush=True)

@@ -18,6 +18,8 @@ use std::time::Instant;
 
 #[path = "gpt_full.rs"]
 mod gpu_full;
+#[path = "mla_full.rs"]
+mod gpu_mla;
 #[path = "state_budget.rs"]
 mod state_budget;
 
@@ -273,6 +275,7 @@ pub(crate) struct Runtime {
     cfg: Config,
     // CUDA graphs borrow expert contexts and matrix addresses. Drop them first.
     gpu_full: Option<gpu_full::GpuFull>,
+    gpu_mla: Option<gpu_mla::GpuMla>,
     weights: Weights,
     tokenizer: LoadedPromptTokenizer,
     kv: Vec<LayerKv>,
@@ -521,7 +524,11 @@ impl Runtime {
         if std::env::var("RBITNET_REQUIRE_GPT_FULL").as_deref() == Ok("1") && gpu_full.is_none() {
             return Err(BitNetError::Inference("fully resident GPT-OSS unavailable: requires CUDA, supported native DLL, CPU quant SIMD, all fixed expert banks and attention/output weights within budget".into()));
         }
-        let gpu_head = if gpu_full.is_none() {
+        let gpu_mla = gpu_mla::GpuMla::new(&weights, &cfg, &gpu_moe, kind);
+        if std::env::var("RBITNET_REQUIRE_MLA_FULL").as_deref() == Ok("1") && gpu_mla.is_none() {
+            return Err(BitNetError::Inference("resident MLA unavailable: requires CUDA, supported native DLL, CPU quant SIMD, compatible unbiased MLA projections and backbone weights within budget".into()));
+        }
+        let gpu_head = if gpu_full.is_none() && gpu_mla.is_none() {
             super::head::GpuHead::new(&weights, "output.weight", cfg.eps)
         } else {
             None
@@ -529,6 +536,7 @@ impl Runtime {
         Ok(Self {
             cfg,
             gpu_full,
+            gpu_mla,
             weights,
             tokenizer,
             kv,
@@ -638,29 +646,12 @@ impl Runtime {
             None
         };
         let fallback = gpu_result.is_none();
-        let mut result = gpu_result.unwrap_or_else(|| vec![0.0; c.embd]);
-        if fallback {
-            for (&expert, &weight) in selected.iter().zip(&weights) {
-                let gate = self.expert(il, "ffn_gate_exps", expert, x)?;
-                let up = self.expert(il, "ffn_up_exps", expert, x)?;
-                let hidden: Vec<f32> = gate
-                    .iter()
-                    .zip(&up)
-                    .map(|(&g, &u)| {
-                        if c.family == Family::GptOss {
-                            let g = g.min(7.0);
-                            g / (1.0 + (-1.702 * g).exp()) * (u.clamp(-7.0, 7.0) + 1.0)
-                        } else {
-                            g / (1.0 + (-g).exp()) * u
-                        }
-                    })
-                    .collect();
-                let down = self.expert(il, "ffn_down_exps", expert, &hidden)?;
-                for (out, d) in result.iter_mut().zip(down) {
-                    *out += weight * c.weight_scale * d;
-                }
-            }
-        }
+        let mut result = if let Some(result) = gpu_result {
+            result
+        } else {
+            let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
+            self.routed_ffn(il, x, &selected, &scaled)?
+        };
         crate::perf::record_native_moe(!fallback, 1, ffn_start.elapsed().as_nanos() as u64);
         if self
             .weights
@@ -671,6 +662,91 @@ impl Runtime {
             add(&mut result, &self.ffn(il, x, true)?)?;
         }
         Ok(result)
+    }
+    /// Routed contribution only, in selected router order; shared FFN is separate.
+    fn routed_ffn(
+        &self,
+        il: usize,
+        x: &[f32],
+        selected: &[usize],
+        scaled: &[f32],
+    ) -> Result<Vec<f32>> {
+        if selected.len() != self.cfg.used
+            || scaled.len() != selected.len()
+            || selected.iter().any(|&e| e >= self.cfg.experts)
+        {
+            return Err(BitNetError::Inference("routed FFN shape mismatch".into()));
+        }
+        let mut result = vec![0.0; self.cfg.embd];
+        for (&expert, &weight) in selected.iter().zip(scaled) {
+            let gate = self.expert(il, "ffn_gate_exps", expert, x)?;
+            let up = self.expert(il, "ffn_up_exps", expert, x)?;
+            let hidden: Vec<f32> = gate
+                .iter()
+                .zip(&up)
+                .map(|(&g, &u)| {
+                    if self.cfg.family == Family::GptOss {
+                        let g = g.min(7.0);
+                        g / (1.0 + (-1.702 * g).exp()) * (u.clamp(-7.0, 7.0) + 1.0)
+                    } else {
+                        g / (1.0 + (-g).exp()) * u
+                    }
+                })
+                .collect();
+            let down = self.expert(il, "ffn_down_exps", expert, &hidden)?;
+            for (out, d) in result.iter_mut().zip(down) {
+                *out += weight * d;
+            }
+        }
+        Ok(result)
+    }
+    fn resident_mla_forward(
+        &mut self,
+        x: &[f32],
+        pos: usize,
+        logits: bool,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
+        // Reinsert on every Result path, including cancellation. The native next
+        // request begins at zero or restores an immutable, complete checkpoint.
+        let mut full = self
+            .gpu_mla
+            .take()
+            .ok_or_else(|| BitNetError::Inference("resident MLA unavailable".into()))?;
+        let result = (|| {
+            full.begin(x, pos)?;
+            for il in 0..self.cfg.layers {
+                if inference_cancelled() {
+                    return Err(BitNetError::Inference("inference cancelled".into()));
+                }
+                let (ids, weights) = full.prepare(il)?;
+                if il < self.cfg.dense_layers {
+                    full.finish(il, None, None)?;
+                    continue;
+                }
+                let start = Instant::now();
+                let leased = if let Some(moe) = &self.gpu_moe[il] {
+                    moe.lease_selected(&ids)?
+                } else {
+                    None
+                };
+                let resident = leased.is_some();
+                if let Some(leased) = leased {
+                    full.finish(il, leased.pointers(), None)?;
+                    // Lease owners remain live until the private stream has
+                    // finished reading the selected dynamic expert buffers.
+                    drop(leased);
+                } else {
+                    let input = full.ffn_input()?;
+                    let routed = self.routed_ffn(il, &input, &ids, &weights)?;
+                    full.finish(il, None, Some(&routed))?;
+                }
+                crate::perf::record_native_moe(resident, 1, start.elapsed().as_nanos() as u64);
+            }
+            full.end(logits, greedy)
+        })();
+        self.gpu_mla = Some(full);
+        result
     }
     fn attention(&mut self, il: usize, pos: usize, x: &[f32]) -> Result<Vec<f32>> {
         let c = &self.cfg;
@@ -872,6 +948,9 @@ impl Runtime {
             }
             return full.run(&x, pos, logits, greedy);
         }
+        if self.gpu_mla.is_some() {
+            return self.resident_mla_forward(&x, pos, logits, greedy);
+        }
         for il in 0..self.cfg.layers {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -938,10 +1017,19 @@ impl Runtime {
         }
         let mut logits = Vec::new();
         let mut next_token = None;
-        let gpu_greedy = (self.gpu_full.is_some() || self.gpu_head.is_some())
-            && sampling.device_greedy_eligible();
-        for (pos, &id) in ids.iter().enumerate() {
+        let gpu_greedy =
+            (self.gpu_full.is_some() || self.gpu_mla.is_some() || self.gpu_head.is_some())
+                && sampling.device_greedy_eligible();
+        let reused = if let Some(full) = &mut self.gpu_mla {
+            full.restore_prefix(&ids)?
+        } else {
+            0
+        };
+        for (pos, &id) in ids.iter().enumerate().skip(reused) {
             (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
+        }
+        if let Some(full) = &mut self.gpu_mla {
+            full.save_prefix(&ids)?;
         }
         let prefill_ms = pf.elapsed().as_millis() as u64;
         let mut rng = match sampling.seed {
@@ -1053,6 +1141,8 @@ impl ModelExecutor for NativeExecutor {
         self.runtime.lock().ok().map(|r| {
             let execution=if let Some(full)=&r.gpu_full {
                 format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: true; fixed expert banks; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
+            } else if let Some(full)=&r.gpu_mla {
+                format!("resident quantized weights: {} MiB; resident MLA attention/router/head: true; compressed KV on device: true; host expert admission per layer; CPU routed FFN fallback available; CUDA graphs: {}; split-KV: {}; context capacity: {}",(r.weights.resident_bytes+full.extra_weights_bytes)/(1024*1024),full.graphs,full.split,r.cfg.max_seq)
             } else {
                 format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: false; resident output head: {}; resident routed expert layers: {}; attention GPU enabled: {}; remaining operations execute on CPU; context capacity: {}",r.weights.resident_bytes/(1024*1024),r.gpu_head.is_some(),r.gpu_moe.iter().filter(|m|m.is_some()).count(),r.use_gpu_attention,r.cfg.max_seq)
             };
@@ -1451,3 +1541,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mla_runtime_tests.rs"]
+mod mla_runtime_tests;

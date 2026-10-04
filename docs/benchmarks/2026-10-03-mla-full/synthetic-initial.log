@@ -1,0 +1,18 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 3 tests
+test native::graph::gpu_mla::tests::compressed_attention_matches_f64_with_different_key_value_widths_at_tile_boundaries ... ok
+MLA F64 oracle passed format 0: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 2: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 6: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 8: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 12: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 13: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 14: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+MLA F64 oracle passed format 39: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds
+test native::graph::gpu_mla::tests::quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_prefix ... ok
+test native::graph::gpu_mla::tests::sigmoid_softmax_group_selection_preserves_ids_ties_bias_and_normalization ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 110 filtered out; finished in 1.12s

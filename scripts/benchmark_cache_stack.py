@@ -15,7 +15,7 @@ from benchmark_engines import Server
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=pathlib.Path, required=True)
-    parser.add_argument('--model', choices=['llama32-1b', 'qwen35-2b', 'gpt-oss-20b'], required=True)
+    parser.add_argument('--model', choices=['llama32-1b', 'qwen35-2b', 'gpt-oss-20b', 'glm47-flash'], required=True)
     parser.add_argument('--backend', choices=['cpu', 'gpu'], default='gpu')
     parser.add_argument('--binary', type=pathlib.Path, required=True)
     parser.add_argument('--library', type=pathlib.Path, required=True)
@@ -27,7 +27,14 @@ def main():
     parser.add_argument('--tf32x3', action='store_true', help='Compare Llama block prefill with compensated Tensor Core projections')
     parser.add_argument('--qwen-prefill', action='store_true', help='Compare full Qwen serial/SIMT block/Tensor Core block prefill')
     parser.add_argument('--gpt-full', action='store_true', help='Compare GPT-OSS partial, resident, and resident split-KV paths')
+    parser.add_argument('--mla-full', action='store_true', help='Compare resident compressed MLA, split attention and prefixes')
+    parser.add_argument('--moe-cache', type=int, default=0, help='MiB expert cache for MLA modes; zero retains fixed placement')
+    parser.add_argument('--device-mib', type=int, default=12288)
     args = parser.parse_args()
+    if args.mla_full and (args.model!='glm47-flash' or args.backend!='gpu' or args.gpt_full or args.qwen_full or args.qwen_prefill or args.tf32x3): parser.error('--mla-full requires GLM GPU alone')
+    if args.model=='glm47-flash' and not args.mla_full: parser.error('GLM requires --mla-full')
+    if args.moe_cache<0 or args.device_mib<1: parser.error('invalid memory budgets')
+    if args.moe_cache and not args.mla_full: parser.error('this cache ablation is currently scoped to MLA')
     if args.cycles < 2: parser.error('use at least one warmup and one measured cycle')
     if args.qwen_full and (args.model != 'qwen35-2b' or args.backend != 'gpu'): parser.error('--qwen-full requires dense Qwen GPU')
     if args.gpt_full and (args.model != 'gpt-oss-20b' or args.backend != 'gpu' or args.qwen_full or args.qwen_prefill or args.tf32x3): parser.error('--gpt-full requires GPT-OSS GPU')
@@ -79,6 +86,10 @@ def main():
         else: modes += [('block-prefix','1','0','1',split,'0','1')]
     if args.gpt_full:
         modes=[('baseline','0','0','0','0','0','0'),('full','0','0','0','0','0','0'),('full-split','0','0','0','1','0','0')]
+    if args.mla_full:
+        modes=[('baseline','0','0','0','0','0','0'),('mla','0','0','0','0','0','0')]
+        if args.split_kv: modes += [('mla-split','0','0','0','1','0','0'),('mla-split-prefix','1','0','0','1','0','0')]
+        else: modes += [('mla-prefix','1','0','0','0','0','0')]
     original = subprocess.Popen
     baseline = {}
     baseline_sse = {}
@@ -89,12 +100,16 @@ def main():
                          RBITNET_CUDA_QWEN_FULL=full, RBITNET_REQUIRE_QWEN_FULL=full,
                          RBITNET_CUDA_GPT_FULL='1' if args.gpt_full and mode != 'baseline' else '0',
                          RBITNET_REQUIRE_GPT_FULL='1' if args.gpt_full and mode != 'baseline' else '0',
-                         RBITNET_MOE_CACHE_MB='0',
+                         RBITNET_CUDA_MLA_FULL='1' if args.mla_full and mode!='baseline' else '0',
+                         RBITNET_REQUIRE_MLA_FULL='1' if args.mla_full and mode!='baseline' else '0',
+                         RBITNET_MOE_CACHE_MB=str(args.moe_cache),
+
                          RBITNET_CUDA_SPLIT_KV=split,
                          RBITNET_CUDA_PREFILL_TF32X3=tensor,
                          RBITNET_CUDA_QWEN_PREFILL=qwen_block,
                          RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='128', RBITNET_CUDA_PREFILL=block,
                          RBITNET_CUDA_PREFILL_TOKENS='128', RBITNET_REQUIRE_RESIDENT='1' if args.backend == 'gpu' and args.model == 'llama32-1b' else '0')
+        if args.mla_full: overrides.update(RBITNET_MAX_SEQ='2048',RBITNET_CUDA_DEVICE_BUDGET_MB=str(args.device_mib),RBITNET_CUDA_DEVICE_MARGIN_MB='256')
         def popen(*a, **kw):
             if kw.get('env'):
                 kw['env'] = kw['env'].copy(); kw['env'].update(overrides)
@@ -124,6 +139,11 @@ def main():
                     if qwen_block == '1' and index < 2 and prefix == '0': assert delta.get('rbitnet_core_gpu_prefill_blocks_total', 0) > 0, 'native Qwen block prefill was not used'
                     if full == '1': assert delta.get('rbitnet_core_gpu_qwen_full_tokens_total', 0) > 0, 'full Qwen pipeline was not used'
                     if args.gpt_full and mode != 'baseline': assert delta.get('rbitnet_core_gpu_gpt_full_tokens_total', 0) > 0, 'full GPT-OSS pipeline was not used'
+                    if args.mla_full and mode != 'baseline': assert delta.get('rbitnet_core_gpu_mla_full_tokens_total',0)>0, 'MLA pipeline was not used'
+                    if args.mla_full:
+                        assert after['rbitnet_core_cuda_managed_memory_available']==1
+                        assert after['rbitnet_core_cuda_managed_live_bytes']<=after['rbitnet_core_cuda_managed_limit_bytes']<=args.device_mib*1024*1024
+                        row['managed_metrics']={k:v for k,v in after.items() if 'cuda_managed' in k};save()
                     if split == '1': assert delta.get('rbitnet_core_gpu_split_attention_queries_total', 0) > 0, 'split-KV kernels were not used'
                     if tensor == '1' and index < 2 and prefix == '0': assert delta.get('rbitnet_core_gpu_tensor_gemm_calls_total', 0) > 0, 'Tensor Core projections were not used'
             messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Répète exactement : été, café, résumé, 🙂.'}]
@@ -132,14 +152,22 @@ def main():
                 body = dict(model=model['id'], messages=messages, max_tokens=128, **options)
                 response = requests.post(server.base+'/v1/chat/completions', json=body, timeout=600); response.raise_for_status()
                 text = response.json()['choices'][0]['message']['content']
-                stream = requests.post(server.base+'/v1/chat/completions', json={**body, 'stream': True}, timeout=600); stream.raise_for_status()
+                sse_start=time.perf_counter(); first_content_ms=None
+                stream = requests.post(server.base+'/v1/chat/completions', json={**body, 'stream': True}, stream=True, timeout=600); stream.raise_for_status()
                 parts, done = [], False
-                for line in stream.content.decode('utf-8').splitlines():
-                    if line == 'data: [DONE]': done = True
-                    elif line.startswith('data: '): parts.append(json.loads(line[6:]).get('choices', [{}])[0].get('delta', {}).get('content', ''))
+                try:
+                    for raw_line in stream.iter_lines(chunk_size=1):
+                        line=raw_line.decode('utf-8')
+                        if line=='data: [DONE]': done=True
+                        elif line.startswith('data: '):
+                            content=json.loads(line[6:]).get('choices',[{}])[0].get('delta',{}).get('content','')
+                            if content and first_content_ms is None:first_content_ms=1000*(time.perf_counter()-sse_start)
+                            parts.append(content)
+                finally:stream.close()
+                assert first_content_ms is not None
                 joined = ''.join(parts)
                 if mode == 'baseline': baseline_sse[label] = text
-                report['sse'].append(dict(mode=mode, sampling=label, request=body, text=text, sse_text=joined, done=done, matches_baseline=text == baseline_sse[label])); save()
+                report['sse'].append(dict(mode=mode, sampling=label, request=body, text=text, sse_text=joined, done=done, first_content_ms=first_content_ms, matches_baseline=text == baseline_sse[label])); save()
                 assert done and joined == text and text and '\ufffd' not in text, (mode, label, text, joined)
                 assert text == baseline_sse[label], (mode, label, 'output differs from baseline')
             stop_body = dict(model=model['id'], messages=prompts[2], max_tokens=128, temperature=0, stop=['Paris'])

@@ -95,6 +95,7 @@ void *rbitnet_cuda_moe_dynamic_create(const RbitnetMoeConfig *c,const RbitnetLla
 void rbitnet_cuda_moe_destroy(void *context) {delete static_cast<ResidentMoe*>(context);}
 int rbitnet_cuda_moe_step(void *context,const float *input,const unsigned *experts,const float *probabilities,float *output) {
     auto *r=static_cast<ResidentMoe*>(context);if(!r || !input || !experts || !probabilities || !output)return 1;
+    NativeCallCompletion completion(r->stream);
     for(unsigned s=0;s<r->cfg.used;s++)if(experts[s]>=r->cfg.experts)return 2;
     if(cudaMemcpyAsync(r->input,input,r->cfg.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->experts,experts,r->cfg.used*sizeof(unsigned),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
@@ -107,16 +108,17 @@ int rbitnet_cuda_moe_step(void *context,const float *input,const unsigned *exper
     if(cudaGraphLaunch(r->executable,r->stream)!=cudaSuccess || cudaGetLastError()!=cudaSuccess)return 6;
     if(cudaMemcpyAsync(output,r->output,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 7;
-    return 0;
+    completion.dismiss();return 0;
 }
 int rbitnet_cuda_moe_dynamic_step(void *context,const float *input,const unsigned *experts,
     const float *probabilities,float *output,const void *const *selected) {
     auto *r=static_cast<ResidentMoe*>(context);
     if(!r || !r->dynamic || !selected)return 1;
+    NativeCallCompletion completion(r->stream);
     for(unsigned s=0;s<3*r->cfg.used;s++)if(!selected[s])return 2;
     // Stable device table is read by every replay; uploaded pointers stay leased
     // until the synchronous step returns. The table copy is outside capture.
     if(cudaMemcpyAsync(r->selected,selected,3*r->cfg.used*sizeof(void*),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 3;
-    return rbitnet_cuda_moe_step(context,input,experts,probabilities,output);
+    int status=rbitnet_cuda_moe_step(context,input,experts,probabilities,output);if(!status)completion.dismiss();return status;
 }
 }

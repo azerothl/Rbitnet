@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "E:\devs\Rbitnet\scripts\validate_cache_streaming.py", line 161, in <module>
+    if __name__ == '__main__': main()
+                               ^^^^^^
+  File "E:\devs\Rbitnet\scripts\validate_cache_streaming.py", line 40, in main
+    binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\azero\anaconda3\Lib\pathlib.py", line 1037, in write_bytes
+    return f.write(view)
+           ^^^^^^^^^^^^^
+OSError: [Errno 28] No space left on device
