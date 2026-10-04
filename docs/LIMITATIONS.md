@@ -96,3 +96,7 @@ CUDA attention keeps F32 K/V on device for capacities up to **8192**. Compatible
 - **Inference timeout / cancel:** Long generations are cut off with HTTP 504 after `RBITNET_INFERENCE_TIMEOUT_SECS`. The server aborts the tokio `spawn_blocking` join handle **and** sets a cooperative cancel flag checked at **token boundaries** on the Llama decode/prefill path (and Qwen paths). Mid-generation abort should stop further tokens under that bound; Tokio still cannot hard-kill an in-flight matmul, so capacity planning still matters for worst-case wall time of one step.
 - **Concurrency:** At most `RBITNET_MAX_CONCURRENT` generations at once; extra requests receive HTTP 503.
 - **Auth:** When `RBITNET_API_KEY` is set, protect upstream with TLS and a reverse proxy for anything beyond localhost.
+
+## Structured generation
+
+JSON-object/schema and tool-call generation are unsupported. Engine entry points refuse the ASCII-ID research mask; HTTP returns 501 before SSE or inference admission. The standalone schema validator can validate already-produced text but does not constrain model generation. Ordinary text remains available, including when tools are explicitly disabled. See [STRUCTURED_OUTPUT.md](STRUCTURED_OUTPUT.md).

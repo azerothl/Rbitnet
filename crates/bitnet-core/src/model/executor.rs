@@ -52,6 +52,7 @@ pub trait ModelExecutor: Send + Sync {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<crate::scheduler::InferenceOutput> {
+        sampling.validate_structured_output()?;
         let (text, phases) = self.generate_with_timings(prompt, max_tokens, sampling)?;
         Ok(crate::scheduler::InferenceOutput {
             text,
@@ -67,6 +68,7 @@ pub trait ModelExecutor: Send + Sync {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let (text, phases) = self.generate_with_timings(prompt, max_tokens, sampling)?;
         if !text.is_empty() {
             on_event(StreamEvent::Delta { text: text.clone() })?;
@@ -208,6 +210,7 @@ impl ModelExecutor for LlamaExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         let mut slot = self
             .runtime
             .lock()
@@ -231,6 +234,7 @@ impl ModelExecutor for LlamaExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<crate::scheduler::InferenceOutput> {
+        sampling.validate_structured_output()?;
         let mut slot = self
             .runtime
             .lock()
@@ -262,6 +266,7 @@ impl ModelExecutor for LlamaExecutor {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let mut slot = self
             .runtime
             .lock()
@@ -359,6 +364,7 @@ impl ModelExecutor for BitNetNativeExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         let mut slot = self
             .runtime
             .lock()
@@ -384,6 +390,7 @@ impl ModelExecutor for BitNetNativeExecutor {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let mut slot = self
             .runtime
             .lock()
@@ -452,6 +459,7 @@ impl ModelExecutor for BitNetExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         let t0 = Instant::now();
         let text = self.toy.generate(prompt, max_tokens, sampling.temperature);
         let total_ms = t0.elapsed().as_millis() as u64;
@@ -469,6 +477,7 @@ impl ModelExecutor for BitNetExecutor {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let generated = self.toy.generate(prompt, max_tokens, sampling.temperature);
         let words: Vec<&str> = generated.split_whitespace().collect();
         let mut full = String::new();

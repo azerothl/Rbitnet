@@ -186,6 +186,7 @@ impl MixtralRuntime {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }

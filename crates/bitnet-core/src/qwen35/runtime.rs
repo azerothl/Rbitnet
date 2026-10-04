@@ -326,6 +326,7 @@ impl Qwen35Runtime {
         sampling: SamplingOptions,
         mut events: Option<&mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }

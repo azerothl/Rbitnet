@@ -843,6 +843,11 @@ pub struct ChatCompletionRequest {
     /// OpenAI-compatible structured output (`json_object` / `json_schema`).
     #[serde(default)]
     pub response_format: Option<ResponseFormat>,
+    /// Recognized explicitly so unsupported tool generation is not silently ignored.
+    #[serde(default, alias = "functions")]
+    pub tools: Option<Vec<serde_json::Value>>,
+    #[serde(default, alias = "function_call")]
+    pub tool_choice: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1281,6 +1286,8 @@ async fn completions(
         presence_penalty: req.presence_penalty,
         seed: req.seed,
         response_format: None,
+        tools: None,
+        tool_choice: None,
     };
     let response = chat_completions(State(state), headers, Json(chat)).await?;
     if req.stream == Some(true) {
@@ -1320,6 +1327,25 @@ async fn completions(
         "usage": chat_body["usage"].clone()
     }))
     .into_response())
+}
+
+/// Both API dialects may explicitly disable tools while still listing definitions.
+pub(crate) fn tool_generation_requested(
+    tools: Option<&[serde_json::Value]>,
+    choice: Option<&serde_json::Value>,
+) -> bool {
+    let definitions = tools.is_some_and(|tools| !tools.is_empty());
+    let Some(choice) = choice else {
+        return definitions;
+    };
+    let kind = choice
+        .as_str()
+        .or_else(|| choice.get("type").and_then(|kind| kind.as_str()));
+    match kind {
+        Some("none") => false,
+        Some("auto") => definitions,
+        _ => true,
+    }
 }
 
 async fn chat_completions(
@@ -1481,6 +1507,49 @@ async fn chat_completions(
             .into_response());
     }
 
+    let temperature = req.temperature.unwrap_or(0.7);
+    if tool_generation_requested(req.tools.as_deref(), req.tool_choice.as_ref()) {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"error": {
+                "message": "tool-call generation requires a validated tokenizer-aware grammar",
+                "type": "not_implemented_error", "code": "tool_generation_not_supported"
+            }})),
+        )
+            .into_response());
+    }
+    let structured_json = req.response_format.as_ref().is_some_and(|rf| {
+        matches!(
+            rf.format_type.trim().to_ascii_lowercase().as_str(),
+            "json_object" | "json_schema"
+        )
+    });
+    let sampling = SamplingOptions {
+        temperature,
+        top_p: req.top_p,
+        seed: req.seed,
+        frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
+        presence_penalty: req.presence_penalty.unwrap_or(0.0),
+        structured_json,
+    };
+    if let Err(error) = sampling.validate_structured_output() {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"error": {
+                "message": error.to_string(), "type": "not_implemented_error",
+                "code": "structured_output_not_supported"
+            }})),
+        )
+            .into_response());
+    }
     let permit = match state.semaphore.clone().try_acquire_owned() {
         Ok(p) => p,
         Err(_) => {
@@ -1501,21 +1570,6 @@ async fn chat_completions(
         }
     };
 
-    let temperature = req.temperature.unwrap_or(0.7);
-    let structured_json = req.response_format.as_ref().is_some_and(|rf| {
-        matches!(
-            rf.format_type.trim().to_ascii_lowercase().as_str(),
-            "json_object" | "json_schema"
-        )
-    });
-    let sampling = SamplingOptions {
-        temperature,
-        top_p: req.top_p,
-        seed: req.seed,
-        frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
-        presence_penalty: req.presence_penalty.unwrap_or(0.0),
-        structured_json,
-    };
     clear_inference_cancel();
 
     if req.stream == Some(true) {

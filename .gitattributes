@@ -1,0 +1,4 @@
+
+docs/benchmarks/2026-10-04-structured-guards/raw/** -text
+docs/benchmarks/2026-10-04-structured-guards/receipt.json -text
+docs/benchmarks/2026-10-04-structured-guards/harness/** -text

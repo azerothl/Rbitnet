@@ -191,6 +191,7 @@ impl LlamaRuntime {
         sampling: SamplingOptions,
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         self.last_speculative_attempted = false;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));

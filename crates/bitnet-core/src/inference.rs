@@ -446,6 +446,7 @@ impl Engine {
 
     /// Generate completion text from a user-facing prompt string.
     pub fn complete(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
+        SamplingOptions::from_temperature(temperature).validate_structured_output()?;
         if self.inner.stub {
             return Ok(stub_response(prompt, max_tokens));
         }
@@ -486,6 +487,7 @@ impl Engine {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<InferenceOutput> {
+        sampling.validate_structured_output()?;
         if self.inner.stub {
             let text = stub_response(prompt, max_tokens);
             let completion_tokens = text.split_whitespace().count() as u32;
@@ -563,6 +565,7 @@ impl Engine {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         if self.inner.stub {
             let text = stub_response(prompt, max_tokens);
             if !text.is_empty() {
@@ -643,6 +646,9 @@ impl Engine {
         &self,
         requests: &[InferenceRequest],
     ) -> Result<Vec<InferenceOutput>> {
+        for request in requests {
+            request.sampling.validate_structured_output()?;
+        }
         if self.inner.stub || self.inner.toy.is_some() {
             let mut out = Vec::with_capacity(requests.len());
             for req in requests {
@@ -815,6 +821,23 @@ mod tests {
         let e = stub_engine();
         assert!(e.complete("hi", 16, 0.7).unwrap().contains("stub"));
         assert_eq!(e.openai_model_id(), None);
+    }
+
+    #[test]
+    fn unsupported_grammar_never_emits_events_or_enters_a_batch() {
+        let sampling = SamplingOptions { structured_json: true, ..SamplingOptions::default() };
+        for engine in [stub_engine(), toy_engine()] {
+            assert!(matches!(engine.complete_detailed_with_options("hello", 0, sampling), Err(BitNetError::NotImplemented(_))));
+            let mut events = 0;
+            assert!(matches!(engine.complete_streaming("hello", 8, sampling, &mut |_| { events += 1; Ok(()) }), Err(BitNetError::NotImplemented(_))));
+            assert_eq!(events, 0);
+            let requests = [InferenceRequest { prompt: "ordinary first".into(), max_tokens: 8, sampling: SamplingOptions::default() }, InferenceRequest { prompt: "unsupported second".into(), max_tokens: 8, sampling }];
+            assert!(matches!(engine.complete_batch_detailed(&requests), Err(BitNetError::NotImplemented(_))));
+        }
+        // Even an unavailable executor cannot consume work before the grammar guard.
+        let mut unavailable = stub_engine();
+        Arc::get_mut(&mut unavailable.inner).unwrap().stub = false;
+        assert!(matches!(unavailable.complete_detailed_with_options("hello", 8, sampling), Err(BitNetError::NotImplemented(_))));
     }
 
     #[test]
