@@ -2,7 +2,7 @@
 
 Cette branche ajoute `RBITNET_CUDA_KV_FORMAT=f32|f16|q8` au cache natif Llama, dense ou paginé, et conserve **F32 par défaut**. Les clés et valeurs sont encodées ; les poids, le calcul de l'attention, les états récurrents Qwen et le cache d'experts MoE ne sont pas quantifiés par cette option.
 
-La qualité, les propriétaires mémoire, les graphes CUDA, les préfixes et les requêtes HTTP/SSE ont été vérifiés sur un prototype privé figé. **La validation de cette branche après intégration reste en attente.** Les autres changements Rust, notamment le cache d'experts asynchrone de la PR #114, sont conservés dans la branche. Les résultats ci-dessous concernent le binaire et la DLL privés identifiés par les manifestes ; ils ne constituent pas une mesure du binaire de cette branche.
+La branche a passé sa propre validation après intégration : `cargo check`, Clippy et les tests du workspace, construction CUDA neuve, 64 cas F64, contrôles de propriétaires/préfixes, corpus NLL, six captures JSON/SSE et quatre suites réseau. Les sources vérifiées restent exactement celles de la livraison `e906a06`. Les preuves fraîches sont dans [`production/validation.json`](production/validation.json), avec les sources, les empreintes des exécutables, les logs et les captures brutes compressées. Les changements de la PR #114 sont conservés. Le tableau historique ci-dessous garde les résultats du prototype privé ; les nouvelles mesures sont séparées dans [`production/summary.json`](production/summary.json).
 
 ## Résultat mesuré
 
@@ -30,7 +30,7 @@ L'échec initial de reprise F16 est conservé dans `initial-failed-warmed-prefix
 
 Les seuils de `quality-plan.json` ont été fixés avant l'expérience. Les contrôles incluent un oracle d'attention F64, les frontières de pages et de contexte, les graphes et l'attention découpée activés/désactivés, les refus numériques, la troncature, la copie et la libération des propriétaires.
 
-Deux corpus imposés, répétitifs et synthétiques, contiennent chacun 1024 cibles. L'écart NLL moyen absolu maximal observé est d'environ 0,0000379 en F16 et 0,00157 en Q8 ; les écarts maximaux par cible sont 0,00763 et 0,12706. Ces contrôles passent les seuils prévus. Ils ne constituent pas une évaluation générale de langage ni une garantie sur d'autres modèles. Les quatre suites réseau conservent aussi neuf réponses factuelles strictes chacune, les seeds, les pénalités, les déconnexions et les requêtes concurrentes sérialisées. La correction des raisons de fin HTTP est une validation distincte en cours.
+Deux corpus imposés, répétitifs et synthétiques, contiennent chacun 1024 cibles. L'écart NLL moyen absolu maximal observé est d'environ 0,0000379 en F16 et 0,00157 en Q8 ; les écarts maximaux par cible sont 0,00763 et 0,12706. Ces contrôles passent les seuils prévus. Ils ne constituent pas une évaluation générale de langage ni une garantie sur d'autres modèles. Les quatre suites réseau conservent aussi neuf réponses factuelles strictes chacune, les seeds, les pénalités, les déconnexions et les requêtes concurrentes sérialisées. La correction des raisons de fin HTTP est livrée séparément dans la PR #117 ; elle ne fait pas partie de cette branche.
 
 `summary.json` contient les valeurs agrégées. Les fichiers `.json.gz` et `.log.gz` conservent les réponses et échantillons complets, y compris leurs différences entre formats. `manifest.json` distingue les sources de la branche, les exécutables privés mesurés et les artefacts compressés. Aucun binaire ni modèle n'est ajouté au dépôt.
 
@@ -64,3 +64,7 @@ cargo test -p bitnet-core --release --lib resident::quantized_long_tests -- --no
 ```
 
 Pour les tests de pages, répéter `resident::paged_tests` avec `RBITNET_CUDA_KV_FORMAT=f16` puis `q8`. Les modèles, seeds et formats utilisés doivent figurer dans toute nouvelle comparaison. CPU, Qwen et les autres architectures sont hors du périmètre de cette option native Llama. KIVI reste à implémenter et évaluer ; l'issue #93 reste ouverte.
+
+## Limite de l’ABI mutable
+
+Le chemin Rust refuse TF32 avec KV encodé dès la configuration. L’API C++ mutable `configure_tensor_prefill` doit encore recevoir un refus équivalent lorsqu’un appelant natif tente de modifier un contexte encodé déjà créé. Cette correction distincte reste à valider ; la PR demeure en brouillon pendant ce travail. Les preuves ci-dessus concernent les configurations encodées sans TF32.
