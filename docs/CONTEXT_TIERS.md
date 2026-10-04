@@ -79,7 +79,7 @@ host payload budget.
 
 ## Evidence required before adoption
 
-### Prepared global SSD admission (validation pending)
+### Cooperative global SSD admission (Windows validation passed)
 
 `RBITNET_CONTEXT_DISK_GLOBAL_MB` opts into a cooperative global disk cap below
 the configured cache root. RAM and ordinary per-namespace disk limits remain
@@ -98,13 +98,14 @@ Existing active data above a newly introduced cap cannot be reclaimed while
 its namespace is locked; new disk admission is refused rather than deleting it.
 Only recognized managed objects count, not arbitrary user files in the root.
 
-Eight new fixtures are prepared for cross-model accounting, active
+Eight new fixtures pass for cross-model accounting, active
 namespace refusal, own LRU reclamation with live RAM leases, contention, differing
 caps, I/O refusal, interrupted temporaries and redirected foreign namespaces.
 The process fixture holds a sealed checkpoint in a second process, attempts
 admission while its namespace is locked, terminates that process forcibly, then
 attempts reclamation and checks physical bytes and a surviving RAM lease.
-Compilation, cross-process and actual model/proxy execution remain pending.
+Fresh compilation, all 19 store tests and actual Llama/Qwen HTTP/proxy execution pass.
+346 workspace tests pass with one ignored. See the [raw validation report](benchmarks/2026-10-04-context-global-quota-fresh/README.md).
 This does not claim a physical ENOSPC or timed process-crash recovery sweep.
 
 The validation must cover actual Llama and Qwen prompt outputs, seeded sampling,
@@ -116,5 +117,6 @@ latency separately. A successful unit test is not evidence of faster serving.
 
 Simulated interrupted files and an insufficient configured disk quota do not
 demonstrate recovery from a physical disk-full condition. Crash timing, physical
-disk-full recovery, cross-process serving and combined cache performance remain
-unverified until their corresponding raw evidence has been published.
+disk-full recovery and combined cache performance remain unverified.
+Cross-process ownership/restart and real two-model admission are now covered
+by the published captures; this does not cover a timed write/rename crash sweep.
