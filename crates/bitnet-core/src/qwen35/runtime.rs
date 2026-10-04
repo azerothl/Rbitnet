@@ -53,6 +53,7 @@ pub struct Qwen35Runtime {
     cuda_graph_enabled: bool,
     prefixes: PrefixStore<SavedPrefix>,
     prefix_supported: bool,
+    draft: Option<spec_serving::DraftRuntime>,
 }
 
 fn must_tensor(archive: &GgufArchive, name: &str) -> Result<GgufTensorInfo> {
@@ -125,12 +126,21 @@ impl Qwen35Runtime {
                 .flatten()
                 .map(|g| g.extra_weights_bytes)
                 .sum::<usize>()
+            + self.draft_resident_weights_bytes()
     }
     pub(crate) fn context_capacity(&self) -> usize {
         self.cfg.max_seq
     }
 
     pub fn load(
+        archive: Arc<GgufArchive>,
+        tokenizer_path: &Path,
+        backend_kind: BackendKind,
+    ) -> Result<Self> {
+        Self::load_with_optional_draft(archive, tokenizer_path, backend_kind)
+    }
+
+    fn load_without_draft(
         archive: Arc<GgufArchive>,
         tokenizer_path: &Path,
         backend_kind: BackendKind,
@@ -307,6 +317,7 @@ impl Qwen35Runtime {
             cuda_graph_enabled,
             prefixes: PrefixStore::from_env(),
             prefix_supported,
+            draft: None,
         })
     }
 
@@ -326,6 +337,9 @@ impl Qwen35Runtime {
         sampling: SamplingOptions,
         mut events: Option<&mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
+        if self.draft.is_some() {
+            return self.generate_with_owned_draft(prompt, max_tokens, sampling, events);
+        }
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
@@ -1257,3 +1271,17 @@ mod sequence_tests {
         }
     }
 }
+
+#[path = "spec_decode.rs"]
+mod spec_decode;
+
+#[path = "spec_serving.rs"]
+mod spec_serving;
+
+#[cfg(test)]
+#[path = "spec_tests.rs"]
+mod spec_tests;
+
+#[cfg(test)]
+#[path = "spec_decode_tests.rs"]
+mod spec_decode_tests;

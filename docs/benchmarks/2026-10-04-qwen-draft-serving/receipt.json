@@ -1,0 +1,274 @@
+{
+  "kind": "qwen",
+  "workspace": "C:\\Users\\azero\\.codex\\worktrees\\qwen-speculative-serving\\Rbitnet",
+  "journal": {
+    "pid": 15980,
+    "status": "passed",
+    "complete": true,
+    "started_utc": "2026-10-04T14:41:10Z",
+    "checker_sha256": "d9e011220242f0d8fe165c90e35e2f401a21e237b706f27f7538c2ff8bb09010",
+    "hardware_started_utc": "2026-10-04T14:41:10Z",
+    "current_step": "quiet",
+    "finished_utc": "2026-10-04T14:51:36Z"
+  },
+  "manifest_sha256": "c45d768a7cbe5d9ae4407b5d717fc7f6c30555347e34c1cc06bd22c86224ea43",
+  "captures": [
+    {
+      "path": "raw/ablation/draft-1.log.gz",
+      "raw_path": "ablation/draft-1.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/ablation/draft-4.log.gz",
+      "raw_path": "ablation/draft-4.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/ablation/draft-8.log.gz",
+      "raw_path": "ablation/draft-8.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/ablation/results.json.gz",
+      "raw_path": "ablation/results.json",
+      "raw_sha256": "e49c8de3748da43d8be313c1dac5f9c72d0c7770874b046331a60c21b19f7941",
+      "gzip_sha256": "787defb5870e14d7dd80c82e5751c64fa5d8bc864d5d09daca909c1e9eb647fe",
+      "raw_bytes": 497870
+    },
+    {
+      "path": "raw/ablation/target.log.gz",
+      "raw_path": "ablation/target.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/actual-draft-split0-coupled.log.gz",
+      "raw_path": "actual-draft-split0-coupled.log",
+      "raw_sha256": "05e9a5537e8c33c54c471fe81dcd3882cd17b58e1d90c531a50bca642f15d0db",
+      "gzip_sha256": "5a9dd003de82619c380b31770c78841e70f0cea9633ff2138e81390d6861b315",
+      "raw_bytes": 39767
+    },
+    {
+      "path": "raw/actual-draft-split0-greedy.log.gz",
+      "raw_path": "actual-draft-split0-greedy.log",
+      "raw_sha256": "6deed5da9dd047aef8b0448bd93910a36108dde8f559858bb2d8899abee6fe14",
+      "gzip_sha256": "2a431e0257129172e8f7375a9b9fb7385ead30d77b7ecfe4dcd4cd907deea93a",
+      "raw_bytes": 39864
+    },
+    {
+      "path": "raw/actual-draft-split1-coupled.log.gz",
+      "raw_path": "actual-draft-split1-coupled.log",
+      "raw_sha256": "1b2c6a63a3907650df785013ff24bd452c9e2d8df1db3e094b97b4dc6a7f8ebf",
+      "gzip_sha256": "71a40167302ec7759386f1bf64dc9c18869230eb5ec00526d2bf90f693bb3efb",
+      "raw_bytes": 39763
+    },
+    {
+      "path": "raw/actual-draft-split1-greedy.log.gz",
+      "raw_path": "actual-draft-split1-greedy.log",
+      "raw_sha256": "97af98f1ffb58ac235edebecfb66ef850a791630f3623eaa380465638c8d9aa8",
+      "gzip_sha256": "265e57b4fa432d761a05a20839f630ebb5f783f511d3a93e96d9b06f519278fb",
+      "raw_bytes": 39740
+    },
+    {
+      "path": "raw/all-project-artifact-purge-dev.json.gz",
+      "raw_path": "all-project-artifact-purge-dev.json",
+      "raw_sha256": "a5417155860de210160fda66005b1d9a950aeea10affc62c63419cd444b0e973",
+      "gzip_sha256": "cfde59c55dbb02656429d5005c6b2933a0bda45d606644d7c4a0d74915891511",
+      "raw_bytes": 1988
+    },
+    {
+      "path": "raw/all-project-artifact-purge-release.json.gz",
+      "raw_path": "all-project-artifact-purge-release.json",
+      "raw_sha256": "1b5f05830ef7637264ce2679ab476f15d08c77ca126f400408a0c72bf67bfa5c",
+      "gzip_sha256": "437a6bfd692f26c573613bf4f4cd47c3db3d21bd86c69459a04e81234cce3207",
+      "raw_bytes": 2374
+    },
+    {
+      "path": "raw/analysis.json.gz",
+      "raw_path": "analysis.json",
+      "raw_sha256": "66477c656ee45151a4f08d665699305fc33d1340a85134c0b573097910abedd0",
+      "gzip_sha256": "a8a5ced2e2b0d732b992e9b8caeef9a49d36158cd58b8e207fb05811b12c9797",
+      "raw_bytes": 4897
+    },
+    {
+      "path": "raw/check-verbose-before-repair.log.gz",
+      "raw_path": "check-verbose-before-repair.log",
+      "raw_sha256": "46fe17940d2e9e924909d400c199ac54e522abfdc6064224431ada4c9f49a2fd",
+      "gzip_sha256": "12c6d50e4bf55feacefdab9c0c7bcbde1d42623516a583f0389b29df98daf88f",
+      "raw_bytes": 27756
+    },
+    {
+      "path": "raw/check.log.gz",
+      "raw_path": "check.log",
+      "raw_sha256": "20ab913f59c94a71db6963a364c22d445e973995bb89fbcb9f86022f1ebc1e82",
+      "gzip_sha256": "72a664a59a0fe7bc73440e6dc8ea095690b2e65f7d4d018e8c76fd04bb2a172e",
+      "raw_bytes": 1767
+    },
+    {
+      "path": "raw/clippy.log.gz",
+      "raw_path": "clippy.log",
+      "raw_sha256": "5b5151f1651e9b582731768a8d1a82f35896a43cff5856a6482bf1932a4d7f26",
+      "gzip_sha256": "a8d2a228b5ff79138284767d79e6d0ae349f51cd4d1ce394b56d808e71445440",
+      "raw_bytes": 10215
+    },
+    {
+      "path": "raw/default-finish/glm47-flash.log.gz",
+      "raw_path": "default-finish/glm47-flash.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/default-finish/gpt-oss-20b.log.gz",
+      "raw_path": "default-finish/gpt-oss-20b.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/default-finish/llama32-1b.log.gz",
+      "raw_path": "default-finish/llama32-1b.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/default-finish/qwen35-2b.log.gz",
+      "raw_path": "default-finish/qwen35-2b.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/default-finish/results.json.gz",
+      "raw_path": "default-finish/results.json",
+      "raw_sha256": "fecc30a7ef06cc6676fb614cac7ad206d1e01bd8c783ba03d611245650c00372",
+      "gzip_sha256": "9070194a518a5a7795bdf628a4ac9e6ea85d4ae35486626cdb7e29e28a44e765",
+      "raw_bytes": 56931
+    },
+    {
+      "path": "raw/default-four-model-finish.log.gz",
+      "raw_path": "default-four-model-finish.log",
+      "raw_sha256": "02c37ea075a784871b7a63e1340e528256ce970a566fd3ecd2a2281063381832",
+      "gzip_sha256": "7ed60d71f904a59cce7c77e2fa563689b259ae657581bdbda5f14d7ebdb09e09",
+      "raw_bytes": 274
+    },
+    {
+      "path": "raw/live/qwen35-2b-blockcoupled.log.gz",
+      "raw_path": "live/qwen35-2b-blockcoupled.log",
+      "raw_sha256": "d3e58f5749a47137c8d6077b2de02755e5188a0f58f5bc3c1c6bf5698438c763",
+      "gzip_sha256": "8730aaf6c4c051e56dd59b893eabb15405235f7a04d2c14f8552b86a0198e134",
+      "raw_bytes": 180
+    },
+    {
+      "path": "raw/live/qwen35-2b-blockgreedy.log.gz",
+      "raw_path": "live/qwen35-2b-blockgreedy.log",
+      "raw_sha256": "f5bff8b65d62ecc37dcd23d12098b325337103b75033f662c7bef35bca04b910",
+      "gzip_sha256": "4cfff26cf29c260fae63acfec14a9e6af24936e31966d686bbe00d5825856ede",
+      "raw_bytes": 180
+    },
+    {
+      "path": "raw/live/qwen35-2b-blocktarget.log.gz",
+      "raw_path": "live/qwen35-2b-blocktarget.log",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/results.json.gz",
+      "raw_path": "live/results.json",
+      "raw_sha256": "614c550827e95c0cf5d786c9e7a5c4930694c7e271452a378677f8ae7e4f65ca",
+      "gzip_sha256": "7c2bcab29e08329cb2e4225626e6ac9b10eac165a94237070344d00170d095e5",
+      "raw_bytes": 121415
+    },
+    {
+      "path": "raw/manifest.json.gz",
+      "raw_path": "manifest.json",
+      "raw_sha256": "c45d768a7cbe5d9ae4407b5d717fc7f6c30555347e34c1cc06bd22c86224ea43",
+      "gzip_sha256": "5a4170ea24951a73c46357715bdd97a33bc72d7f3cf674884ecacfda19500e00",
+      "raw_bytes": 27782
+    },
+    {
+      "path": "raw/native-build.log.gz",
+      "raw_path": "native-build.log",
+      "raw_sha256": "9002c2734269ac7d3072fb4655d3ee01adc96a78a13d98bf10c9eedd5abf389b",
+      "gzip_sha256": "191dda3e524b029a4c979e5f4487568ed9976ed6f952c516cdb135ab7d5fa4ed",
+      "raw_bytes": 911
+    },
+    {
+      "path": "raw/network.log.gz",
+      "raw_path": "network.log",
+      "raw_sha256": "2add1118a1ab388f90d82a2b4fd0540d23cb717da083ebc524cc7d2c29e3b79b",
+      "gzip_sha256": "8bfabc42bef44f7d6fadf0061ee79e1798499461e718feb1c9941ec5f4f18ce5",
+      "raw_bytes": 667
+    },
+    {
+      "path": "raw/project-artifact-clean-dev.log.gz",
+      "raw_path": "project-artifact-clean-dev.log",
+      "raw_sha256": "fff817d76d8bcdd5693199c9339e64b7899ba101545732d4e3d83370d4abd19a",
+      "gzip_sha256": "40b765989df366207505450b77e9ef0c81255bff79fe57744d4dab76205908dc",
+      "raw_bytes": 37
+    },
+    {
+      "path": "raw/project-artifact-clean-release.log.gz",
+      "raw_path": "project-artifact-clean-release.log",
+      "raw_sha256": "0bdaeb2aa6a92a0fdfec2d2cc4d0ab71946de5d0654e08c526e4629130ae0f28",
+      "gzip_sha256": "94b43c1849676ea7043059d85de5660d3a7cc2c8717a2f1a5f80d98681cd964f",
+      "raw_bytes": 21
+    },
+    {
+      "path": "raw/quiet.log.gz",
+      "raw_path": "quiet.log",
+      "raw_sha256": "7301250063c81b59bfbb63b4f0aed7dbbac8f17d4742013a2399a20bffda02ab",
+      "gzip_sha256": "55f205a641fcf0c790621a4ec1fbae774d4b98ea30ab56037b1d00a96a3ae7fc",
+      "raw_bytes": 4725
+    },
+    {
+      "path": "raw/release-after-all-hashes-purge.log.gz",
+      "raw_path": "release-after-all-hashes-purge.log",
+      "raw_sha256": "8c449df092249886e293973264cac30ea82c0aca497a7bda4b1f0e6776b1a3dc",
+      "gzip_sha256": "39bef9d55ecef8900dcdeab7130bb4eb7c69b39da1df4ad662782966b7fd8d5e",
+      "raw_bytes": 1543
+    },
+    {
+      "path": "raw/release.log.gz",
+      "raw_path": "release.log",
+      "raw_sha256": "2eea381948f03d82214f9e113eee87558ef93222494d585211ebcd2db03d2b9b",
+      "gzip_sha256": "6bb83f14a8aa32ecffad3a93a6fb0f10da8d373f82db2673f922c7950175e4f2",
+      "raw_bytes": 1512
+    },
+    {
+      "path": "raw/workspace.log.gz",
+      "raw_path": "workspace.log",
+      "raw_sha256": "e3b5633604e84b52861c8a1e6e08c9ef2301d5dd3273af5f7f7ee9870bbbb550",
+      "gzip_sha256": "ff746247381a9abf47037773987b25a81605006775ddb9e1d5c918d10e9d083d",
+      "raw_bytes": 31553
+    }
+  ],
+  "harness_sha256": {
+    "check_qwen_serving.py": "d9e011220242f0d8fe165c90e35e2f401a21e237b706f27f7538c2ff8bb09010",
+    "project_build_cache.py": "9ec69dda48f8aa8b0e8a5b9a791a854245e9d627cf83650487551b04e0272a85",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c",
+    "finish_reason_live.py": "0fd806fac367035e14ab6afa3fbf6e45236f7d379af29cbeb4da40289bc4240d",
+    "analyse_qwen_serving.py": "658c36decf1f191f8dc1f1ea4b1a92ece3ae7835cd0f1d36ffc92582ce6403ff",
+    "qwen-serving-harness/benchmark.py": "a8ac73ff84e8d97a873a1d0a21e8a796c9524e339305654837cb8430a1e0d33c",
+    "qwen-serving-harness/live.py": "221de3e3c65c38e78c1373e2891f71f7acddcbd22d8b63c6210f5f49fd00b6b2"
+  },
+  "workspace_tests": {
+    "passed": 299,
+    "failed": 0,
+    "ignored": 1
+  },
+  "limits": [
+    "Original captures are gzip-compressed byte for byte; no models or binaries are included.",
+    "Optional Native/HTTP behavior is bounded by the recorded models and environment.",
+    "Benchmark cwd metadata is not the compiled source identity; manifest source hashes bind the managed checkout."
+  ]
+}
