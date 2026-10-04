@@ -201,7 +201,9 @@ struct ResidentMla {
         launch_quant_kernel(kind,m.weights,m.row_bytes,input,m.cols,m.rows,m.rows,output,stream);
     }
     void normalize(float *input,const float *weight,unsigned width,float *output,const float *residual=nullptr) {
-        gpt_norm_ordered<<<1,256,0,stream>>>(input,weight,cfg.epsilon,width,output,residual);
+        // Stage independent loads/products in parallel, retaining the original
+        // scalar RN sum and the large-width fallback used by GPT-OSS.
+        launch_gpt_ordered_norm(input,weight,cfg.epsilon,width,output,residual,1,stream);
     }
     void enqueue_prepare(unsigned il) {
         const auto &c=cfg;const auto &l=layers[il];unsigned width=c.rank+c.rotary;

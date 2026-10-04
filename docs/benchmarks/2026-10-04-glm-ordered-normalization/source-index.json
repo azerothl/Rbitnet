@@ -1,0 +1,1205 @@
+{
+  "head": "a67a1458fae274a266d358ece31334a465ef1334",
+  "paths": [
+    {
+      "path": "Cargo.lock",
+      "source_bytes_sha256": "fa515b7b4ad6bd17541bde95c5d4a19871eadd11f4c4ba418a46b36011217c5a",
+      "normalized_git_blob_sha256": "a5fad5afe389bcd1bf0debdb5adfb849d7096dfc544b2f59c4bf90d17de92e52"
+    },
+    {
+      "path": "Cargo.toml",
+      "source_bytes_sha256": "76957bf3462796f568c2f5247b3405f1283c6a7e749db0911ae65c4b22e173b8",
+      "normalized_git_blob_sha256": "38790d7e1030b8eed7adacecfd288b01052e57e6650267ceb97c67891aaa48c0"
+    },
+    {
+      "path": "crates/bitnet-core/Cargo.toml",
+      "source_bytes_sha256": "b2566e1b718d8fab7bce8e9161db80747e0d2a6a54c75fb857ec5e85dbe07bbb",
+      "normalized_git_blob_sha256": "d3a1b0a34120a42237bf20d5d459abd2282de25e65111dca21c5103180e82cbf"
+    },
+    {
+      "path": "crates/bitnet-core/benches/kernels.rs",
+      "source_bytes_sha256": "2b59bff5bc595d01d222fdb9875f356f449f1759a5822ffa80051c63342644b2",
+      "normalized_git_blob_sha256": "8f5379840ea32f2e75f43f7db36d8a3a370531dff8180c68bd44b423c0b2fcda"
+    },
+    {
+      "path": "crates/bitnet-core/examples/engine_smoke.rs",
+      "source_bytes_sha256": "6a41353bdff067caf605fcadf9976b7f37fc93bd15f1ea3267a796813fe9ea11",
+      "normalized_git_blob_sha256": "e5d5bf078307c14127ca531765fec1ffa08fb505a16650eb0bbbf9965d956195"
+    },
+    {
+      "path": "crates/bitnet-core/examples/inspect_gguf.rs",
+      "source_bytes_sha256": "e5208cc5cda0a86e28d948d923d52c62c248974e275e914b3d11561f5c387752",
+      "normalized_git_blob_sha256": "1b123d8b56606fbbf2d391d94fca31c69591d46c4901dd63e8dda7138fb56efb"
+    },
+    {
+      "path": "crates/bitnet-core/examples/profile_llama.rs",
+      "source_bytes_sha256": "edf65c4ee9383dd0a4dc833267e37fc73dbfbc15c7f8a8a64c4a7ccafdb21fb9",
+      "normalized_git_blob_sha256": "f5ae3feb2b27bed91771a236bda02992d5151bfeb9d2d2ed3af9069cdbac2206"
+    },
+    {
+      "path": "crates/bitnet-core/examples/ternary_microbench.rs",
+      "source_bytes_sha256": "85ac2a2ab8363639044d72485a7542d6e7cd28670abe4dfab8b419e251dfb309",
+      "normalized_git_blob_sha256": "cda4003acbbeda18934cdb3d61ca4be3fa17af66c00ef07bd29215ef3daf82ba"
+    },
+    {
+      "path": "crates/bitnet-core/examples/tq_dot_microbench.rs",
+      "source_bytes_sha256": "91c38e177cc4e9521901b3d251cf62c0db11c75dbe5a71b32a1d619a07c09fc1",
+      "normalized_git_blob_sha256": "ce8773087f0bbd060d38f974b56f826e84351cd190d050711e9ef358004c9981"
+    },
+    {
+      "path": "crates/bitnet-core/src/backend.rs",
+      "source_bytes_sha256": "7907f0d106c29d6c4df9a9e8b20531b098603b51690b57004a8c77b241abb146",
+      "normalized_git_blob_sha256": "7907f0d106c29d6c4df9a9e8b20531b098603b51690b57004a8c77b241abb146"
+    },
+    {
+      "path": "crates/bitnet-core/src/backend/async_upload.rs",
+      "source_bytes_sha256": "c2317d9ffa8e752e5212c708e31fb597dfda3eb9074d82238d9ddc95f716f272",
+      "normalized_git_blob_sha256": "c2317d9ffa8e752e5212c708e31fb597dfda3eb9074d82238d9ddc95f716f272"
+    },
+    {
+      "path": "crates/bitnet-core/src/backend/device_memory.rs",
+      "source_bytes_sha256": "7a54b3f369905c56b9e0a9b5a0950469a7e54251a644ef72b67049aa70975ea0",
+      "normalized_git_blob_sha256": "26176e2ac7d0cfe4841d62d71d586f94843bf0bcd3c80eec97851ccf1f6c3c39"
+    },
+    {
+      "path": "crates/bitnet-core/src/backend/expert_arena.rs",
+      "source_bytes_sha256": "c8ef7deb8712eb56f71738a02045594e080f255470b38e62af46c58d69834f08",
+      "normalized_git_blob_sha256": "c8ef7deb8712eb56f71738a02045594e080f255470b38e62af46c58d69834f08"
+    },
+    {
+      "path": "crates/bitnet-core/src/backend/mapped_quant_tests.rs",
+      "source_bytes_sha256": "2c30aeafb6397784d8e8aa4e37d41fe346f740427db6d9880c88463d8a37e6b6",
+      "normalized_git_blob_sha256": "02af63fc8d479ff40816a2ef2f801c04cc3158f977123ab366b5226078001365"
+    },
+    {
+      "path": "crates/bitnet-core/src/cancel.rs",
+      "source_bytes_sha256": "ee3d742ce7d39e792d17cdbfe3d7b88669db27419cb76b72e8a563bdd721ac46",
+      "normalized_git_blob_sha256": "f4024597a6146ebbeeaaf4bcc08815dd3374b9ac1a11246f79465a888a9e2ade"
+    },
+    {
+      "path": "crates/bitnet-core/src/context_capacity.rs",
+      "source_bytes_sha256": "31bcbc9337db7f5195fc194a8d90b0951f3c1f027aa829b86d880c42eabadc87",
+      "normalized_git_blob_sha256": "4a0b38b54d4e13abb65ad7c27d2d60afd4bda9acdcdef13aa934d88e1404ddb8"
+    },
+    {
+      "path": "crates/bitnet-core/src/context_native.rs",
+      "source_bytes_sha256": "a4aa5ab6005e0c4ebd3ced17e60142baf53281f8d7dd5a17c3495396ddfc4ed5",
+      "normalized_git_blob_sha256": "9842a6d0764412216d20cd405379fa62e2a99e53b958e4fde71e0aaea4067d1a"
+    },
+    {
+      "path": "crates/bitnet-core/src/context_tiers.rs",
+      "source_bytes_sha256": "6d37654e710d3c2c86564b997bc01adce6abdbbf2e34c251d7adcc8658cb8b57",
+      "normalized_git_blob_sha256": "895f57415111d9f489a98365293c8ed7bbf01117b9cd9ce8cfcb3647ed024e48"
+    },
+    {
+      "path": "crates/bitnet-core/src/context_tiers/global_quota.rs",
+      "source_bytes_sha256": "1dc2375afc83804ad8248009e1eac1bfdf987b975f5422a48e63b060eee4db7f",
+      "normalized_git_blob_sha256": "c59ec6841381966acebb9c7d765578773ea11eda3f29f854913b547d8f97954b"
+    },
+    {
+      "path": "crates/bitnet-core/src/deepseek2/config.rs",
+      "source_bytes_sha256": "a5e6ca41feed2aae92b7e28cddd41d38a2f56f2ef4a8fb210dcc923e66509b1a",
+      "normalized_git_blob_sha256": "21b88b5de5fb5380606ad00404c8c2d4b2c7486a614f7621ad07b1cf64907201"
+    },
+    {
+      "path": "crates/bitnet-core/src/deepseek2/dispatch.rs",
+      "source_bytes_sha256": "1ed2d994896f0c64a249b81495d8f8e1bab54e9c95a59b72166238aa91a83480",
+      "normalized_git_blob_sha256": "b4c8ec820b7ed3365ce9d540c6a5118c368a92a305d39c5433ec93810a5f7b0f"
+    },
+    {
+      "path": "crates/bitnet-core/src/deepseek2/mod.rs",
+      "source_bytes_sha256": "cf32dc37344c49859116a5e0f2a0ae7e8f26d613f07f64df6c9589a43747ee40",
+      "normalized_git_blob_sha256": "15f397a871a92aa2157cbd652233b352ddb926f1cb5eb66dec8361f117f5da28"
+    },
+    {
+      "path": "crates/bitnet-core/src/error.rs",
+      "source_bytes_sha256": "7654f2cdfb43fd5d936a0d8466093eefd3a6ae3d292b2196a6d853d2f8acb886",
+      "normalized_git_blob_sha256": "6afc46d10a1ba28ad9bc898cc8c320228b6b4bec88227adf6330505f14d28abf"
+    },
+    {
+      "path": "crates/bitnet-core/src/experimental_flashinfer.rs",
+      "source_bytes_sha256": "5b97f3743698d8a20605efff1043f3159d1ece941494aa58dbcad79ca0d005a6",
+      "normalized_git_blob_sha256": "00de4e8b478b4e34c79a02983f3371c53bdcfee908f3e04e4f5e079c0ab35c6d"
+    },
+    {
+      "path": "crates/bitnet-core/src/fused_batch.rs",
+      "source_bytes_sha256": "e6960a68f26e50c689028739531cbe107f6ac739d0c47088a37300535841549d",
+      "normalized_git_blob_sha256": "21cda007c58120c684ac383ea21509c142c97fdc1e1a3ff2048caaf23bb65fbb"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/dequant.rs",
+      "source_bytes_sha256": "deef054c4a03d12ac298f3d4ac153a0e925c78db4882272851ce6cf9dd995511",
+      "normalized_git_blob_sha256": "fd320556b9f9b18dece3f49a5c84d4727c2e8be438fb9f102342d5619791710c"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/mod.rs",
+      "source_bytes_sha256": "218edd986c44de059e9e66d0c8e73edca3275af1da92f89b1089d9481b5f8d7c",
+      "normalized_git_blob_sha256": "ba36314e0636d50040acdb33a7ae74dee921c07d2c160290e65c6c97587feab7"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/quant_dot.rs",
+      "source_bytes_sha256": "f86b0cb01e60774c3a5dcd5f710c9a8ee799d121ad7f7eb33a6d96365035d264",
+      "normalized_git_blob_sha256": "40d41e1ffa5d84c0769e3f7878ef2a583d46884a1fbc48c598ac22b55dacd322"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/quant_simd.rs",
+      "source_bytes_sha256": "88007c9bdcdde82eb690ae32e58732d9d6e2cec0d6861e7b646781e89e1086fc",
+      "normalized_git_blob_sha256": "b02d70221d1ea5c4337b4088300a01d7d1c79fe935897bd3e2bcf1a25218f32d"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/simd.rs",
+      "source_bytes_sha256": "eb3c0e69fc91c6532f49c6b36ec8a995a66fd66d030c641ad52d8a4e5881500b",
+      "normalized_git_blob_sha256": "7e276e9c7c59aad4616d492e1d0c9b9f1599d183ac70f80e2c3d23394b30340a"
+    },
+    {
+      "path": "crates/bitnet-core/src/ggml/types.rs",
+      "source_bytes_sha256": "fbde7b7dd949ccde43e59b630e9b0950b730dbd1ce1f4113e4084072a5c31fa3",
+      "normalized_git_blob_sha256": "6cea2633bc89b7655d3147bafc0f531197d618254a2849e537a96072971f6122"
+    },
+    {
+      "path": "crates/bitnet-core/src/gguf/bitnet_meta.rs",
+      "source_bytes_sha256": "6bfa8fb885e790a31d220d32365540f5b3b43da19b7aa121a739ca8147b3c36c",
+      "normalized_git_blob_sha256": "31dfdb8cadac942ab40209662836c8776c102b0c0b0d1b8cdc19d53aecafb113"
+    },
+    {
+      "path": "crates/bitnet-core/src/gguf/mod.rs",
+      "source_bytes_sha256": "afc59685fa1c8cfa56f0fd4580196159d5bbc3f7061199b722bad345119ed379",
+      "normalized_git_blob_sha256": "722da74ee9be87cc6794de1aa6e511f301b6f8b3257a65af88f6689851f787be"
+    },
+    {
+      "path": "crates/bitnet-core/src/gguf/parse.rs",
+      "source_bytes_sha256": "403dc202dd1ad01beb00841dbd66eabfff31151daf1020f666706b07d8b0d08c",
+      "normalized_git_blob_sha256": "69f3a1ab4b138178bc808b0ebb7c0b60892a0e16ce2df39272255d849595a040"
+    },
+    {
+      "path": "crates/bitnet-core/src/glm4_moe/config.rs",
+      "source_bytes_sha256": "bc251911c0132ed77815e540c602fe4d3219f43f307551e3a506eae795b465d1",
+      "normalized_git_blob_sha256": "0e04005570814e2addb95d0450456778278ab162ce9b90f0164e46e287b1ff83"
+    },
+    {
+      "path": "crates/bitnet-core/src/glm4_moe/dispatch.rs",
+      "source_bytes_sha256": "dd87f25948f1fe66cbfd1156efecc37b3a0ea1d0c4df48a2d8eadd24c96b6121",
+      "normalized_git_blob_sha256": "dbe7f02852dd6c9fc54febd383303562b0969be93ab2846d7199ba7a42b6af37"
+    },
+    {
+      "path": "crates/bitnet-core/src/glm4_moe/mod.rs",
+      "source_bytes_sha256": "284cbf6651e9303c19510d0cad24e588e7361574d7cf6f38d501c15c7a2b3b7d",
+      "normalized_git_blob_sha256": "b1da0413e7dbb142e8ed3e7f6b37bf56531784a502d017193154e5c7cd86be1d"
+    },
+    {
+      "path": "crates/bitnet-core/src/gpt_oss/config.rs",
+      "source_bytes_sha256": "ccc78a04af8b449ea53671bf7251f6e5f4ae949d6765e72b12ec532ce86d1535",
+      "normalized_git_blob_sha256": "6cd4210a7bf3379ccfa06e9967d7a09ad8d27a8086952fa44a3d5444e212a0f6"
+    },
+    {
+      "path": "crates/bitnet-core/src/gpt_oss/dispatch.rs",
+      "source_bytes_sha256": "f143ee6e69b8e2bf5794816dd42a494ee1316e1159c06c678adb4fe41943d5bf",
+      "normalized_git_blob_sha256": "a5a18d9cf519743055d4693f5c1f4a34496c26044cfdab84643477fda48dd374"
+    },
+    {
+      "path": "crates/bitnet-core/src/gpt_oss/mod.rs",
+      "source_bytes_sha256": "f3a1619ea802f53038430822d62d3d3fb31aa9e8f3c40d3f0f8bcaf37047e69d",
+      "normalized_git_blob_sha256": "7cf42e224ea0275bbbe0e8553da3a78a458d555241e79b0a42aa2ff6898aa3e7"
+    },
+    {
+      "path": "crates/bitnet-core/src/inference.rs",
+      "source_bytes_sha256": "e4cac2c6de699e743bec763f6492a6a390684528cd739ae2e30c4ab611d45927",
+      "normalized_git_blob_sha256": "e4954907424f3e2dbead41e68eca2d24442f88145258181d9065fc092bab7d12"
+    },
+    {
+      "path": "crates/bitnet-core/src/inference_session.rs",
+      "source_bytes_sha256": "953c218c96a4e91758d877644a4221e561618a7c2e0bbeb11df1f5ccb45c4791",
+      "normalized_git_blob_sha256": "0498b47f768037d7523032d525f7d61878e8caac8bb818921b89646840e547a7"
+    },
+    {
+      "path": "crates/bitnet-core/src/kernels.rs",
+      "source_bytes_sha256": "a70a0bedc5a24297b2cb8b5c585cb03e45a3b3235a1843b103a3ac4bbe883402",
+      "normalized_git_blob_sha256": "5518a2d1fd5a96edef222b78e95a0e0f4ef77fd7648b47928d64b99f23c404e8"
+    },
+    {
+      "path": "crates/bitnet-core/src/kv_pool.rs",
+      "source_bytes_sha256": "98c9938b0146f213889f870cf103c37172a039f1fc15fde7856bb194cb1c4f21",
+      "normalized_git_blob_sha256": "9a5a7443c9d836391bee7133559af92b811d68a7c9fd734314db3bc75143a413"
+    },
+    {
+      "path": "crates/bitnet-core/src/kv_sidecar.rs",
+      "source_bytes_sha256": "ad733c5a511d1e822430b03643cb187e42704fc72db71083f81b98c4a0fb53b6",
+      "normalized_git_blob_sha256": "616b6aca07a1c27051be8d05e3e6ef4039a7a6ad6c0dce0093ce9c195dc91a15"
+    },
+    {
+      "path": "crates/bitnet-core/src/lib.rs",
+      "source_bytes_sha256": "7bdc481c901dc805c8b90fda9ad9f81567b564d0e876bf7334e1a209d169757a",
+      "normalized_git_blob_sha256": "4586a10ab78b68beb6b96154e961beb01546849dd9267a60ab56bc4c8ad13d8b"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/blas_runtime.rs",
+      "source_bytes_sha256": "f6761d527fb373fca4854d925e1717cb33c05fbe399ebbc6651176d8177916b2",
+      "normalized_git_blob_sha256": "467fd34a814f3fbd67b053926be72b1ef3a598d5c6d39e6540f71288764ff422"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/config.rs",
+      "source_bytes_sha256": "952378fa8d7be463ee8d4b5ed72dd49d08854be9f324474578f53f74d75ca69f",
+      "normalized_git_blob_sha256": "4e916ba933c990c1716568e07af36097df4aad225d89b05aa7ad3f2dcf2d92dd"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/cuda_graph.rs",
+      "source_bytes_sha256": "c4aebcf059d1f0b1e336fcc1df59690cd36981f9ee79179d0fc092c4d3f204bb",
+      "normalized_git_blob_sha256": "57d91663d2d061fe499c6bb49536d11f3e8160164566214d2811969c130a97fc"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/fusion.rs",
+      "source_bytes_sha256": "6926c9724c9ff4fa03cf73fe6b2d5dd48a79a376e5d9caf8b9ca285f20d430b0",
+      "normalized_git_blob_sha256": "cc803ff923109611050f164cdeabef16da3a58dfca6ea570ff6527a5db9f7706"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/ggml_bridge.rs",
+      "source_bytes_sha256": "ceb5c110f9b067679c1a8cec673ec51ec83c0b4c55ae599c3a8b5d1995c3a545",
+      "normalized_git_blob_sha256": "7cfe2c7a8a93782890fd150011198379b35d674aaaa8969666e8a5bdcc058cf5"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/kv_storage.rs",
+      "source_bytes_sha256": "04dd3ad6595b71991bb4e078130bb22a936033a7d3fec6e4814162e2d6653923",
+      "normalized_git_blob_sha256": "efe79e022d0ca9fb9b3cabc4e6d83fd70deeb5379a00d0be79202752a226cd6c"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/mod.rs",
+      "source_bytes_sha256": "02a754d808252eddb772db6f0a9076614494a43642226e812d039d9b3da85e2c",
+      "normalized_git_blob_sha256": "1993c660492c4bbcec0b6e588ecd53a49e4bbda6dc7933730544ece2887c8c52"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/model.rs",
+      "source_bytes_sha256": "6cbfa566bb80bf23aa3ee4a84772f4508682eb600b1522e7503b762a22745ca0",
+      "normalized_git_blob_sha256": "542a86b13f0268099924c913ed7f7c4f8ab892161dd8e3b635f86d4de2ff08c1"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/profile.rs",
+      "source_bytes_sha256": "32ae3a3d8eae57ee50cb3fa0f98baaadeffc028fa1be0acef12ab177d78e17f0",
+      "normalized_git_blob_sha256": "41e615561f091e8fd17721c68852f7be6ba4e64fa10e1ea72de247c43c4c8354"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident.rs",
+      "source_bytes_sha256": "2e7acaddf0e2c7439c9bebbe5d57d2a51dc61832a8d2298edd88e0e67a95f939",
+      "normalized_git_blob_sha256": "2e7acaddf0e2c7439c9bebbe5d57d2a51dc61832a8d2298edd88e0e67a95f939"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/canonical_tests.rs",
+      "source_bytes_sha256": "e70fac9a89f0bf3bd30e1ec56c84eafc44a3212a05e0f533bf847486aaf7477f",
+      "normalized_git_blob_sha256": "e70fac9a89f0bf3bd30e1ec56c84eafc44a3212a05e0f533bf847486aaf7477f"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/context_tests.rs",
+      "source_bytes_sha256": "7f9e5e1736d8f3176c35a7f34edd495eb8d36b295010d5b1d49160e291afd88c",
+      "normalized_git_blob_sha256": "17fa4b548397d7904f479b8f864499cc50bd16b8397d289efc9b35798d51d478"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/continuous.rs",
+      "source_bytes_sha256": "029f99457878b8cc48b46ae557c1e18fbc1d42c1e9035cd1ecb58f2092990aee",
+      "normalized_git_blob_sha256": "4499efe220046cb0f6acf4f5382d6b034a05b46c5f06601b8c8c7ab83240d470"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/continuous_tests.rs",
+      "source_bytes_sha256": "560fff8bb975cced7347095d413a6cedd542b2f06a06a3669a378b8cb7d3b076",
+      "normalized_git_blob_sha256": "583e7011aff1f1a0e8b3e29b5520f0fd01a98ac2761fd2ebac77908ceedbe132"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/controller.rs",
+      "source_bytes_sha256": "65f5d89675780b5cf6542c4650ec4eb26905d55b9c3623f057309117563ae6f0",
+      "normalized_git_blob_sha256": "7cdf30296a4b5bf0f015f9dba610a937b01e0cf094220189e0910fc6ad387df2"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/encoded_guard_tests.rs",
+      "source_bytes_sha256": "e00638db2a719047cd9795383aea17dc404ff14339a3f31a42036eb502e31a03",
+      "normalized_git_blob_sha256": "d90798ea03dca31803ff679d2221b245647cbbf59a321bfe5fd785145951d7af"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/integration_guard_tests.rs",
+      "source_bytes_sha256": "4269fd2fc204ed43409d09c7e06214409c6e001733d21596d45975fd087cc113",
+      "normalized_git_blob_sha256": "03cb13f6fc89b07e658ca25bbb331524e80c7923d4a3a6a97548a51ec6185153"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/paged_tests.rs",
+      "source_bytes_sha256": "656a41e0894bf6d7f5e8df11a7dbfe6e5a0ee9e2cf23e5a05f2c34919d407847",
+      "normalized_git_blob_sha256": "53bb3c6312a008ab585c65b004652630efa227d6cfc15d60c791ec43d3b0262e"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/quantized_long_tests.rs",
+      "source_bytes_sha256": "63cb58796611a1cd96ba75912c2ba39a3585e5dc1ff44183a8400b9e8bb541a4",
+      "normalized_git_blob_sha256": "63cb58796611a1cd96ba75912c2ba39a3585e5dc1ff44183a8400b9e8bb541a4"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/quantized_tests.rs",
+      "source_bytes_sha256": "2bd311b16fcb188547ce14a9ce3c1990b9f4f1726ea7177d57db5f4713445d49",
+      "normalized_git_blob_sha256": "2bd311b16fcb188547ce14a9ce3c1990b9f4f1726ea7177d57db5f4713445d49"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/resident/transient_batch.rs",
+      "source_bytes_sha256": "9718ddc704172546020029ab466ed4042f110b9ba228e1f2db966d980071e0c9",
+      "normalized_git_blob_sha256": "0891686c9cad4bf9596db75012566a000f14395de469ba68b9ea5d95064922dd"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/runtime.rs",
+      "source_bytes_sha256": "2b8a4b3e5ab14b5525b4598dd5bdbead8f99b2f37ac5f25996eb56b53341136a",
+      "normalized_git_blob_sha256": "2b8a4b3e5ab14b5525b4598dd5bdbead8f99b2f37ac5f25996eb56b53341136a"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/slim_attention.rs",
+      "source_bytes_sha256": "b98649ef88abb5a75da458fbeeee49ae30aa15c2cf3b3c7359aec4cc3d51e08a",
+      "normalized_git_blob_sha256": "bf0d7a247020511e4832596815f0c92ef56ecac4049addebcd23a2f5e4516314"
+    },
+    {
+      "path": "crates/bitnet-core/src/llama/speculative.rs",
+      "source_bytes_sha256": "3d635c9a5cf7ed4300cfb323758e0e4e45115692c6b514cd681e3d7afdc53741",
+      "normalized_git_blob_sha256": "fccecb353603e38cce3a00d0fa7ef09262ad3e4b0811bca045c51f92a52aff38"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/arch_key.rs",
+      "source_bytes_sha256": "46dbac250faeab5ea96de8a2e246c96d94cd15dc4ea34271f3cfd1e5847a714b",
+      "normalized_git_blob_sha256": "078ce4ff9da0f244c72cb6ea1955c19c7f19abc28b268ecb15cd4a1fcbb1b52a"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/bitnet.rs",
+      "source_bytes_sha256": "9b007540abae48beae437dcd530a0ef16c6419a530827b013a7a5d78f973fbd2",
+      "normalized_git_blob_sha256": "e13d11d90e4464e9c1744f72f6df57c10302f0e985f28450e9dd064e0e76718e"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/llama.rs",
+      "source_bytes_sha256": "1577d8df4099efe8ed725a3eef387dc0da49637da8d4b6259b83711db13ed7cc",
+      "normalized_git_blob_sha256": "dc0868142cfdc10cfcca1ab3c5ece60b8fcd0ed88ee6a798b8fbf60a34008782"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/mixtral.rs",
+      "source_bytes_sha256": "27bcacd870b5273fe57d5bc8e219a0d27357943fff416f1dbb4cb9e8a384756d",
+      "normalized_git_blob_sha256": "2d83e23b5abf2c8302d5cb4452e84d2c6033ea296fa038a9b041a59a9493e40b"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/mod.rs",
+      "source_bytes_sha256": "13ee04aa57847fa278bceb86955b547d78e086716ab10ba21a022ba2fa84afdb",
+      "normalized_git_blob_sha256": "79f6e411170bf0c9ccdfb0385485666fc24d00552252b582ca5c3d2e173659c8"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/prompt_tokenizer.rs",
+      "source_bytes_sha256": "45413458a67f1b89b16c608b83396c27497d453ce3b8ba95057009de1232f621",
+      "normalized_git_blob_sha256": "efcd14fefa714a3476de032bd567a6df221bf65e5d1a622d857c229a1ff70c30"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/prompt_tokenizer/sentencepiece_codec.rs",
+      "source_bytes_sha256": "ed4562e92e183a659db7544c982bb52e4299f8109a49a9903e63c7c8c285615a",
+      "normalized_git_blob_sha256": "654876c1956d67df5e323ce2cdb985dc4edb3c4ab4e74fcc60d5a9cfbdf47872"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/qwen3.rs",
+      "source_bytes_sha256": "67ba8204621849c89726415f889db8f9dba9ac13f0ec458689eab101c1d2c1fa",
+      "normalized_git_blob_sha256": "cf08e7cd91e19c77d01c058aee608232209e269c780b6c01b259c501d1bcd4ac"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/qwen35.rs",
+      "source_bytes_sha256": "aeca6d8bb863b8531aa93410c514ad22ae0d5236c33b29763df663012b8815d5",
+      "normalized_git_blob_sha256": "540ac0f992704ca1f0835fa38cfcd794c7c25c26b4c240c0bb606968721fb52d"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/registry.rs",
+      "source_bytes_sha256": "f4bcc473c283b1769724f7347d5cc647733593ed02f9f02c93a2e8cc2110ff6e",
+      "normalized_git_blob_sha256": "224d27f66edd982e5dd9d65e9a980792eb7a51edbddbf044ec8e5d5e4cc415d1"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/roadmap_unsupported.rs",
+      "source_bytes_sha256": "1a5dce2e7acee0d60c6a22d9034b2c54536d7b3c7516174d1782c4e8486cd346",
+      "normalized_git_blob_sha256": "9d314f11b37c6a8c2c42d79747d621759e0a24f1b8d8645dd079878f5b7b2a17"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/test_lock.rs",
+      "source_bytes_sha256": "f2e1bb993712a4987f1c3958b9bb6d437a2b2d379055fb40f3e99395bba2dc74",
+      "normalized_git_blob_sha256": "5b57fa06e4764cce060beccb26c1547f5adc756515f064297401bc14442f0a5f"
+    },
+    {
+      "path": "crates/bitnet-core/src/loaders/tokenizer.rs",
+      "source_bytes_sha256": "1f3547249f7b55e8ef73d0cdae4ffe348f3e91de9aaf0e631888de6cb26ae8f3",
+      "normalized_git_blob_sha256": "62aef2d2a798301b0ecf9864e79dcbf0f440cd51fcfdda79e348053bd80a00e8"
+    },
+    {
+      "path": "crates/bitnet-core/src/memory_budget.rs",
+      "source_bytes_sha256": "7bbc2e874d9f7daf796ec6ac7a6a559c62676a8d2ebf327d3a95d20a50f38133",
+      "normalized_git_blob_sha256": "973e520ae27b8518f53adcc463ac877b94b811edb313e7f9ebf95c2375c24de9"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/ci_fixture.rs",
+      "source_bytes_sha256": "bdaf073ab99f0fdaf8d4a3ffb31163943e22fbcb747af6ddbe600c6e4c7717d8",
+      "normalized_git_blob_sha256": "a4f48e09a1c39c668bec9eee77ed37ae2d823a56e00f5c38410234d14a5a1333"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/config.rs",
+      "source_bytes_sha256": "fe0e83468f37aebc1e268ff299e1afec6022b6a9d71b39f3f3c57e5f273def81",
+      "normalized_git_blob_sha256": "0759e9e8a85ac0943905babf097d6e4844f1ac238cca3f4873658c22aa1c636f"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/executor.rs",
+      "source_bytes_sha256": "8e61cfdd3eed974aac873ef8f6d6ee056c27aff0dbbcb0b355760acdee7dda07",
+      "normalized_git_blob_sha256": "f577fdf6a39bb4332928d3fb1131b5931c7c46b5f4585d41596604b5718e7d61"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/mod.rs",
+      "source_bytes_sha256": "9cddf69be27652e42360fc8a137df46a01df2ffaee86c476942c5b35f38a2cf7",
+      "normalized_git_blob_sha256": "68cbb387964d569cf414aedd7fdd20d7236fd964dc4023de862cbd881e64baa4"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/moe.rs",
+      "source_bytes_sha256": "e7ceb092d303f43b26f30f659fb2a61cdae94ae377d862ee96ee835c75f78795",
+      "normalized_git_blob_sha256": "723002dfd20a37192a71e0c764ca1146126197187babe50fce4dad16d4303719"
+    },
+    {
+      "path": "crates/bitnet-core/src/mixtral/runtime.rs",
+      "source_bytes_sha256": "afa927a8c6e82e62933f7d85ac5f46b83b434c87f2bf18b2bd79f042a997dc3f",
+      "normalized_git_blob_sha256": "0768fe9489812ba9da5e3922c8e76685cfda6cd85a5560e27c044a9e243a69aa"
+    },
+    {
+      "path": "crates/bitnet-core/src/model/executor.rs",
+      "source_bytes_sha256": "b5c2eee260ef3f0ea3c77c50bd0fb28d2abac18d186375d481d8dcce7bd04950",
+      "normalized_git_blob_sha256": "2cfbf00074548a0ce732bc8baf7f41dee738089fb0680df3197f8d2142419d65"
+    },
+    {
+      "path": "crates/bitnet-core/src/model/mod.rs",
+      "source_bytes_sha256": "7527caaeb672817d1c7e939aa2404b180d9e5f38524f6258d4abac5cf1e259ee",
+      "normalized_git_blob_sha256": "a31b5b7b3e67ed5cdf84583c7cbf68b457e2435c9056c2107e94fa95dfd4d46e"
+    },
+    {
+      "path": "crates/bitnet-core/src/model/toy.rs",
+      "source_bytes_sha256": "cf64acfbf0e2f0499cc41cab00e54d29dc2079128455958d1a6be0b623d7eed7",
+      "normalized_git_blob_sha256": "6d0a457bf857c60eba45bbcd1bf21934a4c8bd1705bb4986eaec71c952771a8c"
+    },
+    {
+      "path": "crates/bitnet-core/src/model_manager.rs",
+      "source_bytes_sha256": "4066c630eae5afb342c44e5bd8f0dda2e58a841d6e20dd93bec87f5a2d666408",
+      "normalized_git_blob_sha256": "4bf0dc4f184971cebd175f3c5bc5de7715618c67c2e57933868aac87a19be880"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/async_config_tests.rs",
+      "source_bytes_sha256": "a9862867d728fef716349d1215ac7cafa2596fe601f992671b9d469902a7ad62",
+      "normalized_git_blob_sha256": "fae55ab700672aa246d95e4a242a94ef1bedaa41fa722f4482d8e4f780738a86"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/async_profile_tests.rs",
+      "source_bytes_sha256": "5adad28795c25cf67e3ed0042b1bd67de65330ad0425f84a377cdf64a78617bf",
+      "normalized_git_blob_sha256": "4a065cc69659fa66bee478f97d8cd91927de8b296560bbbc9464a307a80df238"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/async_runtime_tests.rs",
+      "source_bytes_sha256": "3c1f4464bfe0048adc4db35e6dea957ec9d0b1430e7fd9bce94f341871faf597",
+      "normalized_git_blob_sha256": "3c1f4464bfe0048adc4db35e6dea957ec9d0b1430e7fd9bce94f341871faf597"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/attention.rs",
+      "source_bytes_sha256": "22304e1c308ee7d26a6d78303836abbdd0c6dce1eacf28d6ae6129a1bd4c3080",
+      "normalized_git_blob_sha256": "b4a69bfb8378cb34fa6f08ae423e833a741fc5f465878eff486c1885104d25b6"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/cache_policy.rs",
+      "source_bytes_sha256": "2b1d4c7e0ea8c70208fa388538eeb59371c772f3db43c14fddda293233747c29",
+      "normalized_git_blob_sha256": "7ef157fe6f2c6bef2fec49748fc0b46628495069be2bce9d4accc7346cf9da01"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/expert_cache.rs",
+      "source_bytes_sha256": "a6624df39b383eac65f7f6c6fb9fdf0a9358bbb9004c29b5f36494eb3f5b2b68",
+      "normalized_git_blob_sha256": "011540a781ddec07a522cb36be5e4bd4b0acfaf486111b2e8b5d4542d99beddf"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/expert_cache/async_cache.rs",
+      "source_bytes_sha256": "1ddfabf72d44073c175749ca98f09e5e2ad0724b0f588e846d6828b34d04eab1",
+      "normalized_git_blob_sha256": "1ddfabf72d44073c175749ca98f09e5e2ad0724b0f588e846d6828b34d04eab1"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/expert_cache/async_cache/arena_tests.rs",
+      "source_bytes_sha256": "56e66a0502e81f81b087a506a8cf72140e61b200abc2a379c74fe006ab57f5d9",
+      "normalized_git_blob_sha256": "56e66a0502e81f81b087a506a8cf72140e61b200abc2a379c74fe006ab57f5d9"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/expert_cache/async_cache/tests.rs",
+      "source_bytes_sha256": "7ded3ee6fc9a446cf997fac4f63fe3b734ff9b744b7b33f9b0cf2fb77907d9e0",
+      "normalized_git_blob_sha256": "0b45fbd5d9df3df99cc9cf64459243cdc6bdcce12542ebd21e0f2cb6a499105a"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/fused_tests.rs",
+      "source_bytes_sha256": "60dbf54a17cafe380fac2a9db6084d0a1a8613ac8c5a7c9db2d1e8d85542dcd7",
+      "normalized_git_blob_sha256": "9039e67a5fc7a0bf5e8a772ceb8d722b56b4a4857f6b1e327b970032b10a8190"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_block_runtime_tests.rs",
+      "source_bytes_sha256": "1046797eb5c1db783224e45469b03dfe51257fc250e3be4701138cf8a741c276",
+      "normalized_git_blob_sha256": "dd02e3fc4a6f71c21cf84c8ca1e668b9feb7ee024201f63371cd6c9aa2fb85e0"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_block_tests.rs",
+      "source_bytes_sha256": "18b80efb0616e79ce6fca0e731879df137e6a3a27c08feb1150dc379866df019",
+      "normalized_git_blob_sha256": "1fe17dbceec28c1a00c1fa0a2dabc69ee0b04323f1f17b7e0829c5f04afbd86a"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_full.rs",
+      "source_bytes_sha256": "20479ddecaf406babd2e2afd13c16c9d93468222519b469b872de52414036820",
+      "normalized_git_blob_sha256": "86077a2d89860752bf47ee1a1020f2a88ce6c4285ab20667827c3e33ea3da992"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_norm_runtime_tests.rs",
+      "source_bytes_sha256": "154bfb6096f624ee2851177127b23c2745f572824eea7cc7e446d02cfac63c4f",
+      "normalized_git_blob_sha256": "154bfb6096f624ee2851177127b23c2745f572824eea7cc7e446d02cfac63c4f"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_norm_tests.rs",
+      "source_bytes_sha256": "752468fd1a104a1f0c012b4baea04c1d681c470fc8d90bc080bb493e39d340d3",
+      "normalized_git_blob_sha256": "752468fd1a104a1f0c012b4baea04c1d681c470fc8d90bc080bb493e39d340d3"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_segmented_runtime_tests.rs",
+      "source_bytes_sha256": "07a37505a2e160c1a19f3619a53abb5fa96441f11721ecd49ad72e98d080a704",
+      "normalized_git_blob_sha256": "638c2f7577d6892be60e11e44df7875a01a4402ef39c3f9be7df3523859e2c4d"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/gpt_segmented_tests.rs",
+      "source_bytes_sha256": "6d02b1e5f8422e7fa16cac1d9063951d0ab35b8e42cd3355a3345e4cd898d930",
+      "normalized_git_blob_sha256": "0da292d20ddc42edfbea2691b337018d3f25a3cf730fa4fd6f48019830edeb20"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/graph.rs",
+      "source_bytes_sha256": "0fd4de56c0a47318f1f9104278955f67ea096aa0e652d2738e58e2237368166f",
+      "normalized_git_blob_sha256": "e1c1e85a704e4b872cf7a5e4fd69c63068969123997fd26aa4d0239635f5ea2d"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/grouped_tests.rs",
+      "source_bytes_sha256": "be91f65239c7092e9240c0c22fb2e8f142503cdeba01668e4a73a28ff535866d",
+      "normalized_git_blob_sha256": "bfe35901e9369d867b72c79c9c3cfae17a288fc3910137f73fb98f16ea9bd36c"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/head.rs",
+      "source_bytes_sha256": "e403b5907faff451591b3bb9f0c03ed8d313fc14760cb872fecd1e81ed52d470",
+      "normalized_git_blob_sha256": "08c4acf28cdb74a73849658b9270ec70786d3d52e0e562db0881f46072f90bc8"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/mla_full.rs",
+      "source_bytes_sha256": "8f7e019f44b18bcdcaab26e7f6d139f816f94719c6b9463ac3912ba2b96bc475",
+      "normalized_git_blob_sha256": "291b8f01716beb3799778b6ebaaf9b91ee4dd486837030b4ae6883b8815cb5db"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/mla_full_tests.rs",
+      "source_bytes_sha256": "7f16c8df6ca2b8e202a8b490a1d0bdf563f898113bace27530dce0e3b7b8673a",
+      "normalized_git_blob_sha256": "36be2923ed9025fc79664cfd6ca42aa4160c5668215b535f3000789982969fb9"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/mla_runtime_tests.rs",
+      "source_bytes_sha256": "5f4c774ab12480ef8688d8257b0f1ae10c443edaee0d584d3846eb9030330045",
+      "normalized_git_blob_sha256": "52407250389db1d7e2aa0951eb9f6429eedaf88c2dae2a17223115dcfd71fdbb"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/mod.rs",
+      "source_bytes_sha256": "d64daad6a25d796b317f8654a6679aa8c66a217cb5652d1382b3fb6dd96cb40c",
+      "normalized_git_blob_sha256": "bb3bf15e8e20a3629d4c59d19f22879927e792ce939042ce29502d5544dbfd6e"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/moe.rs",
+      "source_bytes_sha256": "dc93fa43f667df93c21a093a824abdde9912539130b9f3d50047a03dedc85a7e",
+      "normalized_git_blob_sha256": "e964959d306c5965f82975f6dfea7705fb8538eaf39a227dd13d73c17060f431"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/moe_cost.rs",
+      "source_bytes_sha256": "5e5e5a5dad544e89001e9fb6b7de0832a4b80d47cd1b512d58745f34eb94132c",
+      "normalized_git_blob_sha256": "0639c78e102e251422428179a83275fae4df2bc5d4d93dba6981a1d83e2b8c3f"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/moe_metrics.rs",
+      "source_bytes_sha256": "e5fee9d67928591c99dee74e79c9581873f07b9641d4587789a61fa86def4f46",
+      "normalized_git_blob_sha256": "af0ec9d6cf6f078604e9692e9b4b478236f31953f708c4df04e524ff3dde4ed6"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/moe_policy_runtime_tests.rs",
+      "source_bytes_sha256": "1aea1dd88d11631821099841884da9670170aac1f4403e297627000935061cc1",
+      "normalized_git_blob_sha256": "8c705bf9361f4b2ce19d196f8ba2f6f315d0a4dc767d27fcdcd371b2e56ee9bc"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/ordered_tests.rs",
+      "source_bytes_sha256": "ae29c67b8a8acea18cce2cb8943f6302d95c692453c61d91316c4480bcfe0c2b",
+      "normalized_git_blob_sha256": "3a2a3c5c61b48616fe104d4517c8d5e3b49afbd4b6a5a9aa4a23c5e2e775eab0"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/output.rs",
+      "source_bytes_sha256": "c3a809541b5adadd5bb5698f53c53e802898b0a79672da6aed3fa02935940c7d",
+      "normalized_git_blob_sha256": "4e3760e8df785d463704bcc87d10df00c72b6343605fe102771f71a1302fb4b2"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/prefix.rs",
+      "source_bytes_sha256": "9957fe9ad1236ecc663b23a1f9c43ab01855db9681bab1ae8aa093add1613fff",
+      "normalized_git_blob_sha256": "94b6e082ae435c22fef3bbf4f5dd8123953c5f0ba8717f7b1c30f940dfaba06e"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/quant_gemm.rs",
+      "source_bytes_sha256": "c045a194fc1715d58a491ff57eeeb6d3cb04adc202b23acd2b8748ba9ab74cb5",
+      "normalized_git_blob_sha256": "2273cbf56e8bd811753bdf975535ead1d5cc1d93efcf4195db8b259e4a379010"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/qwen_full.rs",
+      "source_bytes_sha256": "876ce4b387f44cc9346bf74293245f18e57bd8519f1aba39dd68471bf1271a45",
+      "normalized_git_blob_sha256": "28552ca85235800b7968dd0b655534406c2f106999d169a8d317bf616f754741"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/qwen_recurrent.rs",
+      "source_bytes_sha256": "012231a39a02780e58ec0b7c6c77575a8c1600673554a2f7b76d9e605121d510",
+      "normalized_git_blob_sha256": "8966d40f86f1e16755a4986a8178b3b75da90ed37e0c967a4aaba637ff3a40ca"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/split_attention.rs",
+      "source_bytes_sha256": "6b17e7bff5c2c236b34a5bfe92bc732e497853a6e78d02c0fae24c26a0d8ff48",
+      "normalized_git_blob_sha256": "6ac4333b58b91f5a936055f8bd478a1fb71e306691d7234559744dbc88b1f3ef"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/state_budget.rs",
+      "source_bytes_sha256": "8f81cd130232efcee8403f7352c70b14c2461e02f293e7f68d4fa1d8e78cb106",
+      "normalized_git_blob_sha256": "701eff125195ad3c0c7789a4fae445f5088daf892625025378d0b21fe5566532"
+    },
+    {
+      "path": "crates/bitnet-core/src/native/weights.rs",
+      "source_bytes_sha256": "9d17b796ac485663fe43f9f6342061c10907953d0da2ccf5f324119900109a45",
+      "normalized_git_blob_sha256": "9d17b796ac485663fe43f9f6342061c10907953d0da2ccf5f324119900109a45"
+    },
+    {
+      "path": "crates/bitnet-core/src/paged_kv.rs",
+      "source_bytes_sha256": "e36f4cd6d487d2307a7d5e70daad755460aeb9bb6d3cf365cb70f8238759592a",
+      "normalized_git_blob_sha256": "a3291d25503fb37314a4d655f25e5ba61ebe2ea976e3b34b2426b36ada5a808f"
+    },
+    {
+      "path": "crates/bitnet-core/src/paths.rs",
+      "source_bytes_sha256": "61bb7bb5fa93847953643655dbca3a34ca8065a7b51335cec435de51893841a1",
+      "normalized_git_blob_sha256": "a276f61e921d1b022bd524acbafa3f280fd2fa2cf9ae610567840bb09aff4a83"
+    },
+    {
+      "path": "crates/bitnet-core/src/perf.rs",
+      "source_bytes_sha256": "383e3a7e4e19f694652856d65cb967722dce9935c88fadbb45712d683e2f2d75",
+      "normalized_git_blob_sha256": "d79e3f7d8d62acfc86e4cebc0c001bd633f09b98dca465928031406c7b837f28"
+    },
+    {
+      "path": "crates/bitnet-core/src/portable_envelope.rs",
+      "source_bytes_sha256": "ebefa06ce9f181af0e057de9165dd420feaba55f378be1cadafc56623ad4ffcd",
+      "normalized_git_blob_sha256": "b81a7c1204a548a0ff56b867136afaf6fcd645bcd18261d71616e3a967a0c6b4"
+    },
+    {
+      "path": "crates/bitnet-core/src/prefix_kv.rs",
+      "source_bytes_sha256": "47c01e5661e25a5a0bbf2949f2b77468e9128afe06bb3db650e128a9fec756f0",
+      "normalized_git_blob_sha256": "f2be2a6683ae592446449bda44eb4d9322ef3ad0d0aae763b7c7460ea839ac07"
+    },
+    {
+      "path": "crates/bitnet-core/src/prefix_kv_exec.rs",
+      "source_bytes_sha256": "f370d928858059d900c57a19ad57741d4519fadc2addad3a010182fc62288bb1",
+      "normalized_git_blob_sha256": "964e6ddfea9ea841b423de542687e492e75b013dcedfc2337ef4db2e0efa2feb"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen3/config.rs",
+      "source_bytes_sha256": "149160c4828c0972d34d91f0f7375639a1099d0ccaf4eb81a7333b4fed856e7e",
+      "normalized_git_blob_sha256": "6e01c782faa7d96fabd2d0ce3706ef8a6e8a943f35a4980fe584084f1e5dbddc"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen3/executor.rs",
+      "source_bytes_sha256": "e733bdf602392ae969487770ad68cc415deebf893206e9c3c75f39b96cf848a9",
+      "normalized_git_blob_sha256": "40db3ae13655cdf1211dd3d02f552f1fd7fad73edd0a495b90c981ed05a2615c"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen3/mod.rs",
+      "source_bytes_sha256": "a1066978a00db66256849bc4bff634c94d326d6dcf6739171cc55e1e58867320",
+      "normalized_git_blob_sha256": "e271c6748770b32ec70d11e8a7327b0483758189846c47f2d948b731c446f85e"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen3/runtime.rs",
+      "source_bytes_sha256": "36c8aac9748a787ea5184e4688e3d69045e7a83ed30d0382171386f84c76e785",
+      "normalized_git_blob_sha256": "267cf8e48f9bc2ef2ffee81c62b135769c61ab6303ddf90846d39e2f01c5811d"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/attention.rs",
+      "source_bytes_sha256": "4e88266f82dd780b2af3a5305813980073b4efe163af391d04be94465dd09be9",
+      "normalized_git_blob_sha256": "a1a5884a1b4ee0a3a79e477f0821653223dca404e5a50961801730ea416eae42"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/config.rs",
+      "source_bytes_sha256": "6d497ab938cdeec3baed3bf1b07934fb9fcd1de4bfc06005f5c483062bce08f0",
+      "normalized_git_blob_sha256": "72657892253f94c2ed575e729d15ed5115497cd7030d66b6d6487810e344309c"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/context_tests.rs",
+      "source_bytes_sha256": "bbc82732ec774f2bdbda4811a025530b9a8d7f50119baeb3ddaac91eb8e99cd3",
+      "normalized_git_blob_sha256": "412981b6857a1e8927926094cdc06842d85c4f6c0146d469d4e6514d8fa8ad92"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/cuda_ctx.rs",
+      "source_bytes_sha256": "74e05f0149f257f114df87e1ce87c23a17c5f8e42e8e389c998464746cc0326b",
+      "normalized_git_blob_sha256": "551c8fc8f5586f530289d4d5e6a082c75fc26b1216be6061caa02f42f5af9ee7"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/executor.rs",
+      "source_bytes_sha256": "ac7036f5df9874efe05356d6722b89c4fa2baab04e7f3b07b5c168e85658fdba",
+      "normalized_git_blob_sha256": "8c0859b843f2552a4ad8e5cab14ebe9380abc4665b93c4b8d4c453054f635fd2"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/gdn.rs",
+      "source_bytes_sha256": "b001fbf5c6a64e2f89e8cb234d9a3176d99ff6ffb76b727820462e303b04e490",
+      "normalized_git_blob_sha256": "4eaec57563bd1435f223e8ac35f4992ebecc63ca0c8d66d8c142554be5e36b54"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/mod.rs",
+      "source_bytes_sha256": "17c8d3d2d442d6b520470dad8b115ef9582286f1f835768770be8ba9908f0845",
+      "normalized_git_blob_sha256": "a61dce18e2777ed5cf7353d07ed1c22ef28324f7186b3572195715d56b78e3a4"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/moe.rs",
+      "source_bytes_sha256": "fa7730c7b6e358809f84c79eed6501c0410bacb786be9c5c51586033b8b2e500",
+      "normalized_git_blob_sha256": "a874c987e1b107313c5edf4cc4f896d5188ecc000110aaa5ccd664a64bf72d12"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/qmatvec.rs",
+      "source_bytes_sha256": "10635e290b2b1dbc87897ba817f74ff494a3ab74aceaa2b6261d020ba93ba265",
+      "normalized_git_blob_sha256": "78db4cbab2cec84182a5e8cddd05e719022090555ca4614014c42a9d949db90a"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/recurrent.rs",
+      "source_bytes_sha256": "637e6338c06ee103458b6e9d88b9e5e7e887c4fd5731a3a44c53ae330458b565",
+      "normalized_git_blob_sha256": "d87e0f0041d3e8aef3c279bf873365b1739834b68e2cecaeb04da4baabda00ec"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/runtime.rs",
+      "source_bytes_sha256": "18a24e6af10f611ded3fee13e0a4fc496027d47eb2d030ad09f450c1f19c4186",
+      "normalized_git_blob_sha256": "56d93383de70436c7517184a61f2abfdd33964dc7929fb912ba5511590f0e038"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/spec_decode.rs",
+      "source_bytes_sha256": "b26d62929482321edcb9ad773b67d863f8d668a16f7180dad41180941cda0766",
+      "normalized_git_blob_sha256": "718e84a9487d1251076147deae9bb9426f6ce5f1d406b34bf0a81666646f03e9"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/spec_decode_tests.rs",
+      "source_bytes_sha256": "95a1a02ce8d771b2a165bff61014d7f043c812134b7976c4ebc693fb4a29ed97",
+      "normalized_git_blob_sha256": "4693c5b8ec5f2cd0bf665b9a8a6ff4c2b31962d6577393602872ebaa9c1f821d"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/spec_serving.rs",
+      "source_bytes_sha256": "5cb8f255d383a8505e3ec95f2f198fa550d45b399fec76327b98d2d103984149",
+      "normalized_git_blob_sha256": "cadc32b25f56e0d7fe84bef5740ad824854b4824a56ad8c5d8ce07e2743a9fbd"
+    },
+    {
+      "path": "crates/bitnet-core/src/qwen35/spec_tests.rs",
+      "source_bytes_sha256": "2f5f72e1369ec516a8e7526976f795e73abc30c84e4cc4a2570ef1d21cea1a71",
+      "normalized_git_blob_sha256": "620b98cbba9402b95cb214f8dfec0c3aeee49312fb8410e807e5f595dc094e8a"
+    },
+    {
+      "path": "crates/bitnet-core/src/registry.rs",
+      "source_bytes_sha256": "ee9e0552f4885f833e0cf5cb106c636503ddcc826946469b1e7c08d4e27150b0",
+      "normalized_git_blob_sha256": "fc773d33cb7c8255f7a5c1c012e4ea555c3ec2df91883ce199097efa8ab37cd5"
+    },
+    {
+      "path": "crates/bitnet-core/src/sampling.rs",
+      "source_bytes_sha256": "105244458800b36d5a9c9285b5af0113b5f7e165cbf822dbb2cbe7d091debe56",
+      "normalized_git_blob_sha256": "3aa59a5340506534a9c9fc8eacd0d0ac40fdb85d0f7578a9371e857d5e018a7c"
+    },
+    {
+      "path": "crates/bitnet-core/src/sampling/heap_actual_tests.rs",
+      "source_bytes_sha256": "c5eded14613dd0077dc897648dced7560227ba1eb0a5412c627e80a814cb2b03",
+      "normalized_git_blob_sha256": "93f946216b60b7ebd4a80ed8055ba47ce8ad61b8d2e4ad4a7300abfc3237ecfe"
+    },
+    {
+      "path": "crates/bitnet-core/src/sampling/heap_tests.rs",
+      "source_bytes_sha256": "90ff1f3d14abdfb0e89511a5b240b04308224c4f29fed1c057a7fe1b5c7b47bc",
+      "normalized_git_blob_sha256": "21c6885e02a5a5b87e58333e5c1490683c1339da0a4034cd9191852bde1af6f4"
+    },
+    {
+      "path": "crates/bitnet-core/src/sampling/top_p_heap.rs",
+      "source_bytes_sha256": "c1ca8105aafd4ef8ae98e3173d243ca2014bca801ff6f27093d31f5b85c308e4",
+      "normalized_git_blob_sha256": "d2c457735e2e83605066ee004c8841545ce24457483f37878e39ba35652730f7"
+    },
+    {
+      "path": "crates/bitnet-core/src/scheduler.rs",
+      "source_bytes_sha256": "e409a5134d988bec8b0b6b4bcbbba5a0916bf21e9be810d68c78abb355c88863",
+      "normalized_git_blob_sha256": "0b01563507401b7d9d8a205104e269ea32a5efdd224c978e5df29176294cc2ec"
+    },
+    {
+      "path": "crates/bitnet-core/src/scratch.rs",
+      "source_bytes_sha256": "8eaea7eacaee4a315087795077a4085dd17c8d4d0de9cd95c06dd0cb60641231",
+      "normalized_git_blob_sha256": "71b79d89b4e468acca834673efb446f0b543baf74472bc7d9fca431f746c681a"
+    },
+    {
+      "path": "crates/bitnet-core/src/stream.rs",
+      "source_bytes_sha256": "b6ac4c6bd272a835aae9749d8aba2238b325d32ce8ae1c32b4a4b27ed4c2309c",
+      "normalized_git_blob_sha256": "88d0ec5e8fe0522dca03a6fa2ee428cb4e970582b0be3df635d0bcbaee0db674"
+    },
+    {
+      "path": "crates/bitnet-core/src/timings.rs",
+      "source_bytes_sha256": "79af52d7334891509d67f65726b3fdcf78a8b7a6363ecc23d382b6d3d51e5464",
+      "normalized_git_blob_sha256": "cf190d052683d0972810018c8cc1e99dcd19ffb40cc2ddb9b069a50bf26cfa15"
+    },
+    {
+      "path": "crates/bitnet-core/tests/backend_conformance.rs",
+      "source_bytes_sha256": "7a68a7fe550145a5fcb70700856d8d0245eba38f211d93636a5dfdb82253cd53",
+      "normalized_git_blob_sha256": "da29756342b8a5119d2b6b17c818278ea4792d2a1de4fdd394d84e27ccbea8b3"
+    },
+    {
+      "path": "crates/bitnet-core/tests/cuda_quant_residency.rs",
+      "source_bytes_sha256": "9ea9676bbcea26bd71bf27c4a82fb6b3a929a60004cb1f6d4aef37db13291281",
+      "normalized_git_blob_sha256": "29ef5cc2e037274025d64de0c6a55b9c08edf516ffbf91a8905785809feafa33"
+    },
+    {
+      "path": "crates/bitnet-core/tests/golden_kernels.rs",
+      "source_bytes_sha256": "e9de44c12c3cc18e2161adc8876fc34ab234a0b89a820e3a30cd4b75fb54ba2a",
+      "normalized_git_blob_sha256": "e4f5941646e6a727cbe8e870f2a0048a369fd3b7298b6ea4441d5f8f1e9c3544"
+    },
+    {
+      "path": "crates/bitnet-core/tests/gpt_cuda_profile.rs",
+      "source_bytes_sha256": "f3e109326fff61995a9a0c3a40ea02fa773a78fea69ef4198ecfcabbfd750a48",
+      "normalized_git_blob_sha256": "9f850804c6f0a9711028876dacbf69bb7569a956c467e72a322bb7a5bc8cd8eb"
+    },
+    {
+      "path": "crates/bitnet-core/tests/kv_storage_paged.rs",
+      "source_bytes_sha256": "e35b11db8879cc1bf5ce818a4f0d5bb7db759d292b28f02dcc059e5c1259fcd7",
+      "normalized_git_blob_sha256": "080efaa6caac3143319c5cad3dd02c5d959b3306987f1f320a82856b43a876d1"
+    },
+    {
+      "path": "crates/bitnet-core/tests/mixtral_moe_golden_ci.rs",
+      "source_bytes_sha256": "362b2c7c46a4478b9c0d7db3f7e59e93b2a30c19807066e51d54451d8d224a66",
+      "normalized_git_blob_sha256": "43c69a39ddce5297389454cb0a44c6cf697225d90ca208bdc5ff8df675d77cc3"
+    },
+    {
+      "path": "crates/bitnet-core/tests/optional_gguf_env.rs",
+      "source_bytes_sha256": "317f5b2f1f0f1b4ace43adbe14beba8919b09e1e244cf4cce202395b9cb5e0bb",
+      "normalized_git_blob_sha256": "553fba828eb1c95bae354c7dde47be0ed053197aadc801f6d323b595c0c52e3e"
+    },
+    {
+      "path": "crates/bitnet-core/tests/optional_golden_llama.rs",
+      "source_bytes_sha256": "8a1a1fe98bce4dd989d07eb100ff90b150679de5150aa86ec41e905eb45d7127",
+      "normalized_git_blob_sha256": "25b333a55dc4143bec16ae14c0030ffbf8a101be5b5f104e64d1e8c1ec3d3953"
+    },
+    {
+      "path": "crates/bitnet-core/tests/optional_llama_sequence.rs",
+      "source_bytes_sha256": "01991e5d75ba2dba9fd4c3b1293a729605827e68f719d80b930d05005747c0b0",
+      "normalized_git_blob_sha256": "0a5a6d6df4b7d66ddb42b4a8abd8d898571c205c6667863ea8864d142f20e64e"
+    },
+    {
+      "path": "crates/bitnet-core/tests/prefix_kv_toy.rs",
+      "source_bytes_sha256": "b06555e0bcb709da11d3d114aa2b4f7853540c1480978c2448e09d35ac3f9878",
+      "normalized_git_blob_sha256": "f4097c7b50340eeb1fa1626345a0aa43774a1d9a9fe3c3ec260a87ea3c628fea"
+    },
+    {
+      "path": "crates/bitnet-core/tests/qwen3_dense_golden_ci.rs",
+      "source_bytes_sha256": "2f6d480a142603b4ef544e6af6adb48f36280a50ef138d7ce4d0c12299cfedcd",
+      "normalized_git_blob_sha256": "bb076c58dff2b3999c2402a0ad9bf62b6ddda002ba518262f7950cf5c2bc0ece"
+    },
+    {
+      "path": "crates/bitnet-core/tests/scheduler_speculative.rs",
+      "source_bytes_sha256": "4e503f2feacda4ffafed4526f68e847e95b1fd8f5802626e92835b585652cb68",
+      "normalized_git_blob_sha256": "eb2d47344e5af95303114ac58716c65b883a0224278bd884a26bc71cd0eb0a68"
+    },
+    {
+      "path": "crates/bitnet-core/tests/toy_streaming.rs",
+      "source_bytes_sha256": "a6877ee9107018b4791adca5d70cb8c2b89b3b26253576fcee8ebd3b85470261",
+      "normalized_git_blob_sha256": "ad28de2219d5d956562875bd87b69c84165b6f3514604f3370072a0e245edc60"
+    },
+    {
+      "path": "crates/bitnet-server/Cargo.toml",
+      "source_bytes_sha256": "23ea40c6223067f4c7f816b026135db89a4ddb82de97f4880cb43a61f4e150d9",
+      "normalized_git_blob_sha256": "810506ba7b93fbcad6a5fb7c902ee3ac722f4a7d713dfdf05ba7d6fcc78469da"
+    },
+    {
+      "path": "crates/bitnet-server/examples/check_chat_templates.rs",
+      "source_bytes_sha256": "b86afb74ad84ba79f667d1db45b06c2d7a1d598e73f0f1af6cd3d414cf592181",
+      "normalized_git_blob_sha256": "55776385000b1b1bd1adf137d1321a56c9861ae2fc9cb45307ccc916a07aa9d5"
+    },
+    {
+      "path": "crates/bitnet-server/src/anthropic.rs",
+      "source_bytes_sha256": "4fd5714ceadf0aa3c657241075b409be64b843ad74a838849eea85fc50836784",
+      "normalized_git_blob_sha256": "6f8e24a0af741107ad54d5a5ee45cff64eed81315efd1eb96ca3557893b65b35"
+    },
+    {
+      "path": "crates/bitnet-server/src/chat_template.rs",
+      "source_bytes_sha256": "37b46b9affe8d9d49d76008ab339a9e2ac135517b636ef730622e07f15cb10e4",
+      "normalized_git_blob_sha256": "9e7b7d739599d82b7433b47e31aa4deb996bf50e7ee7819c689423e556ba9b8f"
+    },
+    {
+      "path": "crates/bitnet-server/src/config.rs",
+      "source_bytes_sha256": "c91a56c5b6f97d9e465c78afd7b80a6a173f2e3449b2d7827aa115bfd0096956",
+      "normalized_git_blob_sha256": "8397852ea99c338a5481afcb6b4e02865b8f505f46fb7f38b7ff91f02cefe89e"
+    },
+    {
+      "path": "crates/bitnet-server/src/lib.rs",
+      "source_bytes_sha256": "f78af0fb2839665026810b84b0ced553071404b85bf17709848c69faa70f4a0d",
+      "normalized_git_blob_sha256": "21be8f70fe140d1de41402eda34f6a337cc30e3d5e24eb83ac40b2adff959795"
+    },
+    {
+      "path": "crates/bitnet-server/src/main.rs",
+      "source_bytes_sha256": "e6deecb8ea31c915211660734f0deb3c8cf715e81c7b4c35943a0d6d8471f221",
+      "normalized_git_blob_sha256": "5f7e83a908c071b90aca9f4e29eaeeab6a3231421a3dead2eca2a7326c46f368"
+    },
+    {
+      "path": "crates/bitnet-server/src/metrics.rs",
+      "source_bytes_sha256": "5895150ba8364f5dc5fe4135502203242ed8c0bda05d19c881388bbb23e80ba1",
+      "normalized_git_blob_sha256": "03e7f2949835e609db43126fec8afb3e687fe7fa6c06bb0deb7abc36046a8b87"
+    },
+    {
+      "path": "crates/bitnet-server/src/model_registry.rs",
+      "source_bytes_sha256": "33aca1c02fcf98cad36de752d26ce200e4e76cbe472d1e4d69c84063df1c63ee",
+      "normalized_git_blob_sha256": "156012c1ffcc512140a5f8a855494a5a03d687d6a37d14b5ec599a774fde7ac0"
+    },
+    {
+      "path": "crates/bitnet-server/src/run.rs",
+      "source_bytes_sha256": "b718a8dbc5dd4eff575d81787bdd2906b18d070e54e1b09656b7eeb90d4dbbab",
+      "normalized_git_blob_sha256": "f08de03b76080f8d85129ff8e1e1aef8088bd32b5d3763994f9b55ba602527a7"
+    },
+    {
+      "path": "crates/bitnet-server/src/stream_stop.rs",
+      "source_bytes_sha256": "63c19c4481f2f0f7b9ddc77e2d393795f668451c023f68065b755a45892dee4a",
+      "normalized_git_blob_sha256": "67c8110323144eedd8d7be482013005c4c3c83b8d5cc588afab2ed5c1d47c06b"
+    },
+    {
+      "path": "crates/bitnet-server/tests/anthropic_compat.rs",
+      "source_bytes_sha256": "573b47c6e33389e56af8035afcd0298bd118302c1fcf41bd5d8aef7ca751fcae",
+      "normalized_git_blob_sha256": "b6519ab6c13b0e8bbad2db3dd0945c55ed647cfef9d6dce2bcbb69c7d5b43542"
+    },
+    {
+      "path": "crates/bitnet-server/tests/context_capacity.rs",
+      "source_bytes_sha256": "467e6f720106aed8de81a6fe4a4c037d585ccc878f3aea31bf71750564e7f066",
+      "normalized_git_blob_sha256": "2c4e30550b529b4eed72c3995573ab818ef819b3680cff4151c82fb98e448a29"
+    },
+    {
+      "path": "crates/bitnet-server/tests/finish_reason.rs",
+      "source_bytes_sha256": "c4801168db9931338816327ef99112277ee1ba96c82ca2f64250910aa94afa03",
+      "normalized_git_blob_sha256": "23991bd9b93189ecc5b2bdf9e701866dcf066b93876999e4c67d7159e8a6d1b2"
+    },
+    {
+      "path": "crates/bitnet-server/tests/mixtral_moe_v1.rs",
+      "source_bytes_sha256": "0fd8747db82f0a26a1411b45b0633ef53f4127b1dce7fcc81c45df1afa5e8324",
+      "normalized_git_blob_sha256": "211e85a0af8805f0cf1218059dfa66bdd6112e01c5de2e0f13fcdf0aefc70b6c"
+    },
+    {
+      "path": "crates/bitnet-server/tests/openai_compat.rs",
+      "source_bytes_sha256": "597f91bef89b5f4e85c952ce6f46d0bac30f9f8d4b93b6a064f4bb5363d10f61",
+      "normalized_git_blob_sha256": "c7e9451818d3b84177b0b6bb39fd91dc0667ac0b026f56f3fdf2febd0576cca0"
+    },
+    {
+      "path": "crates/rbitnet-cli/Cargo.toml",
+      "source_bytes_sha256": "9c60dea457fc8f2084647e3e721eb3620de83ad7696c33b8d5223514c0fb89b8",
+      "normalized_git_blob_sha256": "f6a3099dd4c3c21b12090d59325fe9ea1459b8840f9b87623f32d9b455b1c9a9"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/bitnet_install.rs",
+      "source_bytes_sha256": "87f29bb24bc7d323b84a3bfd916ec16f9ad6a9f6f6ee30f0d8a844c7c3778265",
+      "normalized_git_blob_sha256": "8340409495835abb5b525bb05d3de391418abfe37500dd5cd9e2145d7e3651c0"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/catalog.rs",
+      "source_bytes_sha256": "22535542183d5ed29d91e7918948d19833fb8c3a994db1e308e0a095e2335cf6",
+      "normalized_git_blob_sha256": "9106190287e4fb552fc2df7b90b13d9da49796774661964492f06e4f486f2b03"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/chat_tui.rs",
+      "source_bytes_sha256": "57edc74185912f6d8b3ace9acba4fc029e4f1f5c0765af9518b8d39b97076235",
+      "normalized_git_blob_sha256": "0dd20054c9db99385506e24bbcd29cf1a98910477ae2a41726d83f4afcb14a84"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/download.rs",
+      "source_bytes_sha256": "b2aacda7689f0d45cfbf78930abfc21d2586cc108ee9d5588af0dce02cd9ac41",
+      "normalized_git_blob_sha256": "7616a8b93c5c9d27e1b93c4446a2a1f0a3b3a32e8c386b292ba6348c3eb07a96"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/hf_search.rs",
+      "source_bytes_sha256": "f68fc50e23a6c53f424daa73f4f1b31ef6402a125db406e7885b9beb473086ec",
+      "normalized_git_blob_sha256": "43662d07ac2e499378a683148b1f88cb543b65d120bb93d79a453984e0b1906b"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/hub_http.rs",
+      "source_bytes_sha256": "fc5f80afef15e77999d46ab533681a6fd4569b34f0e99df65c0980a912eba836",
+      "normalized_git_blob_sha256": "b0b4f05c510cd8279f85106d88673c46a8fb1a0635d63e215a09c57e071857d8"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/integrity.rs",
+      "source_bytes_sha256": "20e0179c72ba042e5912f86fcf4e8a218ca990ed6d75b1150b6b6d0b3f0d41f5",
+      "normalized_git_blob_sha256": "a8ab6a22da0ac98aaa2a6876c82063a239f92dc1673f8079c1a957356c142c08"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/interactive_models.rs",
+      "source_bytes_sha256": "91987e8709cf50e50fe0864b0a9b06ba74d6175cd599aaa900bd9d5b0f216bde",
+      "normalized_git_blob_sha256": "e385f353fd1f64af46dc6d0ef9c99637d20e022c522e4e2d1244fb487fac4b5b"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/main.rs",
+      "source_bytes_sha256": "2d9383d3dc65a36c3c2b6ac37c172190e469e86ef6e534e53a0925de089b3d5d",
+      "normalized_git_blob_sha256": "96d38c725f7b6950db026d3c4a21bcfc91e051590fbae72b088e59f12570dd3c"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/recipes.rs",
+      "source_bytes_sha256": "ef2b7e94b8c811bf9dc89481f64c3f65996afd077d26d6c8ba67a7164e564770",
+      "normalized_git_blob_sha256": "47fedfa72f590b1b6d8a66357fe3bdd6c42b44d96ace4aa4f2378151e91a6c07"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/train_cli.rs",
+      "source_bytes_sha256": "51a9da1e97835b8b77868e803012efe4f5cda0f037e6fb15b4bce2d31fb9fce7",
+      "normalized_git_blob_sha256": "2069c2428977e5b8a1fd8efbc3272e74ea5bc0f2ae7109944e2a9d34ff1c6098"
+    },
+    {
+      "path": "crates/rbitnet-cli/src/tune.rs",
+      "source_bytes_sha256": "0be401ac06f59e6c9b84d7be377b2cb2ec236466cf7e4c0369e72407e03d253c",
+      "normalized_git_blob_sha256": "febe59a83865e8752909b43d92747de8a19e0916b1571b28915c77845ec35e10"
+    },
+    {
+      "path": "crates/rbitnet-proxy/Cargo.toml",
+      "source_bytes_sha256": "7e23917ff716a013e95e9bf55b21ac5bed6f47c68338f0df4f6fadf2be8d53b2",
+      "normalized_git_blob_sha256": "250684ae19e97d494c91976f6192b9b6aeaa58c90ee33b38cf2c07449a99b30a"
+    },
+    {
+      "path": "crates/rbitnet-proxy/src/lib.rs",
+      "source_bytes_sha256": "93e0a7266edd4a08ed966d2915180fd1ff34aa036ee47518f88f4c75178a6714",
+      "normalized_git_blob_sha256": "b9b97530c528b194a3d3865ef02521ba1834a01903ea2e31b5dab908c6e0137b"
+    },
+    {
+      "path": "crates/rbitnet-proxy/src/main.rs",
+      "source_bytes_sha256": "ed5e8b2b9bbe153740c59a3a281e0161316c124fa15d7252c9995b06015e6ef4",
+      "normalized_git_blob_sha256": "126831ee203837d1aa2bd02bdf64f9a5dc33351ea94d6a7ec872ce2b4e962141"
+    },
+    {
+      "path": "crates/rbitnet-runner/Cargo.toml",
+      "source_bytes_sha256": "1abb6cd04a4a28e29b06fa4a7cc9420449fe7f09913ee3a6cc058555d7993d50",
+      "normalized_git_blob_sha256": "cb7bebfe05029b6a5904da0f5a15dc1769a483504dc3b9c82b9553a9edb48c0e"
+    },
+    {
+      "path": "crates/rbitnet-runner/src/main.rs",
+      "source_bytes_sha256": "57530ca4a5d2a21fc794579d237622f83446f7738d9e7752c9c99c39cfc05d94",
+      "normalized_git_blob_sha256": "8c4e62f7dffdd3ac28155734373051af76acb1d3740c7473c4a4c823429212bb"
+    },
+    {
+      "path": "native/cuda_quant/include/rbitnet_cuda_quant.h",
+      "source_bytes_sha256": "a39de6d56fd66adf86fad42764a2bb311ae702a72ac0b9099141de8106cfdfad",
+      "normalized_git_blob_sha256": "a39de6d56fd66adf86fad42764a2bb311ae702a72ac0b9099141de8106cfdfad"
+    },
+    {
+      "path": "native/cuda_quant/src/device_memory.cuh",
+      "source_bytes_sha256": "f18e3f51d40ed72f3dc2e8b8e5b9ee44fa42f9baa600fee9e2aac59c967fab56",
+      "normalized_git_blob_sha256": "14869e0ea819fd846a9b4e859ee5a99a806bbf88f0a56ea693a2c0c2d5babf2c"
+    },
+    {
+      "path": "native/cuda_quant/src/gpt_full.cuh",
+      "source_bytes_sha256": "47e7ead36ce7850782633356e1e176118a8e97b9fc40bf5112e71f85b94e2307",
+      "normalized_git_blob_sha256": "47e7ead36ce7850782633356e1e176118a8e97b9fc40bf5112e71f85b94e2307"
+    },
+    {
+      "path": "native/cuda_quant/src/gpt_ordered_norm.cuh",
+      "source_bytes_sha256": "82121c23c760e77c584e5ee2e47219a8a434165cc2427f823ca4c8563830395a",
+      "normalized_git_blob_sha256": "c0beb1b52734667ba9b980f34c6b84feb66064ac82ddae66c0ef77874a958451"
+    },
+    {
+      "path": "native/cuda_quant/src/gpt_ordered_norm_checks.cuh",
+      "source_bytes_sha256": "56294fd61b23299f0631a14929dba81daacf32b6138c49a84316f937d248a1db",
+      "normalized_git_blob_sha256": "56294fd61b23299f0631a14929dba81daacf32b6138c49a84316f937d248a1db"
+    },
+    {
+      "path": "native/cuda_quant/src/gpt_prefill.cuh",
+      "source_bytes_sha256": "f3826b34b77517ce160d4ede190e72b44cfa843787269914b264eb90d828bcde",
+      "normalized_git_blob_sha256": "f3826b34b77517ce160d4ede190e72b44cfa843787269914b264eb90d828bcde"
+    },
+    {
+      "path": "native/cuda_quant/src/grouped_moe.cuh",
+      "source_bytes_sha256": "c0e3278374885c253658b43b64f3d6e816b49633bb44f904bc0437e5b49ceb1f",
+      "normalized_git_blob_sha256": "4454acd9ef9a9cc8435c2d5cd8dc6980fcf26f3e6ffa13d13f7c3cb1d315c95a"
+    },
+    {
+      "path": "native/cuda_quant/src/kv_attention_oracle.cuh",
+      "source_bytes_sha256": "b66f4d5e08f2e8b4b0f7ee65c1628778e98b2dc8e81c6e8706dcdffafe5951e9",
+      "normalized_git_blob_sha256": "b66f4d5e08f2e8b4b0f7ee65c1628778e98b2dc8e81c6e8706dcdffafe5951e9"
+    },
+    {
+      "path": "native/cuda_quant/src/kv_storage.cuh",
+      "source_bytes_sha256": "9bbecfa13846ee37af6facdfe0f2bc50051aa2a6584b749bcde17ad73b03524c",
+      "normalized_git_blob_sha256": "9bbecfa13846ee37af6facdfe0f2bc50051aa2a6584b749bcde17ad73b03524c"
+    },
+    {
+      "path": "native/cuda_quant/src/llama_batch.cuh",
+      "source_bytes_sha256": "7f078263c9a94bbfca82baa0f99cda6f000214196f829d99a17462d8b3326ee2",
+      "normalized_git_blob_sha256": "d40340eff41fea3398c66d795fb80b04bdbb30e17fab9528ec1fda6cec6486c2"
+    },
+    {
+      "path": "native/cuda_quant/src/llama_resident.cuh",
+      "source_bytes_sha256": "f7cd1f1c8a97ec6c5efdf6f721a9d4087114a1e03f834a6fe4496353ed4d0eff",
+      "normalized_git_blob_sha256": "f7cd1f1c8a97ec6c5efdf6f721a9d4087114a1e03f834a6fe4496353ed4d0eff"
+    },
+    {
+      "path": "native/cuda_quant/src/mla_full.cuh",
+      "source_bytes_sha256": "c4d3fd9fd0c3e1cfbdf9f4994318409e5257c827f152879fc92925ad23421abf",
+      "normalized_git_blob_sha256": "f7184aee13a572ac3f5098cdf3de3b0c33aad0f3e0e1959c842559bed585c796"
+    },
+    {
+      "path": "native/cuda_quant/src/moe_fused.cuh",
+      "source_bytes_sha256": "6e68941bde59596cfdcacb03d1ae7b1145c09230b167a62127f233641922df70",
+      "normalized_git_blob_sha256": "6d166145883e5f11452aa951fd674d667c05eade5c0c9f859f1ef6aa0521988e"
+    },
+    {
+      "path": "native/cuda_quant/src/moe_resident.cuh",
+      "source_bytes_sha256": "c2a58c5612fa32d01d1298f8ec7c001141f8f1dee518883bfceee7d8d27bafe4",
+      "normalized_git_blob_sha256": "282a99abad4a845f8185221a49a762f3fabccbfb994272647dd824f469108fc1"
+    },
+    {
+      "path": "native/cuda_quant/src/mxfp4_ordered_gemm.cuh",
+      "source_bytes_sha256": "5bcad275acfd50a47d7ca5fb7bc84f10e62b3bb806dbb50a14faf956e0e597ac",
+      "normalized_git_blob_sha256": "4292f7bce0b946df6f1f4c602c3948d69b0399a6877b537456118dfdd9f8c27f"
+    },
+    {
+      "path": "native/cuda_quant/src/native_completion.cuh",
+      "source_bytes_sha256": "a8884eaf6ecd553dc4548b02a4244ea90d8fee761d9d57cf790fbe4528ddb526",
+      "normalized_git_blob_sha256": "eaa924c6cf9c247c4f8ec550b6904170e1a0e2ad5b6e8b6f4cba7ca4a21016ee"
+    },
+    {
+      "path": "native/cuda_quant/src/native_completion_check.cuh",
+      "source_bytes_sha256": "9a0b465a12e79b1ce28c5f0fbc162881b1482e289f335c6d972ef208ebffcd25",
+      "normalized_git_blob_sha256": "61711961057026b8f215b07154024b0f86496d0142f76ad98725795c93aa2188"
+    },
+    {
+      "path": "native/cuda_quant/src/ordered_gemm.cuh",
+      "source_bytes_sha256": "c4863550dea6c7f910026760ed02581e3e5ceaeeed838d40fc3bceb0cd80c146",
+      "normalized_git_blob_sha256": "5f0f5fe8464fddab5c74ea91add2c0f2e8c1cdeccca1ac452b7c0240c4578a3e"
+    },
+    {
+      "path": "native/cuda_quant/src/output_head.cuh",
+      "source_bytes_sha256": "79b13120bd60dd479e541f4cf17773c0f50c45eea0ac4544eced13715c241993",
+      "normalized_git_blob_sha256": "6668a0486e14ce66ef7a018f974a1b1d70d0b52679b4810260f81cf74985fe02"
+    },
+    {
+      "path": "native/cuda_quant/src/paged_kernels.cuh",
+      "source_bytes_sha256": "235bb85746fd6253479bea552608dc40645cc66285335f52008942048d88f53d",
+      "normalized_git_blob_sha256": "235bb85746fd6253479bea552608dc40645cc66285335f52008942048d88f53d"
+    },
+    {
+      "path": "native/cuda_quant/src/paged_pool.cuh",
+      "source_bytes_sha256": "357db2740304b425f2bad6a133fe6e1f457e0deae254c8e147156c0b80eb0a33",
+      "normalized_git_blob_sha256": "357db2740304b425f2bad6a133fe6e1f457e0deae254c8e147156c0b80eb0a33"
+    },
+    {
+      "path": "native/cuda_quant/src/portable_state.cuh",
+      "source_bytes_sha256": "ddb6b9dc8b692d9c60a297d65aad0e1b3aa360aeb5801b25353e79ea99827435",
+      "normalized_git_blob_sha256": "0ef38b1993be884f7d94a8bb7c083e120312a3f9097f30fea92b06d71aced032"
+    },
+    {
+      "path": "native/cuda_quant/src/prefill_quant.cuh",
+      "source_bytes_sha256": "e7b55fd18affc924e9de6d306f09dcbe681818c8c79e10851bc100d0b47e7150",
+      "normalized_git_blob_sha256": "7e07c9d2fc085f8f0c7dfa2dac5755bbcf7fde06aa0f1d47fa387ebbe77e65ff"
+    },
+    {
+      "path": "native/cuda_quant/src/quant_matvec.cu",
+      "source_bytes_sha256": "c7456506bcf71d822c451d64bdd6ec58f236c4eb22dca2037681f92f2b8969d5",
+      "normalized_git_blob_sha256": "c7456506bcf71d822c451d64bdd6ec58f236c4eb22dca2037681f92f2b8969d5"
+    },
+    {
+      "path": "native/cuda_quant/src/qwen_full.cuh",
+      "source_bytes_sha256": "bbfbf282d6996d6c70fce39afbcbb57b2ced68f3843b9bc6d6d7bc28743ea6b1",
+      "normalized_git_blob_sha256": "c9b65814e534a335cb32a44d4a5a2a20895758f62d58fff8459d5f79773640b3"
+    },
+    {
+      "path": "native/cuda_quant/src/qwen_prefill.cuh",
+      "source_bytes_sha256": "257ab9023a3be7d13be11674650bfd3bb63abf29839bc299966d295f9ea3a7b8",
+      "normalized_git_blob_sha256": "eff573655b79da24f0ac34cd4ace383678460a51ff66cb655552064a08ace90c"
+    },
+    {
+      "path": "native/cuda_quant/src/qwen_recurrent.cuh",
+      "source_bytes_sha256": "1927620fbf33faf2724ddfdd549959197c44d5f43c3209a1bc9ca7eb10e4867b",
+      "normalized_git_blob_sha256": "69d612227d0e25fcc099642b52c367500eb880628b9bdfdd72c6a53d0de03bed"
+    },
+    {
+      "path": "native/cuda_quant/src/split_attention.cuh",
+      "source_bytes_sha256": "f51edb1442a130757b59a3f8e6dc26acb8731a40325241754feebe214c4a2f76",
+      "normalized_git_blob_sha256": "f8f8effeda891cf8b3e24fab2ef7365344f9cc66098c068d1207802b88372e23"
+    }
+  ]
+}
