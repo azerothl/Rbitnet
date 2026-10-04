@@ -578,6 +578,9 @@ impl GpuFull {
         Ok((logits, ids))
     }
 
+    pub(crate) fn portable_context(&self) -> usize {
+        self.context
+    }
     pub fn prefill_capacity(&self) -> usize {
         self.prefill.as_ref().map_or(1, |p| p.capacity)
     }

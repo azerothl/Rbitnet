@@ -325,6 +325,15 @@ RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_save(void*,uint64_t*);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_restore(void*,uint64_t);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_discard(void*,uint64_t);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_verify(void*,const float*,size_t,unsigned,unsigned,unsigned,float*,size_t,unsigned*,size_t);
+
+/* F32 host checkpoint transport: caller validates model identity and sealed files. */
+RBITNET_CUDA_API int rbitnet_cuda_portable_device_key(unsigned char*,size_t);
+RBITNET_CUDA_API size_t rbitnet_cuda_llama_portable_bytes(void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_llama_portable_export(void*,unsigned,float*,size_t);
+RBITNET_CUDA_API int rbitnet_cuda_llama_portable_import(void*,unsigned,const float*,size_t);
+RBITNET_CUDA_API size_t rbitnet_cuda_qwen_portable_bytes(void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_portable_export(void*,unsigned,float*,size_t);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_portable_import(void*,unsigned,const float*,size_t);
 #ifdef __cplusplus
 }
 #endif

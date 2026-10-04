@@ -160,6 +160,12 @@ impl Qwen3Runtime {
     }
 
     pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path) -> Result<Self> {
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
+
         let cfg = Qwen3Config::from_gguf(archive.as_ref())?;
         let tok_embd = must_tensor(archive.as_ref(), "token_embd.weight")?;
         let out_norm = must_tensor(archive.as_ref(), "output_norm.weight")?;

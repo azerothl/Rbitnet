@@ -151,7 +151,9 @@ struct BatchLlamaCompletion {
 extern "C" {
 RBITNET_CUDA_API void *rbitnet_cuda_llama_batch_create(const void *peer,unsigned maximum,unsigned ordering) {
     auto *r=static_cast<const ResidentLlama*>(peer);
-    if(!r||!maximum||maximum>8||ordering>1||r->split_kv||r->tf32_prefill||r->batch_model_key.empty())return nullptr;
+    // The shared decode kernels consume F32 KV pointers. Refuse encoded owners
+    // before allocating scratch or changing any sequence state.
+    if(!r||!maximum||maximum>8||ordering>1||r->kv_format||r->split_kv||r->tf32_prefill||r->batch_model_key.empty())return nullptr;
     auto *b=new(std::nothrow) BatchLlama(maximum);if(!b)return nullptr;
     try {if(!b->init(*r,ordering)) {delete b;return nullptr;}}catch(const std::bad_alloc&) {delete b;return nullptr;}
     return b;
@@ -169,7 +171,7 @@ RBITNET_CUDA_API int rbitnet_cuda_llama_batch_step(void *batch,void *const *cont
     unsigned capacity=0;
     for(unsigned i=0;i<count;i++) {
         auto *r=static_cast<ResidentLlama*>(contexts[i]);
-        if(!r||r->split_kv||r->tf32_prefill||bool(r->paged)!=b->paged||r->batch_model_key!=b->model_key
+        if(!r||r->kv_format||r->split_kv||r->tf32_prefill||bool(r->paged)!=b->paged||r->batch_model_key!=b->model_key
             ||positions[i]>=r->cfg.capacity||(positions[i]&&positions[i]!=r->filled))return 3;
         for(unsigned j=0;j<i;j++)if(owners[j]==r)return 4;
         if(b->paged&&i&&r->paged->pool.get()!=owners[0]->paged->pool.get())return 5;

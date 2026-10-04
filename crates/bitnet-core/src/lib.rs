@@ -71,3 +71,7 @@ pub use model::ToyLlm;
 pub use paths::validate_no_parent_components;
 pub use stream::StreamEvent;
 pub use timings::PhaseTimings;
+
+pub(crate) mod context_native;
+pub(crate) mod context_tiers;
+pub(crate) mod portable_envelope;

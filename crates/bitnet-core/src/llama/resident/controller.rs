@@ -42,6 +42,16 @@ impl BatchOptions {
                 "RBITNET_CUDA_CONTINUOUS requires the CUDA Llama backend".into(),
             ));
         }
+        if super::configured_kv_format()? != 0 {
+            return Err(BitNetError::Inference(
+                "RBITNET_CUDA_CONTINUOUS requires F32 native KV storage".into(),
+            ));
+        }
+        if crate::context_native::enabled() {
+            return Err(BitNetError::Inference(
+                "context tiers are not validated with RBITNET_CUDA_CONTINUOUS".into(),
+            ));
+        }
         let parse = |key: &str, default: usize, min: usize, max: usize| -> Result<usize> {
             let value = std::env::var(key).ok().map_or(Ok(default), |s| {
                 s.parse::<usize>()

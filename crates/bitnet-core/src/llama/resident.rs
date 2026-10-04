@@ -193,6 +193,7 @@ pub(super) struct Resident {
     kv_bytes_per_token: usize,
     pages: Option<Pages>,
     kv_format: u32,
+    context_tier: Option<crate::context_native::Handle>,
 }
 impl Resident {
     pub fn new(model: &LlamaModel) -> Option<Self> {
@@ -450,6 +451,7 @@ impl Resident {
             kv_bytes_per_token,
             pages,
             kv_format,
+            context_tier: None,
         })
     }
     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
@@ -713,9 +715,33 @@ impl Resident {
         Ok((logits, next))
     }
 
+    pub(super) fn configure_context_tiers(
+        &mut self,
+        archive: &crate::gguf::GgufArchive,
+        tokenizer: &std::path::Path,
+        configuration: &str,
+    ) -> Result<()> {
+        self.context_tier =
+            crate::context_native::Handle::new("llama", archive, tokenizer, configuration)
+                .map_err(|error| BitNetError::Inference(format!("context tiers: {error}")))?;
+        Ok(())
+    }
+    fn restore_context(&mut self, tokens: &[u32]) -> Result<usize> {
+        let Some(tier) = &mut self.context_tier else {
+            return Ok(0);
+        };
+        let reusable = &tokens[..tokens.len().saturating_sub(1)];
+        match unsafe { tier.restore(self.context as *mut c_void, reusable) } {
+            Ok(length) => Ok(length),
+            Err(error) => {
+                tracing::warn!(%error, "context restore refused; recomputing prompt");
+                Ok(0)
+            }
+        }
+    }
     pub fn restore_prefix(&mut self, tokens: &[u32]) -> Result<usize> {
         if !crate::native::prefix::enabled() {
-            return Ok(0);
+            return self.restore_context(tokens);
         }
         let Some(api) = &self.snapshots else {
             return Ok(0);
@@ -742,10 +768,18 @@ impl Resident {
             return Ok(matched);
         }
         crate::perf::record_prefix_cache_miss();
-        Ok(0)
+        self.restore_context(tokens)
     }
 
     pub fn save_prefix(&mut self, tokens: &[u32]) {
+        if let Some(tier) = &mut self.context_tier {
+            let reusable = &tokens[..tokens.len().saturating_sub(1)];
+            if reusable.len() >= 8 {
+                if let Err(error) = unsafe { tier.capture(self.context as *mut c_void, reusable) } {
+                    tracing::warn!(%error, "context capture refused; normal decoding remains available");
+                }
+            }
+        }
         if !crate::native::prefix::enabled()
             || tokens.len() < crate::native::prefix::minimum_tokens()
         {
@@ -1054,23 +1088,27 @@ mod paged_tests;
 mod quantized_tests;
 
 #[cfg(test)]
-#[path="resident/canonical_tests.rs"]
+#[path = "resident/canonical_tests.rs"]
 mod canonical_tests;
 
 #[cfg(test)]
 #[path = "resident/encoded_guard_tests.rs"]
 mod encoded_guard_tests;
 
-#[cfg(test)]
-#[path="resident/quantized_long_tests.rs"]
-mod quantized_long_tests;
 #[path = "resident/continuous.rs"]
 mod continuous;
 #[path = "resident/controller.rs"]
 mod controller;
+#[cfg(test)]
+#[path = "resident/quantized_long_tests.rs"]
+mod quantized_long_tests;
 #[path = "resident/transient_batch.rs"]
 mod transient_batch;
 pub(crate) use controller::{BatchController, BatchOptions};
 #[cfg(test)]
 #[path = "resident/continuous_tests.rs"]
 mod continuous_tests;
+
+#[cfg(test)]
+#[path = "resident/context_tests.rs"]
+mod context_tests;
