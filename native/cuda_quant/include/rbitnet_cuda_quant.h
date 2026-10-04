@@ -139,6 +139,31 @@ RBITNET_CUDA_API int rbitnet_cuda_qwen_recurrent_restore(void *context, const vo
 RBITNET_CUDA_API int rbitnet_cuda_qwen_recurrent_step(void *context,const float *input,
     unsigned pos,float *output);
 
+/* Optional dense Qwen full-attention block and whole-token pipeline. Matrix
+ * order: q, k, v, out, gate, up, down. Norms/frequency are host arrays.
+ * A pipeline borrows its ordered layer contexts (0=recurrent, 1=attention).
+ * The caller retains contexts and weights until after pipeline destruction. */
+typedef struct {
+    unsigned embd, ffn, heads, kv_heads, head_dim, rotary, capacity, gated, graphs;
+    float epsilon, scale;
+} RbitnetQwenAttentionConfig;
+typedef struct { unsigned kind; void *context; } RbitnetQwenFullLayer;
+RBITNET_CUDA_API void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig*,
+    const RbitnetLlamaMatrix*,const float *attn_norm,const float *ffn_norm,
+    const float *q_norm,const float *k_norm,const float *frequency);
+RBITNET_CUDA_API void rbitnet_cuda_qwen_full_attention_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_full_attention_step(void*,const float*,unsigned,float*);
+RBITNET_CUDA_API void *rbitnet_cuda_qwen_full_attention_snapshot(void*);
+RBITNET_CUDA_API void rbitnet_cuda_qwen_full_attention_snapshot_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_full_attention_restore(void*,const void*,unsigned);
+RBITNET_CUDA_API void *rbitnet_cuda_qwen_full_create(unsigned embd,unsigned vocab,unsigned capacity,
+    unsigned layers,unsigned graphs,const RbitnetQwenFullLayer*,const RbitnetLlamaMatrix *head,
+    const float *norm,float epsilon);
+RBITNET_CUDA_API void rbitnet_cuda_qwen_full_destroy(void*);
+/* mode=0 no output; 1 logits; 2 argmax. One synchronization per token. */
+RBITNET_CUDA_API int rbitnet_cuda_qwen_full_step(void*,const float*,unsigned,unsigned,float*,unsigned*);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_full_restored(void*,unsigned length);
+
 /* Shared resident output RMSNorm, quantized head and optional greedy reduction.
  * mode=0 downloads logits, mode=1 downloads only the chosen token. */
 RBITNET_CUDA_API void *rbitnet_cuda_head_create(const RbitnetLlamaMatrix*,const float *norm,float epsilon);

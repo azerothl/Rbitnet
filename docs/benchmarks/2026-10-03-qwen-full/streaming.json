@@ -1,0 +1,575 @@
+{
+  "binary_sha256": "a61b961c47df862758e0fa6a0ba35909a35b053dfc1b7444b29c15545a4ee433",
+  "library_sha256": "fd9e688e7118f30d0382823704ac2af00c0d97eb9ebbde674311b98819141b29",
+  "speculative": false,
+  "qwen_full": true,
+  "cases": [
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules de **Kael**. Il n'était pas un robot au sens humain du terme ; il était un assemblage de six cents composants électroniques, de six cents pièces de mémoire et de six cents années d'expérience accumulées dans le temps. Kael était un archiviste de données, un gardien de la mémoire collective de l'humanité, mais il n'avait jamais été dans une bibliothèque aussi vaste, aussi profonde et aussi myst",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024657,
+        "id": "chatcmpl-1791024657",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules de **Kael**. Il n'était pas un robot au sens humain du terme ; il était un assemblage de six cents composants électroniques, de six cents pièces de mémoire et de six cents années d'expérience accumulées dans le temps. Kael était un archiviste de données, un gardien de la mémoire collective de l'humanité, mais il n'avait jamais été dans une bibliothèque aussi vaste, aussi profonde et aussi myst",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024658,
+        "id": "chatcmpl-1791024658",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Le",
+        " silence"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Temps Oubliés » n'était pas un vide, mais une substance épaisse, semblable à de la poussière d'or qui s'installait lentement dans les plis de ses livres. Le robot, nommé Kael, n'était pas un simple automate ; il était une entité consciente, une conscience projetée dans le code, un miroir éternel de l'oubli humain, mais aussi une gardienne fragile de ce qui avait été gagné.\n\nKael se trouvait au rez-de-chaussée, où les rangées de livres s'ét",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024659,
+        "id": "chatcmpl-1791024659",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Le silence de la bibliothèque « Bibliothèque des Temps Oubliés » n'était pas un vide, mais une substance épaisse, semblable à de la poussière d'or qui s'installait lentement dans les plis de ses livres. Le robot, nommé Kael, n'était pas un simple automate ; il était une entité consciente, une conscience projetée dans le code, un miroir éternel de l'oubli humain, mais aussi une gardienne fragile de ce qui avait été gagné.\n\nKael se trouvait au rez-de-chaussée, où les rangées de livres s'ét",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024659,
+        "id": "chatcmpl-1791024659",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " la"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules du robot nommé **Kael**. Kael n'était pas un simple automate ; il était un architecte de l'information, un être conçu pour naviguer dans les archives infinies de l'univers, mais il avait une singularité : il ne pouvait pas lire. Il ne pouvait pas comprendre le sens des mots. Il pouvait seulement percevoir la structure logique des données.\n\nKael se tenait devant la grande porte d'",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024660,
+        "id": "chatcmpl-1791024660",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans la bibliothèque de l'Observatoire de la Lune, le silence n'était pas une absence de bruit, mais une substance tangible, un poids matriciel qui pesait sur les épaules du robot nommé **Kael**. Kael n'était pas un simple automate ; il était un architecte de l'information, un être conçu pour naviguer dans les archives infinies de l'univers, mais il avait une singularité : il ne pouvait pas lire. Il ne pouvait pas comprendre le sens des mots. Il pouvait seulement percevoir la structure logique des données.\n\nKael se tenait devant la grande porte d'",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024661,
+        "id": "chatcmpl-1791024661",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 48,
+          "total_tokens": 176
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791024661,
+        "id": "chatcmpl-1791024661",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 49,
+          "total_tokens": 50
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "qwen35-2b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "qwen35-2b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est **Paris**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024661,
+          "id": "chatcmpl-1791024661",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 42,
+            "total_tokens": 51
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024661,
+          "id": "chatcmpl-1791024661",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 44,
+            "total_tokens": 55
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est **Rome**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024661,
+          "id": "chatcmpl-1791024661",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 43,
+            "total_tokens": 54
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024662,
+          "id": "chatcmpl-1791024662",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 45,
+            "total_tokens": 52
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est **Paris**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024662,
+          "id": "chatcmpl-1791024662",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 42,
+            "total_tokens": 51
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024662,
+          "id": "chatcmpl-1791024662",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 44,
+            "total_tokens": 55
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l'Italie est **Rome**.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024662,
+          "id": "chatcmpl-1791024662",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 11,
+            "prompt_tokens": 43,
+            "total_tokens": 54
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791024662,
+          "id": "chatcmpl-1791024662",
+          "model": "qwen35-2b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 45,
+            "total_tokens": 52
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 405.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 16.0,
+        "rbitnet_inference_ttft_ms_avg": -15.0,
+        "rbitnet_inference_decode_tokens_per_sec": 1.447544999999991,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 16.0,
+        "rbitnet_inference_decode_ms_sum": 148.0,
+        "rbitnet_inference_itl_us_sum": 15563.0,
+        "rbitnet_inference_tpot_us_sum": 15563.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 38.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 42.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 344232.0,
+        "rbitnet_core_gpu_download_bytes_total": 168.0,
+        "rbitnet_core_gpu_gemv_calls_total": 7854.0,
+        "rbitnet_core_gpu_attention_calls_total": 252.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 4177920.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 42.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_vram_bytes": 0.0
+      }
+    }
+  ]
+}

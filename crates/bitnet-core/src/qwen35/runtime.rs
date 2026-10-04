@@ -26,7 +26,8 @@ use crate::native::prefix::{self, PrefixStore};
 use crate::native::weights::Weights;
 
 struct SavedPrefix {
-    attention: super::attention::AttnPrefix,
+    attention: Option<super::attention::AttnPrefix>,
+    device_attention: Vec<Option<crate::native::qwen_full::SavedAttention>>,
     recurrent: Vec<RecurrentState>,
     device: Vec<Option<crate::native::qwen_recurrent::SavedRecurrent>>,
 }
@@ -37,6 +38,8 @@ pub struct Qwen35Runtime {
     tokenizer: LoadedPromptTokenizer,
     attn_kv: AttnKvCache,
     rec: Vec<RecurrentState>,
+    // Drop graphs borrowing layer contexts before those contexts and their weights.
+    gpu_full: Option<crate::native::qwen_full::GpuFull>,
     gpu_recurrent: Vec<Option<crate::native::qwen_recurrent::GpuRecurrent>>,
     gpu_head: Option<crate::native::head::GpuHead>,
     weights: Weights,
@@ -101,11 +104,14 @@ fn rms_combine(
 }
 
 impl Qwen35Runtime {
+    pub(crate) fn has_full_gpu_pipeline(&self) -> bool {
+        self.gpu_full.is_some()
+    }
     pub(crate) fn gpu_execution_summary(&self) -> (usize, usize, bool) {
         (
             self.gpu_recurrent.iter().flatten().count(),
             self.cfg.recurrent_layers.iter().filter(|&&v| v).count(),
-            self.gpu_head.is_some(),
+            self.gpu_head.is_some() || self.gpu_full.is_some(),
         )
     }
     pub(crate) fn resident_weights_bytes(&self) -> usize {
@@ -187,7 +193,6 @@ impl Qwen35Runtime {
             }
         }
 
-        let attn_kv = AttnKvCache::new(&cfg, cfg.max_seq);
         let d_conv = cfg.ssm_d_conv.max(2);
         let d_inner = cfg.ssm_d_inner.max(1);
         let gate_out = first_recurrent_gate_out_dim(archive.as_ref(), &cfg)?;
@@ -239,7 +244,32 @@ impl Qwen35Runtime {
             });
         }
 
-        let gpu_head = crate::native::head::GpuHead::new(&weights, &out_head.name, cfg.norm_eps);
+        let gpu_full =
+            if debug_max_layers.is_none() && debug_moe_topk.is_none() && !trace_layer_timings {
+                crate::native::qwen_full::GpuFull::new(
+                    &weights,
+                    &cfg,
+                    &gpu_recurrent,
+                    &out_head.name,
+                    backend_kind,
+                )
+            } else {
+                None
+            };
+        if std::env::var("RBITNET_REQUIRE_QWEN_FULL").as_deref() == Ok("1") && gpu_full.is_none() {
+            return Err(BitNetError::Inference("required Qwen full GPU pipeline unavailable (backend, tensors, options or CUDA DLL)".into()));
+        }
+        tracing::info!(enabled = gpu_full.is_some(), "full Qwen GPU token pipeline");
+        let attn_kv = if gpu_full.is_some() {
+            AttnKvCache::default()
+        } else {
+            AttnKvCache::new(&cfg, cfg.max_seq)
+        };
+        let gpu_head = if gpu_full.is_none() {
+            crate::native::head::GpuHead::new(&weights, &out_head.name, cfg.norm_eps)
+        } else {
+            None
+        };
         let prefix_supported = gpu_recurrent
             .iter()
             .flatten()
@@ -253,6 +283,7 @@ impl Qwen35Runtime {
             tokenizer,
             attn_kv,
             rec,
+            gpu_full,
             gpu_recurrent,
             gpu_head,
             weights,
@@ -318,7 +349,9 @@ impl Qwen35Runtime {
                 self.prefixes
                     .lookup(reusable, false, prefix::minimum_tokens())
             {
-                self.attn_kv.restore(&saved.attention)?;
+                if let Some(attention) = &saved.attention {
+                    self.attn_kv.restore(attention)?;
+                }
                 for (dst, src) in self.rec.iter_mut().zip(&saved.recurrent) {
                     *dst = src.clone();
                 }
@@ -327,15 +360,24 @@ impl Qwen35Runtime {
                         gpu.restore(state, length)?;
                     }
                 }
+                if let Some(gpu) = &mut self.gpu_full {
+                    gpu.restore_attention(&saved.device_attention, length)?;
+                }
                 matched = length;
-                crate::perf::record_prefix_hit(self.attn_kv.prefix_bytes(length));
+                crate::perf::record_prefix_hit(
+                    self.gpu_full
+                        .as_ref()
+                        .map(|g| g.prefix_bytes(length))
+                        .unwrap_or_else(|| self.attn_kv.prefix_bytes(length)),
+                );
             } else {
                 crate::perf::record_prefix_cache_miss();
             }
         }
         let mut logits = Vec::new();
         let mut next_token = None;
-        let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
+        let gpu_greedy = (self.gpu_head.is_some() || self.gpu_full.is_some())
+            && sampling.device_greedy_eligible();
         let prefill_chunk = self.prefill_chunk_tokens.max(1);
         let checkpoint_interval =
             env_opt_usize("RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS").unwrap_or(256);
@@ -422,8 +464,10 @@ impl Qwen35Runtime {
             return Ok(());
         }
         let bytes = self
-            .attn_kv
-            .prefix_bytes(tokens.len())
+            .gpu_full
+            .as_ref()
+            .map(|g| g.prefix_bytes(tokens.len()))
+            .unwrap_or_else(|| self.attn_kv.prefix_bytes(tokens.len()))
             .saturating_add(
                 self.rec
                     .iter()
@@ -453,8 +497,24 @@ impl Qwen35Runtime {
             };
             device.push(state);
         }
+        let device_attention = if let Some(gpu) = &self.gpu_full {
+            let Some(saved) = gpu.snapshots() else {
+                tracing::warn!(
+                    "Qwen attention checkpoint allocation failed; skipping prefix insertion"
+                );
+                return Ok(());
+            };
+            saved
+        } else {
+            Vec::new()
+        };
         let saved = SavedPrefix {
-            attention: self.attn_kv.snapshot(tokens.len())?,
+            attention: if self.gpu_full.is_none() {
+                Some(self.attn_kv.snapshot(tokens.len())?)
+            } else {
+                None
+            },
+            device_attention,
             recurrent: self.rec.clone(),
             device,
         };
@@ -499,6 +559,9 @@ impl Qwen35Runtime {
         }
 
         let mut x = token_embedding_row(archive, &self.tok_embd, tok, cfg.n_embd, cfg.n_vocab)?;
+        if let Some(gpu) = &mut self.gpu_full {
+            return gpu.run(&x, pos, logits_required, greedy);
+        }
 
         let layer_limit = self
             .debug_max_layers
@@ -929,6 +992,9 @@ mod sequence_tests {
         let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
         let mut rt =
             Qwen35Runtime::load(Arc::clone(&archive), Path::new(&tokenizer), backend).unwrap();
+        if std::env::var("RBITNET_REQUIRE_QWEN_FULL").as_deref() == Ok("1") {
+            assert!(rt.gpu_full.is_some(), "full GPU pipeline required");
+        }
         if std::env::var("RBITNET_QWEN_REQUIRE_RESIDENT").as_deref() == Ok("1") {
             assert_eq!(
                 rt.gpu_recurrent.iter().flatten().count(),

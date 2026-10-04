@@ -1,0 +1,10 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 8.81s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+test qwen35::runtime::sequence_tests::optional_qwen_greedy_ids_text_and_sequence_reset_match_reference ... ok
+test qwen35::runtime::sequence_tests::optional_qwen_prefix_checkpoints_restore_kv_gdn_and_convolution_after_divergence ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 93 filtered out; finished in 26.27s
