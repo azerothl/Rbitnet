@@ -98,9 +98,12 @@ Existing active data above a newly introduced cap cannot be reclaimed while
 its namespace is locked; new disk admission is refused rather than deleting it.
 Only recognized managed objects count, not arbitrary user files in the root.
 
-Six new filesystem fixtures are prepared for cross-model accounting, active
+Eight new fixtures are prepared for cross-model accounting, active
 namespace refusal, own LRU reclamation with live RAM leases, contention, differing
 caps, I/O refusal, interrupted temporaries and redirected foreign namespaces.
+The process fixture holds a sealed checkpoint in a second process, attempts
+admission while its namespace is locked, terminates that process forcibly, then
+attempts reclamation and checks physical bytes and a surviving RAM lease.
 Compilation, cross-process and actual model/proxy execution remain pending.
 This does not claim a physical ENOSPC or timed process-crash recovery sweep.
 

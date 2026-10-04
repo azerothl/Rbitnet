@@ -604,6 +604,7 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
     fn key() -> Compatibility {
         Compatibility {
             model_sha256: [1; 32],
@@ -630,6 +631,94 @@ mod tests {
                 Ok(())
             })
             .unwrap()
+    }
+    #[test]
+    fn global_quota_process_holder_fixture() {
+        let Some(root) = std::env::var_os("RBITNET_QUOTA_TEST_ROOT") else {
+            return;
+        };
+        let root = PathBuf::from(root);
+        let mut configuration = policy(&root, 128);
+        configuration.global_disk_bytes =
+            Some(portable_envelope::sealed_size(&key(), &[1], 64).unwrap());
+        let mut store = Store::open(key(), configuration).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.writes, 1);
+        std::fs::write(root.join("holder-ready"), b"sealed and owner locked").unwrap();
+        // The parent deliberately terminates this process after publication.
+        // Bound the wait so an interrupted parent never leaves an orphan fixture.
+        std::thread::sleep(Duration::from_secs(30));
+        panic!("parent failed to terminate quota holder");
+    }
+    #[test]
+    fn global_quota_other_process_is_protected_and_killed_owner_can_be_reclaimed() {
+        struct Holder(std::process::Child);
+        impl Drop for Holder {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let root = tempfile::tempdir().unwrap();
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--exact",
+                "context_tiers::tests::global_quota_process_holder_fixture",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env("RBITNET_QUOTA_TEST_ROOT", root.path());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let mut holder = Holder(command.spawn().unwrap());
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !root.path().join("holder-ready").exists() {
+            assert!(
+                holder.0.try_wait().unwrap().is_none(),
+                "holder exited early"
+            );
+            assert!(Instant::now() < deadline, "holder publication timed out");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut configuration = policy(root.path(), 128);
+        configuration.global_disk_bytes = Some(bound);
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut store = Store::open(other, configuration).unwrap();
+        let format = root.path().join("rbitnet-state-v1");
+        let objects = || {
+            std::fs::read_dir(&format)
+                .unwrap()
+                .flat_map(|namespace| std::fs::read_dir(namespace.unwrap().path()).unwrap())
+                .map(|entry| entry.unwrap().path())
+                .filter(|path| path.extension().and_then(|v| v.to_str()) == Some("state"))
+                .collect::<Vec<_>>()
+        };
+        let original = objects();
+        assert_eq!(original.len(), 1);
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        assert_eq!(objects(), original);
+        let held = store.lookup(&[2, 3], |_| 64).unwrap().unwrap();
+        holder.0.kill().unwrap();
+        assert!(!holder.0.wait().unwrap().success());
+        assert!(capture(&mut store, &[3], 3.0));
+        assert_eq!(store.stats.writes, 1);
+        assert_eq!(store.disk_used(), bound);
+        assert!(!original[0].exists());
+        let physical: u64 = objects()
+            .iter()
+            .map(|path| std::fs::metadata(path).unwrap().len())
+            .sum();
+        assert_eq!(physical, bound as u64);
+        assert!(held.checkpoint.values.iter().all(|v| *v == 2.0));
+        eprintln!("GLOBAL_QUOTA_CROSS_PROCESS_DONE active protected; killed owner reclaimed; physical cap exact; RAM lease intact");
     }
     #[test]
     fn global_quota_counts_active_namespaces_and_reclaims_only_idle_files() {
