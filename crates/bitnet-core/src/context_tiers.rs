@@ -66,6 +66,51 @@ impl Policy {
 fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
+fn linked(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x400 != 0;
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+// Create only one managed component after its parent has been checked. On
+// Windows retain an un-followed handle without delete sharing, so the component
+// cannot be renamed/replaced while this store uses paths below it.
+fn owned_directory(path: &Path) -> io::Result<File> {
+    match std::fs::create_dir(path) {
+        Ok(()) => (),
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => (),
+        Err(error) => return Err(error),
+    }
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.is_dir() || linked(&metadata) {
+        return Err(invalid(
+            "managed checkpoint directory must be a real directory",
+        ));
+    }
+    #[cfg(windows)]
+    let handle = {
+        use std::os::windows::fs::OpenOptionsExt;
+        OpenOptions::new()
+            .access_mode(0x80) // FILE_READ_ATTRIBUTES
+            .share_mode(0x1 | 0x2) // read/write sharing; no deletion or rename
+            .custom_flags(0x02000000 | 0x00200000) // BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+            .open(path)?
+    };
+    #[cfg(not(windows))]
+    let handle = File::open(path)?;
+    let opened = handle.metadata()?;
+    if !opened.is_dir() || linked(&opened) {
+        return Err(invalid("opened checkpoint directory must not redirect"));
+    }
+    Ok(handle)
+}
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|value| format!("{value:02x}")).collect()
 }
@@ -131,6 +176,7 @@ pub(crate) struct Store {
     directory: PathBuf,
     // Exclusive OS lock isolates cooperative runtimes and is released by process exit.
     _directory_lock: File,
+    _managed_directories: [File; 2],
     entries: BTreeMap<String, Entry>,
     charged: Arc<AtomicUsize>,
     disk_used: usize,
@@ -140,28 +186,36 @@ pub(crate) struct Store {
 impl Store {
     pub fn open(key: Compatibility, policy: Policy) -> io::Result<Self> {
         let identity = hex(&Sha256::digest(serde_json::to_vec(&key)?));
-        let directory = policy.directory.join("rbitnet-state-v1").join(identity);
-        std::fs::create_dir_all(&directory)?;
-        if std::fs::symlink_metadata(&directory)?
-            .file_type()
-            .is_symlink()
-        {
-            return Err(invalid("checkpoint namespace must not be a symlink"));
-        }
+        std::fs::create_dir_all(&policy.directory)?;
+        let format_directory = policy.directory.join("rbitnet-state-v1");
+        let format_guard = owned_directory(&format_directory)?;
+        let directory = format_directory.join(identity);
+        let namespace_guard = owned_directory(&directory)?;
         let lock_path = directory.join(".owner.lock");
-        if lock_path.exists()
-            && std::fs::symlink_metadata(&lock_path)?
-                .file_type()
-                .is_symlink()
-        {
-            return Err(invalid("checkpoint lock must not be a symlink"));
+        match std::fs::symlink_metadata(&lock_path) {
+            Ok(metadata) if linked(&metadata) || !metadata.is_file() => {
+                return Err(invalid("checkpoint lock must be a regular unlinked file"));
+            }
+            Ok(_) => (),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error),
         }
-        let lock = OpenOptions::new()
+        let mut lock_options = OpenOptions::new();
+        lock_options
             .read(true)
             .write(true)
             .create(true)
-            .truncate(false)
-            .open(lock_path)?;
+            .truncate(false);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            lock_options.share_mode(0x1 | 0x2).custom_flags(0x00200000);
+        }
+        let lock = lock_options.open(lock_path)?;
+        let metadata = lock.metadata()?;
+        if linked(&metadata) || !metadata.is_file() {
+            return Err(invalid("opened checkpoint lock must not redirect"));
+        }
         lock.try_lock()
             .map_err(|error| io::Error::new(io::ErrorKind::WouldBlock, error.to_string()))?;
         let mut store = Self {
@@ -169,6 +223,7 @@ impl Store {
             policy,
             directory,
             _directory_lock: lock,
+            _managed_directories: [format_guard, namespace_guard],
             entries: BTreeMap::new(),
             charged: Arc::new(AtomicUsize::new(0)),
             disk_used: 0,
@@ -545,6 +600,99 @@ mod tests {
                 Ok(())
             })
             .unwrap()
+    }
+    #[cfg(any(windows, unix))]
+    fn redirect_directory(link: &Path, target: &Path) {
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, link).unwrap();
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            // Paths are passed as child environment values, never shell code.
+            let status = std::process::Command::new("pwsh")
+                .args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path $env:RBITNET_TEST_JUNCTION_LINK -Target $env:RBITNET_TEST_JUNCTION_TARGET | Out-Null"])
+                .env("RBITNET_TEST_JUNCTION_LINK", link)
+                .env("RBITNET_TEST_JUNCTION_TARGET", target)
+                .creation_flags(0x08000000)
+                .status()
+                .unwrap();
+            assert!(status.success(), "create owned temporary test junction");
+        }
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn redirected_format_directory_is_refused_before_namespace_creation() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("configured-root");
+        let outside = parent.path().join("outside-cache");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let note = outside.join("keep.txt");
+        std::fs::write(&note, b"preserve outside contents").unwrap();
+        let link = root.join("rbitnet-state-v1");
+        redirect_directory(&link, &outside);
+        assert!(
+            Store::open(key(), policy(&root, 128)).is_err(),
+            "redirected managed format accepted"
+        );
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(std::fs::read(&note).unwrap(), b"preserve outside contents");
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn redirected_namespace_is_refused_without_touching_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let format = parent.path().join("rbitnet-state-v1");
+        let outside = parent.path().join("outside-cache");
+        std::fs::create_dir(&format).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let identity = hex(&Sha256::digest(serde_json::to_vec(&key()).unwrap()));
+        let link = format.join(identity);
+        redirect_directory(&link, &outside);
+        assert!(Store::open(key(), policy(parent.path(), 128)).is_err());
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+    }
+    #[cfg(unix)]
+    #[test]
+    fn dangling_lock_link_is_refused_without_creating_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let store = Store::open(key(), policy(parent.path(), 128)).unwrap();
+        let lock = store.directory.join(".owner.lock");
+        drop(store);
+        std::fs::remove_file(&lock).unwrap();
+        let outside = parent.path().join("must-not-be-created");
+        std::os::unix::fs::symlink(&outside, &lock).unwrap();
+        assert!(!lock.exists());
+        assert!(Store::open(key(), policy(parent.path(), 128)).is_err());
+        assert!(!outside.exists());
+        std::fs::remove_file(lock).unwrap();
+    }
+    #[cfg(windows)]
+    #[test]
+    fn live_windows_directory_handles_prevent_rename_until_store_drop() {
+        let parent = tempfile::tempdir().unwrap();
+        let mut store = Store::open(key(), policy(parent.path(), 128)).unwrap();
+        assert!(capture(&mut store, &[1, 2], 0.5));
+        let format = parent.path().join("rbitnet-state-v1");
+        let moved = parent.path().join("moved-format");
+        let moved_namespace = format.join("moved-namespace");
+        assert!(std::fs::rename(&format, &moved).is_err());
+        assert!(std::fs::rename(&store.directory, &moved_namespace).is_err());
+        assert!(!moved.exists() && !moved_namespace.exists());
+        let restored = store.lookup(&[1, 2, 3], |_| 64).unwrap().unwrap();
+        assert_eq!(restored.checkpoint.values, vec![0.5; 16]);
+        drop(restored);
+        drop(store);
+        std::fs::rename(&format, &moved).unwrap();
+        assert!(moved.is_dir() && !format.exists());
     }
     #[test]
     fn restart_reclaims_interrupted_writes_and_malformed_objects_without_removing_notes() {

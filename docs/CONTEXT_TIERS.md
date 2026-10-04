@@ -13,6 +13,18 @@ prefix checkpoint boundaries and Native page geometry. Changing these options
 selects another namespace rather than importing state produced by a different
 calculation configuration.
 
+The engine-created `rbitnet-state-v1` directory and its identity namespace are
+checked before creating anything below them. Links and Windows reparse points,
+including directory junctions, are refused. Windows keeps directory handles
+without delete sharing for the store lifetime, preventing those managed
+components from being renamed while the cache uses them. Lock inspection also
+covers dangling links before opening the file. The configured parent remains
+the user's chosen directory.
+
+The namespace-guard follow-up is prepared; Windows junction/rename regression
+tests and fresh serving validation have not run yet. These changes do not add
+a global quota across old namespaces or validate other operating systems.
+
 ## Configuration
 
 Set `RBITNET_CONTEXT_TIERS=1` and `RBITNET_CONTEXT_DIR` to a local directory.
