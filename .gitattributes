@@ -1,0 +1,21 @@
+# Keep bytes used by the encoded-KV evidence stable across Windows checkouts.
+native/cuda_quant/src/kv_storage.cuh text eol=lf
+native/cuda_quant/src/kv_attention_oracle.cuh text eol=lf
+native/cuda_quant/src/llama_resident.cuh text eol=lf
+native/cuda_quant/src/paged_kernels.cuh text eol=lf
+native/cuda_quant/src/paged_pool.cuh text eol=lf
+native/cuda_quant/src/quant_matvec.cu text eol=lf
+native/cuda_quant/include/rbitnet_cuda_quant.h text eol=lf
+crates/bitnet-core/src/llama/resident.rs text eol=lf
+crates/bitnet-core/src/llama/runtime.rs text eol=lf
+crates/bitnet-core/src/llama/resident/quantized_tests.rs text eol=lf
+crates/bitnet-core/src/llama/resident/canonical_tests.rs text eol=lf
+crates/bitnet-core/src/llama/resident/quantized_long_tests.rs text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.json text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.md text eol=lf
+docs/benchmarks/2026-10-04-kv-formats/*.gz -text
+.gitattributes text eol=lf
+
+docs/benchmarks/2026-10-04-kv-tf32-guard/raw/** -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/harness/** -text
