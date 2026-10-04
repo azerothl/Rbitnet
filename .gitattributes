@@ -28,3 +28,9 @@ docs/benchmarks/2026-10-04-stack-comparison-first/receipt.json -text
 docs/benchmarks/2026-10-04-context-namespace-fresh/raw/** -text
 docs/benchmarks/2026-10-04-context-namespace-fresh/receipt.json -text
 docs/benchmarks/2026-10-04-context-namespace-fresh/harness/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/raw/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/harness/** -text
+docs/benchmarks/2026-10-04-native-llama-comparison/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/raw/** -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/harness/** -text
