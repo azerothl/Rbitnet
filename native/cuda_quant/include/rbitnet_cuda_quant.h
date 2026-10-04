@@ -315,6 +315,15 @@ typedef struct {
 RBITNET_CUDA_API void *rbitnet_cuda_llama_create_paged(const RbitnetLlamaConfig*,const RbitnetLlamaLayer*,const RbitnetLlamaMatrix*,const float*,const float*,unsigned,const void*,unsigned);
 RBITNET_CUDA_API int rbitnet_cuda_llama_paged_stats(const void*,RbitnetPagedKvStats*);
 RBITNET_CUDA_API int rbitnet_cuda_llama_paged_trim(void*);
+
+/* F32 host checkpoint transport: caller validates model identity and sealed files. */
+RBITNET_CUDA_API int rbitnet_cuda_portable_device_key(unsigned char*,size_t);
+RBITNET_CUDA_API size_t rbitnet_cuda_llama_portable_bytes(void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_llama_portable_export(void*,unsigned,float*,size_t);
+RBITNET_CUDA_API int rbitnet_cuda_llama_portable_import(void*,unsigned,const float*,size_t);
+RBITNET_CUDA_API size_t rbitnet_cuda_qwen_portable_bytes(void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_portable_export(void*,unsigned,float*,size_t);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_portable_import(void*,unsigned,const float*,size_t);
 #ifdef __cplusplus
 }
 #endif

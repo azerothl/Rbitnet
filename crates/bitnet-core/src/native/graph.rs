@@ -1379,6 +1379,11 @@ impl NativeExecutor {
         family: Family,
     ) -> Result<Self> {
         let id = archive.suggested_openai_model_id();
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
         let runtime = Runtime::load(archive, tokenizer, kind, family)?;
         Ok(Self {
             kind,

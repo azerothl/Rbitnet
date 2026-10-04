@@ -810,6 +810,7 @@ pub fn prometheus_text() -> String {
         )
         .unwrap();
     }
+    s.push_str(&crate::context_native::prometheus_text());
     s
 }
 

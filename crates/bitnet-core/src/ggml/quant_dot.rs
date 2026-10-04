@@ -759,37 +759,55 @@ pub fn matvec_device_quant_optional(
     }
 }
 
+struct LoadedCudaLibrary {
+    library: Library,
+    identity: Option<[u8; 32]>,
+}
+static CUDA_QUANT_LIBRARY: OnceLock<Option<LoadedCudaLibrary>> = OnceLock::new();
+
+pub(crate) fn cuda_quant_library_identity() -> Option<[u8; 32]> {
+    let _ = load_cuda_quant_library();
+    CUDA_QUANT_LIBRARY.get()?.as_ref()?.identity
+}
 pub(crate) fn load_cuda_quant_library() -> Option<&'static Library> {
-    static LIB: OnceLock<Option<Library>> = OnceLock::new();
-    LIB.get_or_init(|| {
-        let mut candidates: Vec<String> = Vec::new();
-        if let Ok(explicit) = std::env::var("RBITNET_CUDA_QUANT_LIB") {
-            let trimmed = explicit.trim();
-            if !trimmed.is_empty() {
-                candidates.push(trimmed.to_string());
+    CUDA_QUANT_LIBRARY
+        .get_or_init(|| {
+            let mut candidates: Vec<String> = Vec::new();
+            if let Ok(explicit) = std::env::var("RBITNET_CUDA_QUANT_LIB") {
+                let trimmed = explicit.trim();
+                if !trimmed.is_empty() {
+                    candidates.push(trimmed.to_string());
+                }
             }
-        }
-        for path in [
-            "rbitnet_cuda_quant64.dll",
-            "rbitnet_cuda_quant.dll",
-            "librbitnet_cuda_quant.so",
-            "librbitnet_cuda_quant.dylib",
-            "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
-            "native/cuda_quant/build/rbitnet_cuda_quant.dll",
-            "native/cuda_quant/build/librbitnet_cuda_quant.so",
-            "native/cuda_quant/build/librbitnet_cuda_quant.dylib",
-        ] {
-            candidates.push(path.to_string());
-        }
-        for path in candidates {
-            if let Ok(lib) = unsafe { Library::new(path.as_str()) } {
-                tracing::info!(path = %path, "loaded librbitnet_cuda_quant");
-                return Some(lib);
+            for path in [
+                "rbitnet_cuda_quant64.dll",
+                "rbitnet_cuda_quant.dll",
+                "librbitnet_cuda_quant.so",
+                "librbitnet_cuda_quant.dylib",
+                "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
+                "native/cuda_quant/build/rbitnet_cuda_quant.dll",
+                "native/cuda_quant/build/librbitnet_cuda_quant.so",
+                "native/cuda_quant/build/librbitnet_cuda_quant.dylib",
+            ] {
+                candidates.push(path.to_string());
             }
-        }
-        None
-    })
-    .as_ref()
+            for path in candidates {
+                use sha2::Digest;
+                let identity = std::fs::read(&path)
+                    .ok()
+                    .map(|bytes| sha2::Sha256::digest(&bytes).into());
+                if let Ok(lib) = unsafe { Library::new(path.as_str()) } {
+                    tracing::info!(path = %path, "loaded librbitnet_cuda_quant");
+                    return Some(LoadedCudaLibrary {
+                        library: lib,
+                        identity,
+                    });
+                }
+            }
+            None
+        })
+        .as_ref()
+        .map(|loaded| &loaded.library)
 }
 
 pub(crate) fn matvec_device_quant_batch_optional(
