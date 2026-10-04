@@ -315,6 +315,7 @@ typedef struct {
 RBITNET_CUDA_API void *rbitnet_cuda_llama_create_paged(const RbitnetLlamaConfig*,const RbitnetLlamaLayer*,const RbitnetLlamaMatrix*,const float*,const float*,unsigned,const void*,unsigned);
 RBITNET_CUDA_API int rbitnet_cuda_llama_paged_stats(const void*,RbitnetPagedKvStats*);
 RBITNET_CUDA_API int rbitnet_cuda_llama_paged_trim(void*);
+RBITNET_CUDA_API void *rbitnet_cuda_llama_create_kv(const RbitnetLlamaConfig*,const RbitnetLlamaLayer*,const RbitnetLlamaMatrix*,const float*,const float*,unsigned,const void*,unsigned,unsigned);
 #ifdef __cplusplus
 }
 #endif
