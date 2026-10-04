@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Draft: F32 page indirection; original arithmetic/reduction order.
+// F32 page indirection; preserve dense arithmetic and reduction order.
 namespace {
 __global__ void paged_resident_rope_kv(float *q,float *k,const float *v,float *const *pages_k,float *const *pages_v,unsigned layer,
     const float *frequency,const unsigned *position,unsigned heads,unsigned kv_heads,unsigned dim,unsigned rotary) {
