@@ -1,0 +1,106 @@
+{
+  "origin_manifest": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\manifest.json",
+  "origin_manifest_sha256": "141830ee5111041fded1e98f60d571d6adad8a7ab0c4a8218612d1583441dc65",
+  "vectors": [
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-147.f32",
+      "sha256": "2cb16efe783fda040a1bb09ff3fc811e36561d58895f5c4806d26bfa4d85ab9b"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-145.f32",
+      "sha256": "3a73865286bf5f08b78969bf70ba25d2046dd7718bbbb4344ae59d7555687c00"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-7.f32",
+      "sha256": "3ca9ef09fc22e71f1350a847d8481d6d700cfe212e711019ad5deeb812f8a828"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-146.f32",
+      "sha256": "3f262ebe8f811315c6a200784c2f75b121aff0c2ec35ce896a08181c7222b6b2"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-149.f32",
+      "sha256": "49bea60af65b0f80bdc1377136deaeaba69ceff2e5d06a2021eb3437cccc04fd"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-159.f32",
+      "sha256": "50b741cff74d7c42c1a1422231943f40225ae7fbe5050b675c38fde52671a0c4"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-63.f32",
+      "sha256": "5d1ef47664945f5d4116eb73375d3a85520d4e18c1f27f9f5ff9cb14f0d8271e"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-0.f32",
+      "sha256": "5d433ed81aa3dc474867ea934f59733fdbfa475c89755c772e5d752e066e50e3"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-31.f32",
+      "sha256": "5eba7e6711fa628b433790df05d4e24f65c7a9cc3554390a40249cca530c7561"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-159.f32",
+      "sha256": "6b1dde96733d88a9eef6e2b39dba88adb0fc430442d68bd39fdf9d325dbfede8"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-127.f32",
+      "sha256": "79f2f5ca597d090f4e5ebcadebb34dfc88d65259f34bcde97a4728d8157fb20d"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-148.f32",
+      "sha256": "7ef0171d60c57bb749e1cc0aff106176760619ede6a581d532196f39f168281b"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-0.f32",
+      "sha256": "8733dee7617208eb0fb99cd54459746df6e3e04d6c13f4d2e64d0cbaf238b15f"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-1.f32",
+      "sha256": "8b38a0d00a6a02843ff0d9e0622d81d41bef8c59d722ff44791ace759a203634"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-127.f32",
+      "sha256": "8e0268c1cf88dda8a20e5f1f04d78a9299c08c89dd4e21f7c0cc71d618b7a54f"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-147.f32",
+      "sha256": "afa2705e98ddcf3a5af130c80bd02971edec1abc60cea151a6ea1b03955b060a"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-1.f32",
+      "sha256": "b10b32774b061ac025a9461785d9155a59c6d42de2b850a004cccd8718e75e11"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-145.f32",
+      "sha256": "b43c82b02e7b671b0271d1b2f7436a6795f7444828d4f59e305bfdc16d480f9a"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-7.f32",
+      "sha256": "bcc9c2fbc2e44a269fe6fd7033c3eb60ec4c489835ca7db13df5f02f4c3ef392"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-148.f32",
+      "sha256": "cf8eb8eb25c70a3fffedf1230679b6b92730b2821e077c09840374d87e685ce5"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-146.f32",
+      "sha256": "d6779c409d12107aa2bbbb15cd5ab3cda1c72af06229a9d34cf9ae9583665149"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-0-position-63.f32",
+      "sha256": "f156a39a7f13e36930c350bc5222495c9983395a636c0de5641f2856029b57e5"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-31.f32",
+      "sha256": "fc1873d9fa7025a8560a809b3f7ffde0e5e7a8c6fee8f3e5551576b77a69a02e"
+    },
+    {
+      "path": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-ordered-fastpaths-proof\\vectors\\baseline\\actual-count-0-tile-0-fused-1-corpus-1-position-149.f32",
+      "sha256": "febe2c5f96a1deb3ec8d01a4110c6868cbd9f41c40794294c5ddd8488e26e86b"
+    }
+  ],
+  "limits": [
+    "Frozen previously executed GPT-OSS full-vocabulary logits. No new model execution occurred.",
+    "This input index is for future CPU sampler equality and timing; it does not measure model throughput."
+  ]
+}
