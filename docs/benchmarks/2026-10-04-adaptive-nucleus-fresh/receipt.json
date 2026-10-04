@@ -1,0 +1,314 @@
+{
+  "kind": "adaptive-nucleus",
+  "journal": {
+    "pid": 48804,
+    "status": "passed",
+    "complete": true,
+    "workspace": "C:\\Users\\azero\\.codex\\worktrees\\exact-nucleus-sampling\\Rbitnet",
+    "head": "cebe50dde577781100dd7861bb6ae71699e13501",
+    "checker_sha256": "e0ae4e371a581955e3d7563042a8ea999ed21a8034630c1fb2455c55d5ddfa75",
+    "started_utc": "2026-10-04T16:54:22Z",
+    "hardware_started_utc": "2026-10-04T18:00:23Z",
+    "current_step": "actual-network",
+    "finished_utc": "2026-10-04T18:11:11Z"
+  },
+  "manifest_sha256": "f59656d8e7af741f1ee8ebfdedea0bfe994595d7d52ccaf0d58a01e616a4e081",
+  "captures": [
+    {
+      "path": "raw/actual-cost.log.gz",
+      "raw_path": "actual-cost.log",
+      "raw_sha256": "0684d100ef7932f544a7f79bffd9aab18995b003b916ac463d67b12c55aa6274",
+      "gzip_sha256": "98c2d59d6f8ac016fd560203c8f6f057d3e5aba25196190f7f2d3f58d58d0d02",
+      "raw_bytes": 7642
+    },
+    {
+      "path": "raw/actual-cost.log.decode.json.gz",
+      "raw_path": "actual-cost.log.decode.json",
+      "raw_sha256": "51d69d2ebb366b7963f8f26c15c5042c55f1e1c9be6a5ddee13c393f0256ae09",
+      "gzip_sha256": "4b233b4c48bef112626c838a0ab5c1ba0aa76861df1e697974832638f3524ce4",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/actual-network.log.gz",
+      "raw_path": "actual-network.log",
+      "raw_sha256": "5ad022ef60dd2622ce316a9e8580e45954c61ef988edba115555444ff4c250d4",
+      "gzip_sha256": "a812a4f26bae161854c179ef1c015b3ad64d22fffd6966b54c3867e31c3485fa",
+      "raw_bytes": 893
+    },
+    {
+      "path": "raw/actual-network.log.decode.json.gz",
+      "raw_path": "actual-network.log.decode.json",
+      "raw_sha256": "598f9465821cfadbd42e558ac76e3d41d35241d8ab7c52c619759e0cd357efe4",
+      "gzip_sha256": "a1644f834922476d12dd43b3a554ccdab6f716a1fe9bd3ecbd6b31f3383c43e7",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/all-project-artifact-purge-dev.json.gz",
+      "raw_path": "all-project-artifact-purge-dev.json",
+      "raw_sha256": "ff55e19e9f18a7ee5328aff2a521e3800a43806ff86603bd8f7388f182b992e4",
+      "gzip_sha256": "7716c9a389af22e9c6c5fd99813ff57a456b700b41afb549b28d96ee0425df03",
+      "raw_bytes": 982
+    },
+    {
+      "path": "raw/all-project-artifact-purge-release.json.gz",
+      "raw_path": "all-project-artifact-purge-release.json",
+      "raw_sha256": "076872e0beaa3a71978c51066c2b95d38fd8b72ae68c0d0f3ba419a57f788476",
+      "gzip_sha256": "777fb67b42c8e46ff1759ef76a2e3455c2e3044dc1e283748af4a6477e18d0ae",
+      "raw_bytes": 3123
+    },
+    {
+      "path": "raw/check.log.gz",
+      "raw_path": "check.log",
+      "raw_sha256": "5f8ffc88737d303cacc6864908ad605f311a722522720058bc0b7be8e3132e55",
+      "gzip_sha256": "017747368476fe21126b9fe968fe9229cdf735d8b17bb735a3d69d70038c76a6",
+      "raw_bytes": 1755
+    },
+    {
+      "path": "raw/check.log.decode.json.gz",
+      "raw_path": "check.log.decode.json",
+      "raw_sha256": "9a5b825509eda11af34015a5484e5bc347b917b43f98b5b9e8e484205bed05ba",
+      "gzip_sha256": "a3d80f9aefc778670907b8300c079f9ba7d5df773bbe62e0fbb8567edefea792",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/clippy.log.gz",
+      "raw_path": "clippy.log",
+      "raw_sha256": "aec5c701e541556286abfb5259cfa4d765ae2e018bd3f3f5a0221b39c8dc0770",
+      "gzip_sha256": "f23e10ac1627e8da96e6ab6346bc9d99324998651ea4d236d07790a5ef848eb0",
+      "raw_bytes": 10203
+    },
+    {
+      "path": "raw/clippy.log.decode.json.gz",
+      "raw_path": "clippy.log.decode.json",
+      "raw_sha256": "a6c6a8b1743286b03824d881e699d5a191da38e6f3da4c4904e3e78b0c75b3d9",
+      "gzip_sha256": "251f3632a8c3cede2253c5b4bf1a970c26f2aee317a3fdf34f7220531b7c3da1",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/live/glm47-flash-cpu-heap0.log.gz",
+      "raw_path": "live/glm47-flash-cpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/glm47-flash-cpu-heap1.log.gz",
+      "raw_path": "live/glm47-flash-cpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/glm47-flash-gpu-heap0.log.gz",
+      "raw_path": "live/glm47-flash-gpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/glm47-flash-gpu-heap1.log.gz",
+      "raw_path": "live/glm47-flash-gpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/gpt-oss-20b-cpu-heap0.log.gz",
+      "raw_path": "live/gpt-oss-20b-cpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/gpt-oss-20b-cpu-heap1.log.gz",
+      "raw_path": "live/gpt-oss-20b-cpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/gpt-oss-20b-gpu-heap0.log.gz",
+      "raw_path": "live/gpt-oss-20b-gpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/gpt-oss-20b-gpu-heap1.log.gz",
+      "raw_path": "live/gpt-oss-20b-gpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/llama32-1b-cpu-heap0.log.gz",
+      "raw_path": "live/llama32-1b-cpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/llama32-1b-cpu-heap1.log.gz",
+      "raw_path": "live/llama32-1b-cpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/llama32-1b-gpu-heap0.log.gz",
+      "raw_path": "live/llama32-1b-gpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/llama32-1b-gpu-heap1.log.gz",
+      "raw_path": "live/llama32-1b-gpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/qwen35-2b-cpu-heap0.log.gz",
+      "raw_path": "live/qwen35-2b-cpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/qwen35-2b-cpu-heap1.log.gz",
+      "raw_path": "live/qwen35-2b-cpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/qwen35-2b-gpu-heap0.log.gz",
+      "raw_path": "live/qwen35-2b-gpu-heap0.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/qwen35-2b-gpu-heap1.log.gz",
+      "raw_path": "live/qwen35-2b-gpu-heap1.log",
+      "raw_sha256": "a2ae09935d37bff5eb2de117c91ae7c01650e39adb58b29b9ef25e2fd40c70a5",
+      "gzip_sha256": "b8d3f4a63607e9589223d5470793ed14c1e841cfee063317d6b19930c04bb1a8",
+      "raw_bytes": 38
+    },
+    {
+      "path": "raw/live/results.json.gz",
+      "raw_path": "live/results.json",
+      "raw_sha256": "fffa269244b703368bd03feb540e75fdbc5e72356954c86f82b604103fb9f935",
+      "gzip_sha256": "38f0a5cb6a6c582f8644ab39c33e2e8204a1d270c0d66fafdccdb757fc7ec256",
+      "raw_bytes": 7718917
+    },
+    {
+      "path": "raw/manifest.json.gz",
+      "raw_path": "manifest.json",
+      "raw_sha256": "f59656d8e7af741f1ee8ebfdedea0bfe994595d7d52ccaf0d58a01e616a4e081",
+      "gzip_sha256": "c17ad9b52e3e93e3273f7cbe768e50c97e9718ccdf5e86998e4a1887adb8eb37",
+      "raw_bytes": 36370
+    },
+    {
+      "path": "raw/native-build.log.gz",
+      "raw_path": "native-build.log",
+      "raw_sha256": "6d3f726fbda37e1401ce9e333435b13af63ef1464b92c0217811f475b472c65d",
+      "gzip_sha256": "2fd56bbd6dec43d51f73bb81d1c9fac936c2293398843826642c344ef0396a1f",
+      "raw_bytes": 929
+    },
+    {
+      "path": "raw/native-build.log.decode.json.gz",
+      "raw_path": "native-build.log.decode.json",
+      "raw_sha256": "9bfaa57742991cc3c4982cc78edaead3b3d45d47172a3eab63c2d0225bbb6478",
+      "gzip_sha256": "f66f8fd66e3b4e7bce2981d26b3e2fcb18b9915caca9976085716ed3f767a686",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/project-artifact-clean-dev.log.gz",
+      "raw_path": "project-artifact-clean-dev.log",
+      "raw_sha256": "fff817d76d8bcdd5693199c9339e64b7899ba101545732d4e3d83370d4abd19a",
+      "gzip_sha256": "40b765989df366207505450b77e9ef0c81255bff79fe57744d4dab76205908dc",
+      "raw_bytes": 37
+    },
+    {
+      "path": "raw/project-artifact-clean-release.log.gz",
+      "raw_path": "project-artifact-clean-release.log",
+      "raw_sha256": "0bdaeb2aa6a92a0fdfec2d2cc4d0ab71946de5d0654e08c526e4629130ae0f28",
+      "gzip_sha256": "94b43c1849676ea7043059d85de5660d3a7cc2c8717a2f1a5f80d98681cd964f",
+      "raw_bytes": 21
+    },
+    {
+      "path": "raw/release.log.gz",
+      "raw_path": "release.log",
+      "raw_sha256": "5e677e24027b2a1a7916a7188c6fb48f8d0db1519c553bfbaae36fea1ec822f0",
+      "gzip_sha256": "5dd099aca003082abe860a96c329e09550bc138321c2cb2e23befb725ae67d4b",
+      "raw_bytes": 1504
+    },
+    {
+      "path": "raw/release.log.decode.json.gz",
+      "raw_path": "release.log.decode.json",
+      "raw_sha256": "52390013d9b1109977b365f7cf1cd2e5a332428d0e77cd75dd1a1d2d970be733",
+      "gzip_sha256": "a92899c185da51715ffde703cdbe7bb79e6bde0f3f3f580501525749415b5e92",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/summary.json.gz",
+      "raw_path": "summary.json",
+      "raw_sha256": "3f2c7bebff0eb0e9d2464c63856e832107b7b65a68998031313215da4b240218",
+      "gzip_sha256": "518d5d31cc6e4fe432aa7d3d0a2de9356d31891f375c3b7691246967a5bd04ba",
+      "raw_bytes": 11712
+    },
+    {
+      "path": "raw/synthetic-exact.log.gz",
+      "raw_path": "synthetic-exact.log",
+      "raw_sha256": "7750eb96fda3db85d45a043ad4588ecd6e7ab64065d9c876e5fb7564b7be7c55",
+      "gzip_sha256": "638cffe9755b45072525d292738a3db51cbbd358546a1309101476118bf25ce5",
+      "raw_bytes": 895
+    },
+    {
+      "path": "raw/synthetic-exact.log.decode.json.gz",
+      "raw_path": "synthetic-exact.log.decode.json",
+      "raw_sha256": "61026aadcb1e9916e9be7e33ce4da0b2ef2427092a5a9d33aa4c7f6dbbe3cc04",
+      "gzip_sha256": "1da520b61bb1a4d64f6fc1090161060a987261f61a28432fb98594183a146abd",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/workspace.log.gz",
+      "raw_path": "workspace.log",
+      "raw_sha256": "7b2b9ebadd2547cd1943e9c58c3af3620ec2841d86ed03b55fa4db3bf0cedbc9",
+      "gzip_sha256": "d44b59f1cf6d78efe85600e580e01ea542d698522aa321c08070ab0d85b1c38a",
+      "raw_bytes": 31387
+    },
+    {
+      "path": "raw/workspace.log.decode.json.gz",
+      "raw_path": "workspace.log.decode.json",
+      "raw_sha256": "653a5b3d31a18c248ff5045219c59e76d15eea7c3fb272deb4b004092e9ccefd",
+      "gzip_sha256": "97af167b55d80385ad6e9294b5db830289c18080317fbe5d91b52f55ff6b4d6f",
+      "raw_bytes": 185
+    }
+  ],
+  "harness_sha256": {
+    "check_adaptive_nucleus.py": "e0ae4e371a581955e3d7563042a8ea999ed21a8034630c1fb2455c55d5ddfa75",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c",
+    "diagnostic_logs.py": "37e0dd4a2d6769bac1f4672ecae66e3ceb310222aa45b294255174f155b32325",
+    "project_build_cache.py": "9ec69dda48f8aa8b0e8a5b9a791a854245e9d627cf83650487551b04e0272a85",
+    "finish_reason_live.py": "0fd806fac367035e14ab6afa3fbf6e45236f7d379af29cbeb4da40289bc4240d",
+    "nucleus_sampling_live.py": "b1745247b7467aa8f34a30a59f3b5798c1a48ec4fa0b45747f4fd8bd73890375",
+    "top-p-actual-inputs.json": "47f22e4d1e014f79da2abb1bb996de84379d721291331f98c5b774ca84981525",
+    "benchmark_engines.py": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e",
+    "benchmark_cache_stack.py": "8de5558fe350ce5c1491d1fb0a9c751f7b7ab2c08d2e975e0979e5a396cf4e97",
+    "validate_cache_streaming.py": "186c0dbac3473a2216d98059f83df34a72edd7a98b62c006749fd709d17135dd"
+  },
+  "workspace_tests": {
+    "passed": 298,
+    "failed": 0,
+    "ignored": 1
+  },
+  "limits": [
+    "Models, executables, DLLs and local full-vector float archives are omitted; their original SHA-256 identities remain in the manifest.",
+    "Raw capture bytes are preserved; source identities bind working-file bytes, not cross-platform Git line endings.",
+    "Local orchestration/model paths need adaptation for reproduction."
+  ],
+  "publication_head": "cebe50dde577781100dd7861bb6ae71699e13501"
+}

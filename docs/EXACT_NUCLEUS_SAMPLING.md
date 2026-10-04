@@ -8,8 +8,8 @@ wide nuclei use stable sorting; small candidate nuclei try 64 heap pops before
 a complete deterministic sort fallback. Temperature and repetition penalties
 are applied before this selection, as before.
 
-This source is prepared, not yet validated. Earlier isolated GPT-OSS vector
-measurements of the unguarded heap showed gains and uniform-input regressions;
-they do not validate this revision or establish end-to-end tokens/s improvement.
-Synthetic/actual-vector equality, RNG state, CPU ablations and four-model
-HTTP/SSE comparisons are required before publishing or enabling this option.
+Fresh validation passed: 298 workspace tests (one ignored), 2,028 synthetic
+cases, 864 actual-vector token/RNG checks and 96 four-model CPU/CUDA HTTP/SSE
+observations. The optional path improved measured GPU wall rates on the two
+writing prompts per model. Wider-distribution selection can still regress;
+the default remains unchanged. See the complete [report and original captures](benchmarks/2026-10-04-adaptive-nucleus-fresh/README.md).
