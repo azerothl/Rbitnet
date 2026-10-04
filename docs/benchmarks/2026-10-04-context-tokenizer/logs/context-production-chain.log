@@ -1,0 +1,6 @@
+Adopted context/tokenizer validation: workspace
+Adopted context/tokenizer validation: clippy
+Adopted context/tokenizer validation: actual-sp
+Adopted context/tokenizer validation: release
+Adopted context/tokenizer validation: network
+Adopted context capacity, SentencePiece, immutable tokenizers, actual Mistral and HTTP validation passed.

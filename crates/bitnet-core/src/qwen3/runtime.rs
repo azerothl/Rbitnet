@@ -35,7 +35,7 @@ struct LayerTensors {
 pub struct Qwen3Runtime {
     cfg: Qwen3Config,
     archive: Arc<GgufArchive>,
-    tokenizer: LoadedPromptTokenizer,
+    pub(super) tokenizer: Arc<LoadedPromptTokenizer>,
     tok_embd: GgufTensorInfo,
     out_norm: GgufTensorInfo,
     out_head: GgufTensorInfo,
@@ -155,6 +155,10 @@ fn resolve_lm_head(archive: &GgufArchive, tok_embd: &GgufTensorInfo) -> Result<G
 }
 
 impl Qwen3Runtime {
+    pub(crate) fn context_capacity(&self) -> usize {
+        self.cfg.max_seq
+    }
+
     pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path) -> Result<Self> {
         let cfg = Qwen3Config::from_gguf(archive.as_ref())?;
         let tok_embd = must_tensor(archive.as_ref(), "token_embd.weight")?;
@@ -178,7 +182,10 @@ impl Qwen3Runtime {
                 ffn_down: must_tensor(archive.as_ref(), &format!("{p}.ffn_down.weight"))?,
             });
         }
-        let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
+        let tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            tokenizer_path,
+            &archive,
+        )?);
 
         let stride = cfg.n_kv * cfg.head_dim;
         cfg.n_layer
@@ -219,6 +226,7 @@ impl Qwen3Runtime {
         let t_enc = Instant::now();
         let prompt_ids = self.tokenizer.encode_ids(prompt, true)?;
         let encode_ms = t_enc.elapsed().as_millis() as u64;
+        crate::context_capacity::check_request(prompt_ids.len(), max_tokens, self.cfg.max_seq)?;
         if prompt_ids.is_empty() {
             return Ok((
                 String::new(),

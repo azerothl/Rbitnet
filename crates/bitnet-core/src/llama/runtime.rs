@@ -51,7 +51,7 @@ fn llama_decode_skip_special_tokens() -> bool {
 pub struct LlamaRuntime {
     model: LlamaModel,
     resident: Option<super::resident::Resident>,
-    tokenizer: LoadedPromptTokenizer,
+    tokenizer: Arc<LoadedPromptTokenizer>,
     kv: KvStorage,
     backend: Box<dyn ComputeBackend>,
     prefill_chunk_tokens: usize,
@@ -73,9 +73,30 @@ impl LlamaRuntime {
         tokenizer_path: &Path,
         backend_kind: BackendKind,
     ) -> Result<Self> {
+        let cfg = LlamaConfig::from_gguf(archive.as_ref())?;
+        Self::load_with_config(archive, tokenizer_path, backend_kind, cfg)
+    }
+    pub(crate) fn load_with_config(
+        archive: Arc<GgufArchive>,
+        tokenizer_path: &Path,
+        backend_kind: BackendKind,
+        cfg: LlamaConfig,
+    ) -> Result<Self> {
+        let tokenizer = Arc::new(LoadedPromptTokenizer::from_path_for_gguf(
+            tokenizer_path,
+            &archive,
+        )?);
+        Self::load_with_config_and_tokenizer(archive, tokenizer_path, backend_kind, cfg, tokenizer)
+    }
+    pub(crate) fn load_with_config_and_tokenizer(
+        archive: Arc<GgufArchive>,
+        tokenizer_path: &Path,
+        backend_kind: BackendKind,
+        cfg: LlamaConfig,
+        tokenizer: Arc<LoadedPromptTokenizer>,
+    ) -> Result<Self> {
         let model_id = archive.suggested_openai_model_id();
-        let model = LlamaModel::from_gguf_arc_for_backend(archive, backend_kind)?;
-        let tokenizer = LoadedPromptTokenizer::from_path(tokenizer_path)?;
+        let model = LlamaModel::from_gguf_arc_with_config(Arc::clone(&archive), backend_kind, cfg)?;
         let _ = kv_pool::ensure_global_kv_pool(&model.cfg);
         let kv = llama_kv_from_env(&model.cfg)?;
         let resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
@@ -181,6 +202,11 @@ impl LlamaRuntime {
             .tokenizer
             .encode_ids(prompt, llama_encode_add_special_tokens())?;
         let encode_ms = t_enc.elapsed().as_millis() as u64;
+        crate::context_capacity::check_request(
+            prompt_ids.len(),
+            max_tokens,
+            self.model.cfg.max_seq,
+        )?;
         if prompt_ids.is_empty() {
             return Ok((
                 String::new(),

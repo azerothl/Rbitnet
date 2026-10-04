@@ -34,5 +34,5 @@ pub fn build_bitnet_executor(
         backend,
         gguf,
         tokenizer_path,
-    )))
+    )?))
 }

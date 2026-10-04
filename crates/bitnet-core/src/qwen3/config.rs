@@ -113,9 +113,11 @@ impl Qwen3Config {
         let norm_eps = metadata_f32(md, "qwen3.attention.layer_norm_rms_epsilon")
             .or_else(|| metadata_f32(md, "qwen3.attention.layer_norm_epsilon"))
             .unwrap_or(1e-6);
-        let max_seq = metadata_usize(md, "qwen3.context_length")
-            .unwrap_or(2048)
-            .min(8192);
+        let max_seq = crate::context_capacity::capacity_from_env(
+            metadata_usize(md, "qwen3.context_length").unwrap_or(2048),
+            8192,
+            Some(8192),
+        )?;
 
         Ok(Self {
             n_embd,

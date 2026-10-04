@@ -33,7 +33,7 @@ pub fn build_glm4_moe_executor(
             gguf,
             tokenizer_path,
             "glm4moe",
-        )));
+        )?));
     }
     Err(roadmap_unsupported::roadmap_architecture_not_supported(
         architecture_key,

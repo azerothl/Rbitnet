@@ -16,6 +16,13 @@ pub enum BitNetError {
     #[error("model not loaded; set RBITNET_MODEL to a .gguf path or use stub mode")]
     ModelNotLoaded,
 
+    #[error("request exceeds allocated context capacity ({prompt_tokens} prompt tokens + {max_tokens} max_tokens, capacity {capacity}); shorten the prompt or lower max_tokens")]
+    ContextCapacityExceeded {
+        prompt_tokens: usize,
+        max_tokens: u32,
+        capacity: usize,
+    },
+
     #[error("inference error: {0}")]
     Inference(String),
 
@@ -33,6 +40,7 @@ impl BitNetError {
     #[must_use]
     pub fn http_status_for_chat_completion(&self) -> u16 {
         match self {
+            Self::ContextCapacityExceeded { .. } => 400,
             Self::TokenizerMissing => 400,
             Self::InvalidGguf(_) => 400,
             Self::NotImplemented(_) => 501,

@@ -1,0 +1,9 @@
+Ignored capacity drafts generated. Syntax/type/live verification still pending.
+Ignored SentencePiece flags/metadata wiring prepared; Rust and reference validation pending.
+Ignored frozen shared tokenizer wiring generated; count and generation share one immutable owner, validation pending.
+Actual trained SentencePiece/GGUF: check
+Actual trained SentencePiece/GGUF: frozen-tokenizer-context
+Actual trained SentencePiece/GGUF: clippy
+Actual trained SentencePiece/GGUF: actual-sp
+Actual trained SentencePiece/GGUF: cli
+Actual Mistral GGUF SentencePiece/HF CPU/CUDA generation and trained normalization checks passed; network live and serving capacity follow-up pending.

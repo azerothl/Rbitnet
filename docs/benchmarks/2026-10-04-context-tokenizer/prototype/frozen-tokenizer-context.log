@@ -1,0 +1,11 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core)
+   Compiling bitnet-server v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.48s
+     Running tests\context_capacity.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\context_capacity-0adf1a972113c39f.exe)
+
+running 1 test
+test real_llama_context_is_frozen_before_lazy_load_and_rejects_before_sse ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

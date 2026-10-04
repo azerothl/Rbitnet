@@ -153,12 +153,14 @@ impl LlamaConfig {
             })
             .unwrap_or(1e-5);
 
-        let max_seq = h
-            .context_length
-            .or_else(|| metadata_u32_any(archive, &["bitnet.context_length"]))
-            .map(|c| c as usize)
-            .unwrap_or(2048)
-            .min(8192);
+        let max_seq = crate::context_capacity::capacity_from_env(
+            h.context_length
+                .or_else(|| metadata_u32_any(archive, &["bitnet.context_length"]))
+                .map(|n| n as usize)
+                .unwrap_or(2048),
+            8192,
+            Some(8192),
+        )?;
 
         let sliding_window = metadata_u32_any(archive, &["llama.attention.sliding_window"])
             .map(|w| w as usize)

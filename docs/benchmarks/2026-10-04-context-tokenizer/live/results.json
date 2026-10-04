@@ -1,0 +1,893 @@
+{
+  "binary_sha256": "de7476245bc1aa3c09c12b0dc6cb43abe765fef14ab15aac51fab027b6041e7b",
+  "library_sha256": "3a094ca396e63ee7bc42df87060c0f30cba021dea786ba7ce33d5b1e250bd860",
+  "library_path": "E:\\devs\\Rbitnet\\target\\gpt-block\\cuda\\rbitnet_cuda_quant64.dll",
+  "capacity": 64,
+  "cases": [
+    {
+      "backend": "cpu",
+      "loaded_model": {
+        "data": [
+          {
+            "created": 1791070853,
+            "id": "rbitnet-llama",
+            "loaded": true,
+            "metadata": {
+              "architecture": "llama",
+              "backend": "cpu",
+              "backend_accelerated": false,
+              "context_capacity": 64,
+              "context_length": 32768,
+              "hybrid_offload": null,
+              "model_path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\mistral-7b-instruct-v0.1.Q4_K_M.gguf",
+              "perf": {
+                "cuda_graph_replays": 0,
+                "expert_cache_evictions": 0,
+                "expert_cache_hits": 0,
+                "expert_cache_misses": 0,
+                "expert_cache_upload_bytes": 0,
+                "expert_cache_upload_ns": 0,
+                "gpu_attention_calls": 0,
+                "gpu_download_bytes": 0,
+                "gpu_gemv_calls": 0,
+                "gpu_gpt_full_tokens": 0,
+                "gpu_mla_full_tokens": 0,
+                "gpu_prefill_blocks": 0,
+                "gpu_prefill_tokens": 0,
+                "gpu_quant_gemm_calls": 0,
+                "gpu_qwen_full_tokens": 0,
+                "gpu_split_attention_queries": 0,
+                "gpu_tensor_gemm_calls": 0,
+                "gpu_upload_bytes": 0,
+                "kv_new_physical_pages": 0,
+                "kv_physical_pages": 0,
+                "kv_pool_active_seqs": 0,
+                "kv_pool_allocated_pages": 0,
+                "kv_pool_fragmentation_permille": 0,
+                "kv_pool_free_pages": 0,
+                "kv_quant_format_code": 0,
+                "kv_reused_physical_pages": 0,
+                "kv_write_bytes": 0,
+                "model_load_ms": 17,
+                "model_loads": 1,
+                "native_moe_fallback_layers": 0,
+                "native_moe_fallback_ns": 0,
+                "native_moe_resident_layers": 0,
+                "native_moe_resident_ns": 0,
+                "prefix_cache_bytes_saved": 0,
+                "prefix_cache_hits": 0,
+                "prefix_cache_misses": 0,
+                "quant_matvec_calls": 0,
+                "quant_matvec_cols": 0,
+                "quant_matvec_ns": 0,
+                "quant_matvec_rows": 0,
+                "scheduler_batch_items": 0,
+                "scheduler_batches": 0,
+                "scheduler_decode_waves": 0,
+                "scheduler_iteration_budget": 0,
+                "scheduler_prefill_chunks": 0,
+                "scheduler_stall_free_iters": 0,
+                "scratch_alloc_bytes": 0,
+                "scratch_reuse_hits": 0,
+                "speculative_accepted_tokens": 0,
+                "speculative_draft_ns": 0,
+                "speculative_draft_tokens": 0,
+                "speculative_rollbacks": 0,
+                "speculative_target_tokens": 0,
+                "speculative_verified_tokens": 0,
+                "speculative_verify_blocks": 0,
+                "speculative_verify_ns": 0
+              },
+              "quantization": "type0:65,type12:193,type14:33",
+              "ready": true,
+              "summary": "GGUF v2 arch=llama tensors=291 tensor_data@734880",
+              "tensor_count": 291
+            },
+            "object": "model",
+            "owned_by": "rbitnet",
+            "ready": true
+          }
+        ],
+        "object": "list"
+      },
+      "errors": [
+        {
+          "path": "/v1/chat/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "prompt": "Bonjour"
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "prompt": "Bonjour"
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (5 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            },
+            "type": "error"
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (5 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            },
+            "type": "error"
+          }
+        }
+      ],
+      "tokenizer_file_moved_before_first_generation": true,
+      "unary": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791070856,
+        "id": "chatcmpl-1791070856",
+        "model": "mistral7b-sp",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 24,
+          "total_tokens": 26
+        }
+      },
+      "exact_capacity_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791070856,
+        "id": "chatcmpl-1791070856",
+        "model": "mistral7b-sp",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 24,
+          "total_tokens": 26
+        }
+      },
+      "sse_text": "Paris.",
+      "sse_done": true,
+      "concurrent_requests": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070857,
+          "id": "chatcmpl-1791070857",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070858,
+          "id": "chatcmpl-1791070858",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070858,
+          "id": "chatcmpl-1791070858",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070859,
+          "id": "chatcmpl-1791070859",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        }
+      ],
+      "metrics": {
+        "rbitnet_chat_requests_total": 12.0,
+        "rbitnet_chat_errors_total": 7.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 8427.0,
+        "rbitnet_inference_calls_total": 7.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 3979.0,
+        "rbitnet_inference_ttft_ms_avg": 568.0,
+        "rbitnet_inference_decode_tokens_per_sec": 8.760951,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 3844.0,
+        "rbitnet_inference_decode_ms_sum": 1598.0,
+        "rbitnet_inference_itl_us_sum": 799000.0,
+        "rbitnet_inference_tpot_us_sum": 799000.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 14.0,
+        "rbitnet_native_accelerated_calls_total": 0.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_mla_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_native_moe_resident_layers_total": 0.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 0.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 9877.0,
+        "rbitnet_core_quant_matvec_rows_total": 61227264.0,
+        "rbitnet_core_quant_matvec_ns_total": 5571295600.0,
+        "rbitnet_core_gpu_upload_bytes_total": 0.0,
+        "rbitnet_core_gpu_download_bytes_total": 0.0,
+        "rbitnet_core_gpu_gemv_calls_total": 0.0,
+        "rbitnet_core_gpu_attention_calls_total": 0.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 204800.0,
+        "rbitnet_core_scratch_reuse_hits_total": 5692.0,
+        "rbitnet_core_kv_write_bytes_total": 11534336.0,
+        "rbitnet_core_kv_physical_pages": 32.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 17.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 6.0,
+        "rbitnet_core_prefix_hit": 6.0,
+        "rbitnet_core_prefix_cache_misses_total": 2.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 9216.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 12957638656.0,
+        "rbitnet_core_memory_budget_weight_bytes": 4367704064.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 8589934592.0,
+        "rbitnet_process_rss_bytes": 4392935424.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    },
+    {
+      "backend": "gpu",
+      "loaded_model": {
+        "data": [
+          {
+            "created": 1791070860,
+            "id": "rbitnet-llama",
+            "loaded": true,
+            "metadata": {
+              "architecture": "llama",
+              "backend": "cuda",
+              "backend_accelerated": true,
+              "context_capacity": 64,
+              "context_length": 32768,
+              "hybrid_offload": null,
+              "model_path": "D:\\Rbitnet-benchmark-models\\mistral7b-sp\\mistral-7b-instruct-v0.1.Q4_K_M.gguf",
+              "perf": {
+                "cuda_graph_replays": 0,
+                "expert_cache_evictions": 0,
+                "expert_cache_hits": 0,
+                "expert_cache_misses": 0,
+                "expert_cache_upload_bytes": 0,
+                "expert_cache_upload_ns": 0,
+                "gpu_attention_calls": 0,
+                "gpu_download_bytes": 0,
+                "gpu_gemv_calls": 0,
+                "gpu_gpt_full_tokens": 0,
+                "gpu_mla_full_tokens": 0,
+                "gpu_prefill_blocks": 0,
+                "gpu_prefill_tokens": 0,
+                "gpu_quant_gemm_calls": 0,
+                "gpu_qwen_full_tokens": 0,
+                "gpu_split_attention_queries": 0,
+                "gpu_tensor_gemm_calls": 0,
+                "gpu_upload_bytes": 0,
+                "kv_new_physical_pages": 0,
+                "kv_physical_pages": 0,
+                "kv_pool_active_seqs": 0,
+                "kv_pool_allocated_pages": 0,
+                "kv_pool_fragmentation_permille": 0,
+                "kv_pool_free_pages": 0,
+                "kv_quant_format_code": 0,
+                "kv_reused_physical_pages": 0,
+                "kv_write_bytes": 0,
+                "model_load_ms": 154,
+                "model_loads": 1,
+                "native_moe_fallback_layers": 0,
+                "native_moe_fallback_ns": 0,
+                "native_moe_resident_layers": 0,
+                "native_moe_resident_ns": 0,
+                "prefix_cache_bytes_saved": 0,
+                "prefix_cache_hits": 0,
+                "prefix_cache_misses": 0,
+                "quant_matvec_calls": 0,
+                "quant_matvec_cols": 0,
+                "quant_matvec_ns": 0,
+                "quant_matvec_rows": 0,
+                "scheduler_batch_items": 0,
+                "scheduler_batches": 0,
+                "scheduler_decode_waves": 0,
+                "scheduler_iteration_budget": 0,
+                "scheduler_prefill_chunks": 0,
+                "scheduler_stall_free_iters": 0,
+                "scratch_alloc_bytes": 0,
+                "scratch_reuse_hits": 0,
+                "speculative_accepted_tokens": 0,
+                "speculative_draft_ns": 0,
+                "speculative_draft_tokens": 0,
+                "speculative_rollbacks": 0,
+                "speculative_target_tokens": 0,
+                "speculative_verified_tokens": 0,
+                "speculative_verify_blocks": 0,
+                "speculative_verify_ns": 0
+              },
+              "quantization": "type0:65,type12:193,type14:33",
+              "ready": true,
+              "summary": "GGUF v2 arch=llama tensors=291 tensor_data@734880",
+              "tensor_count": 291
+            },
+            "object": "model",
+            "owned_by": "rbitnet",
+            "ready": true
+          }
+        ],
+        "object": "list"
+      },
+      "errors": [
+        {
+          "path": "/v1/chat/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "prompt": "Bonjour"
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "prompt": "Bonjour"
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (3 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": false,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (5 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            },
+            "type": "error"
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "request": {
+            "model": "mistral7b-sp",
+            "max_tokens": 65,
+            "temperature": 0,
+            "stream": true,
+            "messages": [
+              {
+                "role": "user",
+                "content": "Bonjour"
+              }
+            ]
+          },
+          "status": 400,
+          "response": {
+            "error": {
+              "message": "request exceeds allocated context capacity (5 prompt tokens + 65 max_tokens, capacity 64); shorten the prompt or lower max_tokens",
+              "type": "invalid_request_error"
+            },
+            "type": "error"
+          }
+        }
+      ],
+      "tokenizer_file_moved_before_first_generation": true,
+      "unary": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791070862,
+        "id": "chatcmpl-1791070862",
+        "model": "mistral7b-sp",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 24,
+          "total_tokens": 26
+        }
+      },
+      "exact_capacity_response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791070862,
+        "id": "chatcmpl-1791070862",
+        "model": "mistral7b-sp",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 24,
+          "total_tokens": 26
+        }
+      },
+      "sse_text": "Paris.",
+      "sse_done": true,
+      "concurrent_requests": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070862,
+          "id": "chatcmpl-1791070862",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070862,
+          "id": "chatcmpl-1791070862",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070862,
+          "id": "chatcmpl-1791070862",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791070862,
+          "id": "chatcmpl-1791070862",
+          "model": "mistral7b-sp",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 24,
+            "total_tokens": 26
+          }
+        }
+      ],
+      "metrics": {
+        "rbitnet_chat_requests_total": 12.0,
+        "rbitnet_chat_errors_total": 7.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 2372.0,
+        "rbitnet_inference_calls_total": 7.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 282.0,
+        "rbitnet_inference_ttft_ms_avg": 40.0,
+        "rbitnet_inference_decode_tokens_per_sec": 129.62963,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 272.0,
+        "rbitnet_inference_decode_ms_sum": 108.0,
+        "rbitnet_inference_itl_us_sum": 54000.0,
+        "rbitnet_inference_tpot_us_sum": 54000.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 14.0,
+        "rbitnet_native_accelerated_calls_total": 7.0,
+        "rbitnet_core_cuda_managed_memory_available": 1.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 12884901888.0,
+        "rbitnet_core_cuda_managed_live_bytes": 4317395444.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 4317395444.0,
+        "rbitnet_core_cuda_managed_allocations_total": 311.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_mla_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 1408.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_native_moe_resident_layers_total": 0.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 0.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 4293632176.0,
+        "rbitnet_core_gpu_download_bytes_total": 84.0,
+        "rbitnet_core_gpu_gemv_calls_total": 9877.0,
+        "rbitnet_core_gpu_attention_calls_total": 1408.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 154.0,
+        "rbitnet_core_model_loads_total": 1.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 6.0,
+        "rbitnet_core_prefix_hit": 6.0,
+        "rbitnet_core_prefix_cache_misses_total": 1.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 36175872.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 44.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 12957638656.0,
+        "rbitnet_core_memory_budget_weight_bytes": 4367704064.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 8589934592.0,
+        "rbitnet_process_rss_bytes": 8933793792.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    }
+  ],
+  "memory": {
+    "cpu": {
+      "peak_process_tree_rss_bytes": 4401430528,
+      "gpu_global_baseline_mib": 2052.0,
+      "gpu_global_peak_mib": 2052.0,
+      "gpu_global_peak_delta_mib": 0
+    },
+    "gpu": {
+      "peak_process_tree_rss_bytes": 8936710144,
+      "gpu_global_baseline_mib": 2052.0,
+      "gpu_global_peak_mib": 6574.0,
+      "gpu_global_peak_delta_mib": 4522.0
+    }
+  }
+}

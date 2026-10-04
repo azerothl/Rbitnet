@@ -1,0 +1,6 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-core)
+    Checking bitnet-server v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\bitnet-server)
+    Checking rbitnet-cli v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\rbitnet-cli)
+    Checking rbitnet-runner v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-context\crates\rbitnet-runner)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.35s

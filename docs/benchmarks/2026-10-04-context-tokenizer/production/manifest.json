@@ -1,0 +1,32 @@
+{
+  "source_sha256": {
+    "crates/bitnet-core/src/context_capacity.rs": "4a0b38b54d4e13abb65ad7c27d2d60afd4bda9acdcdef13aa934d88e1404ddb8",
+    "crates/bitnet-core/src/error.rs": "6afc46d10a1ba28ad9bc898cc8c320228b6b4bec88227adf6330505f14d28abf",
+    "crates/bitnet-core/src/glm4_moe/dispatch.rs": "dbe7f02852dd6c9fc54febd383303562b0969be93ab2846d7199ba7a42b6af37",
+    "crates/bitnet-core/src/inference.rs": "e25c3cf226c4e8b3ad4adae75a2b9df065d58ae34c4dd8ce5508ed008cb03e3e",
+    "crates/bitnet-core/src/lib.rs": "623a521e6526bc4ad126887e64f23311718c0f842a5a20fc6a950e873d8409c7",
+    "crates/bitnet-core/src/llama/config.rs": "4e916ba933c990c1716568e07af36097df4aad225d89b05aa7ad3f2dcf2d92dd",
+    "crates/bitnet-core/src/llama/model.rs": "542a86b13f0268099924c913ed7f7c4f8ab892161dd8e3b635f86d4de2ff08c1",
+    "crates/bitnet-core/src/llama/runtime.rs": "a3b4b785e3e365a7ad15320b892c0ef171d01dab4d2af2b7c07eeb7959843848",
+    "crates/bitnet-core/src/loaders/bitnet.rs": "e13d11d90e4464e9c1744f72f6df57c10302f0e985f28450e9dd064e0e76718e",
+    "crates/bitnet-core/src/loaders/llama.rs": "dc0868142cfdc10cfcca1ab3c5ece60b8fcd0ed88ee6a798b8fbf60a34008782",
+    "crates/bitnet-core/src/loaders/prompt_tokenizer.rs": "efcd14fefa714a3476de032bd567a6df221bf65e5d1a622d857c229a1ff70c30",
+    "crates/bitnet-core/src/loaders/prompt_tokenizer/sentencepiece_codec.rs": "654876c1956d67df5e323ce2cdb985dc4edb3c4ab4e74fcc60d5a9cfbdf47872",
+    "crates/bitnet-core/src/mixtral/config.rs": "0759e9e8a85ac0943905babf097d6e4844f1ac238cca3f4873658c22aa1c636f",
+    "crates/bitnet-core/src/mixtral/executor.rs": "f577fdf6a39bb4332928d3fb1131b5931c7c46b5f4585d41596604b5718e7d61",
+    "crates/bitnet-core/src/mixtral/runtime.rs": "9ca8d4f34eee167b4eeb3faecd9c355a5f090e09d70fb74d427b34fd1c8c9966",
+    "crates/bitnet-core/src/model/executor.rs": "e63a53c5a0387e0ebcd0c2fe74f86a33e6cea7129dee723c432fc227b36cc894",
+    "crates/bitnet-core/src/native/graph.rs": "0c8731c67547c9447585b061b7e6ae8666f879fcfdb21dcfab2e0cd54061dad3",
+    "crates/bitnet-core/src/qwen3/config.rs": "6e01c782faa7d96fabd2d0ce3706ef8a6e8a943f35a4980fe584084f1e5dbddc",
+    "crates/bitnet-core/src/qwen3/executor.rs": "40db3ae13655cdf1211dd3d02f552f1fd7fad73edd0a495b90c981ed05a2615c",
+    "crates/bitnet-core/src/qwen3/runtime.rs": "09a7690d5a17002ed2dad78c057c225dd05e2297f5e4e630d426a92bd584df3b",
+    "crates/bitnet-core/src/qwen35/config.rs": "72657892253f94c2ed575e729d15ed5115497cd7030d66b6d6487810e344309c",
+    "crates/bitnet-core/src/qwen35/executor.rs": "6cad37cfc1b7791f6c49a6c09c07c70682ca0f1ef64e19a96b3d1c3187d579a8",
+    "crates/bitnet-core/src/qwen35/runtime.rs": "2aeeb51a4b15a848b18d317a353cd21d41ced3f8e0e54329ac031386afd7b7ff",
+    "crates/bitnet-server/src/anthropic.rs": "c5f411eb4afd9e554945248236c83101b0dac68645829bfc6b0e928515a01feb",
+    "crates/bitnet-server/src/lib.rs": "e33feaeb4c23f30e21612b2e70431cfccefced0d1dea1269bc60afc1e50340af",
+    "crates/bitnet-server/tests/context_capacity.rs": "2c4e30550b529b4eed72c3995573ab818ef819b3680cff4151c82fb98e448a29"
+  },
+  "binary_sha256": "de7476245bc1aa3c09c12b0dc6cb43abe765fef14ab15aac51fab027b6041e7b",
+  "library_sha256": "3a094ca396e63ee7bc42df87060c0f30cba021dea786ba7ce33d5b1e250bd860"
+}
