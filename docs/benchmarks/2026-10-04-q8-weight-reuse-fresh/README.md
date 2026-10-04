@@ -23,6 +23,15 @@ no confidence interval. The one-token capital reply is excluded from the speed
 table. Target-only differences do not demonstrate a benefit: the tile kernel
 is selected only during draft verification. No cross-engine comparison is made.
 
+The first measured tile-4/draft-4 writing request illustrates the remaining
+cost: 214 proposed tokens yielded 72 accepted tokens (33.6%), with 46 rollbacks
+over 55 verification blocks. Draft generation consumed 534.5 ms and verification
+377.0 ms before other bookkeeping/rollback costs, for 128 completed output
+tokens. A matching direct run needs approximately 566 ms of decode. These
+counter deltas explain why improved projection reuse is insufficient for this
+request; they are not a general acceptance-rate estimate for other prompts.
+The exact counters and request are in `raw/quiet-tile4/results.json.gz`.
+
 The serial owner completed check, Clippy, 299 workspace tests (one ignored),
 fresh CUDA and release CLI builds, 300 projection oracles including 20 Q8 reuse
 cases, real .8B/2B complete-vector and GDN rollback checks with split attention
