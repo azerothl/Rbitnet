@@ -88,6 +88,60 @@ pub(crate) fn enabled() -> bool {
         Ok("1" | "true")
     )
 }
+
+fn execution_options(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Vec<(&'static str, Option<String>)> {
+    [
+        "RBITNET_CUDA_RESIDENT_GRAPH",
+        "RBITNET_CUDA_QWEN_FULL_GRAPH",
+        "RBITNET_CUDA_QWEN_PREFILL",
+        "RBITNET_CUDA_PREFILL",
+        "RBITNET_CUDA_PREFILL_TOKENS",
+        "RBITNET_PREFILL_CHUNK_TOKENS",
+        "RBITNET_QWEN_ORDERED_BLOCK_TEST",
+        "RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS",
+        "RBITNET_PREFIX_KV",
+        "RBITNET_PREFIX_KV_MIN_TOKENS",
+        "RBITNET_CUDA_KV_PAGE_LIMIT",
+        "RBITNET_CUDA_PREFILL_TF32X3",
+        "RBITNET_CUDA_KV_FORMAT",
+        "RBITNET_CUDA_SPLIT_KV",
+    ]
+    .into_iter()
+    .map(|name| (name, lookup(name)))
+    .collect()
+}
+
+#[cfg(test)]
+mod identity_tests {
+    use super::*;
+
+    #[test]
+    fn prefill_partitions_ordering_prefix_boundaries_and_page_geometry_change_identity() {
+        let baseline = serde_json::to_vec(&execution_options(|_| None)).unwrap();
+        for key in [
+            "RBITNET_CUDA_PREFILL_TOKENS",
+            "RBITNET_PREFILL_CHUNK_TOKENS",
+            "RBITNET_QWEN_ORDERED_BLOCK_TEST",
+            "RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS",
+            "RBITNET_PREFIX_KV",
+            "RBITNET_PREFIX_KV_MIN_TOKENS",
+            "RBITNET_CUDA_KV_PAGE_LIMIT",
+        ] {
+            let first = serde_json::to_vec(&execution_options(|name| {
+                (name == key).then(|| "1".to_string())
+            }))
+            .unwrap();
+            let second = serde_json::to_vec(&execution_options(|name| {
+                (name == key).then(|| "2".to_string())
+            }))
+            .unwrap();
+            assert_ne!(baseline, first, "missing state compatibility option {key}");
+            assert_ne!(first, second, "option value omitted from identity: {key}");
+        }
+    }
+}
 fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
@@ -148,18 +202,7 @@ impl Handle {
         if unsafe { device_key(device.as_mut_ptr(), device.len()) } != 0 {
             return Err(invalid("Native device identity query failed"));
         }
-        let options: Vec<_> = [
-            "RBITNET_CUDA_RESIDENT_GRAPH",
-            "RBITNET_CUDA_QWEN_FULL_GRAPH",
-            "RBITNET_CUDA_QWEN_PREFILL",
-            "RBITNET_CUDA_PREFILL",
-            "RBITNET_CUDA_PREFILL_TF32X3",
-            "RBITNET_CUDA_KV_FORMAT",
-            "RBITNET_CUDA_SPLIT_KV",
-        ]
-        .into_iter()
-        .map(|name| (name, std::env::var(name).ok()))
-        .collect();
+        let options = execution_options(|name| std::env::var(name).ok());
         static EXECUTABLE: std::sync::OnceLock<Option<[u8; 32]>> = std::sync::OnceLock::new();
         let executable = EXECUTABLE
             .get_or_init(|| {

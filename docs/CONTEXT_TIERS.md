@@ -8,6 +8,11 @@ reading model weights during decoding or establish an increase in decode tokens/
 Implementation and serving validation are in progress. Do not treat the presence
 of this document as a completed benchmark or support for other architectures.
 
+Compatibility also records prefill partition sizes, ordered Qwen block mode,
+prefix checkpoint boundaries and Native page geometry. Changing these options
+selects another namespace rather than importing state produced by a different
+calculation configuration.
+
 ## Configuration
 
 Set `RBITNET_CONTEXT_TIERS=1` and `RBITNET_CONTEXT_DIR` to a local directory.
