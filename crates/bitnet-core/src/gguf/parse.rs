@@ -43,6 +43,7 @@ pub struct GgufTensorInfo {
 #[derive(Debug, Clone)]
 pub struct GgufArchive {
     mmap: Arc<Mmap>,
+    content_hash: Arc<std::sync::OnceLock<[u8; 32]>>,
     pub version: u32,
     pub metadata: HashMap<String, GgufValue>,
     pub tensors: Vec<GgufTensorInfo>,
@@ -51,6 +52,13 @@ pub struct GgufArchive {
 }
 
 impl GgufArchive {
+    pub(crate) fn content_sha256(&self) -> [u8; 32] {
+        use sha2::Digest;
+        *self
+            .content_hash
+            .get_or_init(|| sha2::Sha256::digest(self.mmap.as_ref().as_ref()).into())
+    }
+
     /// Look up a tensor by exact name.
     pub fn tensor_by_name(&self, name: &str) -> Option<&GgufTensorInfo> {
         self.tensors.iter().find(|t| t.name == name)
@@ -191,6 +199,7 @@ impl GgufArchive {
         }
 
         Ok(GgufArchive {
+            content_hash: Arc::new(std::sync::OnceLock::new()),
             mmap,
             version,
             metadata,

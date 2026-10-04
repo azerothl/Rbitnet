@@ -17,6 +17,11 @@ pub struct PerfSnapshot {
     pub gpu_qwen_full_tokens: u64,
     pub gpu_gpt_full_tokens: u64,
     pub gpu_mla_full_tokens: u64,
+    pub gpu_llama_batch_waves: u64,
+    pub gpu_llama_batch_rows: u64,
+    pub gpu_llama_batch_projections: u64,
+    pub gpu_llama_batch_max_rows: u64,
+
     pub gpu_split_attention_queries: u64,
     pub gpu_tensor_gemm_calls: u64,
     pub scratch_alloc_bytes: u64,
@@ -77,6 +82,11 @@ struct PerfCounters {
     gpu_qwen_full_tokens: AtomicU64,
     gpu_gpt_full_tokens: AtomicU64,
     gpu_mla_full_tokens: AtomicU64,
+    gpu_llama_batch_waves: AtomicU64,
+    gpu_llama_batch_rows: AtomicU64,
+    gpu_llama_batch_projections: AtomicU64,
+    gpu_llama_batch_max_rows: AtomicU64,
+
     gpu_split_attention_queries: AtomicU64,
     gpu_tensor_gemm_calls: AtomicU64,
     scratch_alloc_bytes: AtomicU64,
@@ -386,6 +396,17 @@ pub fn record_speculative(draft_tokens: u32, verified_tokens: u32, accepted_toke
         .fetch_add(accepted_tokens as u64, Ordering::Relaxed);
 }
 
+/// Successful blocking Native forwards; distinct from virtual scheduler waves.
+pub(crate) fn record_native_llama_batch(rows: usize, projections: u64) {
+    let p = perf();
+    p.gpu_llama_batch_waves.fetch_add(1, Ordering::Relaxed);
+    p.gpu_llama_batch_rows
+        .fetch_add(rows as u64, Ordering::Relaxed);
+    p.gpu_llama_batch_projections
+        .fetch_add(projections, Ordering::Relaxed);
+    p.gpu_llama_batch_max_rows
+        .fetch_max(rows as u64, Ordering::Relaxed);
+}
 pub fn snapshot() -> PerfSnapshot {
     let p = perf();
     PerfSnapshot {
@@ -400,6 +421,11 @@ pub fn snapshot() -> PerfSnapshot {
         gpu_qwen_full_tokens: p.gpu_qwen_full_tokens.load(Ordering::Relaxed),
         gpu_gpt_full_tokens: p.gpu_gpt_full_tokens.load(Ordering::Relaxed),
         gpu_mla_full_tokens: p.gpu_mla_full_tokens.load(Ordering::Relaxed),
+        gpu_llama_batch_waves: p.gpu_llama_batch_waves.load(Ordering::Relaxed),
+        gpu_llama_batch_rows: p.gpu_llama_batch_rows.load(Ordering::Relaxed),
+        gpu_llama_batch_projections: p.gpu_llama_batch_projections.load(Ordering::Relaxed),
+        gpu_llama_batch_max_rows: p.gpu_llama_batch_max_rows.load(Ordering::Relaxed),
+
         gpu_split_attention_queries: p.gpu_split_attention_queries.load(Ordering::Relaxed),
         gpu_tensor_gemm_calls: p.gpu_tensor_gemm_calls.load(Ordering::Relaxed),
         scratch_alloc_bytes: p.scratch_alloc_bytes.load(Ordering::Relaxed),
@@ -458,6 +484,22 @@ pub fn prometheus_text() -> String {
             writeln!(s, "{} {}", $name, $value).unwrap();
         }};
     }
+    counter!(
+        "rbitnet_core_gpu_llama_batch_waves_total",
+        "Successful shared Native Llama forwards evaluated waves",
+        snap.gpu_llama_batch_waves
+    );
+    counter!(
+        "rbitnet_core_gpu_llama_batch_rows_total",
+        "Successful shared Native Llama forwards evaluated activation rows",
+        snap.gpu_llama_batch_rows
+    );
+    counter!(
+        "rbitnet_core_gpu_llama_batch_projections_total",
+        "Successful shared Native Llama forwards evaluated matrix projections",
+        snap.gpu_llama_batch_projections
+    );
+    writeln!(s,"# TYPE rbitnet_core_gpu_llama_batch_max_rows gauge\nrbitnet_core_gpu_llama_batch_max_rows {}",snap.gpu_llama_batch_max_rows).unwrap();
     let managed = crate::backend::cuda_managed_memory_stats();
     writeln!(s,"# TYPE rbitnet_core_cuda_managed_memory_available gauge\nrbitnet_core_cuda_managed_memory_available {}",u8::from(managed.is_some())).unwrap();
     if let Some(m) = managed {
@@ -810,6 +852,7 @@ pub fn prometheus_text() -> String {
         )
         .unwrap();
     }
+    s.push_str(&crate::context_native::prometheus_text());
     s
 }
 

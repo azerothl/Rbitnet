@@ -1,0 +1,112 @@
+{
+  "files": {
+    "manifest.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\manifest.json",
+      "sha256": "88559b35da8368d75bb28e4acd727631111c4d0d971a08ddb8f5b2047c8d9af7"
+    },
+    "hoisted-network-manifest.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\hoisted-network-manifest.json",
+      "sha256": "1b3055b1beb80cdf8b294b56a97343da611c1cb153b124a6d9d388020a70816b"
+    },
+    "network-combined.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\network-combined.log",
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4"
+    },
+    "network-hoisted.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\network-hoisted.log",
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4"
+    },
+    "live-combined/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\live\\results.json",
+      "sha256": "548c67873f9db1819435ef6096bdaf1afaa0bf9962966d86a10d847af8ae7379"
+    },
+    "live-hoisted/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\live-hoisted\\results.json",
+      "sha256": "82ca3ca24152e72105b6136d12b8ada8d6699cf6da311c091290968962ff8553"
+    },
+    "tests/actual-exclusive-split0.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-exclusive-split0.log",
+      "sha256": "7399180310dee5aefe62bf234518cbb60db9ef45145e276356fa350bd599e556"
+    },
+    "tests/actual-exclusive-split1.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-exclusive-split1.log",
+      "sha256": "27c81d6a8f1a1ad766a5726ea9872b213c4ec45e0227a3ca47f92dbc5690ee2b"
+    },
+    "diagnostics/exclusive-paged_kernels.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\exclusive\\native\\paged_kernels.cuh",
+      "sha256": "8bc7ea8a3e89838caa89df29a580ede31f843d9a79693c0013e1e62163e8654b"
+    },
+    "diagnostics/exclusive-paged_pool.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\exclusive\\native\\paged_pool.cuh",
+      "sha256": "06b02cdefeb9741a8703acc1750656bb99a327950d0767ab5fa881fe99730675"
+    },
+    "tests/actual-hoisted-split0.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-hoisted-split0.log",
+      "sha256": "cf7b21d88c8652cfaac82029a0984463866f0287dc1c71026bd4f24170221baf"
+    },
+    "tests/actual-hoisted-split1.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-hoisted-split1.log",
+      "sha256": "e29a608b89187ee6513871960f99b4cb0420d559087df207d7262a763ae55624"
+    },
+    "diagnostics/hoisted-paged_kernels.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\hoisted\\native\\paged_kernels.cuh",
+      "sha256": "fa29b3e7ca6baa4686d095d37531c26c08832ee2578a7b7cad92e7dd943fa080"
+    },
+    "diagnostics/hoisted-paged_pool.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\hoisted\\native\\paged_pool.cuh",
+      "sha256": "2e53cb130d2041184dae680468162e91887130b45ff9c6ac348c904e33b6df39"
+    },
+    "tests/actual-combined-split0.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-combined-split0.log",
+      "sha256": "1be558a6d7d69e98eacce1b42a75c0bb3da846c8416de499c5f1e21d147c4e9a"
+    },
+    "tests/actual-combined-split1.log": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\actual-combined-split1.log",
+      "sha256": "0144ace44be32aa3082d14cac0e9051ae2902d83e85bab45da4a00bfdbd2585f"
+    },
+    "diagnostics/combined-paged_kernels.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\combined\\native\\paged_kernels.cuh",
+      "sha256": "fa29b3e7ca6baa4686d095d37531c26c08832ee2578a7b7cad92e7dd943fa080"
+    },
+    "diagnostics/combined-paged_pool.cuh": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\combined\\native\\paged_pool.cuh",
+      "sha256": "06b02cdefeb9741a8703acc1750656bb99a327950d0767ab5fa881fe99730675"
+    },
+    "source/benchmark.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\followup-harness\\paged_benchmark.py",
+      "sha256": "709003df8982d123b7a3c531044e8032d10dab6ea5a5033a8a7d7780362e59d4"
+    },
+    "source/live.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\followup-harness\\paged_live.py",
+      "sha256": "71a9d266974d1b542b649013d2dc197a5ad4218acffdf10bd84626e9c4e9ce65"
+    },
+    "source/atomic_journal.py": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\atomic_journal.py",
+      "sha256": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c"
+    },
+    "ablation/baseline/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\ablation\\baseline\\results.json",
+      "sha256": "504c483bd7208565979546af6676923c7956003481c7aa3e681e8acd6948562e"
+    },
+    "ablation/exclusive/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\ablation\\exclusive\\results.json",
+      "sha256": "a334f65bb801de8632256f686de2a29cdbe653672e244a3c0e5782760d3e4522"
+    },
+    "ablation/hoisted/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\ablation\\hoisted\\results.json",
+      "sha256": "a601ddb4bf38acb2c66471b7e5542bac876e8272f3f57f5a858fc7694eae9195"
+    },
+    "ablation/combined/results.json": {
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\page-fastpath-proof\\ablation\\combined\\results.json",
+      "sha256": "2b44888639e2f18fb7e29b7a538be4c71d7fdfa7256de3d2ecbc81e91eb2fdf8"
+    }
+  },
+  "adopted_source": {
+    "native/cuda_quant/src/paged_kernels.cuh": "fa29b3e7ca6baa4686d095d37531c26c08832ee2578a7b7cad92e7dd943fa080"
+  },
+  "generated": {
+    "README.md": "e89a7e0c1a3ac4ec8deac181b2c50ce8f10be496ca78ba749516746537bd6be1",
+    ".gitattributes": "8423e10f3626c7552527d7ae47f5906b9a6deba041cf841c8082b6f4851c711e"
+  },
+  "scope": "Only page-pointer hoisting adopted; exclusive pool admission retained as an unadopted ablation; standalone selected-variant network proof required."
+}

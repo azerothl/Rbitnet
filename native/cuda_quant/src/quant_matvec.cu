@@ -1,3 +1,4 @@
+#include <cmath>
 // SPDX-License-Identifier: MIT
 // Native CUDA quantized matvec for Rbitnet (#22 Gate E).
 // Layouts match crates/bitnet-core/src/ggml/dequant.rs (llama.cpp-compatible).
@@ -493,3 +494,6 @@ extern "C" int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,s
 }
 
 #include "kv_attention_oracle.cuh"
+#include "llama_batch.cuh"
+#include "portable_state.cuh"
+#include "gpt_ordered_norm_checks.cuh"

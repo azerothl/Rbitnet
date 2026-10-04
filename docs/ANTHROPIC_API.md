@@ -60,7 +60,7 @@ Use OpenAI for Akasha production paths. Point `ANTHROPIC_BASE_URL` at Rbitnet on
 
 ## Gaps (explicit, out of deferred #43 close)
 
-1. **Tools / tool_use / tool_result** — multi-turn agent blocks Claude Code expects; today non-text content is dropped.
+1. **Tools / tool_use / tool_result** — unimplemented. Tool generation requests and these incoming blocks return HTTP 501 before SSE rather than dropping the tool content. Empty tools or explicit `tool_choice: {"type":"none"}` allow ordinary text; other non-text content remains outside the text-only subset.
 2. **Multi-block fidelity** — image, thinking, and mixed blocks; system prompt field; `stop_sequences`; `top_p` / `metadata`.
 3. **Claude Code polish** — richer `anthropic-version` / error JSON edge cases beyond the shared auth path.
 4. **Docs / website** — optional deeper link from [INTEGRATIONS.md](INTEGRATIONS.md).

@@ -134,6 +134,12 @@ impl MixtralRuntime {
     }
 
     pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path) -> Result<Self> {
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
+
         let cfg = MixtralConfig::from_gguf(archive.as_ref())?;
         let tok_embd = must_tensor(archive.as_ref(), "token_embd.weight")?;
         let out_norm = must_tensor(archive.as_ref(), "output_norm.weight")?;
@@ -186,6 +192,7 @@ impl MixtralRuntime {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }

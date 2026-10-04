@@ -82,7 +82,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         let bytes = rt.resident_weights_bytes();
         let (gpu, total, head) = rt.gpu_execution_summary();
         if rt.has_full_gpu_pipeline() {
-            return Some(format!("native dense Qwen CUDA pipeline; {} MiB quantized weights resident; all attention/recurrent layers and output head on GPU; prefill block capacity {}; one embedding upload per block or decoded token, last logits or token ID download", bytes / (1024 * 1024), rt.gpu_prefill_capacity()));
+            return Some(format!("native dense Qwen CUDA pipeline; {} MiB quantized weights resident; all attention/recurrent layers and output head on GPU; prefill block capacity {}; one embedding upload per block or decoded token, last logits or token ID download", bytes / (1024 * 1024), rt.gpu_prefill_capacity()) + &rt.draft_summary().unwrap_or_default());
         }
         Some(format!("native qwen35 graph; {} MiB quantized weights resident on CUDA; {gpu}/{total} recurrent blocks resident; resident output head: {head}; remaining operations use the existing CPU/GPU path", bytes / (1024 * 1024)))
     }
@@ -93,6 +93,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         let mut slot_rt = self
             .runtime
             .lock()
@@ -102,6 +103,24 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
             .unwrap()
             .generate_with_timings(prompt, max_tokens, sampling)
     }
+    fn generate_output(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<crate::scheduler::InferenceOutput> {
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        let runtime = slot.as_mut().unwrap();
+        let speculative = runtime.speculative_enabled() && max_tokens > 0;
+        let (text, phases) = runtime.generate_with_timings(prompt, max_tokens, sampling)?;
+        Ok(crate::scheduler::InferenceOutput {
+            text,
+            stats: crate::scheduler::InferenceStats::from_phases(phases, speculative),
+        })
+    }
     fn generate_streaming(
         &self,
         prompt: &str,
@@ -109,10 +128,12 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         sampling: SamplingOptions,
         callback: &mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let mut runtime = self
             .runtime
             .lock()
             .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        let speculative = runtime.as_ref().unwrap().speculative_enabled() && max_tokens > 0;
         let (text, phases) = runtime.as_mut().unwrap().generate_inner(
             prompt,
             max_tokens,
@@ -122,7 +143,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         callback(crate::stream::StreamEvent::Done(
             crate::scheduler::InferenceOutput {
                 text,
-                stats: crate::scheduler::InferenceStats::from_phases(phases, false),
+                stats: crate::scheduler::InferenceStats::from_phases(phases, speculative),
             },
         ))
     }

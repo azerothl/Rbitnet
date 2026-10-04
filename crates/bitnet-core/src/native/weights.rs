@@ -41,6 +41,12 @@ impl Weights {
                 ))
             }
         };
+        let arena_requested = crate::backend::expert_arena::from_env()?;
+        if arena_requested && !async_requested {
+            return Err(BitNetError::Inference(
+                "RBITNET_MOE_ARENA requires RBITNET_MOE_ASYNC=1".into(),
+            ));
+        }
         if async_requested
             && (!matches!(kind, BackendKind::Cuda | BackendKind::Hybrid)
                 || super::moe_cost::Execution::from_env() != super::moe_cost::Execution::Cache)
