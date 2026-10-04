@@ -1,0 +1,3 @@
+*.log -text -whitespace
+*.json -text -whitespace
+*.py -text whitespace=-blank-at-eof

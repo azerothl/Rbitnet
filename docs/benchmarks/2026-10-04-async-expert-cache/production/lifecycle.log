@@ -1,0 +1,3 @@
+Actual async bounded pool/pinned/scoped unload and reload: gpt-oss-20b passed.
+Actual async bounded pool/pinned/scoped unload and reload: glm47-flash passed.
+Actual async GPT/GLM scoped READY/PENDING/pinned budget and unload/reload lifecycle suites passed.

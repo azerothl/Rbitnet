@@ -1,0 +1,3 @@
+Rbitnet UI: http://127.0.0.1:18138/ui
+2026-10-04T01:02:50.089244Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms
+2026-10-04T01:03:07.021630Z ERROR tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms

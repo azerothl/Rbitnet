@@ -1,0 +1,7 @@
+Capture range started in the application.
+Capture range ended in the application.
+Generating 'C:\Users\azero\AppData\Local\Temp\nsys-report-95ef.qdstrm'
+[1/1] [0%                          ] warmed-async-cuda.nsys-repProcessing events...
+[1/1] [0%                          ] warmed-async-cuda.nsys-rep[1/1] [5%                          ] warmed-async-cuda.nsys-rep[1/1] [8%                          ] warmed-async-cuda.nsys-rep[1/1] [12%                         ] warmed-async-cuda.nsys-rep[1/1] [=16%                        ] warmed-async-cuda.nsys-rep[1/1] [==20%                       ] warmed-async-cuda.nsys-rep[1/1] [====25%                     ] warmed-async-cuda.nsys-rep[1/1] [=====29%                    ] warmed-async-cuda.nsys-rep[1/1] [======33%                   ] warmed-async-cuda.nsys-rep[1/1] [=======37%                  ] warmed-async-cuda.nsys-rep[1/1] [========41%                 ] warmed-async-cuda.nsys-rep[1/1] [=========45%                ] warmed-async-cuda.nsys-rep[1/1] [==========49%               ] warmed-async-cuda.nsys-rep[1/1] [========================100%] warmed-async-cuda.nsys-rep[1/1] [========================100%] warmed-async-cuda.nsys-rep
+Generated:
+	E:\devs\Rbitnet\target\performance-cache\async-current-proof\warmed-async-cuda.nsys-rep

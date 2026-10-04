@@ -1,0 +1,2 @@
+Nsight warmed actual GPT expert-copy range starting; not a throughput measurement.
+Actual warmed async CUDA report and SQLite exported; overlap and allocation analysis still required.
