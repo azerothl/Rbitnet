@@ -16,3 +16,11 @@ docs/benchmarks/2026-10-04-kv-formats/*.md text eol=lf
 docs/benchmarks/2026-10-04-kv-formats/*.gz -text
 .gitattributes text eol=lf
 docs/benchmarks/2026-10-04-continuous-llama/raw/** -text
+
+docs/benchmarks/2026-10-04-performance-stack-fresh/raw/** -text
+docs/benchmarks/2026-10-04-performance-stack-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-performance-stack-fresh/harness/** -text
+
+docs/benchmarks/2026-10-04-stack-comparison-first/raw/** -text
+docs/benchmarks/2026-10-04-stack-comparison-first/harness/** -text
+docs/benchmarks/2026-10-04-stack-comparison-first/receipt.json -text
