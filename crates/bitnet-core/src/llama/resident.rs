@@ -1058,5 +1058,9 @@ mod quantized_tests;
 mod canonical_tests;
 
 #[cfg(test)]
+#[path = "resident/encoded_guard_tests.rs"]
+mod encoded_guard_tests;
+
+#[cfg(test)]
 #[path="resident/quantized_long_tests.rs"]
 mod quantized_long_tests;

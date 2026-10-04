@@ -15,3 +15,7 @@ docs/benchmarks/2026-10-04-kv-formats/*.json text eol=lf
 docs/benchmarks/2026-10-04-kv-formats/*.md text eol=lf
 docs/benchmarks/2026-10-04-kv-formats/*.gz -text
 .gitattributes text eol=lf
+
+docs/benchmarks/2026-10-04-kv-tf32-guard/raw/** -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/receipt.json -text
+docs/benchmarks/2026-10-04-kv-tf32-guard/harness/** -text

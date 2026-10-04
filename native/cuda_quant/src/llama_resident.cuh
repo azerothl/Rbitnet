@@ -346,7 +346,7 @@ unsigned rbitnet_cuda_llama_tensor_gemm_calls(void *p) {
     auto *r=static_cast<ResidentLlama*>(p);return r?r->tensor_gemm_calls:0;
 }
 int rbitnet_cuda_llama_configure_tensor_prefill(void *p,unsigned enabled) {
-    auto *r=static_cast<ResidentLlama*>(p);if(!r || enabled>1 || r->block || r->filled)return 1;
+    auto *r=static_cast<ResidentLlama*>(p);if(!r || enabled>1 || (r->kv_format && enabled) || r->block || r->filled)return 1;
     const bool wanted=enabled && tf32_prefill_supported();
     if(r->paged) {
         auto &pool=*r->paged->pool;std::lock_guard<std::mutex> lock(pool.mutex);
