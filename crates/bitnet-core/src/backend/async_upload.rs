@@ -295,9 +295,33 @@ impl UnpublishedQuant {
             rt: Arc::clone(rt),
             ptr: ptr as usize,
             nbytes: matrix.bytes(),
+            owner: None,
         }));
         matrix.rt = Some(Arc::clone(rt));
         Ok(Some(Self { matrix }))
+    }
+    pub(crate) fn from_arena(
+        rt: &Arc<CudaRuntime>,
+        archive: Arc<crate::gguf::GgufArchive>,
+        tensor: &crate::gguf::GgufTensorInfo,
+        rows: usize,
+        cols: usize,
+        buffer: CudaDeviceBuffer,
+    ) -> Result<Self> {
+        let mut matrix =
+            CudaDeviceQuantMatrix::from_archive_range(None, archive, tensor, 0, rows, cols, true)?;
+        if !crate::ggml::ggml_type_supports_cuda_quant(tensor.ggml_type)
+            || buffer.owner.is_none()
+            || !Arc::ptr_eq(&buffer.rt, rt)
+            || buffer.nbytes < matrix.bytes()
+        {
+            return Err(BitNetError::Inference(
+                "invalid expert arena projection view".into(),
+            ));
+        }
+        matrix.device = Some(Arc::new(buffer));
+        matrix.rt = Some(Arc::clone(rt));
+        Ok(Self { matrix })
     }
     pub(crate) fn recycle(matrix: CudaDeviceQuantMatrix) -> Result<Self> {
         if matrix

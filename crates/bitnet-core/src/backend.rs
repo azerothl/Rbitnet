@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 pub(crate) mod async_upload;
 mod device_memory;
+pub(crate) mod expert_arena;
 pub use device_memory::{cuda_managed_memory_stats, CudaMemoryStats};
 
 /// Backend identifiers used by runtime selection and metrics.
@@ -304,6 +305,7 @@ impl CudaRuntime {
             rt: Arc::clone(self),
             ptr: ptr as usize,
             nbytes,
+            owner: None,
         })
     }
 
@@ -815,6 +817,7 @@ pub struct CudaDeviceBuffer {
     rt: Arc<CudaRuntime>,
     ptr: usize,
     nbytes: usize,
+    owner: Option<Arc<CudaDeviceBuffer>>,
 }
 
 unsafe impl Send for CudaDeviceBuffer {}
@@ -846,7 +849,9 @@ impl CudaDeviceBuffer {
 
 impl Drop for CudaDeviceBuffer {
     fn drop(&mut self) {
-        self.rt.free_device(self.ptr as *mut c_void);
+        if self.owner.is_none() {
+            self.rt.free_device(self.ptr as *mut c_void);
+        }
     }
 }
 
