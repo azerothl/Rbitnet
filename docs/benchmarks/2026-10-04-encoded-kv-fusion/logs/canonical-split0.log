@@ -1,0 +1,874 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-encoded-fusion\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.18s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test llama::resident::canonical_tests::optional_actual_encoded_prefill_partition_prefix_restore_exact ... KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=0 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=f16 graph=1 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=0 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=None prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=33 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=129 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=2 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=16 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE format=q8 graph=1 pages=Some(64) prefix=257 chunk=128 cold vs serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE same-format restored last token vs cold serial changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_COMPARE restored successor logits changed_logits=0 max_abs=0
+KV_CANONICAL_DONE encoded F16/Q8 dense/page, block partitions and restored prefix/successors exactly match serial
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 146 filtered out; finished in 91.25s
+

@@ -1,0 +1,279 @@
+{
+  "files": {
+    "manifest.json": {
+      "sha256": "3de6d472818223e4df87978d766c386d6b49bde9f281e45aff6c4d9bcdc9c82e",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\manifest.json"
+    },
+    "exact-cross-library.json": {
+      "sha256": "fc81ad3a4468ddacc632f192aaadf026d9c8b2ee7ea39b6bbcccbc5c62e4bc5f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\exact-cross-library.json"
+    },
+    "logs/canonical-split0.log": {
+      "sha256": "c760814d5204ffd374b8491e3b379ce35d85bbe3907ec34b64385bdfee18cb33",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\canonical-split0.log"
+    },
+    "logs/canonical-split1.log": {
+      "sha256": "8f2b0a68ec041e89471032826fe0b2e843f7e4237ba96279f8a291f1a0a98754",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\canonical-split1.log"
+    },
+    "logs/check.log": {
+      "sha256": "313bc8aa854ca1015e923eae099b7611b3dd0af344dddab6f6a26253ca0cb182",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\check.log"
+    },
+    "logs/clippy.log": {
+      "sha256": "d3f324a9b99bd3e89dc5d9688ae6db4ab20198a79bedd34342db6701b87c6d9e",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\clippy.log"
+    },
+    "logs/cross-library-f16-dense-graph0.log": {
+      "sha256": "ccf8acbb2805c5a8240db273a4b7d8cb04c92df9d78ff65d7f79197b72d21a51",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f16-dense-graph0.log"
+    },
+    "logs/cross-library-f16-dense-graph1.log": {
+      "sha256": "1208b615b1c8f1ca335bae2f660d27ae638e2f261a57ac64d8ccaae00f45ce79",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f16-dense-graph1.log"
+    },
+    "logs/cross-library-f16-paged-graph0.log": {
+      "sha256": "c92a5bad00835f86aeb05a44727427a8630ebaad62e0b17472869e5a30798af1",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f16-paged-graph0.log"
+    },
+    "logs/cross-library-f16-paged-graph1.log": {
+      "sha256": "1208b615b1c8f1ca335bae2f660d27ae638e2f261a57ac64d8ccaae00f45ce79",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f16-paged-graph1.log"
+    },
+    "logs/cross-library-f32-dense-graph0.log": {
+      "sha256": "33ccff67abb98d092cf4dd4c38633b7027f60d25a85ae5ce52d53b8497426e48",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f32-dense-graph0.log"
+    },
+    "logs/cross-library-f32-dense-graph1.log": {
+      "sha256": "e17bf97baf7a9c3e1adbc3d1766e8f6e04f93b60b98568d079fcfbcada49cbf5",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f32-dense-graph1.log"
+    },
+    "logs/cross-library-f32-paged-graph0.log": {
+      "sha256": "f8e80f264f873266932b36a428130e992036c105a7899b7656ac1c17df8778c8",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f32-paged-graph0.log"
+    },
+    "logs/cross-library-f32-paged-graph1.log": {
+      "sha256": "adf123e9d2614d5123a81d7c6be66a6cd7f16d8114af3b5a28b1990a9881775b",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-f32-paged-graph1.log"
+    },
+    "logs/cross-library-q8-dense-graph0.log": {
+      "sha256": "3003fe0527ddebfd17fb19ca809f85579a6e87b7637d626e26937e730a378ab2",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-q8-dense-graph0.log"
+    },
+    "logs/cross-library-q8-dense-graph1.log": {
+      "sha256": "2cdfe328ad5182fcaea7814a5d1f32d8df27e673729c57239fdaaff6c557d26d",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-q8-dense-graph1.log"
+    },
+    "logs/cross-library-q8-paged-graph0.log": {
+      "sha256": "54df8b25b9c13622fdc8ed6b7fdbb9a3099d36d6eed2bb1c6181d1c41680afd6",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-q8-paged-graph0.log"
+    },
+    "logs/cross-library-q8-paged-graph1.log": {
+      "sha256": "f752a51eb74d217ddff1610b8a49f4e3814db11eaadc6cf11e6f12df1943f3e0",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\cross-library-q8-paged-graph1.log"
+    },
+    "logs/guard-split0.log": {
+      "sha256": "ed7e45133272664310600458b19585f8e4bedd328bc60170e89b8177eeab4d9b",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\guard-split0.log"
+    },
+    "logs/guard-split1.log": {
+      "sha256": "f40903c73af6e7de44abe97362cf96eb86b910ab49ff18b5def9cb52140cbd89",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\guard-split1.log"
+    },
+    "logs/independent-f64.log": {
+      "sha256": "0b2fd94898805f2020221c4372fd0f50bd8167928046f1f2061e74713912d317",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\independent-f64.log"
+    },
+    "logs/native-build.log": {
+      "sha256": "196c1540af621de7bcd5d5a3ddc3b1d511799121bf0a2b674f56b7441fe1babe",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\native-build.log"
+    },
+    "logs/network-dense-f16.log": {
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\network-dense-f16.log"
+    },
+    "logs/network-dense-q8.log": {
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\network-dense-q8.log"
+    },
+    "logs/network-paged-f16.log": {
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\network-paged-f16.log"
+    },
+    "logs/network-paged-q8.log": {
+      "sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\network-paged-q8.log"
+    },
+    "logs/pages-f16-split0.log": {
+      "sha256": "475feb43fdc003446052b417b843cda78698fb7b97f4c8ee976ac96811f010a2",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\pages-f16-split0.log"
+    },
+    "logs/pages-f16-split1.log": {
+      "sha256": "cba1834caa9c03785c8599b8fdc2b1a928722c8ecef786c43d41c6dd97ea4e4a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\pages-f16-split1.log"
+    },
+    "logs/pages-q8-split0.log": {
+      "sha256": "93e46ab49e75a5d311e13f282828e0c1c0d872cbe9dafbb075bfce9e9f054f5c",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\pages-q8-split0.log"
+    },
+    "logs/pages-q8-split1.log": {
+      "sha256": "406ee3eaef0d43082202d1f7cdc5a46c37af9c2455f7f85e32424fb674ee945e",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\pages-q8-split1.log"
+    },
+    "logs/prepare.log": {
+      "sha256": "2915bafa16afd763961dd104e2834b6bd7f8fdf09ec59580b3e756fe6868075c",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\prepare.log"
+    },
+    "logs/quality-lifetime-split0.log": {
+      "sha256": "51d828f4cd8a23ca1b60ba4aaae2af228c724aa9fd96f7242890578a2463532a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quality-lifetime-split0.log"
+    },
+    "logs/quality-lifetime-split1.log": {
+      "sha256": "b89cffaa2d0bbeeda26bbb8a9abbade50a9c1861975a7338f2ec82a6697006b1",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quality-lifetime-split1.log"
+    },
+    "logs/quiet-baseline-dense-context2048.log": {
+      "sha256": "4aa26b59492254502fd4549c03f7d9c3a9b33f9e97563fd8b406d0bbf6275d1f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-baseline-dense-context2048.log"
+    },
+    "logs/quiet-baseline-dense-context8192.log": {
+      "sha256": "d2388a90d097f0857b11dbb6dbe4c142e55a3feefb55df1dd8cfe1a9ad89b569",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-baseline-dense-context8192.log"
+    },
+    "logs/quiet-baseline-paged-context2048.log": {
+      "sha256": "e9814cd5012135788a2e301a9d14545760edcf86935847bc7f7d35180e4da2cb",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-baseline-paged-context2048.log"
+    },
+    "logs/quiet-baseline-paged-context8192.log": {
+      "sha256": "a1d2e4c9f2324b178ac164af520cd7f264c141493031205de84ddfa2b15ab6a3",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-baseline-paged-context8192.log"
+    },
+    "logs/quiet-fused-dense-context2048.log": {
+      "sha256": "1e3278bcfec76a026de2a70dfe74a27e8c9ab0f6ece91c4c8cf186902f68d800",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-fused-dense-context2048.log"
+    },
+    "logs/quiet-fused-dense-context8192.log": {
+      "sha256": "c5d8b304e5ab763aa63238c28a64a39fee62e99b614192cb1a32f054d7115f7a",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-fused-dense-context8192.log"
+    },
+    "logs/quiet-fused-paged-context2048.log": {
+      "sha256": "66b98b5bb4b38c27ab2574012680b4448463aee338a6d48e0963f45066621d9f",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-fused-paged-context2048.log"
+    },
+    "logs/quiet-fused-paged-context8192.log": {
+      "sha256": "6d5a24dc3301880cc471d7e4498dea08aa3f0226d20ad3ab0413e18212267826",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\quiet-fused-paged-context8192.log"
+    },
+    "ablation/baseline/dense-context2048/results.json": {
+      "sha256": "a8fe9d238248f121f5cb1bc224b62201c61342fc0851338ab0b9a05b30f161d6",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\baseline\\dense-context2048\\results.json"
+    },
+    "ablation/baseline/paged-context2048/results.json": {
+      "sha256": "b9f90be2f78c3d475bb2167a44118a6051e98d007c5c32816694436185dd05ba",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\baseline\\paged-context2048\\results.json"
+    },
+    "ablation/baseline/dense-context8192/results.json": {
+      "sha256": "6560d2ab98e7921d079b3100b07d828bcd5a507b53c4381c7647caadcd472501",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\baseline\\dense-context8192\\results.json"
+    },
+    "ablation/baseline/paged-context8192/results.json": {
+      "sha256": "6e6f52da6f3bb167334f934b7227f4af3764ef744743ba0bfbcfc8011b7bf179",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\baseline\\paged-context8192\\results.json"
+    },
+    "ablation/fused/dense-context2048/results.json": {
+      "sha256": "cea5b148fcae1dbb9858d0f8cdea61e7b05c73dec05c43c2b5dfbaed49b16e32",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\fused\\dense-context2048\\results.json"
+    },
+    "ablation/fused/paged-context2048/results.json": {
+      "sha256": "4116f11afcd04705d7558c33a59ebd3dcbcf5801bf9ba495ccb3257eb06402b9",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\fused\\paged-context2048\\results.json"
+    },
+    "ablation/fused/dense-context8192/results.json": {
+      "sha256": "5f0457265385e0d9a55ef637f4287bc96b5d9fc47b0887d0025200d885b4c800",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\fused\\dense-context8192\\results.json"
+    },
+    "ablation/fused/paged-context8192/results.json": {
+      "sha256": "26bf894d82d87331b6c7a7bb4e7e144d075eab86a8cbbcc267542fd3bf325820",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\ablation\\fused\\paged-context8192\\results.json"
+    },
+    "live/dense-f16/results.json": {
+      "sha256": "439552c534fe7255fb47841f56b3eb9342ae2f77d8ad5d228eef34802859d340",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\live\\dense-f16\\results.json"
+    },
+    "live/dense-q8/results.json": {
+      "sha256": "c3972d0534fe41529bccf54571a8a48e82f8523e0e4a5215e576b9123c6f6f13",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\live\\dense-q8\\results.json"
+    },
+    "live/paged-f16/results.json": {
+      "sha256": "f010b0657424ae9d1b5a678eb1c79d0ecd981993df9d78953c98e60f1727746b",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\live\\paged-f16\\results.json"
+    },
+    "live/paged-q8/results.json": {
+      "sha256": "7842edc18e5d71371954cdc9e92230a96384a2b63e7dc3973008756bac518cdf",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-proof\\live\\paged-q8\\results.json"
+    },
+    "source/benchmark.py": {
+      "sha256": "369a2e20bbaeea7161c98fec78890d521f27e513db256153ee3a8327dc89f493",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\quantized-harness\\benchmark.py"
+    },
+    "source/live.py": {
+      "sha256": "031304f2faa4e82f5aca68c7623052d5e67293b351499d3ddd606e32238c7cd9",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\quantized-harness\\live.py"
+    },
+    "diagnostics/check_encoded_store_fusion.py": {
+      "sha256": "60ded51d4fd73154accd2c4c044f0fa92f10998bb36de6e9d9b54d2e1f725766",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check_encoded_store_fusion.py"
+    },
+    "diagnostics/prepare_encoded_store_fusion.py": {
+      "sha256": "c04158ae505e2ca9836dcddd489555b1c1558a8b92c865a29c38a53decddc8e1",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\prepare_encoded_store_fusion.py"
+    },
+    "diagnostics/check_encoded_attention_oracle.py": {
+      "sha256": "62bbc019b0be38ec7d23a0d1e7026a01c2c525460fd184ca52c6c24a97be24d4",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\check_encoded_attention_oracle.py"
+    },
+    "diagnostics/encoded_guard_tests_draft.rs": {
+      "sha256": "79436f0e52a1bc288eed9f6e81f4f19720723a6bdf4f8bf1a3045a7af6af8ce9",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded_guard_tests_draft.rs"
+    },
+    "diagnostics/build_cuda.ps1": {
+      "sha256": "0c6bf420931d0b6e821a806282fff26c6fced02ddfb7eaa63e8b203b046700f0",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-native\\build_cuda.ps1"
+    },
+    "experimental/native/kv_attention_oracle.cuh": {
+      "sha256": "75e2a663e31e0689849e78321304161d55e5dbd3a5f64f1ab019888be8406cea",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-native\\kv_attention_oracle.cuh"
+    },
+    "experimental/native/kv_storage.cuh": {
+      "sha256": "eb1ebe48187bce3e87f56ed2855f9f9ec43771ca8055342b2018a287a9149a23",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-native\\kv_storage.cuh"
+    },
+    "experimental/native/llama_resident.cuh": {
+      "sha256": "cc8ca55fe2c2d9960d84a7ec6518265b1780c5487d5e7942427ded34f157f5d9",
+      "source_path": "E:\\devs\\Rbitnet\\target\\performance-cache\\encoded-store-fusion-native\\llama_resident.cuh"
+    }
+  },
+  "experimental_native_paths": [
+    "kv_attention_oracle.cuh",
+    "kv_storage.cuh",
+    "llama_resident.cuh"
+  ],
+  "stage": {
+    "script": "check_encoded_store_fusion.py",
+    "script_sha256": "60ded51d4fd73154accd2c4c044f0fa92f10998bb36de6e9d9b54d2e1f725766",
+    "log": "encoded-store-fusion-chain.log",
+    "started_utc": "2026-10-04T11:21:05Z",
+    "status": "passed",
+    "log_start_byte": 0,
+    "pid": 3924,
+    "returncode": 0,
+    "finished_utc": "2026-10-04T11:40:34Z",
+    "log_capture_sha256": "4bc451011c1c664a2a16a1cc0b6aaf5c9978758392dd916c3616e1951eda8432"
+  },
+  "generated": {
+    "README.md": "2fe061e3cb5d913d7791664d4d3d77a7579b7fd2e9c0e33e9f4390db99599cb2",
+    ".gitattributes": "26adfb60699ab4be86ae4098c1203d5b0132707e2ab57ee8c4f70649d5643059",
+    "warm-rates.json": "000ef27eac0e8c911a735c40d18b0f5a39f843087ffbc0dc8509e24665eeeade"
+  },
+  "scope": "Measured non-adopted encoded KV fusion; production sources unchanged."
+}

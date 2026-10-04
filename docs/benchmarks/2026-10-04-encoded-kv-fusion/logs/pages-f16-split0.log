@@ -1,0 +1,17 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-encoded-fusion\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.17s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 2 tests
+test llama::resident::paged_tests::optional_native_paged_owner_variants_and_snapshot_outlives_root ... PAGED_OWNER dense foreign/attention variant/TF32 variant/weight owner refusals, peer and snapshot lifetime, one-charge reclamation exact
+ok
+test llama::resident::paged_tests::optional_native_paged_shared_prefix_cow_graph_block_split_and_reclaim ... PAGED_NATIVE graphs=0 split=0 sequences=1 pages=4 bytes/page=1048576 COW=1 exact=true
+PAGED_NATIVE graphs=0 split=0 sequences=4 pages=10 bytes/page=1048576 COW=4 exact=true
+PAGED_NATIVE graphs=0 split=0 sequences=8 pages=18 bytes/page=1048576 COW=8 exact=true
+PAGED_NATIVE graphs=1 split=0 sequences=1 pages=4 bytes/page=1048576 COW=1 exact=true
+PAGED_NATIVE graphs=1 split=0 sequences=4 pages=10 bytes/page=1048576 COW=4 exact=true
+PAGED_NATIVE graphs=1 split=0 sequences=8 pages=18 bytes/page=1048576 COW=8 exact=true
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 145 filtered out; finished in 9.12s
+
