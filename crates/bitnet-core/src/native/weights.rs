@@ -79,11 +79,16 @@ impl Weights {
             requested_weights
         };
         result.residency_budget_bytes = budget;
-        // Reserve separate immutable small-router copies for the segmented MLA
-        // pipeline, while the ordinary reference still uses its CPU router.
-        let priority = if result.archive.normalized_architecture().as_deref() == Some("deepseek2")
-            && std::env::var("RBITNET_CUDA_MLA_FULL").as_deref() == Ok("1")
-        {
+        // Reserve immutable small-router copies before bank/cache placement.
+        // The ordinary reference continues to use its CPU SIMD router.
+        let reserve_router = match result.archive.normalized_architecture().as_deref() {
+            Some("deepseek2") => std::env::var("RBITNET_CUDA_MLA_FULL").as_deref() == Ok("1"),
+            Some("gpt-oss" | "gptoss") => {
+                std::env::var("RBITNET_CUDA_GPT_FULL").as_deref() == Ok("1")
+            }
+            _ => false,
+        };
+        let priority = if reserve_router {
             result
                 .archive
                 .tensors
@@ -97,14 +102,14 @@ impl Weights {
                 .try_fold(0usize, |n, t| {
                     n.checked_add(result.archive.tensor_payload(t)?.len())
                         .ok_or_else(|| {
-                            BitNetError::Inference("MLA router reservation overflow".into())
+                            BitNetError::Inference("resident router reservation overflow".into())
                         })
                 })?
         } else {
             0
         };
         let placement_budget = budget.checked_sub(priority).ok_or_else(|| {
-            BitNetError::Inference("CUDA weight budget cannot reserve MLA routers".into())
+            BitNetError::Inference("CUDA weight budget cannot reserve resident routers".into())
         })?;
         let requested_cache = std::env::var("RBITNET_MOE_CACHE_MB")
             .ok()

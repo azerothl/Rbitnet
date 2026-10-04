@@ -1,0 +1,4 @@
+# Preserve the published evidence bytes across LF/CRLF checkouts.
+validation/** -text
+performance/** -text
+scripts/*.py -text

@@ -56,6 +56,7 @@ pub(super) fn reserve(a: &GgufArchive, c: &Config) -> Result<usize> {
             product(&[2, qs])?,
             product(&[2, ks])?,
             c.experts,
+            product(&[2, c.used])?, // Stable IDs/probabilities for host admission.
             c.rotary / 2,
             product(&[c.max_seq, c.rotary])?,
             c.vocab,

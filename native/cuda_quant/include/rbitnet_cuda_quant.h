@@ -152,6 +152,24 @@ RBITNET_CUDA_API void *rbitnet_cuda_gpt_full_create(const RbitnetGptConfig*,cons
     const RbitnetLlamaMatrix *head,const float *output_norm,const float *frequency);
 RBITNET_CUDA_API void rbitnet_cuda_gpt_full_destroy(void*);
 RBITNET_CUDA_API int rbitnet_cuda_gpt_full_step(void*,const float*,unsigned position,unsigned mode,float*,unsigned*);
+/* Host-admitted GPT segments retain attention/KV/backbone on device. Each
+ * token is begin, then prepare/finish in increasing layer order, then end.
+ * Finish accepts a dynamic selected pointer table or a host routed FFN output.
+ * The caller retains every selected owner through synchronous finish completion.
+ * Begin at zero abandons an interrupted token; a position beyond filled fails. */
+RBITNET_CUDA_API void *rbitnet_cuda_gpt_segmented_create(const RbitnetGptConfig*,const RbitnetGptLayer*,const RbitnetLlamaMatrix*,const float*,const float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_begin(void*,const float*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_prepare(void*,unsigned,unsigned*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_ffn_input(void*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_finish(void*,unsigned,const void *const*,const float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_end(void*,unsigned,float*,unsigned*);
+/* Compact immutable GPT K/V prefixes, valid only in the creating context's
+ * generation. Restore may truncate and safely abandons an interrupted token. */
+RBITNET_CUDA_API void *rbitnet_cuda_gpt_snapshot(void*,unsigned);
+RBITNET_CUDA_API void rbitnet_cuda_gpt_snapshot_destroy(void*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_restore(void*,const void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_hidden_check(void*,float*);
+
 /* Diagnostic host-array APIs share the production enqueue/router kernels. */
 RBITNET_CUDA_API int rbitnet_cuda_gpt_full_hidden_check(void*,const float*,unsigned position,float*);
 /* Output per layer: embd hidden values, experts raw router logits, used IDs as F32. */
