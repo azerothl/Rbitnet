@@ -27,15 +27,11 @@ __global__ void paged_resident_attention(float *const *k,float *const *v,unsigne
     const unsigned head=blockIdx.x,kh=head/(heads/kv_heads),seq=*position+blockIdx.y+1;
     q+=size_t(blockIdx.y)*heads*dim;y+=size_t(blockIdx.y)*heads*dim;
     const unsigned first=window && seq>window?seq-window:0;
-    for(unsigned p=first+warp;p<seq;) {
-        unsigned page=p/llama_page_tokens,end=min(seq,(page+1)*llama_page_tokens);
-        const float *keys=k[page]+size_t(layer)*llama_page_tokens*kv_heads*dim+kh*dim;
-        for(;p<end;p+=4) {
-            float s=0;
-            for(unsigned i=lane;i<dim;i+=32)s=fmaf(q[head*dim+i],keys[(p%llama_page_tokens)*kv_heads*dim+i],s);
-            for(int shift=16;shift;shift/=2)s+=__shfl_down_sync(0xffffffff,s,shift);
-            if(lane==0)scores[p-first]=s*scale;
-        }
+    for(unsigned p=first+warp;p<seq;p+=4) {
+        float s=0;
+        for(unsigned i=lane;i<dim;i+=32)s=fmaf(q[head*dim+i],k[p/llama_page_tokens][(size_t(layer)*llama_page_tokens+p%llama_page_tokens)*kv_heads*dim+kh*dim+i],s);
+        for(int shift=16;shift;shift/=2)s+=__shfl_down_sync(0xffffffff,s,shift);
+        if(lane==0)scores[p-first]=s*scale;
     }
     __syncthreads();
     float maximum=-CUDART_INF_F;
@@ -53,11 +49,7 @@ __global__ void paged_resident_attention(float *const *k,float *const *v,unsigne
     if(sinks)sum+=expf(sinks[head]-maximum);
     for(unsigned i=tid;i<dim;i+=128) {
         float output=0;
-        for(unsigned p=first;p<seq;) {
-            unsigned page=p/llama_page_tokens,end=min(seq,(page+1)*llama_page_tokens);
-            const float *values=v[page]+size_t(layer)*llama_page_tokens*kv_heads*dim+kh*dim+i;
-            for(;p<end;p++)output=fmaf(scores[p-first]/sum,values[(p%llama_page_tokens)*kv_heads*dim],output);
-        }
+        for(unsigned p=first;p<seq;p++)output=fmaf(scores[p-first]/sum,v[p/llama_page_tokens][(size_t(layer)*llama_page_tokens+p%llama_page_tokens)*kv_heads*dim+kh*dim+i],output);
         y[head*dim+i]=output;
     }
 }
@@ -70,15 +62,11 @@ __global__ void paged_attention_partials(float *const *k,float *const *v,unsigne
     float *out=scratch+((size_t(token)*heads+head)*parts+part)*(dim+2);
     if(begin>=end) {if(!tid) {out[0]=-CUDART_INF_F;out[1]=0;}return;}
     unsigned kh=head/(heads/kv_heads);q+=size_t(token)*heads*dim+head*dim;
-    for(unsigned p=begin+warp;p<end;) {
-        unsigned page=p/llama_page_tokens,page_end=min(end,(page+1)*llama_page_tokens);
-        const float *keys=k[page]+size_t(layer)*llama_page_tokens*kv_heads*dim+kh*dim;
-        for(;p<page_end;p+=4) {
-            float dot=0;
-            for(unsigned i=lane;i<dim;i+=32)dot=fmaf(q[i],keys[(p%llama_page_tokens)*kv_heads*dim+i],dot);
-            for(int shift=16;shift;shift/=2)dot+=__shfl_down_sync(0xffffffff,dot,shift);
-            if(!lane)scores[p-begin]=dot*scale;
-        }
+    for(unsigned p=begin+warp;p<end;p+=4) {
+        float dot=0;
+        for(unsigned i=lane;i<dim;i+=32)dot=fmaf(q[i],k[p/llama_page_tokens][(size_t(layer)*llama_page_tokens+p%llama_page_tokens)*kv_heads*dim+kh*dim+i],dot);
+        for(int shift=16;shift;shift/=2)dot+=__shfl_down_sync(0xffffffff,dot,shift);
+        if(!lane)scores[p-begin]=dot*scale;
     }
     __syncthreads();float maximum=-CUDART_INF_F;
     for(unsigned p=tid;p<end-begin;p+=128)maximum=fmaxf(maximum,scores[p]);
@@ -93,11 +81,7 @@ __global__ void paged_attention_partials(float *const *k,float *const *v,unsigne
     if(!tid) {out[0]=maximum;out[1]=sum;}
     for(unsigned i=tid;i<dim;i+=128) {
         float value=0;
-        for(unsigned p=begin;p<end;) {
-            unsigned page=p/llama_page_tokens,page_end=min(end,(page+1)*llama_page_tokens);
-            const float *values=v[page]+size_t(layer)*llama_page_tokens*kv_heads*dim+kh*dim+i;
-            for(;p<page_end;p++)value=fmaf(scores[p-begin],values[(p%llama_page_tokens)*kv_heads*dim],value);
-        }
+        for(unsigned p=begin;p<end;p++)value=fmaf(scores[p-begin],v[p/llama_page_tokens][(size_t(layer)*llama_page_tokens+p%llama_page_tokens)*kv_heads*dim+kh*dim+i],value);
         out[i+2]=value;
     }
 }

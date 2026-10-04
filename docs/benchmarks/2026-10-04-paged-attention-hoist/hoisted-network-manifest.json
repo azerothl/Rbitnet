@@ -1,0 +1,8 @@
+{
+  "binary_sha256": "5d937ad9f035c20548e12bebf7a4121ff389a2d09f3d1034f706f8194cf91470",
+  "library_sha256": "05de803b837cf0bd78f54337d6ae5107d29d983dd0b538002fd975f020a6bd77",
+  "harness_sha256": "71a9d266974d1b542b649013d2dc197a5ad4218acffdf10bd84626e9c4e9ce65",
+  "results_sha256": "82ca3ca24152e72105b6136d12b8ada8d6699cf6da311c091290968962ff8553",
+  "log_sha256": "2c35cb60ef959be449c6e8bdee8e599d8ca3104dd7f80064c0f4cab734dc50a4",
+  "scope": "Standalone pointer hoisting only, original page pool unchanged; both Llama prefill modes, cancellation/resume, explicit stop and serialized concurrency."
+}
