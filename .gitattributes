@@ -1,0 +1,4 @@
+
+docs/benchmarks/2026-10-04-gpt-norm-fresh/raw/** -text
+docs/benchmarks/2026-10-04-gpt-norm-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-gpt-norm-fresh/harness/** -text
