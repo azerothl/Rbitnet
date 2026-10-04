@@ -1219,6 +1219,7 @@ impl Runtime {
         sampling: SamplingOptions,
         mut events: Option<&mut (dyn FnMut(StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         for kv in &mut self.kv {
             kv.k.clear();
             kv.v.clear();
@@ -1313,6 +1314,7 @@ impl Runtime {
         let dec = Instant::now();
         let mut previous = String::new();
         let mut emitted = String::new();
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for step in 0..limit {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -1321,6 +1323,7 @@ impl Runtime {
                 .take()
                 .unwrap_or_else(|| sample_token(&logits, &sampling, &generated, &mut rng));
             if stop.contains(&next) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             generated.push(next);
@@ -1345,6 +1348,7 @@ impl Runtime {
             decode_ms: dec.elapsed().as_millis() as u64,
             prompt_tokens: ids.len() as u32,
             completion_tokens: generated.len() as u32,
+            finish_reason,
         };
         if let Some(callback) = events.as_deref_mut() {
             emit_text_delta(&previous, &mut emitted, true, callback)?;
@@ -1376,6 +1380,11 @@ impl NativeExecutor {
         family: Family,
     ) -> Result<Self> {
         let id = archive.suggested_openai_model_id();
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
         let runtime = Runtime::load(archive, tokenizer, kind, family)?;
         Ok(Self {
             kind,
@@ -1437,6 +1446,7 @@ impl ModelExecutor for NativeExecutor {
         limit: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         self.runtime
             .lock()
             .map_err(|_| BitNetError::Inference("runtime lock poisoned".into()))?
@@ -1449,6 +1459,7 @@ impl ModelExecutor for NativeExecutor {
         sampling: SamplingOptions,
         callback: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let (text, phases) = self
             .runtime
             .lock()
@@ -1850,3 +1861,10 @@ mod async_profile_tests;
 #[cfg(test)]
 #[path = "async_config_tests.rs"]
 mod async_config_tests;
+
+#[cfg(test)]
+#[path = "gpt_norm_runtime_tests.rs"]
+mod gpt_norm_runtime_tests;
+#[cfg(test)]
+#[path = "gpt_norm_tests.rs"]
+mod gpt_norm_tests;

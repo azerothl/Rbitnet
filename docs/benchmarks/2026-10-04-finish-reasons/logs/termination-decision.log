@@ -1,0 +1,11 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.18s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\bitnet_core-431cd9ba796006ca.exe)
+
+running 2 tests
+test llama::speculative::finish_tests::eos_inside_verification_and_budget_exhaustion_are_distinct ... ok
+test timings::finish_tests::legacy_statistics_are_unknown_and_phase_reason_survives_both_combiners ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 150 filtered out; finished in 0.00s
+

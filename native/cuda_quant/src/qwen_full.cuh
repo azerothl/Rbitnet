@@ -84,6 +84,56 @@ struct QwenAttentionSnapshot {
     ~QwenAttentionSnapshot() {if(k)cudaFree(k);if(v)cudaFree(v);}
 };
 #include "qwen_prefill.cuh"
+// Private bounded Qwen all-position verification and GDN-only rollback.
+// Included inside the anonymous namespace immediately before ResidentQwenFull.
+struct QwenSpeculativeWorkspace {
+    static constexpr unsigned limit=9;
+    float *h=nullptr,*logits=nullptr,*maxima=nullptr,*maximum=nullptr,*backup=nullptr;
+    unsigned *ids=nullptr,*tokens=nullptr;
+    struct Plane {float *source;size_t offset,elements;};
+    std::vector<Plane> planes;
+    std::vector<void*> allocations;
+    size_t backup_elements=0;
+    unsigned saved_length=0;
+    uint64_t nonce=0;
+    bool valid=false,poisoned=false;
+    cudaGraph_t graphs[3][limit+1]={};cudaGraphExec_t executable[3][limit+1]={};
+    ~QwenSpeculativeWorkspace() {
+        for(auto &mode:executable)for(auto e:mode)if(e)cudaGraphExecDestroy(e);
+        for(auto &mode:graphs)for(auto g:mode)if(g)cudaGraphDestroy(g);
+        for(auto p:allocations)cudaFree(p);
+    }
+    template<typename T> bool alloc(T *&p,size_t elements) {
+        if(!elements || elements>SIZE_MAX/sizeof(T))return false;
+        if(cudaMalloc(reinterpret_cast<void**>(&p),elements*sizeof(T))!=cudaSuccess)return false;
+        allocations.push_back(p);return true;
+    }
+    bool init(unsigned embd,unsigned vocab,const std::vector<RbitnetQwenFullLayer> &layers) {
+        MemoryCategoryScope category(MemoryScratch);
+        for(const auto &layer:layers)if(layer.kind==0) {
+            auto *r=static_cast<ResidentQwenRecurrent*>(layer.context);const auto &c=r->cfg;
+            size_t history=size_t(2*c.num_k+c.num_v)*c.head*c.conv,state=size_t(c.num_v)*c.head*c.head;
+            if(history>SIZE_MAX-backup_elements)return false;
+            planes.push_back({r->history,backup_elements,history});backup_elements+=history;
+            if(state>SIZE_MAX-backup_elements)return false;
+            planes.push_back({r->state,backup_elements,state});backup_elements+=state;
+        }
+        unsigned blocks=(vocab+255)/256;
+        return alloc(h,size_t(limit)*embd) && alloc(logits,size_t(limit)*vocab)
+            && alloc(maxima,size_t(limit)*blocks) && alloc(ids,size_t(limit)*blocks)
+            && alloc(maximum,limit) && alloc(tokens,limit) && (!backup_elements || alloc(backup,backup_elements));
+    }
+    bool copy(cudaStream_t stream,bool restore) {
+        for(const auto &plane:planes) {
+            float *dst=restore?plane.source:backup+plane.offset;
+            const float *src=restore?backup+plane.offset:plane.source;
+            if(cudaMemcpyAsync(dst,src,plane.elements*sizeof(float),cudaMemcpyDeviceToDevice,stream)!=cudaSuccess)return false;
+        }
+        return true;
+    }
+    void invalidate() {valid=false;nonce=0;}
+};
+
 struct ResidentQwenFull {
     unsigned embd,vocab,capacity,filled=0;bool use_graphs;
     std::vector<RbitnetQwenFullLayer> layers;RbitnetLlamaMatrix head;
@@ -91,11 +141,11 @@ struct ResidentQwenFull {
     float *x=nullptr,*h=nullptr,*norm=nullptr,*logits=nullptr,*maxima=nullptr,*maximum=nullptr;
     unsigned *position=nullptr,*ids=nullptr,*token=nullptr;
     cudaStream_t stream=nullptr;cudaGraph_t graphs[3]={};cudaGraphExec_t executable[3]={};float epsilon;
-    QwenPrefill *block=nullptr;bool tf32_prefill=false;unsigned tensor_gemm_calls=0;
+    QwenSpeculativeWorkspace *spec=nullptr;QwenPrefill *block=nullptr;bool tf32_prefill=false,ordered_prefill=false;unsigned tensor_gemm_calls=0;
     ~ResidentQwenFull() {
         if(stream)cudaStreamSynchronize(stream);
         for(auto e:executable)if(e)cudaGraphExecDestroy(e);for(auto g:graphs)if(g)cudaGraphDestroy(g);
-        delete block;
+        delete spec;delete block;
         for(auto p:allocations)cudaFree(p);if(stream)cudaStreamDestroy(stream);
     }
     template<typename T> bool alloc(T *&p,size_t n,const T *host=nullptr) {
@@ -110,6 +160,7 @@ struct ResidentQwenFull {
         r->stream=stream;r->x=x;r->enqueue();r->x=previous_x;r->stream=previous_stream;
     }
     bool reset() {
+        if(spec){spec->invalidate();spec->poisoned=false;}
         for(const auto &layer:layers) {
             if(layer.kind==0) {
                 auto *b=static_cast<ResidentQwenRecurrent*>(layer.context);const auto &c=b->cfg;
@@ -149,10 +200,23 @@ struct ResidentQwenFull {
             resident_argmax<<<1,256,0,stream>>>(maxima,ids,blocks,maximum,token);
         }
     }
+    void enqueue_verify(unsigned count,unsigned mode) {
+        bool previous=ordered_prefill;ordered_prefill=true;
+        enqueue_block(count,0);ordered_prefill=previous;
+        if(!mode)return;
+        resident_norm<<<count,256,0,stream>>>(block->x,norm,epsilon,embd,spec->h);
+        QuantKind kind;resident_kind(head.type,kind);
+        launch_ordered_gemm(kind,static_cast<const uint8_t*>(head.weights),head.row_bytes,spec->h,head.cols,head.rows,count,spec->logits,stream);
+        if(mode==2) {
+            unsigned blocks=(vocab+255)/256;
+            resident_argmax<<<dim3(blocks,count),256,0,stream>>>(spec->logits,nullptr,vocab,spec->maxima,spec->ids);
+            resident_argmax<<<dim3(1,count),256,0,stream>>>(spec->maxima,spec->ids,blocks,spec->maximum,spec->tokens);
+        }
+    }
     void enqueue_block(unsigned count,unsigned mode) {
         for(const auto &layer:layers) {
-            if(layer.kind==0)qwen_recurrent_block(static_cast<ResidentQwenRecurrent*>(layer.context),block,count,stream,tf32_prefill);
-            else qwen_attention_block(static_cast<ResidentQwenAttention*>(layer.context),block,position,count,stream,tf32_prefill);
+            if(layer.kind==0)qwen_recurrent_block(static_cast<ResidentQwenRecurrent*>(layer.context),block,count,stream,tf32_prefill,ordered_prefill);
+            else qwen_attention_block(static_cast<ResidentQwenAttention*>(layer.context),block,position,count,stream,tf32_prefill,ordered_prefill);
         }
         output(mode,block->x+size_t(count-1)*embd);
     }
@@ -280,6 +344,11 @@ int rbitnet_cuda_qwen_configure_prefill(void *p,unsigned enabled,unsigned tensor
     if(!b->init(r->layers,r->embd)) {delete b;cudaGetLastError();return 2;}
     r->block=b;r->tf32_prefill=tensor && tf32_prefill_supported();return 0;
 }
+int rbitnet_cuda_qwen_configure_ordered_prefill(void *p,unsigned enabled) {
+    auto *r=static_cast<ResidentQwenFull*>(p);if(!r || enabled>1 || r->filled || !r->block || (enabled && r->tf32_prefill))return 1;
+    for(auto &mode:r->block->executable)for(auto graph:mode)if(graph)return 2;
+    r->ordered_prefill=enabled!=0;return 0;
+}
 unsigned rbitnet_cuda_qwen_prefill_capacity(void *p) {
     auto *r=static_cast<ResidentQwenFull*>(p);return r && r->block?QwenPrefill::capacity:0;
 }
@@ -297,7 +366,7 @@ int rbitnet_cuda_qwen_full_restored(void *p,unsigned length) {
         unsigned filled=layer.kind==0?static_cast<ResidentQwenRecurrent*>(layer.context)->filled:static_cast<ResidentQwenAttention*>(layer.context)->filled;
         if(filled!=length)return 2;
     }
-    r->filled=length;return 0;
+    if(r->spec)r->spec->invalidate();r->filled=length;return 0;
 }
 int rbitnet_cuda_qwen_full_step(void *p,const float *input,unsigned pos,unsigned mode,float *logits,unsigned *token) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || !input || pos>=r->capacity || mode>2 || (mode==1 && !logits) || (mode==2 && !token))return 1;
@@ -348,4 +417,97 @@ int rbitnet_cuda_qwen_full_prefill(void *p,const float *input,unsigned pos,unsig
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 11;
     r->advance(pos+count);r->tensor_gemm_calls=tensor_calls;completion.dismiss();return 0;
 }
+// Private ABI; every entrypoint is synchronous with bounded/preallocated device storage.
+int rbitnet_cuda_qwen_spec_configure(void *p,unsigned enabled) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || enabled>1 || r->filled || r->spec || (enabled && (!r->block || r->tf32_prefill)))return 1;
+    if(!enabled)return 0;
+    auto *s=new(std::nothrow) QwenSpeculativeWorkspace;if(!s)return 2;
+    if(!s->init(r->embd,r->vocab,r->layers)) {delete s;cudaGetLastError();return 2;}
+    r->spec=s;return 0;
+}
+uint64_t rbitnet_cuda_qwen_spec_bytes(void *p) {
+    auto *r=static_cast<ResidentQwenFull*>(p);if(!r || !r->spec)return 0;
+    auto *s=r->spec;uint64_t n=QwenSpeculativeWorkspace::limit,blocks=(r->vocab+255)/256;
+    return 4*(n*r->embd+n*r->vocab+2*n*blocks+2*n+s->backup_elements);
+}
+size_t rbitnet_cuda_qwen_spec_state_elements(void *p) {
+    auto *r=static_cast<ResidentQwenFull*>(p);return r && r->spec?r->spec->backup_elements:0;
+}
+// Test evidence only, excluded from every throughput run.
+int rbitnet_cuda_qwen_spec_state_read(void *p,float *out,size_t elements) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || r->spec->poisoned || !out || elements!=r->spec->backup_elements)return 1;
+    NativeCallCompletion completion(r->stream);
+    for(const auto &plane:r->spec->planes)if(cudaMemcpyAsync(out+plane.offset,plane.source,plane.elements*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 2;
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 3;completion.dismiss();return 0;
+}
+int rbitnet_cuda_qwen_spec_save(void *p,uint64_t *nonce) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || r->spec->poisoned || !nonce || !r->filled)return 1;
+    for(const auto &layer:r->layers) {
+        unsigned length=layer.kind==0?static_cast<ResidentQwenRecurrent*>(layer.context)->filled:static_cast<ResidentQwenAttention*>(layer.context)->filled;
+        if(length!=r->filled)return 2;
+    }
+    auto *s=r->spec;s->invalidate();uint64_t id=llama_identity();if(!id)return 3;
+    NativeCallCompletion completion(r->stream);
+    if(!s->copy(r->stream,false) || cudaStreamSynchronize(r->stream)!=cudaSuccess) {
+        s->poisoned=true;r->advance(0);return 4;
+    }
+    s->saved_length=r->filled;s->nonce=id;s->valid=true;*nonce=id;completion.dismiss();return 0;
+}
+int rbitnet_cuda_qwen_spec_restore(void *p,uint64_t nonce) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || r->spec->poisoned || !nonce || !r->spec->valid || r->spec->nonce!=nonce
+        || !r->spec->saved_length || r->spec->saved_length>r->filled)return 1;
+    auto *s=r->spec;unsigned length=s->saved_length;s->invalidate();
+    NativeCallCompletion completion(r->stream);
+    if(!s->copy(r->stream,true) || cudaStreamSynchronize(r->stream)!=cudaSuccess) {
+        s->poisoned=true;r->advance(0);return 2;
+    }
+    // Attention prefix planes have never been overwritten: future KV becomes
+    // inaccessible after advancing every layer back to the checkpoint length.
+    r->advance(length);completion.dismiss();return 0;
+}
+int rbitnet_cuda_qwen_spec_discard(void *p,uint64_t nonce) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || !nonce || !r->spec->valid || nonce!=r->spec->nonce)return 1;
+    r->spec->invalidate();return 0;
+}
+int rbitnet_cuda_qwen_spec_verify(void *p,const float *input,size_t input_elements,unsigned pos,unsigned count,
+    unsigned mode,float *logits,size_t logits_elements,unsigned *ids,size_t id_elements) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || !r->block || r->tf32_prefill || !input || !count
+        || count>QwenSpeculativeWorkspace::limit || pos>=r->capacity || count>r->capacity-pos
+        || input_elements!=size_t(count)*r->embd || mode>2
+        || (mode==0 && (logits || logits_elements || ids || id_elements))
+        || (mode==1 && (!logits || logits_elements!=size_t(count)*r->vocab || ids || id_elements))
+        || (mode==2 && (!ids || id_elements!=count || logits || logits_elements)))return 1;
+    for(size_t i=0;i<input_elements;i++)if(!isfinite(input[i]))return 2;
+    if(pos!=0 && (r->spec->poisoned || pos!=r->filled))return 3;
+    NativeCallCompletion completion(r->stream);
+    struct Guard {
+        ResidentQwenFull *r;bool good=false;
+        ~Guard() {if(!good){r->spec->invalidate();r->spec->poisoned=true;r->advance(0);}}
+    } guard{r};
+    if(pos==0 && !r->reset())return 4;
+    if(cudaMemcpyAsync(r->block->x,input,input_elements*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
+        || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 5;
+    auto *s=r->spec;unsigned index=mode;
+    if(r->use_graphs) {
+        if(!s->executable[index][count]) {
+            if(cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 6;
+            r->enqueue_verify(count,mode);
+            if(cudaStreamEndCapture(r->stream,&s->graphs[index][count])!=cudaSuccess
+                || cudaGraphInstantiate(&s->executable[index][count],s->graphs[index][count],0)!=cudaSuccess)return 7;
+        }
+        if(cudaGraphLaunch(s->executable[index][count],r->stream)!=cudaSuccess)return 8;
+    } else r->enqueue_verify(count,mode);
+    if(cudaGetLastError()!=cudaSuccess)return 9;
+    if(mode==1 && cudaMemcpyAsync(logits,s->logits,logits_elements*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 10;
+    if(mode==2 && cudaMemcpyAsync(ids,s->tokens,id_elements*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 11;
+    if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 12;
+    r->advance(pos+count);r->tensor_gemm_calls=0;guard.good=true;completion.dismiss();return 0;
+}
+
 }

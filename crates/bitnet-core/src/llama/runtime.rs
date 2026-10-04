@@ -107,7 +107,14 @@ impl LlamaRuntime {
                     .into(),
             ));
         }
-        let resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
+        let native_format = super::resident::configured_kv_format()?;
+        if native_format != 0 && (backend_kind != BackendKind::Cuda || kv.as_paged().is_some()) {
+            return Err(BitNetError::Inference(
+                "encoded native K/V requires CUDA dense Llama residency and no host paged KV"
+                    .into(),
+            ));
+        }
+        let mut resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
             super::resident::Resident::new(&model)
         } else {
             None
@@ -116,6 +123,32 @@ impl LlamaRuntime {
             return Err(BitNetError::Inference(
                 "native CUDA KV paging unavailable or pool/context allocation refused".into(),
             ));
+        }
+        if native_format != 0 && resident.is_none() {
+            return Err(BitNetError::Inference(
+                "encoded native K/V unavailable or context allocation refused".into(),
+            ));
+        }
+        if crate::context_native::enabled() {
+            if std::env::var("RBITNET_CUDA_KV_FORMAT").is_ok_and(|value| value != "f32")
+                || super::speculative::enabled()
+                || std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1")
+                || model.cfg.max_seq > 8192
+            {
+                return Err(BitNetError::NotImplemented("context tiers require F32 Llama without TF32/speculative decoding and capacity <= 8192"));
+            }
+            let resident = resident.as_mut().ok_or(BitNetError::NotImplemented(
+                "context tiers require full Native Llama CUDA residency",
+            ))?;
+            let configuration = format!(
+                "{:?};rope={:?};split={:?};tensor={:?};head={:?}",
+                model.cfg,
+                model.rope_inv_freq,
+                std::env::var("RBITNET_CUDA_SPLIT_KV"),
+                std::env::var("RBITNET_CUDA_PREFILL_TF32X3"),
+                std::env::var("RBITNET_CUDA_HEAD")
+            );
+            resident.configure_context_tiers(&archive, tokenizer_path, &configuration)?;
         }
         let backend = make_backend(backend_kind);
         let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
@@ -191,6 +224,7 @@ impl LlamaRuntime {
         sampling: SamplingOptions,
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         self.last_speculative_attempted = false;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
@@ -421,6 +455,7 @@ impl LlamaRuntime {
                 decode_ms: 0,
                 prompt_tokens: prompt_ids.len() as u32,
                 completion_tokens: 0,
+                finish_reason: Default::default(),
             };
             cb(StreamEvent::FirstToken {
                 stats: crate::scheduler::InferenceStats::from_phases(partial, false),
@@ -435,12 +470,14 @@ impl LlamaRuntime {
         let mut pos = prompt_ids.len();
         let mut prev_text = String::new();
 
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for step in 0..max_tokens {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             let next_id = sample_token(&logits, &sampling, &gen, &mut rng);
             if eos_ids.contains(&next_id) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             gen.push(next_id);
@@ -470,6 +507,7 @@ impl LlamaRuntime {
             decode_ms,
             prompt_tokens: prompt_ids.len() as u32,
             completion_tokens: gen.len() as u32,
+            finish_reason,
         };
 
         if let Some(cb) = on_event {
@@ -574,11 +612,13 @@ impl LlamaRuntime {
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(8)
             .clamp(1, 15);
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         while generated.len() < limit as usize {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             if eos.contains(&next) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             generated.push(next);
@@ -667,6 +707,9 @@ impl LlamaRuntime {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             let Some(pending) = decision.pending else {
+                if decision.ended_on_eos {
+                    finish_reason = crate::timings::GenerationFinishReason::Stop;
+                }
                 break;
             };
             next = pending;
@@ -677,6 +720,7 @@ impl LlamaRuntime {
             decode_ms: decode.elapsed().as_millis() as u64,
             prompt_tokens: ids.len() as u32,
             completion_tokens: generated.len() as u32,
+            finish_reason,
         };
         if let Some(cb) = events {
             emit_text_delta(&text, &mut emitted, true, cb)?;
@@ -716,6 +760,7 @@ impl LlamaRuntime {
                         decode_ms: 0,
                         prompt_tokens: ids.len() as u32,
                         completion_tokens: 0,
+                        finish_reason: Default::default(),
                     },
                     false,
                 ),
@@ -726,11 +771,13 @@ impl LlamaRuntime {
         let mut generated = Vec::new();
         let mut previous = String::new();
         let mut emitted = String::new();
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for step in 0..limit {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             if stop.contains(&next) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             generated.push(next);
@@ -751,6 +798,7 @@ impl LlamaRuntime {
             decode_ms: decode.elapsed().as_millis() as u64,
             prompt_tokens: ids.len() as u32,
             completion_tokens: generated.len() as u32,
+            finish_reason,
         };
         if let Some(cb) = events {
             emit_text_delta(&previous, &mut emitted, true, cb)?;

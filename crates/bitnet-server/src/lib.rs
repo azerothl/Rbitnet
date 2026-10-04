@@ -475,8 +475,12 @@ async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> Respo
         .into_response();
     }
     let eng = state.engine.read().await;
-    let model_id = eng
-        .openai_model_id()
+    let model_id = state
+        .expected_request_model_id
+        .read()
+        .await
+        .clone()
+        .or_else(|| eng.openai_model_id())
         .unwrap_or_else(|| "rbitnet-stub".into());
     let mut metadata = eng.model_metadata();
     if !eng.has_gguf() && eng.openai_model_id().is_none() {
@@ -794,9 +798,15 @@ async fn reload_single_engine(
         apply_runtime_config_env().map_err(|e| format!("invalid runtime config: {e}"))?;
         Arc::new(Engine::from_env().map_err(|e| format!("failed to init engine from env: {e:?}"))?)
     };
-    let model_id = new_engine
-        .openai_model_id()
-        .unwrap_or_else(|| "rbitnet-stub".into());
+    let model_id = if state.config.require_model_match {
+        crate::run::standalone_model_id(
+            new_engine.openai_model_id(),
+            std::env::var("RBITNET_ACTIVE_MODEL_ID").ok().as_deref(),
+        )
+    } else {
+        new_engine.openai_model_id()
+    }
+    .unwrap_or_else(|| "rbitnet-stub".into());
     {
         let mut eng = state.engine.write().await;
         state
@@ -843,6 +853,11 @@ pub struct ChatCompletionRequest {
     /// OpenAI-compatible structured output (`json_object` / `json_schema`).
     #[serde(default)]
     pub response_format: Option<ResponseFormat>,
+    /// Recognized explicitly so unsupported tool generation is not silently ignored.
+    #[serde(default, alias = "functions")]
+    pub tools: Option<Vec<serde_json::Value>>,
+    #[serde(default, alias = "function_call")]
+    pub tool_choice: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1281,6 +1296,8 @@ async fn completions(
         presence_penalty: req.presence_penalty,
         seed: req.seed,
         response_format: None,
+        tools: None,
+        tool_choice: None,
     };
     let response = chat_completions(State(state), headers, Json(chat)).await?;
     if req.stream == Some(true) {
@@ -1315,11 +1332,30 @@ async fn completions(
             "text": text,
             "index": 0,
             "logprobs": serde_json::Value::Null,
-            "finish_reason": "stop"
+            "finish_reason": chat_body["choices"][0]["finish_reason"].clone()
         }],
         "usage": chat_body["usage"].clone()
     }))
     .into_response())
+}
+
+/// Both API dialects may explicitly disable tools while still listing definitions.
+pub(crate) fn tool_generation_requested(
+    tools: Option<&[serde_json::Value]>,
+    choice: Option<&serde_json::Value>,
+) -> bool {
+    let definitions = tools.is_some_and(|tools| !tools.is_empty());
+    let Some(choice) = choice else {
+        return definitions;
+    };
+    let kind = choice
+        .as_str()
+        .or_else(|| choice.get("type").and_then(|kind| kind.as_str()));
+    match kind {
+        Some("none") => false,
+        Some("auto") => definitions,
+        _ => true,
+    }
 }
 
 async fn chat_completions(
@@ -1481,6 +1517,49 @@ async fn chat_completions(
             .into_response());
     }
 
+    let temperature = req.temperature.unwrap_or(0.7);
+    if tool_generation_requested(req.tools.as_deref(), req.tool_choice.as_ref()) {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"error": {
+                "message": "tool-call generation requires a validated tokenizer-aware grammar",
+                "type": "not_implemented_error", "code": "tool_generation_not_supported"
+            }})),
+        )
+            .into_response());
+    }
+    let structured_json = req.response_format.as_ref().is_some_and(|rf| {
+        matches!(
+            rf.format_type.trim().to_ascii_lowercase().as_str(),
+            "json_object" | "json_schema"
+        )
+    });
+    let sampling = SamplingOptions {
+        temperature,
+        top_p: req.top_p,
+        seed: req.seed,
+        frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
+        presence_penalty: req.presence_penalty.unwrap_or(0.0),
+        structured_json,
+    };
+    if let Err(error) = sampling.validate_structured_output() {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"error": {
+                "message": error.to_string(), "type": "not_implemented_error",
+                "code": "structured_output_not_supported"
+            }})),
+        )
+            .into_response());
+    }
     let permit = match state.semaphore.clone().try_acquire_owned() {
         Ok(p) => p,
         Err(_) => {
@@ -1501,21 +1580,6 @@ async fn chat_completions(
         }
     };
 
-    let temperature = req.temperature.unwrap_or(0.7);
-    let structured_json = req.response_format.as_ref().is_some_and(|rf| {
-        matches!(
-            rf.format_type.trim().to_ascii_lowercase().as_str(),
-            "json_object" | "json_schema"
-        )
-    });
-    let sampling = SamplingOptions {
-        temperature,
-        top_p: req.top_p,
-        seed: req.seed,
-        frequency_penalty: req.frequency_penalty.unwrap_or(0.0),
-        presence_penalty: req.presence_penalty.unwrap_or(0.0),
-        structured_json,
-    };
     clear_inference_cancel();
 
     if req.stream == Some(true) {
@@ -1711,7 +1775,12 @@ async fn chat_completions(
         }
     };
 
+    let original_len = output.text.len();
     let text = apply_stop_sequences(output.text, req.stop.as_ref());
+    let mut stats = output.stats;
+    if text.len() < original_len {
+        stats.finish_reason = bitnet_core::timings::GenerationFinishReason::Stop;
+    }
     if let Some(rf) = req.response_format.as_ref() {
         if let Err(msg) = validate_structured_output(&text, rf) {
             state
@@ -1735,7 +1804,7 @@ async fn chat_completions(
                 .into_response());
         }
     }
-    Ok(json_completion(&request_model, &text, &output.stats).into_response())
+    Ok(json_completion(&request_model, &text, &stats).into_response())
 }
 
 pub fn unix_now() -> u64 {
@@ -1769,7 +1838,7 @@ fn json_completion(model: &str, text: &str, stats: &InferenceStats) -> impl Into
         "choices": [{
             "index": 0,
             "message": { "role": "assistant", "content": text },
-            "finish_reason": "stop"
+            "finish_reason": stats.finish_reason.openai()
         }],
         "usage": {
             "prompt_tokens": pt,
@@ -1903,7 +1972,7 @@ async fn live_stream_chat_completion(
                     "choices": [{
                         "index": 0,
                         "delta": {},
-                        "finish_reason": "stop"
+                        "finish_reason": if stop_filter.stopped(){Some("stop")}else{output.stats.finish_reason.openai()}
                     }]
                 });
                 let tail = stop_filter.finish();
@@ -1994,7 +2063,7 @@ fn stream_completion(model: &str, full_text: &str) -> Response {
             "choices": [{
                 "index": 0,
                 "delta": {},
-                "finish_reason": "stop"
+                "finish_reason": serde_json::Value::Null
             }]
         });
         Ok::<_, std::convert::Infallible>(format!("data: {}\n\n", finish))

@@ -160,6 +160,12 @@ impl Qwen3Runtime {
     }
 
     pub fn load(archive: Arc<GgufArchive>, tokenizer_path: &Path) -> Result<Self> {
+        if crate::context_native::enabled() {
+            return Err(BitNetError::NotImplemented(
+                "context tiers support Native F32 Llama and dense Qwen only",
+            ));
+        }
+
         let cfg = Qwen3Config::from_gguf(archive.as_ref())?;
         let tok_embd = must_tensor(archive.as_ref(), "token_embd.weight")?;
         let out_norm = must_tensor(archive.as_ref(), "output_norm.weight")?;
@@ -213,6 +219,7 @@ impl Qwen3Runtime {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
@@ -254,12 +261,14 @@ impl Qwen3Runtime {
         let mut generated = Vec::new();
         let mut rng = seeded_rng(sampling.seed);
         let mut pos = prompt_ids.len();
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for _ in 0..max_tokens {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
             }
             let next_id = sample_token(&logits, &sampling, &generated, &mut rng);
             if Some(next_id) == eos_id {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             generated.push(next_id);
@@ -277,6 +286,7 @@ impl Qwen3Runtime {
                 decode_ms,
                 prompt_tokens: prompt_ids.len() as u32,
                 completion_tokens: generated.len() as u32,
+                finish_reason,
             },
         ))
     }

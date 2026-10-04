@@ -1,0 +1,22 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-glm-policy-logits\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::glm_policy_logits::optional_glm_policy_full_logits_repeated_history_exact ... GLM_POLICY_LOGITS_EXACT lru-cycle0 positions=128
+GLM_POLICY_LOGITS_EXACT lru-cycle1 positions=128
+GLM_POLICY_LOGITS_EXACT lru-cycle2 positions=128
+GLM_POLICY_LOGITS_EXACT lru-cycle3 positions=128
+GLM_POLICY_LOGITS_EXACT lfu-cycle0 positions=128
+GLM_POLICY_LOGITS_EXACT lfu-cycle1 positions=128
+GLM_POLICY_LOGITS_EXACT lfu-cycle2 positions=128
+GLM_POLICY_LOGITS_EXACT lfu-cycle3 positions=128
+GLM_POLICY_LOGITS_EXACT least-stale-cycle0 positions=128
+GLM_POLICY_LOGITS_EXACT least-stale-cycle1 positions=128
+GLM_POLICY_LOGITS_EXACT least-stale-cycle2 positions=128
+GLM_POLICY_LOGITS_EXACT least-stale-cycle3 positions=128
+GLM_POLICY_FULL_LOGITS_DONE policies=3 cycles=4 positions=1536
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 150 filtered out; finished in 339.20s
+

@@ -1,0 +1,182 @@
+{
+  "journal": {
+    "pid": 46264,
+    "status": "passed",
+    "complete": true,
+    "workspace": "C:\\Users\\azero\\.codex\\worktrees\\kv-tf32-guard\\Rbitnet",
+    "checker_sha256": "84554e51290efa7dc1119fd9b861b5fa9dd560e0a2569b4d060e8f8c98dc5350",
+    "started_utc": "2026-10-04T15:29:20Z",
+    "hardware_started_utc": "2026-10-04T15:42:35Z",
+    "current_step": "canonical-split1",
+    "finished_utc": "2026-10-04T15:46:57Z"
+  },
+  "manifest_sha256": "a2d2450b7ed52abb89c9a3f3375c830966a2877982ccce6cef27c11f95e42598",
+  "captures": [
+    {
+      "path": "raw/all-project-artifact-purge-dev.json.gz",
+      "raw_sha256": "0eeab7bac08f321cf31c4e3069294172929219cf383649b135e78c3b5ca767b1",
+      "gzip_sha256": "1ddad5bfbc7fbc3290f5f5ee0063d46689886089dd90757783ea68799222a864",
+      "raw_bytes": 973
+    },
+    {
+      "path": "raw/all-project-artifact-purge-release.json.gz",
+      "raw_sha256": "7f898d8b1752c9d44ac03a788adda656894eac89858f4a214624f917277bcfee",
+      "gzip_sha256": "6070fa3a73bb8aebd6f072d9c7c1c7357655f3060115a980b92abd2435d451b5",
+      "raw_bytes": 3114
+    },
+    {
+      "path": "raw/attention-f64.log.gz",
+      "raw_sha256": "0b2fd94898805f2020221c4372fd0f50bd8167928046f1f2061e74713912d317",
+      "gzip_sha256": "e0a3692a048f2f5e720b9dd4d4852e6147a93607d85cd8be7b84300dfe28629f",
+      "raw_bytes": 285
+    },
+    {
+      "path": "raw/attention-f64.log.decode.json.gz",
+      "raw_sha256": "1b7654414fd4751c150bb1d2d53140b22cff68b57ec9d9f25f3a78865e84f27d",
+      "gzip_sha256": "733d7e5324821734365763b9ea8cdeba74c0e69556e26d2237415a5dbfaccaa0",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/attention-oracle.json.gz",
+      "raw_sha256": "96ba23872b0a0ba0eb960828da9ec91ba2dd026820b2e0a911a4aa3f7df843ae",
+      "gzip_sha256": "59a71df825421b98e16fc56571f8ce5a12bb2317d3065089e77f6911bc1875f0",
+      "raw_bytes": 29425
+    },
+    {
+      "path": "raw/canonical-split0.log.gz",
+      "raw_sha256": "610f7b85a7b62412d158df34452539db0f71c4557b32b28515352ad4e34858c8",
+      "gzip_sha256": "323c4fb3794e10d2e2133a48d761d99aa31a6a8d5aec33e5afd176a125531aaa",
+      "raw_bytes": 73550
+    },
+    {
+      "path": "raw/canonical-split0.log.decode.json.gz",
+      "raw_sha256": "aab22466c72f77226b3b071ec6afa4c71f98967b96eb225b28703d345b0e254a",
+      "gzip_sha256": "929e41bae793ab6221276bce73e46f616396e211f3f17f4ab3e30fad06b52dfc",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/canonical-split1.log.gz",
+      "raw_sha256": "fe9463ea4d491030fe62fe94c498e7d026c6927c498898a065b5789535ff5195",
+      "gzip_sha256": "9f0e8c6736ad3db9fa7895ef2023757b7beb2fdcc7300f7f2a98e81c62e5384a",
+      "raw_bytes": 73550
+    },
+    {
+      "path": "raw/canonical-split1.log.decode.json.gz",
+      "raw_sha256": "a3062190f66cc874d4fc3597338cdf9f4f175d16e4d3c459e2188b98aa9901a7",
+      "gzip_sha256": "f27a5d25e57a468fff41fd88ade6f043d78fa75611d224d58a70817cf1257017",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/check.log.gz",
+      "raw_sha256": "420f5b93b080eecab5cb97b38b59937188c22d2e20c2679e7208ac9697df6375",
+      "gzip_sha256": "7e5bf14ad5053b764b5dd709a89278bc3d753b0121c6c2504c31f64a177460d6",
+      "raw_bytes": 1701
+    },
+    {
+      "path": "raw/check.log.decode.json.gz",
+      "raw_sha256": "dad47cb2c50acbdfb1f28d5bb2f17bd46e872e9661ea4134c8238f8ae80b8761",
+      "gzip_sha256": "79989d299be7683785fe28a3f129b910483ed5cad6da27bdf23e2d362b0ed955",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/clippy.log.gz",
+      "raw_sha256": "6ccf8314e7921de9c6df140148cf07e8604899cdeae27607de251274764d9248",
+      "gzip_sha256": "7313d78706588d7b8481096ef418cf3962a60b54b0925253bb85601b1b07778e",
+      "raw_bytes": 10149
+    },
+    {
+      "path": "raw/clippy.log.decode.json.gz",
+      "raw_sha256": "884847da16aa1689587a64ad015c5a0f12f01af8e41dd4b4742160e4ac9c60fa",
+      "gzip_sha256": "186efb4f13382f309effc1c6f15b99a79b44a94aa76bd2b30f283a7853aa56b5",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/manifest.json.gz",
+      "raw_sha256": "a2d2450b7ed52abb89c9a3f3375c830966a2877982ccce6cef27c11f95e42598",
+      "gzip_sha256": "c95ae1ac44a4cdf0f1491237cef3c29bd8ad370b259be202dfae89f3b78ddd92",
+      "raw_bytes": 39876
+    },
+    {
+      "path": "raw/mutable-refusal-split0.log.gz",
+      "raw_sha256": "5f500ba2d4e736525e2b63304775c91056c1b20f3f0921d1781a3e825e8fcd93",
+      "gzip_sha256": "2bd8b11995aebe517ae8518f8f9f7a26cb542eb6b17c3db16ca03da68d4dad08",
+      "raw_bytes": 917
+    },
+    {
+      "path": "raw/mutable-refusal-split0.log.decode.json.gz",
+      "raw_sha256": "fe7a3e9f45ef3e23fd72505d6a55bcac28a88023187c0b373baf9326a12ec529",
+      "gzip_sha256": "87e66550742baad694509d5606d6717d7de14304da331f3e5e6b48b034334054",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/mutable-refusal-split1.log.gz",
+      "raw_sha256": "6f71d5e76100d73ef54a8dfc01c2caa9eef08a5fbe968a9fc51468711f9e8d2b",
+      "gzip_sha256": "091e92e08cdf3df7e56bc1aaa47098e1dea3dbee01b04446830e8e84bfeed614",
+      "raw_bytes": 809
+    },
+    {
+      "path": "raw/mutable-refusal-split1.log.decode.json.gz",
+      "raw_sha256": "aae2d52bc6f019555fbcc41006b83388fc5d3d27b892a6e45ad485e484da3973",
+      "gzip_sha256": "1c9af8188f32aba96ac980b7a851c3cb15d90dad1a6bed5dd5f0a4dd8e2e1f87",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/native-build.log.gz",
+      "raw_sha256": "e472848c9c2a38169fe9bfa1d204cc5784637cd6e6c29b68e85dd04b5370c23c",
+      "gzip_sha256": "0583f36f99a7e5ffa6dc006d068470d7a6fe77022e6ea4f60a120d7e390745b6",
+      "raw_bytes": 32818
+    },
+    {
+      "path": "raw/native-build.log.decode.json.gz",
+      "raw_sha256": "6f24f54ae63449833a53e8518f1ba71c6f8ac5abb738bd3cac32cd16b7ba650d",
+      "gzip_sha256": "c84ddd427826eba9fef213ea5888d17f087eac596ebdb050d9e5b0ce536c5d42",
+      "raw_bytes": 185
+    },
+    {
+      "path": "raw/project-artifact-clean-dev.log.gz",
+      "raw_sha256": "b43bcc3ed6287c789c8b1ee0517c3226bde6001e3876242af6f5ac5c702de0dc",
+      "gzip_sha256": "f09ee04309e70584131da23cbf3271dddb2af1faf79f2d359244374d4a7ca2b4",
+      "raw_bytes": 37
+    },
+    {
+      "path": "raw/project-artifact-clean-release.log.gz",
+      "raw_sha256": "0bdaeb2aa6a92a0fdfec2d2cc4d0ab71946de5d0654e08c526e4629130ae0f28",
+      "gzip_sha256": "94b43c1849676ea7043059d85de5660d3a7cc2c8717a2f1a5f80d98681cd964f",
+      "raw_bytes": 21
+    },
+    {
+      "path": "raw/workspace.log.gz",
+      "raw_sha256": "2f118e19fcc180a98dd5436cd97085b414dfab324de551e708249fc8a8ecf87c",
+      "gzip_sha256": "a5af379ff1424dcbe59e5aff0c695b3e5d0c634fbf6919466fd5b64f2baaf514",
+      "raw_bytes": 31208
+    },
+    {
+      "path": "raw/workspace.log.decode.json.gz",
+      "raw_sha256": "8d847e592404b2abc6687170cf65e0504ee6d86a471bad5e0186e0f1212120ad",
+      "gzip_sha256": "45044ea6ba0cf93f09a1705b1811aab88cae03d99ebfd31bc620e024707d00ee",
+      "raw_bytes": 185
+    }
+  ],
+  "harness_sha256": {
+    "check_kv_tf32_guard.py": "84554e51290efa7dc1119fd9b861b5fa9dd560e0a2569b4d060e8f8c98dc5350",
+    "check_encoded_attention_oracle.py": "62bbc019b0be38ec7d23a0d1e7026a01c2c525460fd184ca52c6c24a97be24d4",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c",
+    "diagnostic_logs.py": "37e0dd4a2d6769bac1f4672ecae66e3ceb310222aa45b294255174f155b32325",
+    "project_build_cache.py": "9ec69dda48f8aa8b0e8a5b9a791a854245e9d627cf83650487551b04e0272a85"
+  },
+  "workspace_tests": {
+    "passed": 298,
+    "failed": 0,
+    "ignored": 1
+  },
+  "source_paths": [
+    "crates/bitnet-core/src/llama/resident.rs",
+    "native/cuda_quant/src/llama_resident.cuh",
+    "crates/bitnet-core/src/llama/resident/encoded_guard_tests.rs"
+  ],
+  "limits": [
+    "Guard-only change; encoded storage and attention kernels are unchanged.",
+    "Full KV format quality/serving evidence remains the earlier fresh delivery proof; this validates mutable refusal and exact post-refusal state.",
+    "No encoded-store fusion is adopted; PR #115 remains draft until this proof is folded into its published implementation."
+  ]
+}

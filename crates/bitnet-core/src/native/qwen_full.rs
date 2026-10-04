@@ -307,6 +307,17 @@ impl GpuFull {
                         );
                         return None;
                     }
+                    if std::env::var("RBITNET_QWEN_ORDERED_BLOCK_TEST").as_deref() == Ok("1") {
+                        type Ordered = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+                        let configure = lib
+                            .get::<Ordered>(b"rbitnet_cuda_qwen_configure_ordered_prefill\0")
+                            .expect("ordered native ABI required");
+                        assert_eq!(
+                            configure(context as *mut c_void, 1),
+                            0,
+                            "ordered block explicitly requested"
+                        );
+                    }
                     let capacity = capacity(context as *mut c_void) as usize;
                     (capacity > 0 && capacity <= 128).then_some(PrefillApi {
                         run,
@@ -337,6 +348,238 @@ impl GpuFull {
             split_layers,
             prefill,
         })
+    }
+    // Private typed wrapper, every native call owns the runtime exclusively.
+    #[cfg(test)]
+    pub(crate) fn spec_state(&self) -> Vec<f32> {
+        type Count = unsafe extern "C" fn(*mut c_void) -> usize;
+        type Read = unsafe extern "C" fn(*mut c_void, *mut f32, usize) -> i32;
+        let lib = crate::ggml::load_cuda_quant_library().unwrap();
+        unsafe {
+            let count = lib
+                .get::<Count>(b"rbitnet_cuda_qwen_spec_state_elements\0")
+                .unwrap();
+            let read = lib
+                .get::<Read>(b"rbitnet_cuda_qwen_spec_state_read\0")
+                .unwrap();
+            let mut values = vec![0.0; count(self.context as *mut c_void)];
+            assert_eq!(
+                read(
+                    self.context as *mut c_void,
+                    values.as_mut_ptr(),
+                    values.len()
+                ),
+                0
+            );
+            values
+        }
+    }
+    pub(crate) fn spec_configure(&mut self) -> Result<usize> {
+        type Configure = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+        type Bytes = unsafe extern "C" fn(*mut c_void) -> u64;
+        let lib = crate::ggml::load_cuda_quant_library()
+            .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
+        unsafe {
+            let configure = lib
+                .get::<Configure>(b"rbitnet_cuda_qwen_spec_configure\0")
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            let bytes = lib
+                .get::<Bytes>(b"rbitnet_cuda_qwen_spec_bytes\0")
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            let status = configure(self.context as *mut c_void, 1);
+            if status != 0 {
+                return Err(BitNetError::Inference(format!(
+                    "Qwen spec configure failed: {status}"
+                )));
+            }
+            usize::try_from(bytes(self.context as *mut c_void))
+                .map_err(|_| BitNetError::Inference("speculative byte count overflow".into()))
+        }
+    }
+    pub(crate) fn spec_save(&mut self) -> Result<u64> {
+        type Save = unsafe extern "C" fn(*mut c_void, *mut u64) -> i32;
+        let lib = crate::ggml::load_cuda_quant_library()
+            .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
+        let mut nonce = 0;
+        let status = unsafe {
+            let call = lib
+                .get::<Save>(b"rbitnet_cuda_qwen_spec_save\0")
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            call(self.context as *mut c_void, &mut nonce)
+        };
+        if status != 0 || nonce == 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen spec save failed: {status}"
+            )));
+        }
+        Ok(nonce)
+    }
+    pub(crate) fn spec_finish(&mut self, nonce: u64, restore: bool) -> Result<()> {
+        type Finish = unsafe extern "C" fn(*mut c_void, u64) -> i32;
+        let lib = crate::ggml::load_cuda_quant_library()
+            .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
+        let symbol: &[u8] = if restore {
+            b"rbitnet_cuda_qwen_spec_restore\0"
+        } else {
+            b"rbitnet_cuda_qwen_spec_discard\0"
+        };
+        let status = unsafe {
+            let call = lib
+                .get::<Finish>(symbol)
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            call(self.context as *mut c_void, nonce)
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen spec finish failed: {status}"
+            )));
+        }
+        Ok(())
+    }
+    pub(crate) fn spec_replay(
+        &mut self,
+        input: &[f32],
+        position: usize,
+        count: usize,
+    ) -> Result<()> {
+        type Verify = unsafe extern "C" fn(
+            *mut c_void,
+            *const f32,
+            usize,
+            u32,
+            u32,
+            u32,
+            *mut f32,
+            usize,
+            *mut u32,
+            usize,
+        ) -> i32;
+        if count == 0
+            || count > 9
+            || position >= self.capacity
+            || count > self.capacity - position
+            || input.len() != count * self.embd
+            || input.iter().any(|v| !v.is_finite())
+        {
+            return Err(BitNetError::Inference(
+                "Qwen speculative replay shape/finite mismatch".into(),
+            ));
+        }
+        let lib = crate::ggml::load_cuda_quant_library()
+            .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
+        let status = unsafe {
+            let call = lib
+                .get::<Verify>(b"rbitnet_cuda_qwen_spec_verify\0")
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            call(
+                self.context as *mut c_void,
+                input.as_ptr(),
+                input.len(),
+                position as u32,
+                count as u32,
+                0,
+                std::ptr::null_mut(),
+                0,
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen spec replay failed: {status}"
+            )));
+        }
+        crate::perf::record_gpu_transfer((input.len() * 4 + 4) as u64, 0, 0);
+        crate::perf::record_qwen_full_tokens(count);
+        crate::perf::record_split_attention(self.split_layers * count as u64);
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        Ok(())
+    }
+    pub(crate) fn spec_verify(
+        &mut self,
+        input: &[f32],
+        position: usize,
+        count: usize,
+        greedy: bool,
+    ) -> Result<(Vec<f32>, Vec<u32>)> {
+        type Verify = unsafe extern "C" fn(
+            *mut c_void,
+            *const f32,
+            usize,
+            u32,
+            u32,
+            u32,
+            *mut f32,
+            usize,
+            *mut u32,
+            usize,
+        ) -> i32;
+        if count == 0
+            || count > 9
+            || position >= self.capacity
+            || count > self.capacity - position
+            || input.len() != count * self.embd
+            || input.iter().any(|v| !v.is_finite())
+        {
+            return Err(BitNetError::Inference(
+                "Qwen speculative verify shape/finite mismatch".into(),
+            ));
+        }
+        let lib = crate::ggml::load_cuda_quant_library()
+            .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
+        let mut logits = if greedy {
+            Vec::new()
+        } else {
+            vec![0.0; count * self.vocab]
+        };
+        let mut ids = if greedy { vec![0; count] } else { Vec::new() };
+        let status = unsafe {
+            let call = lib
+                .get::<Verify>(b"rbitnet_cuda_qwen_spec_verify\0")
+                .map_err(|e| BitNetError::Inference(e.to_string()))?;
+            call(
+                self.context as *mut c_void,
+                input.as_ptr(),
+                input.len(),
+                position as u32,
+                count as u32,
+                if greedy { 2 } else { 1 },
+                if greedy {
+                    std::ptr::null_mut()
+                } else {
+                    logits.as_mut_ptr()
+                },
+                logits.len(),
+                if greedy {
+                    ids.as_mut_ptr()
+                } else {
+                    std::ptr::null_mut()
+                },
+                ids.len(),
+            )
+        };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "Qwen spec verify failed: {status}"
+            )));
+        }
+        crate::perf::record_gpu_transfer(
+            (input.len() * 4 + 4) as u64,
+            (logits.len() * 4 + ids.len() * 4) as u64,
+            0,
+        );
+        crate::perf::record_qwen_full_tokens(count);
+        crate::perf::record_split_attention(self.split_layers * count as u64);
+        if self.graphs {
+            crate::perf::record_cuda_graph_replay();
+        }
+        Ok((logits, ids))
+    }
+
+    pub(crate) fn portable_context(&self) -> usize {
+        self.context
     }
     pub fn prefill_capacity(&self) -> usize {
         self.prefill.as_ref().map_or(1, |p| p.capacity)

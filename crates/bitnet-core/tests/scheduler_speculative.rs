@@ -48,6 +48,7 @@ impl ModelExecutor for EchoExecutor {
                 decode_ms: 0,
                 prompt_tokens: 1,
                 completion_tokens: max_tokens,
+                finish_reason: Default::default(),
             },
         ))
     }
@@ -206,6 +207,7 @@ impl ModelExecutor for CountingEcho {
                 decode_ms: 1,
                 prompt_tokens: prompt.split_whitespace().count().max(1) as u32,
                 completion_tokens: max_tokens,
+                finish_reason: Default::default(),
             },
         ))
     }
@@ -347,6 +349,7 @@ impl ModelExecutor for BatchAwareEcho {
                 decode_ms: 0,
                 prompt_tokens: 1,
                 completion_tokens: max_tokens,
+                finish_reason: Default::default(),
             },
         ))
     }
@@ -400,11 +403,191 @@ fn fused_multi_seq_decode_uses_generate_decode_batch() {
     };
     let rows = scheduler.run_batch(&exec, &batch).expect("fused batch");
     assert_eq!(rows.len(), 2);
-    let batch_calls = exec
-        .batch_calls
-        .load(std::sync::atomic::Ordering::Relaxed);
+    let batch_calls = exec.batch_calls.load(std::sync::atomic::Ordering::Relaxed);
     assert!(
         batch_calls >= 1,
         "fused_multi_seq should call generate_decode_batch (got {batch_calls})"
     );
+}
+
+struct EosStepExecutor {
+    calls: std::sync::atomic::AtomicUsize,
+}
+impl ModelExecutor for EosStepExecutor {
+    fn family(&self) -> &'static str {
+        "llama"
+    }
+    fn backend(&self) -> bitnet_core::backend::BackendKind {
+        bitnet_core::backend::BackendKind::Cpu
+    }
+    fn backend_accelerated(&self) -> bool {
+        false
+    }
+    fn is_ready(&self) -> bool {
+        true
+    }
+    fn openai_model_id(&self, _: Option<&GgufArchive>) -> Option<String> {
+        None
+    }
+    fn count_prompt_tokens(&self, _: &str) -> Result<u32> {
+        Ok(1)
+    }
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        _: u32,
+        _: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        assert!(
+            self.calls
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                < 8,
+            "EOS queue must not retry an empty completion"
+        );
+        let eos = prompt.starts_with("eos");
+        Ok((
+            if eos { String::new() } else { "x".into() },
+            PhaseTimings {
+                prompt_tokens: 1,
+                completion_tokens: if eos { 0 } else { 1 },
+                finish_reason: if eos {
+                    bitnet_core::timings::GenerationFinishReason::Stop
+                } else {
+                    bitnet_core::timings::GenerationFinishReason::Length
+                },
+                ..Default::default()
+            },
+        ))
+    }
+}
+
+struct BurstFinishExecutor {
+    first_eos: bool,
+    calls: std::sync::atomic::AtomicUsize,
+}
+impl ModelExecutor for BurstFinishExecutor {
+    fn family(&self) -> &'static str {
+        "llama"
+    }
+    fn backend(&self) -> bitnet_core::backend::BackendKind {
+        bitnet_core::backend::BackendKind::Cpu
+    }
+    fn backend_accelerated(&self) -> bool {
+        false
+    }
+    fn is_ready(&self) -> bool {
+        true
+    }
+    fn openai_model_id(&self, _: Option<&GgufArchive>) -> Option<String> {
+        None
+    }
+    fn count_prompt_tokens(&self, _: &str) -> Result<u32> {
+        Ok(1)
+    }
+    fn generate_with_timings(
+        &self,
+        _: &str,
+        max_tokens: u32,
+        _: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        let call = self
+            .calls
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        assert!(call < 2, "a completed burst must never restart generation");
+        let stop = self.first_eos || call == 1;
+        let count = if self.first_eos {
+            0
+        } else if call == 0 {
+            max_tokens
+        } else {
+            1
+        };
+        Ok((
+            "x".repeat(count as usize),
+            PhaseTimings {
+                prompt_tokens: 1,
+                completion_tokens: count,
+                finish_reason: if stop {
+                    bitnet_core::timings::GenerationFinishReason::Stop
+                } else {
+                    bitnet_core::timings::GenerationFinishReason::Length
+                },
+                ..Default::default()
+            },
+        ))
+    }
+}
+#[test]
+fn legacy_burst_respects_first_eos_and_uses_the_last_actual_termination_reason() {
+    use bitnet_core::timings::GenerationFinishReason;
+    for first_eos in [true, false] {
+        let executor = BurstFinishExecutor {
+            first_eos,
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        };
+        let mut scheduler = test_scheduler(false, false, DraftPath::TargetModel, 1, 8);
+        scheduler.mtp_k = 2;
+        let result = scheduler
+            .run(
+                &executor,
+                &InferenceRequest {
+                    prompt: "burst".into(),
+                    max_tokens: 5,
+                    sampling: SamplingOptions::from_temperature(0.),
+                },
+            )
+            .unwrap();
+        assert_eq!(result.stats.finish_reason, GenerationFinishReason::Stop);
+        assert_eq!(
+            result.stats.completion_tokens,
+            if first_eos { 0 } else { 3 }
+        );
+        assert_eq!(
+            executor.calls.load(std::sync::atomic::Ordering::Relaxed),
+            if first_eos { 1 } else { 2 }
+        );
+    }
+}
+#[test]
+fn eos_zero_output_finishes_both_queue_modes_while_other_members_reach_their_budget() {
+    use bitnet_core::scheduler::{InferenceBatch, ScheduledRequest};
+    for fused in [false, true] {
+        let executor = EosStepExecutor {
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        };
+        let mut scheduler = test_scheduler(true, false, DraftPath::TargetModel, 1, 8);
+        scheduler.fused_multi_seq = fused;
+        let batch = InferenceBatch {
+            requests: [("eos", 5), ("normal", 3), ("zero", 0)]
+                .into_iter()
+                .enumerate()
+                .map(|(id, (prompt, max_tokens))| ScheduledRequest {
+                    id: id as u64,
+                    request: InferenceRequest {
+                        prompt: prompt.into(),
+                        max_tokens,
+                        sampling: SamplingOptions::from_temperature(0.),
+                    },
+                })
+                .collect(),
+        };
+        let result = scheduler.run_batch_waves(&executor, &batch).unwrap();
+        assert_eq!(result.len(), 3);
+        assert_eq!(
+            result[0].1.stats.finish_reason,
+            bitnet_core::timings::GenerationFinishReason::Stop
+        );
+        assert!(result[0].1.text.is_empty());
+        assert_eq!(
+            result[1].1.stats.finish_reason,
+            bitnet_core::timings::GenerationFinishReason::Length
+        );
+        assert_eq!(result[1].1.text, "xxx");
+        assert_eq!(
+            result[2].1.stats.finish_reason,
+            bitnet_core::timings::GenerationFinishReason::Length
+        );
+        assert_eq!(result[2].1.stats.completion_tokens, 0);
+        assert_eq!(executor.calls.load(std::sync::atomic::Ordering::Relaxed), 4);
+    }
 }

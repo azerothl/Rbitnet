@@ -61,7 +61,7 @@ struct GptBlockWorkspace {
     }
     void norm(float *input,const float *weights,float *output,unsigned count,const float *residual=nullptr) {
         auto *r=runtime;
-        if(r->cfg.ordered)gpt_norm_ordered<<<count,256,0,r->stream>>>(input,weights,r->cfg.epsilon,r->cfg.embd,output,residual);
+        if(r->cfg.ordered)launch_gpt_ordered_norm(input,weights,r->cfg.epsilon,r->cfg.embd,output,residual,count,r->stream);
         else resident_norm<<<count,256,0,r->stream>>>(input,weights,r->cfg.epsilon,r->cfg.embd,output,residual);
     }
     bool enqueue(unsigned count,unsigned mode,bool all) {

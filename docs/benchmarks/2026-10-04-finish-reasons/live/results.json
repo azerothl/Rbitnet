@@ -1,0 +1,1998 @@
+{
+  "binary_sha256": "3fe8f07fb4c4ac3287221717e9ab434844d77278436f734542956d2b0661b87f",
+  "library_sha256": "b86c8fa6d5cf34f500c01e860bae1f87fcb2411862d1ed2e0f68dc08f9411e38",
+  "harness_sha256": "0fd806fac367035e14ab6afa3fbf6e45236f7d379af29cbeb4da40289bc4240d",
+  "effective_options": {
+    "llama32-1b": {
+      "RBITNET_MODEL": "C:\\Users\\azero\\.ollama\\models\\blobs\\sha256-3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+      "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json",
+      "RBITNET_BACKEND": "cuda",
+      "RBITNET_BIND": "127.0.0.1:18138",
+      "RBITNET_LLAMA_WEIGHT_MODE": "auto",
+      "RBITNET_LLAMA_ENCODE_ADD_SPECIAL": "1",
+      "RBITNET_STUB": "0",
+      "RBITNET_TOY": "0",
+      "RBITNET_PREFIX_KV": "0",
+      "RBITNET_KV_POOL": "0",
+      "RBITNET_KV_QUANT": "f32",
+      "RBITNET_MAX_CONCURRENT": "1",
+      "RBITNET_INFERENCE_TIMEOUT_SECS": "600",
+      "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\performance-cache\\finish-reason-baseline-native.dll",
+      "RBITNET_MAX_SEQ": "2048",
+      "RBITNET_CUDA_DEVICE_BUDGET_MB": "12288",
+      "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+      "RBITNET_CUDA_KV_FORMAT": "f32",
+      "RBITNET_CUDA_PREFILL": "1",
+      "RBITNET_CUDA_PREFILL_TF32X3": "0",
+      "RBITNET_CUDA_SPLIT_KV": "1",
+      "RBITNET_MOE_ASYNC": "0",
+      "RBITNET_MOE_PREFETCH": "off",
+      "RBITNET_MOE_CACHE_POLICY": "lru",
+      "RBITNET_MOE_CACHE_MB": "0",
+      "RBITNET_MOE_EXECUTION": "cache",
+      "RBITNET_CUDA_QWEN_FULL": "0",
+      "RBITNET_REQUIRE_QWEN_FULL": "0",
+      "RBITNET_CUDA_QWEN_PREFILL": "0",
+      "RBITNET_CUDA_GPT_FULL": "0",
+      "RBITNET_REQUIRE_GPT_FULL": "0",
+      "RBITNET_CUDA_GPT_PREFILL": "0",
+      "RBITNET_REQUIRE_GPT_PREFILL": "0",
+      "RBITNET_CUDA_GPT_PREFILL_TOKENS": "16",
+      "RBITNET_CUDA_MLA_FULL": "0",
+      "RBITNET_REQUIRE_MLA_FULL": "0"
+    },
+    "qwen35-2b": {
+      "RBITNET_MODEL": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+      "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+      "RBITNET_BACKEND": "cuda",
+      "RBITNET_BIND": "127.0.0.1:18138",
+      "RBITNET_LLAMA_WEIGHT_MODE": "auto",
+      "RBITNET_LLAMA_ENCODE_ADD_SPECIAL": "1",
+      "RBITNET_STUB": "0",
+      "RBITNET_TOY": "0",
+      "RBITNET_PREFIX_KV": "0",
+      "RBITNET_KV_POOL": "0",
+      "RBITNET_KV_QUANT": "f32",
+      "RBITNET_MAX_CONCURRENT": "1",
+      "RBITNET_INFERENCE_TIMEOUT_SECS": "600",
+      "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\performance-cache\\finish-reason-baseline-native.dll",
+      "RBITNET_MAX_SEQ": "2048",
+      "RBITNET_CUDA_DEVICE_BUDGET_MB": "12288",
+      "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+      "RBITNET_CUDA_KV_FORMAT": "f32",
+      "RBITNET_CUDA_PREFILL": "1",
+      "RBITNET_CUDA_PREFILL_TF32X3": "0",
+      "RBITNET_CUDA_SPLIT_KV": "1",
+      "RBITNET_MOE_ASYNC": "0",
+      "RBITNET_MOE_PREFETCH": "off",
+      "RBITNET_MOE_CACHE_POLICY": "lru",
+      "RBITNET_MOE_CACHE_MB": "0",
+      "RBITNET_MOE_EXECUTION": "cache",
+      "RBITNET_CUDA_QWEN_FULL": "1",
+      "RBITNET_REQUIRE_QWEN_FULL": "1",
+      "RBITNET_CUDA_QWEN_PREFILL": "1",
+      "RBITNET_CUDA_GPT_FULL": "0",
+      "RBITNET_REQUIRE_GPT_FULL": "0",
+      "RBITNET_CUDA_GPT_PREFILL": "0",
+      "RBITNET_REQUIRE_GPT_PREFILL": "0",
+      "RBITNET_CUDA_GPT_PREFILL_TOKENS": "16",
+      "RBITNET_CUDA_MLA_FULL": "0",
+      "RBITNET_REQUIRE_MLA_FULL": "0"
+    },
+    "gpt-oss-20b": {
+      "RBITNET_MODEL": "D:\\Rbitnet-benchmark-models\\gpt-oss-20b-GGUF\\gpt-oss-20b-Q4_K_M.gguf",
+      "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\gpt-oss-20b\\tokenizer.json",
+      "RBITNET_BACKEND": "cuda",
+      "RBITNET_BIND": "127.0.0.1:18138",
+      "RBITNET_LLAMA_WEIGHT_MODE": "auto",
+      "RBITNET_LLAMA_ENCODE_ADD_SPECIAL": "1",
+      "RBITNET_STUB": "0",
+      "RBITNET_TOY": "0",
+      "RBITNET_PREFIX_KV": "0",
+      "RBITNET_KV_POOL": "0",
+      "RBITNET_KV_QUANT": "f32",
+      "RBITNET_MAX_CONCURRENT": "1",
+      "RBITNET_INFERENCE_TIMEOUT_SECS": "600",
+      "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\performance-cache\\finish-reason-baseline-native.dll",
+      "RBITNET_MAX_SEQ": "2048",
+      "RBITNET_CUDA_DEVICE_BUDGET_MB": "12288",
+      "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+      "RBITNET_CUDA_KV_FORMAT": "f32",
+      "RBITNET_CUDA_PREFILL": "1",
+      "RBITNET_CUDA_PREFILL_TF32X3": "0",
+      "RBITNET_CUDA_SPLIT_KV": "1",
+      "RBITNET_MOE_ASYNC": "0",
+      "RBITNET_MOE_PREFETCH": "off",
+      "RBITNET_MOE_CACHE_POLICY": "lru",
+      "RBITNET_MOE_CACHE_MB": "0",
+      "RBITNET_MOE_EXECUTION": "cache",
+      "RBITNET_CUDA_QWEN_FULL": "0",
+      "RBITNET_REQUIRE_QWEN_FULL": "0",
+      "RBITNET_CUDA_QWEN_PREFILL": "0",
+      "RBITNET_CUDA_GPT_FULL": "1",
+      "RBITNET_REQUIRE_GPT_FULL": "1",
+      "RBITNET_CUDA_GPT_PREFILL": "1",
+      "RBITNET_REQUIRE_GPT_PREFILL": "1",
+      "RBITNET_CUDA_GPT_PREFILL_TOKENS": "16",
+      "RBITNET_CUDA_MLA_FULL": "0",
+      "RBITNET_REQUIRE_MLA_FULL": "0"
+    },
+    "glm47-flash": {
+      "RBITNET_MODEL": "D:\\Rbitnet-benchmark-models\\GLM-4.7-Flash-GGUF\\GLM-4.7-Flash-Q4_K_M.gguf",
+      "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\GLM-4.7-Flash\\tokenizer.json",
+      "RBITNET_BACKEND": "cuda",
+      "RBITNET_BIND": "127.0.0.1:18138",
+      "RBITNET_LLAMA_WEIGHT_MODE": "auto",
+      "RBITNET_LLAMA_ENCODE_ADD_SPECIAL": "1",
+      "RBITNET_STUB": "0",
+      "RBITNET_TOY": "0",
+      "RBITNET_PREFIX_KV": "0",
+      "RBITNET_KV_POOL": "0",
+      "RBITNET_KV_QUANT": "f32",
+      "RBITNET_MAX_CONCURRENT": "1",
+      "RBITNET_INFERENCE_TIMEOUT_SECS": "600",
+      "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\target\\performance-cache\\finish-reason-baseline-native.dll",
+      "RBITNET_MAX_SEQ": "2048",
+      "RBITNET_CUDA_DEVICE_BUDGET_MB": "12288",
+      "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+      "RBITNET_CUDA_KV_FORMAT": "f32",
+      "RBITNET_CUDA_PREFILL": "1",
+      "RBITNET_CUDA_PREFILL_TF32X3": "0",
+      "RBITNET_CUDA_SPLIT_KV": "1",
+      "RBITNET_MOE_ASYNC": "0",
+      "RBITNET_MOE_PREFETCH": "off",
+      "RBITNET_MOE_CACHE_POLICY": "lru",
+      "RBITNET_MOE_CACHE_MB": "0",
+      "RBITNET_MOE_EXECUTION": "cache",
+      "RBITNET_CUDA_QWEN_FULL": "0",
+      "RBITNET_REQUIRE_QWEN_FULL": "0",
+      "RBITNET_CUDA_QWEN_PREFILL": "0",
+      "RBITNET_CUDA_GPT_FULL": "0",
+      "RBITNET_REQUIRE_GPT_FULL": "0",
+      "RBITNET_CUDA_GPT_PREFILL": "0",
+      "RBITNET_REQUIRE_GPT_PREFILL": "0",
+      "RBITNET_CUDA_GPT_PREFILL_TOKENS": "16",
+      "RBITNET_CUDA_MLA_FULL": "1",
+      "RBITNET_REQUIRE_MLA_FULL": "1"
+    }
+  },
+  "cases": [
+    {
+      "model": "llama32-1b",
+      "kind": "eos-search",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108934,
+        "id": "chatcmpl-1791108934",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 77,
+          "total_tokens": 79
+        }
+      }
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 0,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108934,
+        "id": "chatcmpl-1791108934",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 0,
+          "prompt_tokens": 77,
+          "total_tokens": 77
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108934,
+            "id": "chatcmpl-stream-1791108934",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108934,
+            "id": "chatcmpl-stream-1791108934",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 1,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108934,
+        "id": "chatcmpl-1791108934",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 77,
+          "total_tokens": 78
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108934,
+            "id": "chatcmpl-stream-1791108934",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108934,
+            "id": "chatcmpl-stream-1791108934",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108934,
+            "id": "chatcmpl-stream-1791108934",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 2,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108935,
+        "id": "chatcmpl-1791108935",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 77,
+          "total_tokens": 79
+        }
+      },
+      "stream": {
+        "text": "Paris.",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "."
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 3,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108935,
+        "id": "chatcmpl-1791108935",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 77,
+          "total_tokens": 79
+        }
+      },
+      "stream": {
+        "text": "Paris.",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "."
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris.",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108935,
+        "id": "chatcmpl-1791108935",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 77,
+          "total_tokens": 79
+        }
+      },
+      "stream": {
+        "text": "Paris.",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "."
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "llama32-1b",
+      "kind": "client-stop",
+      "request": {
+        "model": "llama32-1b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42,
+        "stop": "Pa"
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108935,
+        "id": "chatcmpl-1791108935",
+        "model": "llama32-1b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 77,
+          "total_tokens": 79
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "role": "assistant"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108935,
+            "id": "chatcmpl-stream-1791108935",
+            "model": "llama32-1b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      }
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "eos-search",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108938,
+        "id": "chatcmpl-1791108938",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 53,
+          "total_tokens": 54
+        }
+      }
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 0,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108938,
+        "id": "chatcmpl-1791108938",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 0,
+          "prompt_tokens": 53,
+          "total_tokens": 53
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108938,
+            "id": "chatcmpl-stream-1791108938",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 1,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108938,
+        "id": "chatcmpl-1791108938",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 53,
+          "total_tokens": 54
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108938,
+            "id": "chatcmpl-stream-1791108938",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108938,
+            "id": "chatcmpl-stream-1791108938",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 2,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108939,
+        "id": "chatcmpl-1791108939",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 53,
+          "total_tokens": 54
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108939,
+            "id": "chatcmpl-stream-1791108939",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108939,
+            "id": "chatcmpl-stream-1791108939",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108939,
+        "id": "chatcmpl-1791108939",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 53,
+          "total_tokens": 54
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108939,
+            "id": "chatcmpl-stream-1791108939",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108939,
+            "id": "chatcmpl-stream-1791108939",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "qwen35-2b",
+      "kind": "client-stop",
+      "request": {
+        "model": "qwen35-2b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42,
+        "stop": "Pa"
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108939,
+        "id": "chatcmpl-1791108939",
+        "model": "qwen35-2b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 53,
+          "total_tokens": 54
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108939,
+            "id": "chatcmpl-stream-1791108939",
+            "model": "qwen35-2b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-search",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108945,
+        "id": "chatcmpl-1791108945",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 110,
+          "total_tokens": 126
+        }
+      }
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 0,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108946,
+        "id": "chatcmpl-1791108946",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 0,
+          "prompt_tokens": 110,
+          "total_tokens": 110
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108946,
+            "id": "chatcmpl-stream-1791108946",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 1,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108946,
+        "id": "chatcmpl-1791108946",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 110,
+          "total_tokens": 111
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108946,
+            "id": "chatcmpl-stream-1791108946",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 16,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108947,
+        "id": "chatcmpl-1791108947",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 110,
+          "total_tokens": 126
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108947,
+            "id": "chatcmpl-stream-1791108947",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108947,
+            "id": "chatcmpl-stream-1791108947",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 17,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108948,
+        "id": "chatcmpl-1791108948",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 110,
+          "total_tokens": 126
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108948,
+            "id": "chatcmpl-stream-1791108948",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108948,
+            "id": "chatcmpl-stream-1791108948",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108950,
+        "id": "chatcmpl-1791108950",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 110,
+          "total_tokens": 126
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108950,
+            "id": "chatcmpl-stream-1791108950",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108950,
+            "id": "chatcmpl-stream-1791108950",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "gpt-oss-20b",
+      "kind": "client-stop",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42,
+        "stop": "Pa"
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108951,
+        "id": "chatcmpl-1791108951",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 110,
+          "total_tokens": 126
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108951,
+            "id": "chatcmpl-stream-1791108951",
+            "model": "gpt-oss-20b",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "eos-search",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108960,
+        "id": "chatcmpl-1791108960",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 45,
+          "total_tokens": 46
+        }
+      }
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 0,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108962,
+        "id": "chatcmpl-1791108962",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 0,
+          "prompt_tokens": 45,
+          "total_tokens": 45
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108962,
+            "id": "chatcmpl-stream-1791108962",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 1,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108966,
+        "id": "chatcmpl-1791108966",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 45,
+          "total_tokens": 46
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "length",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108966,
+            "id": "chatcmpl-stream-1791108966",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "length",
+                "index": 0
+              }
+            ],
+            "created": 1791108966,
+            "id": "chatcmpl-stream-1791108966",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "length"
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 2,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108970,
+        "id": "chatcmpl-1791108970",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 45,
+          "total_tokens": 46
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108970,
+            "id": "chatcmpl-stream-1791108970",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108970,
+            "id": "chatcmpl-stream-1791108970",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "eos-boundary",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Paris",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108974,
+        "id": "chatcmpl-1791108974",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 45,
+          "total_tokens": 46
+        }
+      },
+      "stream": {
+        "text": "Paris",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {
+                  "content": "Paris"
+                },
+                "finish_reason": null,
+                "index": 0
+              }
+            ],
+            "created": 1791108974,
+            "id": "chatcmpl-stream-1791108974",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          },
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108974,
+            "id": "chatcmpl-stream-1791108974",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      },
+      "expected_finish_reason": "stop"
+    },
+    {
+      "model": "glm47-flash",
+      "kind": "client-stop",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds brièvement et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds uniquement par le nom de la ville."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "seed": 42,
+        "stop": "Pa"
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791108977,
+        "id": "chatcmpl-1791108977",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 45,
+          "total_tokens": 46
+        }
+      },
+      "stream": {
+        "text": "",
+        "finish_reason": "stop",
+        "events": [
+          {
+            "choices": [
+              {
+                "delta": {},
+                "finish_reason": "stop",
+                "index": 0
+              }
+            ],
+            "created": 1791108977,
+            "id": "chatcmpl-stream-1791108977",
+            "model": "glm47-flash",
+            "object": "chat.completion.chunk"
+          }
+        ]
+      }
+    }
+  ],
+  "complete": true
+}
