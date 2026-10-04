@@ -1,5 +1,5 @@
 //! Keep routed expert activations on CUDA; one synchronization per FFN layer.
-use super::expert_cache::{ExpertGroup, SharedCache};
+use super::expert_cache::{ExpertGroup, SharedCache, Upload};
 use super::weights::Weights;
 use crate::backend::CudaDeviceQuantMatrix;
 use crate::error::{BitNetError, Result};
@@ -58,8 +58,13 @@ enum Storage {
 pub(super) struct SelectedExperts {
     _leases: Vec<Arc<ExpertGroup>>,
     pointers: Vec<*const c_void>,
+    upload: Upload,
 }
 impl SelectedExperts {
+    pub(super) fn upload(&self) -> Upload {
+        self.upload
+    }
+
     pub(super) fn pointers(&self) -> Option<&[*const c_void]> {
         (!self.pointers.is_empty()).then_some(self.pointers.as_slice())
     }
@@ -84,6 +89,7 @@ impl GpuMoe {
             ));
         }
         let mut leases = Vec::new();
+        let mut upload = Upload::default();
         let mut pointers = Vec::new();
         if let Storage::Cached {
             cache,
@@ -92,17 +98,26 @@ impl GpuMoe {
             ..
         } = &self.storage
         {
+            let waiting = std::time::Instant::now();
             let mut cache = cache
                 .lock()
                 .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?;
+            cache.record_lock_wait(
+                *layer,
+                waiting.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+            );
             cache.trace_route(*layer, selected, *selected_bytes / self.used);
             if !cache.fits(*selected_bytes) {
+                cache.record_capacity_refusal(*layer);
                 return Ok(None);
             }
-            let Some(selected_leases) = cache.acquire_selected(*layer, selected)? else {
+            let Some((selected_leases, selected_upload)) =
+                cache.acquire_selected_with_upload(*layer, selected)?
+            else {
                 return Ok(None);
             };
             leases = selected_leases;
+            upload = selected_upload;
             drop(cache);
             for projection in 0..3 {
                 for group in &leases {
@@ -115,7 +130,38 @@ impl GpuMoe {
         Ok(Some(SelectedExperts {
             _leases: leases,
             pointers,
+            upload,
         }))
+    }
+    /// Estimate without admission: looking at locality cannot upload or evict.
+    pub(super) fn estimate_selected(&self, selected: &[usize]) -> Result<(bool, usize)> {
+        if selected.len() != self.used || selected.iter().any(|&e| e >= self.experts) {
+            return Err(BitNetError::Inference(
+                "CUDA expert selection shape mismatch".into(),
+            ));
+        }
+        match &self.storage {
+            Storage::Fixed { .. } => Ok((true, 0)),
+            Storage::Cached {
+                cache,
+                layer,
+                selected_bytes,
+                ..
+            } => {
+                let waiting = std::time::Instant::now();
+                let cache = cache
+                    .lock()
+                    .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?;
+                cache.record_lock_wait(
+                    *layer,
+                    waiting.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                );
+                Ok((
+                    cache.fits(*selected_bytes),
+                    cache.missing_selected_bytes(*layer, selected, *selected_bytes / self.used)?,
+                ))
+            }
+        }
     }
     // The whole-token graph borrows only immutable, fully resident expert banks.
     // Cached banks require lease acquisition between router and expert execution.
@@ -246,12 +292,12 @@ impl GpuMoe {
             experts,
         })
     }
-    pub fn run(
+    pub fn run_with_upload(
         &mut self,
         input: &[f32],
         selected: &[usize],
         probabilities: &[f32],
-    ) -> Result<Option<Vec<f32>>> {
+    ) -> Result<Option<(Vec<f32>, Upload)>> {
         if input.len() != self.embd
             || selected.len() != self.used
             || probabilities.len() != self.used
@@ -304,7 +350,7 @@ impl GpuMoe {
             3,
         );
         crate::perf::record_cuda_graph_replay();
-        Ok(Some(output))
+        Ok(Some((output, leased.upload)))
     }
 }
 impl Drop for GpuMoe {

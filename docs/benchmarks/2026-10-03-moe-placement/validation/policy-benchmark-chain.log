@@ -1,0 +1,21 @@
+Starting quiet MoE gpt-oss-20b-cache-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE gpt-oss-20b-cache-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE gpt-oss-20b-cpu-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE gpt-oss-20b-cpu-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE gpt-oss-20b-adaptive-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE gpt-oss-20b-adaptive-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE gpt-oss-20b-cache-cache8192 three cycles, same inputs; no other build/inference.
+Completed quiet MoE gpt-oss-20b-cache-cache8192 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE gpt-oss-20b-adaptive-cache8192 three cycles, same inputs; no other build/inference.
+Completed quiet MoE gpt-oss-20b-adaptive-cache8192 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE glm47-flash-cache-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE glm47-flash-cache-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE glm47-flash-cpu-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE glm47-flash-cpu-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE glm47-flash-adaptive-cache0 three cycles, same inputs; no other build/inference.
+Completed quiet MoE glm47-flash-adaptive-cache0 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE glm47-flash-cache-cache8192 three cycles, same inputs; no other build/inference.
+Completed quiet MoE glm47-flash-cache-cache8192 with identical outputs and unchanged source/CLI/DLL.
+Starting quiet MoE glm47-flash-adaptive-cache8192 three cycles, same inputs; no other build/inference.
+Completed quiet MoE glm47-flash-adaptive-cache8192 with identical outputs and unchanged source/CLI/DLL.
+All ten matched MoE policy/cache ablations passed.

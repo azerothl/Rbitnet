@@ -1,0 +1,23 @@
+workspace starting
+workspace exit 0
+clippy starting
+clippy exit 0
+cli starting
+cli exit 0
+native starting
+native exit 0
+mapped starting
+mapped exit 0
+ownership starting
+ownership exit 0
+real-gptoss-cache0-cap12288 starting
+real-gptoss-cache0-cap12288 exit 0
+real-gptoss-cache8192-cap12288 starting
+real-gptoss-cache8192-cap12288 exit 0
+real-gptoss-cache16-cap6144 starting
+real-gptoss-cache16-cap6144 exit 0
+real-mla-cache8192-cap12288 starting
+real-mla-cache8192-cap12288 exit 0
+real-mla-cache0-cap6144 starting
+real-mla-cache0-cap6144 exit 0
+Mapped/cost production checks passed; live and same-build performance remain.

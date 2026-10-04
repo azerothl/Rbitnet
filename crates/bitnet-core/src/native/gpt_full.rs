@@ -111,6 +111,7 @@ pub(super) struct GpuFull {
     prefix: PrefixStore<Checkpoint>,
     used: usize,
     _weights: Vec<CudaDeviceQuantMatrix>,
+    metrics: Option<std::sync::Arc<crate::native::moe_metrics::Model>>,
     pub extra_weights_bytes: usize,
     pub graphs: bool,
     pub split: bool,
@@ -175,7 +176,9 @@ impl GpuFull {
             || moe
                 .iter()
                 .any(|m| m.as_ref().and_then(GpuMoe::fixed_context_address).is_none())
-            || std::env::var("RBITNET_CUDA_GPT_SEGMENTED").as_deref() == Ok("1");
+            || std::env::var("RBITNET_CUDA_GPT_SEGMENTED").as_deref() == Ok("1")
+            || super::super::moe_cost::Execution::from_env()
+                != super::super::moe_cost::Execution::Cache;
         let create = unsafe {
             *lib.get::<Create>(if segmented {
                 b"rbitnet_cuda_gpt_segmented_create\0"
@@ -393,6 +396,7 @@ impl GpuFull {
             prefix: PrefixStore::from_env(),
             used: cfg.used,
             _weights: owned,
+            metrics: weights.moe_metrics.clone(),
             extra_weights_bytes,
             graphs,
             split,
@@ -454,6 +458,11 @@ impl GpuFull {
         );
         crate::perf::record_gpt_full_token();
         crate::perf::record_native_moe(true, self.layers as u64, 0);
+        if let Some(metrics) = &self.metrics {
+            for il in 0..self.layers {
+                metrics.ffn(il, true, None);
+            }
+        }
         crate::perf::record_kv_write(self.kv_bytes_per_token);
         for _ in 0..self.layers {
             crate::perf::record_gpu_attention();

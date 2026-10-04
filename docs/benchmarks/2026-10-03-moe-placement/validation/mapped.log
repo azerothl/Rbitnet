@@ -1,0 +1,11 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 3 tests
+test backend::mapped_quant_tests::mapped_quant_rejects_invalid_spans_and_row_geometry ... ok
+test backend::mapped_quant_tests::mapped_quant_spans_keep_archive_alive_without_vec_mirrors ... ok
+test backend::mapped_quant_tests::optional_mapped_quant_gpu_rows_refill_and_leases ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 123 filtered out; finished in 0.16s
+

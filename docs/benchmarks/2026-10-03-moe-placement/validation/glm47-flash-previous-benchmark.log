@@ -1,0 +1,9 @@
+{"mode": "mla-split", "cycle": 0, "prompt": 0, "prefill_ms": 27487.0, "decode_ms": 6178.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 0, "prompt": 1, "prefill_ms": 24531.0, "decode_ms": 6052.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 0, "prompt": 2, "prefill_ms": 777.0, "decode_ms": 36.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 1, "prompt": 0, "prefill_ms": 24621.0, "decode_ms": 5997.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 1, "prompt": 1, "prefill_ms": 24470.0, "decode_ms": 6245.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 1, "prompt": 2, "prefill_ms": 834.0, "decode_ms": 40.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 2, "prompt": 0, "prefill_ms": 24441.0, "decode_ms": 6038.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 2, "prompt": 1, "prefill_ms": 24610.0, "decode_ms": 5976.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "mla-split", "cycle": 2, "prompt": 2, "prefill_ms": 770.0, "decode_ms": 38.0, "hits": 0.0, "blocks": 0.0, "matches": true}

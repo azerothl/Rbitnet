@@ -288,6 +288,7 @@ impl ServerMetrics {
             .unwrap();
         }
 
+        s.push_str(&bitnet_core::perf::moe_layer_prometheus_text());
         s
     }
 }

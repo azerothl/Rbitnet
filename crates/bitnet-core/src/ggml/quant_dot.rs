@@ -39,6 +39,14 @@ impl Default for QuantMatvecKernel {
 }
 
 impl QuantMatvecKernel {
+    /// Explicit SIMD CPU dispatch, independent of the process CUDA preference.
+    pub(crate) fn cpu_parallel() -> Self {
+        Self {
+            backend: QuantKernelBackend::CpuParallel,
+            parallel_min_rows: 128,
+        }
+    }
+
     pub fn from_env() -> Self {
         let backend = match std::env::var("RBITNET_QUANT_KERNEL")
             .unwrap_or_else(|_| "auto".into())
