@@ -1,0 +1,21 @@
+Switched to a new branch 'codex/async-expert-cache'
+Ignored async-pool wiring generated. No hot CUDA allocation; explicit cache policy only. Not compiled/tested.
+Adopted asynchronous expert cache: workspace
+Adopted asynchronous expert cache: clippy
+Adopted asynchronous expert cache: optional_async_upload_publishes_only_after_events_and_drains_on_drop
+Adopted asynchronous expert cache: optional_async_pool_uses_one_budget_protects_ready_and_pending_and_drains_unload
+Adopted asynchronous expert cache: optional_async_mixed_q4_q6_refill_keeps_capacity_and_original_bytes
+Adopted asynchronous expert cache: actual-config-refusals
+Adopted asynchronous expert cache: real-gpt-cache8192
+Adopted asynchronous expert cache: real-gpt-cache512
+Adopted asynchronous expert cache: real-glm-cache8192
+Adopted asynchronous expert cache: real-glm-cache512
+Adopted asynchronous expert cache: release
+Adopted asynchronous expert cache: quiet-gpt-oss-20b-cache8192
+Adopted asynchronous expert cache: network-gpt-oss-20b
+Adopted asynchronous expert cache: quiet-glm47-flash-cache8192
+Adopted asynchronous expert cache: network-glm47-flash
+Adopted asynchronous expert cache: lifecycle
+Adopted asynchronous expert cache: profile
+Adopted asynchronous expert cache: trace-analysis
+Adopted async expert cache workspace, actual GPU/GGUF, quiet, network, lifecycle and overlap suites passed.

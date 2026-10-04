@@ -1,0 +1,10 @@
+{
+  "async_failed": 0,
+  "cache_mib": 512,
+  "nonce": "7732a4fc-a99a-444e-9411-1e1ea6e6a6ee",
+  "prefetch_copies": 7636,
+  "profiler_stop_succeeded": true,
+  "reference_output": "**Le robot lit un livre dans un jardin calme.**  \nIl s\u2019installe sur un banc en bois, les pieds l\u00e9g\u00e8rement sur\u00e9lev\u00e9s, et",
+  "same_output": true,
+  "test": "optional_async_real_gpt_warmed_cuda_profiler_range"
+}

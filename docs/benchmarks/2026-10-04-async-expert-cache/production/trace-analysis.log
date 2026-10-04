@@ -1,0 +1,31 @@
+{
+  "h2d_groups": {
+    "(0, 1, 13)": {
+      "device": 0,
+      "context": 1,
+      "stream": 13,
+      "h2d_copies": 28746,
+      "h2d_bytes": 126666374400,
+      "h2d_duration_ns": 4989725427,
+      "other_stream_compute_union_ns": 818379693,
+      "copy_compute_overlap_ns": 543795810,
+      "copies_overlapping_other_stream_compute": 5443,
+      "fraction_copy_time_overlapped": 0.10898311299003667
+    },
+    "(0, 1, 38)": {
+      "device": 0,
+      "context": 1,
+      "stream": 38,
+      "h2d_copies": 2184,
+      "h2d_bytes": 1161552,
+      "h2d_duration_ns": 4867861,
+      "other_stream_compute_union_ns": 0,
+      "copy_compute_overlap_ns": 0,
+      "copies_overlapping_other_stream_compute": 0,
+      "fraction_copy_time_overlapped": 0.0
+    }
+  },
+  "warm_allocation_api_counts": {},
+  "runtime_errors": {},
+  "example_count": 12
+}

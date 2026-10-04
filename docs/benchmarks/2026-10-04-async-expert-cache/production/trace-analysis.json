@@ -1,0 +1,199 @@
+{
+  "capture": "completed, warmed second GPT generation, 512 MiB expert pool, previous-pass predictor",
+  "capture_artifact_sha256": {
+    "warmed-async-cuda.sqlite": "28678baac484176cca233ae4a99a7606c7e920778cb283d2e6293c59bb4a87d1",
+    "warmed-async-cuda.nsys-rep": "8a18b96ea71dc6cc7bbc0710d5223782071b609e363790a739099f46d4223cd1",
+    "profile-child-proof.json": "dfc6140cc86410f2fefab2d5ae7e9d884517456ccf4a16518c5f95118ec9fb0a"
+  },
+  "child_completion": {
+    "async_failed": 0,
+    "cache_mib": 512,
+    "nonce": "586e8110-ab2f-4c27-a3ab-57b7c59d902c",
+    "prefetch_copies": 7636,
+    "profiler_stop_succeeded": true,
+    "reference_output": "**Le robot lit un livre dans un jardin calme.**  \nIl s\u2019installe sur un banc en bois, les pieds l\u00e9g\u00e8rement sur\u00e9lev\u00e9s, et",
+    "same_output": true,
+    "test": "optional_async_real_gpt_warmed_cuda_profiler_range"
+  },
+  "kernel_events": 46496,
+  "kernel_duration_sum_ns": 818384621,
+  "copy_events": 39026,
+  "h2d_groups": {
+    "(0, 1, 13)": {
+      "device": 0,
+      "context": 1,
+      "stream": 13,
+      "h2d_copies": 28746,
+      "h2d_bytes": 126666374400,
+      "h2d_duration_ns": 4989725427,
+      "other_stream_compute_union_ns": 818379693,
+      "copy_compute_overlap_ns": 543795810,
+      "copies_overlapping_other_stream_compute": 5443,
+      "fraction_copy_time_overlapped": 0.10898311299003667
+    },
+    "(0, 1, 38)": {
+      "device": 0,
+      "context": 1,
+      "stream": 38,
+      "h2d_copies": 2184,
+      "h2d_bytes": 1161552,
+      "h2d_duration_ns": 4867861,
+      "other_stream_compute_union_ns": 0,
+      "copy_compute_overlap_ns": 0,
+      "copies_overlapping_other_stream_compute": 0,
+      "fraction_copy_time_overlapped": 0.0
+    }
+  },
+  "observed_runtime_api_counts": {
+    "cudaProfilerStart_v4000": 1,
+    "cudaStreamSynchronize_v3020": 4284,
+    "cudaMemcpyAsync_v3020": 34994,
+    "cudaStreamIsCapturing_v10000": 84,
+    "cudaGraphLaunch_v10000": 4116,
+    "cudaEventRecord_v3020": 19164,
+    "cudaEventSynchronize_v3020": 9582,
+    "cudaEventQuery_v3020": 3818
+  },
+  "observed_warm_allocation_or_release_api_counts": {},
+  "runtime_errors": {},
+  "overlap_examples": [
+    {
+      "copy_start_ns": 158148958,
+      "copy_end_ns": 158314721,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 14144,
+      "kernel_start_ns": 158300577,
+      "kernel_end_ns": 158330817,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 158316129,
+      "copy_end_ns": 158481604,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 79457,
+      "kernel_start_ns": 158300577,
+      "kernel_end_ns": 158330817,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 158482436,
+      "copy_end_ns": 158648071,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 145507,
+      "kernel_start_ns": 158502116,
+      "kernel_end_ns": 158533925,
+      "kernel": "<unnamed>::gpt_norm_ordered(float *, const float *, float, unsigned int, float *, const float *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 163991873,
+      "copy_end_ns": 164157572,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 25505,
+      "kernel_start_ns": 164132067,
+      "kernel_end_ns": 164162788,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 164158468,
+      "copy_end_ns": 164324006,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 68961,
+      "kernel_start_ns": 164132067,
+      "kernel_end_ns": 164162788,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 164325574,
+      "copy_end_ns": 164491113,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 164963,
+      "kernel_start_ns": 164325638,
+      "kernel_end_ns": 164357447,
+      "kernel": "<unnamed>::gpt_norm_ordered(float *, const float *, float, unsigned int, float *, const float *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 170944086,
+      "copy_end_ns": 171109721,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 54977,
+      "kernel_start_ns": 171054712,
+      "kernel_end_ns": 171085240,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 171110585,
+      "copy_end_ns": 171276188,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 87553,
+      "kernel_start_ns": 171085272,
+      "kernel_end_ns": 171115865,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 171277052,
+      "copy_end_ns": 171442718,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 165281,
+      "kernel_start_ns": 171259867,
+      "kernel_end_ns": 171312700,
+      "kernel": "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 177921516,
+      "copy_end_ns": 178087183,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 74114,
+      "kernel_start_ns": 178012973,
+      "kernel_end_ns": 178043502,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 178088495,
+      "copy_end_ns": 178254033,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 86241,
+      "kernel_start_ns": 178075694,
+      "kernel_end_ns": 178106223,
+      "kernel": "void <unnamed>::moe_matrix<(<unnamed>::QuantKind)7>(const unsigned char *, unsigned long long, unsigned int, unsigned int, const unsigned int *, const float *, bool, float *, const unsigned char *const *)",
+      "kernel_stream": 38
+    },
+    {
+      "copy_start_ns": 178254993,
+      "copy_end_ns": 178432084,
+      "copy_bytes": 4406400,
+      "copy_stream": 13,
+      "overlap_ns": 176579,
+      "kernel_start_ns": 178219217,
+      "kernel_end_ns": 178271026,
+      "kernel": "void <unnamed>::quant_matvec_kernel<(<unnamed>::QuantKind)2>(const unsigned char *, unsigned long long, const float *, unsigned long long, unsigned long long, unsigned long long, float *)",
+      "kernel_stream": 38
+    }
+  ],
+  "limits": [
+    "Profiler timing is perturbed and is not a throughput benchmark.",
+    "Absence of allocation APIs applies only to this captured warmed generation.",
+    "The predictor uses the previous pass; this is not a trained expert predictor.",
+    "Copy overlap is the interval intersection with kernels on other streams on the same GPU and CUDA context; intervals are merged to avoid double counting."
+  ]
+}

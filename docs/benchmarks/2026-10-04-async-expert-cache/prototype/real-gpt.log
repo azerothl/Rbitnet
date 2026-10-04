@@ -1,0 +1,21 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-async-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.13s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::async_runtime_tests::real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime ... MoE async actual family=gpt-oss policy=off cache=8192: CPU FFNs 0, GPU FFNs 13584, weights 977 MiB
+MoE async actual family=gpt-oss policy=demand cache=8192: CPU FFNs 0, GPU FFNs 13584, weights 977 MiB
+
+thread 'native::graph::async_runtime_tests::real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime' (8444) panicked at crates\bitnet-core\src\native\async_runtime_tests.rs:209:36:
+assertion failed: predicted > 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    native::graph::async_runtime_tests::real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 131 filtered out; finished in 42.48s
+
+error: test failed, to rerun pass `-p bitnet-core --lib`

@@ -1,0 +1,10 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-async-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-async-current\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 10.95s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::async_profile_tests::optional_async_real_gpt_warmed_cuda_profiler_range ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.00s
+

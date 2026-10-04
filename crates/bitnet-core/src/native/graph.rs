@@ -1838,3 +1838,15 @@ mod moe_policy_runtime_tests;
 #[cfg(test)]
 #[path = "gpt_block_runtime_tests.rs"]
 mod gpt_block_runtime_tests;
+
+#[cfg(test)]
+#[path = "async_runtime_tests.rs"]
+mod async_runtime_tests;
+
+#[cfg(test)]
+#[path = "async_profile_tests.rs"]
+mod async_profile_tests;
+
+#[cfg(test)]
+#[path = "async_config_tests.rs"]
+mod async_config_tests;

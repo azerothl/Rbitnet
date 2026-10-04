@@ -80,7 +80,9 @@ pub(super) struct GpuMoe {
     fused: bool,
 }
 impl GpuMoe {
-    pub(super) fn is_fused(&self)->bool {self.fused}
+    pub(super) fn is_fused(&self) -> bool {
+        self.fused
+    }
     pub(super) fn context_address(&self) -> usize {
         self.context
     }
@@ -119,6 +121,9 @@ impl GpuMoe {
                 return Ok(None);
             };
             leases = selected_leases;
+            // Protect current readers before predicting the next layer.
+            // The private copy stream overlaps the following native FFN.
+            cache.prefetch_next(*layer)?;
             upload = selected_upload;
             drop(cache);
             for projection in 0..3 {
@@ -284,12 +289,17 @@ impl GpuMoe {
         if context == 0 {
             return None;
         }
-        let requested=std::env::var("RBITNET_CUDA_MOE_FUSED").as_deref()==Ok("1");
-        let fused=if requested {
-            type Configure=unsafe extern "C" fn(*mut c_void,u32)->i32;
-            let configure=unsafe{lib.get::<Configure>(b"rbitnet_cuda_moe_configure_fused\0").ok()};
-            configure.is_some_and(|f|unsafe{f(context as *mut c_void,1)}==0)
-        } else {false};
+        let requested = std::env::var("RBITNET_CUDA_MOE_FUSED").as_deref() == Ok("1");
+        let fused = if requested {
+            type Configure = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+            let configure = unsafe {
+                lib.get::<Configure>(b"rbitnet_cuda_moe_configure_fused\0")
+                    .ok()
+            };
+            configure.is_some_and(|f| unsafe { f(context as *mut c_void, 1) } == 0)
+        } else {
+            false
+        };
         Some(Self {
             fused,
             context,
@@ -638,9 +648,9 @@ mod tests {
 }
 
 #[cfg(test)]
-#[path="fused_tests.rs"]
+#[path = "fused_tests.rs"]
 mod fused_tests;
 
 #[cfg(test)]
-#[path="grouped_tests.rs"]
+#[path = "grouped_tests.rs"]
 mod grouped_tests;

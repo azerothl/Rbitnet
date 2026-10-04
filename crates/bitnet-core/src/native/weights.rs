@@ -31,6 +31,51 @@ impl Weights {
         kind: BackendKind,
         state_reserve: usize,
     ) -> Result<Self> {
+        let async_requested = match std::env::var("RBITNET_MOE_ASYNC") {
+            Ok(value) if value == "1" => true,
+            Ok(value) if value == "0" => false,
+            Err(std::env::VarError::NotPresent) => false,
+            _ => {
+                return Err(BitNetError::Inference(
+                    "RBITNET_MOE_ASYNC must be 0 or 1".into(),
+                ))
+            }
+        };
+        if async_requested
+            && (!matches!(kind, BackendKind::Cuda | BackendKind::Hybrid)
+                || super::moe_cost::Execution::from_env() != super::moe_cost::Execution::Cache)
+        {
+            return Err(BitNetError::Inference(
+                "async expert cache requires CUDA/hybrid and cache execution policy".into(),
+            ));
+        }
+        let (async_slots, async_predictor) = if async_requested {
+            let slots = match std::env::var("RBITNET_MOE_PINNED_SLOTS") {
+                Ok(value) => value
+                    .parse::<usize>()
+                    .map_err(|_| BitNetError::Inference("invalid pinned slot count".into()))?,
+                Err(std::env::VarError::NotPresent) => 2,
+                Err(_) => return Err(BitNetError::Inference("invalid pinned slot count".into())),
+            };
+            if !(1..=2).contains(&slots) {
+                return Err(BitNetError::Inference(
+                    "async cache needs one or two pinned slots".into(),
+                ));
+            }
+            let predictor = match std::env::var("RBITNET_MOE_PREFETCH") {
+                Ok(value) if value == "previous-pass" => true,
+                Ok(value) if value == "off" => false,
+                Err(std::env::VarError::NotPresent) => false,
+                _ => {
+                    return Err(BitNetError::Inference(
+                        "RBITNET_MOE_PREFETCH must be off or previous-pass".into(),
+                    ))
+                }
+            };
+            (slots, predictor)
+        } else {
+            (2, false)
+        };
         let mut small = HashMap::new();
         for t in &archive.tensors {
             if t.dimensions.len() == 1 || t.name.ends_with(".bias") {
@@ -136,6 +181,9 @@ impl Weights {
             && requested_cache > 0
             && dynamic_api
             && std::env::var("RBITNET_CUDA_MOE").as_deref() != Ok("0");
+        if async_requested && !cache_enabled {
+            return Err(BitNetError::Inference("async expert cache requires a positive expert budget, supported MoE architecture and native dynamic API".into()));
+        }
         if requested_cache > 0 && !cache_enabled {
             tracing::warn!("dynamic expert cache unavailable; retaining static placement");
         }
@@ -201,14 +249,21 @@ impl Weights {
         if cache_enabled {
             let cache_budget =
                 requested_cache.min(placement_budget.saturating_sub(result.resident_bytes));
+            if async_requested && cache_budget == 0 {
+                return Err(BitNetError::Inference(
+                    "no managed CUDA memory remains for the requested async expert cache".into(),
+                ));
+            }
             if cache_budget > 0 {
-                result.expert_cache = Some(Arc::new(std::sync::Mutex::new(
-                    super::expert_cache::ExpertCache::new(
-                        Arc::clone(&result.archive),
-                        rt,
-                        cache_budget,
-                    ),
-                )));
+                let mut cache = super::expert_cache::ExpertCache::new(
+                    Arc::clone(&result.archive),
+                    rt,
+                    cache_budget,
+                );
+                if async_requested {
+                    cache.enable_async(async_slots, async_predictor)?;
+                }
+                result.expert_cache = Some(Arc::new(std::sync::Mutex::new(cache)));
                 tracing::info!(
                     cache_mb = cache_budget / (1024 * 1024),
                     "dynamic expert cache enabled"

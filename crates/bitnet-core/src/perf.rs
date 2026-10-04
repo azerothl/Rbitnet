@@ -259,6 +259,15 @@ pub(crate) fn record_expert_cache(hit: bool, evictions: u64, bytes: u64, ns: u64
     p.expert_cache_upload_ns.fetch_add(ns, Ordering::Relaxed);
 }
 
+/// Background copies and evictions are not demand hits or demand misses.
+pub(crate) fn record_expert_cache_background(bytes: u64, ns: u64, evictions: u64) {
+    let p = perf();
+    p.expert_cache_upload_bytes
+        .fetch_add(bytes, Ordering::Relaxed);
+    p.expert_cache_upload_ns.fetch_add(ns, Ordering::Relaxed);
+    p.expert_cache_evictions
+        .fetch_add(evictions, Ordering::Relaxed);
+}
 pub(crate) fn record_gpu_attention() {
     perf().gpu_attention_calls.fetch_add(1, Ordering::Relaxed);
 }

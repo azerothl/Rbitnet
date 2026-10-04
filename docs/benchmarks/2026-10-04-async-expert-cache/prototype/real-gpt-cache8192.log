@@ -1,0 +1,16 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-async-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::async_runtime_tests::real_moe_async_cache_preserves_logits_generations_prefix_and_model_lifetime ... MoE async actual prefetch copies family=gpt-oss policy=off cache=8192: 0
+MoE async actual family=gpt-oss policy=off cache=8192: CPU FFNs 0, GPU FFNs 13584, weights 977 MiB
+MoE async actual prefetch copies family=gpt-oss policy=demand cache=8192: 0
+MoE async actual family=gpt-oss policy=demand cache=8192: CPU FFNs 0, GPU FFNs 13584, weights 977 MiB
+MoE async actual prefetch copies family=gpt-oss policy=previous-pass cache=8192: 0
+MoE async actual family=gpt-oss policy=previous-pass cache=8192: CPU FFNs 0, GPU FFNs 13584, weights 977 MiB
+MoE async real worst KL=1.644e-11, worst absolute target NLL delta=1.715e-5
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 42.04s
+
