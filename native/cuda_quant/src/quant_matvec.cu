@@ -491,3 +491,5 @@ extern "C" int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,s
     return cudaMemcpyAsync(output,dy,size_t(tokens)*rows*sizeof(float),cudaMemcpyDeviceToHost,buffers.stream)==cudaSuccess
         && cudaStreamSynchronize(buffers.stream)==cudaSuccess ? 0 : 7;
 }
+
+#include "llama_batch.cuh"

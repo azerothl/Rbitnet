@@ -128,6 +128,7 @@ struct ResidentLlama {
     std::unique_ptr<PagedKvState> paged;
     RbitnetLlamaConfig cfg;
     std::vector<RbitnetLlamaLayer> layers;
+    std::vector<unsigned char> batch_model_key;
     RbitnetLlamaMatrix output;
     std::vector<void*> allocations;
     float *x=nullptr,*h=nullptr,*q=nullptr,*k=nullptr,*v=nullptr,*attn=nullptr,*projection=nullptr,*gate=nullptr,*up=nullptr,*logits=nullptr,*kv_k=nullptr,*kv_v=nullptr,*out_norm=nullptr,*frequency=nullptr,*maxima=nullptr,*maximum=nullptr;
@@ -262,6 +263,8 @@ static void *llama_create_impl(const RbitnetLlamaConfig *cfg,const RbitnetLlamaL
             if(!r->paged || !r->paged->init(pool)) {delete r;return nullptr;}
         } catch(const std::bad_alloc&) {delete r;return nullptr;}
     }
+    try {r->batch_model_key=llama_paged_model_key(*cfg,layers,*output,out_norm,frequency);}
+    catch(const std::bad_alloc&) {delete r;return nullptr;}
     r->cfg=*cfg;r->output=*output;r->layers.assign(layers,layers+cfg->layers);r->use_graphs=cfg->graphs!=0;
     r->split_kv=bool(variants&1);
     r->tf32_prefill=bool(variants&2)&&tf32_prefill_supported();

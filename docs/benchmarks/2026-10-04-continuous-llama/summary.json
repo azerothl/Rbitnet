@@ -1,0 +1,58 @@
+[
+  {
+    "config": "dense-slots1",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 141.30013613132581,
+    "relative_to_reference_percent": -4.968689554530082,
+    "wave_wall_ms": 5648.091199999726,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "dense-slots4",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 177.5762656626428,
+    "relative_to_reference_percent": 19.428796687426875,
+    "wave_wall_ms": 4493.844399999034,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "dense-slots8",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 195.92875045979628,
+    "relative_to_reference_percent": 31.77174785474286,
+    "wave_wall_ms": 4073.062149999714,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "paged-slots1",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 138.89742212260234,
+    "relative_to_reference_percent": -6.584633226816883,
+    "wave_wall_ms": 5745.2613999994355,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "paged-slots4",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 175.0200474851179,
+    "relative_to_reference_percent": 17.709613890823263,
+    "wave_wall_ms": 4559.560650000094,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "paged-slots8",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 195.42885797100593,
+    "relative_to_reference_percent": 31.435545501424244,
+    "wave_wall_ms": 4083.3896499998446,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  },
+  {
+    "config": "reference",
+    "measured_cycles": 2,
+    "aggregate_tokens_per_second": 148.68798027614855,
+    "relative_to_reference_percent": 0.0,
+    "wave_wall_ms": 5366.945300000225,
+    "note": "Eight actual HTTP clients; CPU sampling, prefill and delayed arrivals included. Not per-request decode tokens/s."
+  }
+]

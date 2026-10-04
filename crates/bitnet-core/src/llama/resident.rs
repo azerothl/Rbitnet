@@ -992,3 +992,14 @@ mod tests {
 
 #[cfg(test)]
 mod paged_tests;
+
+#[path = "resident/continuous.rs"]
+mod continuous;
+#[path = "resident/controller.rs"]
+mod controller;
+#[path = "resident/transient_batch.rs"]
+mod transient_batch;
+pub(crate) use controller::{BatchController, BatchOptions};
+#[cfg(test)]
+#[path = "resident/continuous_tests.rs"]
+mod continuous_tests;
