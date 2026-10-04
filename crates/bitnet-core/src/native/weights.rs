@@ -16,11 +16,20 @@ pub(crate) struct Weights {
     small: HashMap<String, Vec<f32>>,
     pub resident_bytes: usize,
     pub residency_budget_bytes: usize,
+    pub state_reserve_bytes: usize,
     pub(super) expert_cache: Option<super::expert_cache::SharedCache>,
 }
 
 impl Weights {
     pub fn new(archive: Arc<GgufArchive>, kind: BackendKind) -> Result<Self> {
+        Self::new_with_state_reserve(archive, kind, 0)
+    }
+
+    pub fn new_with_state_reserve(
+        archive: Arc<GgufArchive>,
+        kind: BackendKind,
+        state_reserve: usize,
+    ) -> Result<Self> {
         let mut small = HashMap::new();
         for t in &archive.tensors {
             if t.dimensions.len() == 1 || t.name.ends_with(".bias") {
@@ -36,6 +45,7 @@ impl Weights {
             small,
             resident_bytes: 0,
             residency_budget_bytes: 0,
+            state_reserve_bytes: 0,
             expert_cache: None,
         };
         if !matches!(kind, BackendKind::Cuda | BackendKind::Hybrid) {
@@ -48,7 +58,7 @@ impl Weights {
                 "native CUDA quant library unavailable; build scripts/build_cuda_quant.ps1".into(),
             ));
         }
-        let budget = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
+        let requested_weights = std::env::var("RBITNET_HYBRID_MAX_VRAM_MB")
             .ok()
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(if kind == BackendKind::Cuda {
@@ -57,6 +67,17 @@ impl Weights {
                 512
             })
             .saturating_mul(1024 * 1024);
+        let budget = if let Some(stats) = rt.managed_memory_stats().filter(|s| s.limit > 0) {
+            let remaining = usize::try_from(stats.limit.saturating_sub(stats.live))
+                .map_err(|_| BitNetError::Inference("CUDA remaining budget overflow".into()))?;
+            if state_reserve >= remaining {
+                return Err(BitNetError::Inference(format!("managed CUDA memory budget cannot reserve {state_reserve} state bytes with {remaining} remaining")));
+            }
+            result.state_reserve_bytes = state_reserve;
+            requested_weights.min(remaining - state_reserve)
+        } else {
+            requested_weights
+        };
         result.residency_budget_bytes = budget;
         let requested_cache = std::env::var("RBITNET_MOE_CACHE_MB")
             .ok()
@@ -154,6 +175,8 @@ impl Weights {
         }
         tracing::info!(
             resident_mb = result.resident_bytes / (1024 * 1024),
+            state_reserve_bytes = result.state_reserve_bytes,
+            weight_budget_bytes = result.residency_budget_bytes,
             matrices = result.resident.len(),
             "native quantized weight residency"
         );

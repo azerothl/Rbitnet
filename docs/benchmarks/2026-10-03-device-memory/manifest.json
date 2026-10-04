@@ -1,0 +1,109 @@
+{
+  "tested_code_commit": "3ad61ec347dc42529713136c807ba3608aaaca0e",
+  "branch": "codex/device-memory-budget",
+  "cli_sha256": "44a0441b42c255883dc266ef329ae94faab32bf7f9f8ff81e426a99537792813",
+  "dll_sha256": "1aee7b0ebc0ec7fc7dc2346a62e9255ae5cd862222fb0852a7ade92f61cb2cb9",
+  "old_dll_sha256": "4e6953a79d42ed38a078af93d0a932027531c791938e8f184985c8b42f3650e9",
+  "source_sha256_lf": {
+    "crates/bitnet-core/src/backend.rs": "af80344b5884a63d917513411bbc8d3702d1802036aa07df5043f54ac2a170b6",
+    "crates/bitnet-core/src/backend/device_memory.rs": "26176e2ac7d0cfe4841d62d71d586f94843bf0bcd3c80eec97851ccf1f6c3c39",
+    "crates/bitnet-core/src/native/expert_cache.rs": "49a556b1994b063fb387d859af19ed5b32a2e3fbf90756a89ba8d4fba910424d",
+    "crates/bitnet-core/src/native/gpt_full.rs": "76272d5152593bc16bb061e0d3a03339327f9314ce62146ccc0b3da808536a03",
+    "crates/bitnet-core/src/native/graph.rs": "e893d849c5331e55292436b2cbfa3ae37e3c662ee390e17964607cd45766667f",
+    "crates/bitnet-core/src/native/state_budget.rs": "89159109e3a6d3cdacd8ede2c104104507c35a373496d49cb6333d87c716d7c1",
+    "crates/bitnet-core/src/native/weights.rs": "28c99bf472983609b6c9aa031e9509c91d76e146e06dfcd85707b96798071b1e",
+    "crates/bitnet-core/src/perf.rs": "36960582282799f348c1e59835a6200cb982335c046f6d7b359d6380e708ff45",
+    "crates/bitnet-server/src/run.rs": "80074097af33fe24e3af9759a091d9f2194bd6f51bf19351a7b6c6386a38451b",
+    "docs/ENV_REFERENCE.md": "48d478160cfc1ce35d9be2f8c5f8732496435011056d85e01674e7f384372335",
+    "docs/PERFORMANCE_CACHE_STACK.md": "01c9e7be2a0d24134e153f9ff887185c54698dc3d2a68795e0bf42fc5d0ea5b9",
+    "native/cuda_quant/README.md": "763dadff784e0b3e4dbd16d31b228e736067dfc911a7ed3d0f33a62cf00f5391",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "26bb83591e77cedb7c2aa917a7fddd2887858e495c0a82c48dc4bdf4f4ad7abb",
+    "native/cuda_quant/src/device_memory.cuh": "14869e0ea819fd846a9b4e859ee5a99a806bbf88f0a56ea693a2c0c2d5babf2c",
+    "native/cuda_quant/src/gpt_full.cuh": "f83709d4b84302ca5e7fb4df3b54f151a5cfa0c39ec73027268b43f9c037791a",
+    "native/cuda_quant/src/llama_resident.cuh": "15fcb763bd4c9b5fff31341a4392c1378111c539dfd495e3483658061e373815",
+    "native/cuda_quant/src/quant_matvec.cu": "5517b482539cc3258175e05c5de1366d4bc8e52dc953b660b6a1c8e175f61405",
+    "native/cuda_quant/src/qwen_full.cuh": "645acf1313bcda412b4eb1e53a1c52d097e7f6d19635cc65ca2dd9cee3e4dfe3",
+    "native/cuda_quant/src/qwen_recurrent.cuh": "5c00a5598d68dd149f9140159c532f912801f69741f8e702904999c028df6bb6",
+    "scripts/benchmark_moe_budget.py": "aa831666904a197aa5e4df297c01a40797742e95462cf2e2b8cfaaa32cd016d6",
+    "scripts/validate_cache_streaming.py": "7990a981110f86009c98881abebd47e683dce3903e16c596dbfa0a6552720cb0",
+    "scripts/validate_device_memory.py": "cab22d957660e600daeb22d0510e98bb09dbe34971fc9430014d957f4273d36c"
+  },
+  "models": {
+    "gpt-oss-20b": {
+      "gguf_path": "D:\\Rbitnet-benchmark-models\\gpt-oss-20b-GGUF\\gpt-oss-20b-Q4_K_M.gguf",
+      "gguf_bytes": 11624759488,
+      "gguf_sha256": "c27536640e410032865dc68781d80a08b98f8db5e93575919af8ccc0568aeb4f",
+      "tokenizer_path": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\gpt-oss-20b\\tokenizer.json",
+      "tokenizer_sha256": "0614fe83cadab421296e664e1f48f4261fa8fef6e03e63bb75c20f38e37d07d3"
+    },
+    "glm47-flash": {
+      "gguf_path": "D:\\Rbitnet-benchmark-models\\GLM-4.7-Flash-GGUF\\GLM-4.7-Flash-Q4_K_M.gguf",
+      "gguf_bytes": 18312339808,
+      "gguf_sha256": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+      "tokenizer_path": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\GLM-4.7-Flash\\tokenizer.json",
+      "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+    }
+  },
+  "evidence_sha256_lf": {
+    "ablation.json": "225eb50910cc3ead3989b13f21fffe443a16f13a2a0c8ac763c944a8b796c454",
+    "ablation.log": "31b2d9391ab72138ff10aa36d6cc28515d8abb70a39da44e238afc9dab99c22a",
+    "allocator.log": "05580c6a8761051b4649e5895711dfcc008a7e52d8b00c28c94365471bec9726",
+    "cache-leases.log": "0df811a7fd02b4bf11b84d0e5f96379bbdfd438d34c3461e9a1a29daf9bbf192",
+    "cap6144.json": "4b01231f06f7b044b7006629859a4b1ca68c916b9cdbb704eaf528cfc805c84e",
+    "cap6144.log": "e1e843beab055d9fa06288fda0e39f6333fb78bee3250fe7f5a80a52ccc8f7ea",
+    "cli-build.log": "9d82fc6b430022703b3410686cbd3cb7fc30e12e29365c9b15e2f0cb28fafd28",
+    "clippy.log": "2262fea7621fa26dbb971b0128470fdb94165142eb79eb65032d2718d6783533",
+    "cuda-build.log": "15b6fec77188c9ada37bad1ac7afb50cccbfe1cce31d6ff1e943c47e7dfc0753",
+    "gpt-teacher.log": "5f21ad34b3774b6f3e47913f2b3dc3b07ce752ad49d9b155c8b76ba23f441e97",
+    "initial-unload-retention.log": "84668ec12b6c72f66a81ecaa5384f212bf54781eb8ba92ff1f04636b394d9f65",
+    "native-regression.log": "2a8ccdc49e29f678188d757e1d02b3bc60c54379b92bea2321e51d4052670bc3",
+    "README.md": "35620d22204c1b91857f11402cc15ea84789f2f780c50a22b8208ef8dc509d80",
+    "refusals.json": "895dcea36f5f45d1319465a3dd5d2f67b9ea2541816878c48272443b9e09343b",
+    "refusals.log": "5156885772d7db26e611b69bb052c9571b17dc3bd391280dd61b058042002b34",
+    "reproduce.ps1": "09b3d55952bb545af2c5c84666284b31cba8e1c05988d21a558309dcbb17f42e",
+    "server-tests.log": "5388a351f7e64b610c59edbcb5aa172f5c044caddceb79d45aedef2fa2a82d66",
+    "streaming-glm.json": "3e9a53a7c5c2173153107394fd02688cd7943a9add3e1e0fa316c69f049d3004",
+    "streaming-glm.log": "fd15ac7380de168718321a99bd4350528f0ede816fde772dd6c8748bace4b50c",
+    "streaming-gpt.json": "8ebaa7ceed8f40473c3d16d4476c7d8c2fc2e3d2da14d2f9a6694ab867ac6304",
+    "streaming-gpt.log": "f2adedf752e216104b768664d7d58a565acae945611e5c8b85a4351ff24c367d",
+    "summary-cap6144.json": "ee445a7c8708e263894559e4c8c5ea7b55e8cf507109d60bb2336b3952d4537b",
+    "summary.json": "7328e31af21181fc180afbd703751d9d3400685c38b0378d13dca1860145dc09",
+    "workspace.log": "711fe1b5cb3eff9ffe52dbfe52626f2d800f8ca318b8ee95f978f564036ce566"
+  },
+  "provenance_note": "Nested config.environment fields are inherited historical context from parity-round2, not the source revision or executable used here; this manifest and top-level raw-result binary/library hashes identify the measured build.",
+  "protocol": {
+    "device_cap_mib": 12288,
+    "reduced_cap_mib": 6144,
+    "margin_mib": 256,
+    "context_capacity": 2048,
+    "cache_mib": [
+      0,
+      16,
+      512,
+      8192
+    ],
+    "reduced_cache_mib": [
+      0,
+      4096
+    ],
+    "full_gpt": false,
+    "prefix": false,
+    "split": false,
+    "cold_cycle_in_raw": true,
+    "warmup_cycle": 0,
+    "measured_long_samples_per_mode": 4,
+    "first_content_ttft_measured": false,
+    "reduced_measured_extended_samples_per_mode": 2
+  },
+  "hardware": {
+    "os": "Windows",
+    "cpu": "AMD Ryzen 7 9800X3D",
+    "cpu_threads": 16,
+    "ram_gib_approx": 64,
+    "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+    "gpu_memory_mib": 16376,
+    "driver": "610.88",
+    "cuda": "13.3",
+    "rust": "1.94.1"
+  }
+}

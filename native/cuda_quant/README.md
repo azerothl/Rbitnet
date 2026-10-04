@@ -202,3 +202,19 @@ dynamic-cache integration. The actual-token counter is
 `gpt_full_hidden_check`, `gpt_full_layers_check` and `gpt_router_check` are
 diagnostic APIs sharing production enqueue/router kernels. Their host transfers
 and temporary allocations are excluded from throughput measurements.
+
+The optional `rbitnet_cuda_memory_*` ABI shares one allocator/ledger with Rust
+weights and every native context, KV/recurrent state, prefix snapshot and scratch
+buffer. `RBITNET_CUDA_DEVICE_BUDGET_MB` configures a process-wide managed cap;
+`RBITNET_CUDA_DEVICE_MARGIN_MB` (256 by default) leaves additional device memory
+free. Admissions and frees are serialized, partial creates roll back their owned
+allocations, views are counted once and failed frees retain their charge. Existing
+live memory is included when a subsequent loader configures its cap. Budget
+configuration rejects mixed devices; current support is one CUDA device.
+
+`CudaMemoryStats` exposes exact managed live/peak bytes and seven categories.
+Driver, module, cuBLAS/library and CUDA graph internals are opaque and excluded;
+the ledger is not a measurement of all process VRAM. Thread-local quant scratch
+can remain after unloading a model and is still counted. Without a requested
+cap, the supporting library records allocations without limiting them. Old DLLs
+retain their allocator and explicitly cannot honor a requested managed cap.

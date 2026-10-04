@@ -1,0 +1,572 @@
+{
+  "binary_sha256": "44a0441b42c255883dc266ef329ae94faab32bf7f9f8ff81e426a99537792813",
+  "cases": [
+    {
+      "label": "insufficient-state",
+      "config": {
+        "environment": {
+          "ollama_kv_dtype": "default f16",
+          "ram_bytes": 66157723648,
+          "driver": "610.88",
+          "ollama_version": "0.35.0",
+          "llama_rbitnet_kv_dtype": "f32",
+          "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+          "logical_cores": 16,
+          "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+          "gpu_vram_mib": 16376,
+          "llama_cpp_build": "b11351",
+          "llama_cpp_commit": "631109b34",
+          "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+          "rbitnet_commit": "ab520d0 + local parity rounds 1/2; shared head opt-in",
+          "os": "Microsoft Windows NT 10.0.26220.0",
+          "physical_cores": 8,
+          "rbitnet_branch": "codex/optimize-inference-attention",
+          "rbitnet_context_capacity": 8192,
+          "cuda_execution": "resident Llama; dense Qwen recurrent blocks; resident routed FFN; optional resident output heads",
+          "cuda_quant_library_sha256": "d38eb0e59d280ca659f8328ec1dc1c81c87ada532277d506589c6118e79648b7",
+          "rbitnet_exe_sha256": "b5eaada394b41f5c179bdedc2d7b1e98af0f11f80ece9ca576cbd9a9969d017a",
+          "shared_cuda_head_default": "off; RBITNET_CUDA_HEAD=1 opts in"
+        },
+        "llama_cpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351\\llama-server.exe",
+        "context": 1024,
+        "cwd": "E:\\devs\\Rbitnet",
+        "models": [
+          {
+            "id": "llama32-1b",
+            "gguf": "C:\\Users\\azero\\.ollama\\models\\blobs\\sha256-3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+            "ollama": "rbitnet-bench-llama32-1b:q4_k_m",
+            "parameter_count": 1235814432,
+            "quantization": "Q4_K_M",
+            "architecture": "llama",
+            "tokenizer": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+          },
+          {
+            "id": "qwen35-2b",
+            "gguf": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+            "ollama": "rbitnet-bench-qwen35-2b:q8_0",
+            "parameter_count": 1881825088,
+            "quantization": "Q8_0",
+            "architecture": "qwen35",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+            "source": {
+              "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+              "filename": "Qwen3.5-2B-Q8_0.gguf",
+              "repo": "unsloth/Qwen3.5-2B-GGUF"
+            }
+          },
+          {
+            "id": "gpt-oss-20b",
+            "gguf": "D:\\Rbitnet-benchmark-models\\gpt-oss-20b-GGUF\\gpt-oss-20b-Q4_K_M.gguf",
+            "ollama": "rbitnet-bench-gpt-oss-20b:q4_k_m",
+            "parameter_count": 20914757184,
+            "quantization": "Q4_K_M",
+            "architecture": "gpt-oss",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\gpt-oss-20b\\tokenizer.json",
+            "source": {
+              "revision": "d449b42d93e1c2c7bda5312f5c25c8fb91dfa9b4",
+              "filename": "gpt-oss-20b-Q4_K_M.gguf",
+              "repo": "unsloth/gpt-oss-20b-GGUF"
+            },
+            "expert_count": 32,
+            "expert_used_count": 4
+          },
+          {
+            "id": "glm47-flash",
+            "gguf": "D:\\Rbitnet-benchmark-models\\GLM-4.7-Flash-GGUF\\GLM-4.7-Flash-Q4_K_M.gguf",
+            "ollama": "rbitnet-bench-glm47-flash:q4_k_m",
+            "parameter_count": 29943393920,
+            "quantization": "Q4_K_M",
+            "architecture": "deepseek2",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\GLM-4.7-Flash\\tokenizer.json",
+            "source": {
+              "repo": "unsloth/GLM-4.7-Flash-GGUF",
+              "filename": "GLM-4.7-Flash-Q4_K_M.gguf",
+              "revision": "0d32489ecb9db6d2a4fc93bd27ef01519f95474d"
+            },
+            "expert_count": 64,
+            "expert_used_count": 4
+          }
+        ],
+        "cuda_quant_library": "E:\\devs\\Rbitnet\\target\\device-memory\\cuda-final\\rbitnet_cuda_quant64.dll",
+        "llama_gpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351-cuda\\llama-server.exe",
+        "threads": 16,
+        "rbitnet": "E:\\devs\\Rbitnet\\target\\device-memory\\refusals-final\\rbitnet.exe",
+        "ollama_url": "http://127.0.0.1:11435",
+        "ollama_pid": 46172,
+        "port": 18114,
+        "rbitnet_env": {
+          "RBITNET_CUDA_DEVICE_BUDGET_MB": "64",
+          "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+          "RBITNET_MAX_SEQ": "2048",
+          "RBITNET_CUDA_GPT_FULL": "0",
+          "RBITNET_REQUIRE_GPT_FULL": "0",
+          "RBITNET_MOE_CACHE_MB": "512",
+          "RBITNET_ADMIN_TOKEN": "memory-validation-local"
+        }
+      },
+      "library_sha256": "1aee7b0ebc0ec7fc7dc2346a62e9255ae5cd862222fb0852a7ade92f61cb2cb9",
+      "routes": [
+        {
+          "path": "/v1/chat/completions",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "api_error"
+            },
+            "type": "error"
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "api_error"
+            },
+            "type": "error"
+          }
+        }
+      ],
+      "startup_error": "Model load failed: not ready: LoadFailed — failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN",
+      "ready": {
+        "status": 503,
+        "text": "not ready: LoadFailed — failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN\n"
+      },
+      "metrics": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 4.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 0.0,
+        "rbitnet_inference_calls_total": 0.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 0.0,
+        "rbitnet_inference_ttft_ms_avg": 0.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.0,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 0.0,
+        "rbitnet_inference_decode_ms_sum": 0.0,
+        "rbitnet_inference_itl_us_sum": 0.0,
+        "rbitnet_inference_tpot_us_sum": 0.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 0.0,
+        "rbitnet_native_accelerated_calls_total": 0.0,
+        "rbitnet_core_cuda_managed_memory_available": 1.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 67108864.0,
+        "rbitnet_core_cuda_managed_live_bytes": 0.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 0.0,
+        "rbitnet_core_cuda_managed_allocations_total": 0.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_native_moe_resident_layers_total": 0.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 0.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 0.0,
+        "rbitnet_core_gpu_download_bytes_total": 0.0,
+        "rbitnet_core_gpu_gemv_calls_total": 0.0,
+        "rbitnet_core_gpu_attention_calls_total": 0.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_weight_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 135004160.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "log": "Rbitnet UI: http://127.0.0.1:18114/ui\n2026-10-03T14:20:45.835590Z  INFO bitnet_server::run: rbitnet server limits max_body_bytes=1048576 max_prompt_chars=256000 max_prompt_tokens=None max_tokens_cap=8192 max_concurrent=1 inference_timeout_secs=600 api_key_set=false\n2026-10-03T14:20:45.874896Z  INFO bitnet_core::memory_budget: memory budget check OK weights_bytes=11611750656 kv_estimate_bytes=0 estimated_load_bytes=11611750656\n2026-10-03T14:20:46.024168Z  INFO bitnet_core::ggml::quant_dot: loaded librbitnet_cuda_quant path=E:\\devs\\Rbitnet\\target\\device-memory\\cuda-final\\rbitnet_cuda_quant64.dll\n2026-10-03T14:20:46.057369Z ERROR bitnet_server::run: LoadFailed at startup — binding HTTP with stub for retry msg=failed to init engine from env: Inference(\"managed CUDA memory budget cannot reserve 245666816 state bytes with 67108864 remaining\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\n2026-10-03T14:20:46.057407Z  INFO bitnet_server::run: LoadFailed: serving stub until POST /v1/admin/reload succeeds\n2026-10-03T14:20:46.059159Z  INFO bitnet_server::run: rbitnet-server listening on http://127.0.0.1:18114\n2026-10-03T14:20:46.345802Z ERROR http_request{method=GET path=/ready request_id=82ad8200-7499-4457-9b21-491d2d31f8b6}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.360544Z ERROR http_request{method=GET path=/ready request_id=eecde51b-e613-4874-9914-3fb460acce6e}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.361926Z ERROR http_request{method=POST path=/v1/chat/completions request_id=48c9a886-d36e-4d18-9cc2-9752fd7a3f95}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.376219Z ERROR http_request{method=POST path=/v1/chat/completions request_id=70d23c9b-58d4-49af-814d-a55148bc27c6}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.391762Z ERROR http_request{method=POST path=/v1/completions request_id=34eda418-3c8d-4f7a-960e-463afb614642}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.407585Z ERROR http_request{method=POST path=/v1/completions request_id=5c65df86-7724-49ae-a412-3e1ecd38ddca}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.408681Z ERROR http_request{method=POST path=/v1/messages request_id=b7df715f-14b1-4947-b76a-7fdd50198dad}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:46.409714Z ERROR http_request{method=POST path=/v1/messages request_id=096436cf-5480-4574-838d-ff29ea64987f}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11517952,
+        "gpu_global_baseline_mib": 2180.0,
+        "gpu_global_peak_mib": 2180.0,
+        "gpu_global_peak_delta_mib": 0
+      }
+    },
+    {
+      "label": "missing-memory-abi",
+      "config": {
+        "environment": {
+          "ollama_kv_dtype": "default f16",
+          "ram_bytes": 66157723648,
+          "driver": "610.88",
+          "ollama_version": "0.35.0",
+          "llama_rbitnet_kv_dtype": "f32",
+          "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+          "logical_cores": 16,
+          "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+          "gpu_vram_mib": 16376,
+          "llama_cpp_build": "b11351",
+          "llama_cpp_commit": "631109b34",
+          "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+          "rbitnet_commit": "ab520d0 + local parity rounds 1/2; shared head opt-in",
+          "os": "Microsoft Windows NT 10.0.26220.0",
+          "physical_cores": 8,
+          "rbitnet_branch": "codex/optimize-inference-attention",
+          "rbitnet_context_capacity": 8192,
+          "cuda_execution": "resident Llama; dense Qwen recurrent blocks; resident routed FFN; optional resident output heads",
+          "cuda_quant_library_sha256": "d38eb0e59d280ca659f8328ec1dc1c81c87ada532277d506589c6118e79648b7",
+          "rbitnet_exe_sha256": "b5eaada394b41f5c179bdedc2d7b1e98af0f11f80ece9ca576cbd9a9969d017a",
+          "shared_cuda_head_default": "off; RBITNET_CUDA_HEAD=1 opts in"
+        },
+        "llama_cpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351\\llama-server.exe",
+        "context": 1024,
+        "cwd": "E:\\devs\\Rbitnet",
+        "models": [
+          {
+            "id": "llama32-1b",
+            "gguf": "C:\\Users\\azero\\.ollama\\models\\blobs\\sha256-3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+            "ollama": "rbitnet-bench-llama32-1b:q4_k_m",
+            "parameter_count": 1235814432,
+            "quantization": "Q4_K_M",
+            "architecture": "llama",
+            "tokenizer": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+          },
+          {
+            "id": "qwen35-2b",
+            "gguf": "D:\\Rbitnet-benchmark-models\\qwen35-2b\\Qwen3.5-2B-Q8_0.gguf",
+            "ollama": "rbitnet-bench-qwen35-2b:q8_0",
+            "parameter_count": 1881825088,
+            "quantization": "Q8_0",
+            "architecture": "qwen35",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\Qwen3.5-2B\\tokenizer.json",
+            "source": {
+              "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+              "filename": "Qwen3.5-2B-Q8_0.gguf",
+              "repo": "unsloth/Qwen3.5-2B-GGUF"
+            }
+          },
+          {
+            "id": "gpt-oss-20b",
+            "gguf": "D:\\Rbitnet-benchmark-models\\gpt-oss-20b-GGUF\\gpt-oss-20b-Q4_K_M.gguf",
+            "ollama": "rbitnet-bench-gpt-oss-20b:q4_k_m",
+            "parameter_count": 20914757184,
+            "quantization": "Q4_K_M",
+            "architecture": "gpt-oss",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\gpt-oss-20b\\tokenizer.json",
+            "source": {
+              "revision": "d449b42d93e1c2c7bda5312f5c25c8fb91dfa9b4",
+              "filename": "gpt-oss-20b-Q4_K_M.gguf",
+              "repo": "unsloth/gpt-oss-20b-GGUF"
+            },
+            "expert_count": 32,
+            "expert_used_count": 4
+          },
+          {
+            "id": "glm47-flash",
+            "gguf": "D:\\Rbitnet-benchmark-models\\GLM-4.7-Flash-GGUF\\GLM-4.7-Flash-Q4_K_M.gguf",
+            "ollama": "rbitnet-bench-glm47-flash:q4_k_m",
+            "parameter_count": 29943393920,
+            "quantization": "Q4_K_M",
+            "architecture": "deepseek2",
+            "tokenizer": "E:\\devs\\Rbitnet\\target\\engine-benchmark\\tokenizers\\GLM-4.7-Flash\\tokenizer.json",
+            "source": {
+              "repo": "unsloth/GLM-4.7-Flash-GGUF",
+              "filename": "GLM-4.7-Flash-Q4_K_M.gguf",
+              "revision": "0d32489ecb9db6d2a4fc93bd27ef01519f95474d"
+            },
+            "expert_count": 64,
+            "expert_used_count": 4
+          }
+        ],
+        "cuda_quant_library": "E:\\devs\\Rbitnet\\target\\gpt-full\\cuda\\rbitnet_cuda_quant64.dll",
+        "llama_gpu": "E:\\devs\\Rbitnet\\target\\reference-llamacpp\\b11351-cuda\\llama-server.exe",
+        "threads": 16,
+        "rbitnet": "E:\\devs\\Rbitnet\\target\\device-memory\\refusals-final\\rbitnet.exe",
+        "ollama_url": "http://127.0.0.1:11435",
+        "ollama_pid": 46172,
+        "port": 18114,
+        "rbitnet_env": {
+          "RBITNET_CUDA_DEVICE_BUDGET_MB": "12288",
+          "RBITNET_CUDA_DEVICE_MARGIN_MB": "256",
+          "RBITNET_MAX_SEQ": "2048",
+          "RBITNET_CUDA_GPT_FULL": "0",
+          "RBITNET_REQUIRE_GPT_FULL": "0",
+          "RBITNET_MOE_CACHE_MB": "512",
+          "RBITNET_ADMIN_TOKEN": "memory-validation-local"
+        }
+      },
+      "library_sha256": "4e6953a79d42ed38a078af93d0a932027531c791938e8f184985c8b42f3650e9",
+      "routes": [
+        {
+          "path": "/v1/chat/completions",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/completions",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "rbitnet_error"
+            }
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "stream": false,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "api_error"
+            },
+            "type": "error"
+          }
+        },
+        {
+          "path": "/v1/messages",
+          "stream": true,
+          "status": 503,
+          "response": {
+            "error": {
+              "code": "LoadFailed",
+              "message": "failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).",
+              "type": "api_error"
+            },
+            "type": "error"
+          }
+        }
+      ],
+      "startup_error": "Model load failed: not ready: LoadFailed — failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN",
+      "ready": {
+        "status": 503,
+        "text": "not ready: LoadFailed — failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\nretry: POST /v1/admin/reload with RBITNET_ADMIN_TOKEN\n"
+      },
+      "metrics": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 4.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 0.0,
+        "rbitnet_inference_calls_total": 0.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 0.0,
+        "rbitnet_inference_ttft_ms_avg": 0.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.0,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 0.0,
+        "rbitnet_inference_decode_ms_sum": 0.0,
+        "rbitnet_inference_itl_us_sum": 0.0,
+        "rbitnet_inference_tpot_us_sum": 0.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 0.0,
+        "rbitnet_native_accelerated_calls_total": 0.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 0.0,
+        "rbitnet_core_native_moe_resident_layers_total": 0.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 0.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 0.0,
+        "rbitnet_core_gpu_download_bytes_total": 0.0,
+        "rbitnet_core_gpu_gemv_calls_total": 0.0,
+        "rbitnet_core_gpu_attention_calls_total": 0.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 0.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 1.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_weight_bytes": 11611750656.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 42024960.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "log": "Rbitnet UI: http://127.0.0.1:18114/ui\n2026-10-03T14:20:46.509951Z  INFO bitnet_server::run: rbitnet server limits max_body_bytes=1048576 max_prompt_chars=256000 max_prompt_tokens=None max_tokens_cap=8192 max_concurrent=1 inference_timeout_secs=600 api_key_set=false\n2026-10-03T14:20:46.549733Z  INFO bitnet_core::memory_budget: memory budget check OK weights_bytes=11611750656 kv_estimate_bytes=0 estimated_load_bytes=11611750656\n2026-10-03T14:20:46.687706Z  INFO bitnet_core::ggml::quant_dot: loaded librbitnet_cuda_quant path=E:\\devs\\Rbitnet\\target\\gpt-full\\cuda\\rbitnet_cuda_quant64.dll\n2026-10-03T14:20:46.687753Z  WARN bitnet_core::backend: CUDA managed allocator unavailable error=inference error: managed CUDA memory budget requires the native memory ABI; rebuild the quant library\n2026-10-03T14:20:46.740957Z ERROR bitnet_server::run: LoadFailed at startup — binding HTTP with stub for retry msg=failed to init engine from env: Inference(\"CUDA/cuBLAS unavailable\") — HTTP stays up in LoadFailed; retry with POST /v1/admin/reload (set RBITNET_ADMIN_TOKEN).\n2026-10-03T14:20:46.741036Z  INFO bitnet_server::run: LoadFailed: serving stub until POST /v1/admin/reload succeeds\n2026-10-03T14:20:46.742666Z  INFO bitnet_server::run: rbitnet-server listening on http://127.0.0.1:18114\n2026-10-03T14:20:47.015595Z ERROR http_request{method=GET path=/ready request_id=73e95415-8718-4abd-bd5e-236f343c8fbe}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.017562Z ERROR http_request{method=GET path=/ready request_id=f7476b90-28ee-4dee-837c-862871fa8c19}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.030554Z ERROR http_request{method=POST path=/v1/chat/completions request_id=7bca3c09-a09e-4ca4-8651-caa3dad8d6a0}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.045878Z ERROR http_request{method=POST path=/v1/chat/completions request_id=69f59c19-09d6-46ab-ab85-7b80c9db21e3}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.046916Z ERROR http_request{method=POST path=/v1/completions request_id=c2fb5be1-e0a2-42d9-82ad-db34ef603648}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.047854Z ERROR http_request{method=POST path=/v1/completions request_id=1b5e6159-a6b6-4af8-97e3-037f06f25cdb}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.061095Z ERROR http_request{method=POST path=/v1/messages request_id=02ec1c0e-af55-46ab-91b7-d895e5736034}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n2026-10-03T14:20:47.062113Z ERROR http_request{method=POST path=/v1/messages request_id=43abe021-72ef-4b3d-8eb4-ab32a7eb2b25}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=0 ms\n",
+      "memory": {
+        "peak_process_tree_rss_bytes": 11784192,
+        "gpu_global_baseline_mib": 2180.0,
+        "gpu_global_peak_mib": 2180.0,
+        "gpu_global_peak_delta_mib": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,686 @@
+{
+  "binary_sha256": "44a0441b42c255883dc266ef329ae94faab32bf7f9f8ff81e426a99537792813",
+  "library_sha256": "1aee7b0ebc0ec7fc7dc2346a62e9255ae5cd862222fb0852a7ade92f61cb2cb9",
+  "speculative": false,
+  "qwen_full": false,
+  "gpt_full": false,
+  "split_kv": false,
+  "tf32x3": false,
+  "moe_cache_mib": 8192,
+  "cases": [
+    {
+      "config": "glm47-flash-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "L",
+        "'"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité de logique de l'IA, le modèle 7-B, s'activa doucement, ses capteurs optiques se réajustant sur l'obscurité quasi totale de la salle. Il n'y avait pas de bruit, sinon le léger bourdonnement de son processeur et le grésillement discret de ses servomoteurs. 7-B était un robot de recherche, un modèle ancien, construit pour l'exploration spatiale, mais dont la mission avait été reprogrammée pour une tâche bien plus terrestre et mystérieuse :",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040677,
+        "id": "chatcmpl-1791040677",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité de logique de l'IA, le modèle 7-B, s'activa doucement, ses capteurs optiques se réajustant sur l'obscurité quasi totale de la salle. Il n'y avait pas de bruit, sinon le léger bourdonnement de son processeur et le grésillement discret de ses servomoteurs. 7-B était un robot de recherche, un modèle ancien, construit pour l'exploration spatiale, mais dont la mission avait été reprogrammée pour une tâche bien plus terrestre et mystérieuse :",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040698,
+        "id": "chatcmpl-1791040698",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "glm47-flash-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "L",
+        "'"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité X-71, modèle d'exploration robotique classé \"archiviste avancé\", s'activa dans le silence absolu de la salle d'entrée. Ses capteurs oculaires numériques, émettant une lueur bleue pâle, balayèrent immédiatement les dimensions de la bibliothèque. C’était un vaste espace, une cathédrale de papier et de chêne où l’air était saturé de poussière ionisée et de l’odeur de vieux parchemin.\n\nX-71 releva sa tête rotative d",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040713,
+        "id": "chatcmpl-1791040713",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité X-71, modèle d'exploration robotique classé \"archiviste avancé\", s'activa dans le silence absolu de la salle d'entrée. Ses capteurs oculaires numériques, émettant une lueur bleue pâle, balayèrent immédiatement les dimensions de la bibliothèque. C’était un vaste espace, une cathédrale de papier et de chêne où l’air était saturé de poussière ionisée et de l’odeur de vieux parchemin.\n\nX-71 releva sa tête rotative d",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040731,
+        "id": "chatcmpl-1791040731",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "glm47-flash-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "L",
+        "'"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité de logique de l'IA, le modèle 7-B, s'activa doucement. Ses capteurs optiques, calibrés pour une luminosité de 400 lux, balayèrent la pièce. Il n'y avait pas de bruit, sinon le léger bourdonnement des transformateurs situés sous le plancher. L'air était froid, saturé d'une odeur métallique et de poussière sèche.\n\n7-B était un robot explorateur de type \"Archiviste\", conçu pour les bibliothèques abandonnées ou en ruine. A",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040747,
+        "id": "chatcmpl-1791040747",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "L'unité de logique de l'IA, le modèle 7-B, s'activa doucement. Ses capteurs optiques, calibrés pour une luminosité de 400 lux, balayèrent la pièce. Il n'y avait pas de bruit, sinon le léger bourdonnement des transformateurs situés sous le plancher. L'air était froid, saturé d'une odeur métallique et de poussière sèche.\n\n7-B était un robot explorateur de type \"Archiviste\", conçu pour les bibliothèques abandonnées ou en ruine. A",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040766,
+        "id": "chatcmpl-1791040766",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 41,
+          "total_tokens": 169
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "glm47-flash-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "glm47-flash",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791040770,
+        "id": "chatcmpl-1791040770",
+        "model": "glm47-flash",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 1,
+          "prompt_tokens": 40,
+          "total_tokens": 41
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "glm47-flash-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "glm47-flash",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "glm47-flash",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "glm47-flash",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "glm47-flash",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040777,
+          "id": "chatcmpl-1791040777",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 8,
+            "prompt_tokens": 33,
+            "total_tokens": 41
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "42",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040781,
+          "id": "chatcmpl-1791040781",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 1,
+            "prompt_tokens": 32,
+            "total_tokens": 33
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040784,
+          "id": "chatcmpl-1791040784",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 35,
+            "total_tokens": 38
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040789,
+          "id": "chatcmpl-1791040789",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 38,
+            "total_tokens": 48
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de la France est Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040793,
+          "id": "chatcmpl-1791040793",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 8,
+            "prompt_tokens": 33,
+            "total_tokens": 41
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "42",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040796,
+          "id": "chatcmpl-1791040796",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 1,
+            "prompt_tokens": 32,
+            "total_tokens": 33
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040806,
+          "id": "chatcmpl-1791040806",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 35,
+            "total_tokens": 38
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791040801,
+          "id": "chatcmpl-1791040801",
+          "model": "glm47-flash",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 38,
+            "total_tokens": 48
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 21896.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 14970.0,
+        "rbitnet_inference_ttft_ms_avg": -141.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.007918000000000092,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 14970.0,
+        "rbitnet_inference_decode_ms_sum": 2024.0,
+        "rbitnet_inference_itl_us_sum": 380991.0,
+        "rbitnet_inference_tpot_us_sum": 380991.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 22.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 0.0,
+        "rbitnet_core_cuda_managed_live_bytes": -961536.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 81920.0,
+        "rbitnet_core_cuda_managed_allocations_total": 5650.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 25749.0,
+        "rbitnet_core_native_moe_resident_layers_total": 7360.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 9472953400.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 3691.0,
+        "rbitnet_core_expert_cache_evictions_total": 3691.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 21092106240.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 6116421700.0,
+        "rbitnet_core_quant_matvec_calls_total": 7360.0,
+        "rbitnet_core_quant_matvec_rows_total": 471040.0,
+        "rbitnet_core_quant_matvec_ns_total": 610261200.0,
+        "rbitnet_core_gpu_upload_bytes_total": 22431629312.0,
+        "rbitnet_core_gpu_download_bytes_total": 1267640320.0,
+        "rbitnet_core_gpu_gemv_calls_total": 89786.0,
+        "rbitnet_core_gpu_attention_calls_total": 7520.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 7360.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": -1417216.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "all_cases_metrics_delta": {
+        "rbitnet_chat_requests_total": 19.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 148624.0,
+        "rbitnet_inference_calls_total": 16.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 66636.0,
+        "rbitnet_inference_ttft_ms_avg": 4164.0,
+        "rbitnet_inference_decode_tokens_per_sec": 10.576373,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 63357.0,
+        "rbitnet_inference_decode_ms_sum": 76964.0,
+        "rbitnet_inference_itl_us_sum": 1476358.0,
+        "rbitnet_inference_tpot_us_sum": 1476358.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 814.0,
+        "rbitnet_native_accelerated_calls_total": 16.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 0.0,
+        "rbitnet_core_cuda_managed_live_bytes": 9009799856.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 9013644976.0,
+        "rbitnet_core_cuda_managed_allocations_total": 48903.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 0.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 252816.0,
+        "rbitnet_core_native_moe_resident_layers_total": 70794.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 88540471600.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 30360.0,
+        "rbitnet_core_expert_cache_evictions_total": 28860.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 173449469952.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 62761458700.0,
+        "rbitnet_core_quant_matvec_calls_total": 70794.0,
+        "rbitnet_core_quant_matvec_rows_total": 4530816.0,
+        "rbitnet_core_quant_matvec_ns_total": 5225958600.0,
+        "rbitnet_core_gpu_upload_bytes_total": 186338782720.0,
+        "rbitnet_core_gpu_download_bytes_total": 12554241280.0,
+        "rbitnet_core_gpu_gemv_calls_total": 864212.0,
+        "rbitnet_core_gpu_attention_calls_total": 72333.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 0.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 0.0,
+        "rbitnet_core_prefix_hit": 0.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 0.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 70794.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 24116281344.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    }
+  ]
+}
