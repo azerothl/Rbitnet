@@ -1,1 +1,5 @@
 docs/benchmarks/2026-10-04-continuous-llama/raw/** -text
+
+docs/benchmarks/2026-10-04-llama-continuous-fresh/raw/** -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-llama-continuous-fresh/harness/** -text
