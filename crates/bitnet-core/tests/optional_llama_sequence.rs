@@ -8,6 +8,79 @@ use bitnet_core::{backend::BackendKind, gguf::GgufArchive, llama::LlamaRuntime};
 use serde::Deserialize;
 use tokenizers::Tokenizer;
 
+#[test]
+fn optional_prompt_lookup_matches_serial_target_in_seeded_and_penalized_generation() {
+    if std::env::var("RBITNET_CUDA_PLD_TEST").as_deref() != Ok("1") {
+        return;
+    }
+    let gguf = std::env::var("RBITNET_TEST_GGUF").expect("real GGUF required");
+    let tokenizer = std::env::var("RBITNET_TOKENIZER").expect("matching tokenizer required");
+    let archive = Arc::new(GgufArchive::mmap_path(Path::new(&gguf)).unwrap());
+    let mut runtime =
+        LlamaRuntime::load(archive, Path::new(&tokenizer), BackendKind::Cuda).unwrap();
+    let content = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu";
+    let prompts = [
+        format!("<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nRepeat this sequence eight times without commentary: {content}.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"),
+        "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nWrite a short story about a robot in a library.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n".into(),
+    ];
+    let mut sampled = bitnet_core::sampling::SamplingOptions::from_temperature(0.7);
+    sampled.seed = Some(735);
+    sampled.top_p = Some(0.9);
+    let mut penalized = sampled;
+    penalized.frequency_penalty = 0.25;
+    penalized.presence_penalty = 0.15;
+    let before = bitnet_core::perf::snapshot();
+    for options in [
+        bitnet_core::sampling::SamplingOptions::from_temperature(0.0),
+        sampled,
+        penalized,
+    ] {
+        for prompt in &prompts {
+            std::env::set_var("RBITNET_SPECULATIVE_PLD", "0");
+            std::env::set_var("RBITNET_SPECULATIVE", "0");
+            let expected = runtime.generate_with_timings(prompt, 128, options).unwrap();
+            assert!(!runtime.speculative_attempted());
+            std::env::set_var("RBITNET_SPECULATIVE_PLD", "1");
+            let actual = runtime.generate_with_timings(prompt, 128, options).unwrap();
+            assert_eq!(
+                actual.0, expected.0,
+                "PLD changed target output for {options:?}"
+            );
+            assert_eq!(actual.1.completion_tokens, expected.1.completion_tokens);
+        }
+    }
+    let after = bitnet_core::perf::snapshot();
+    assert!(after.speculative_verify_blocks > before.speculative_verify_blocks);
+    assert!(after.speculative_accepted_tokens > before.speculative_accepted_tokens);
+    assert!(after.speculative_rollbacks > before.speculative_rollbacks);
+    // Cancel specifically after a real verification block, not just at the first token.
+    let options = bitnet_core::sampling::SamplingOptions::from_temperature(0.0);
+    let expected = runtime
+        .generate_with_timings(&prompts[0], 128, options)
+        .unwrap()
+        .0;
+    let before_blocks = bitnet_core::perf::snapshot().speculative_verify_blocks;
+    let mut cancelled_after_block = false;
+    let cancelled = runtime.generate_streaming(&prompts[0], 128, options, &mut |event| {
+        if matches!(event, bitnet_core::stream::StreamEvent::Delta { .. })
+            && bitnet_core::perf::snapshot().speculative_verify_blocks > before_blocks
+        {
+            cancelled_after_block = true;
+            bitnet_core::request_inference_cancel();
+        }
+        Ok(())
+    });
+    bitnet_core::clear_inference_cancel();
+    assert!(cancelled_after_block && cancelled.unwrap_err().to_string().contains("cancelled"));
+    assert_eq!(
+        runtime
+            .generate_with_timings(&prompts[0], 128, options)
+            .unwrap()
+            .0,
+        expected
+    );
+}
+
 #[derive(Deserialize)]
 struct Reference {
     format: String,

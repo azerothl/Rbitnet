@@ -41,6 +41,19 @@ pub trait ModelExecutor: Send + Sync {
         )
         .map(|(s, _)| s)
     }
+    /// Complete output with execution metadata owned by this request.
+    fn generate_output(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<crate::scheduler::InferenceOutput> {
+        let (text, phases) = self.generate_with_timings(prompt, max_tokens, sampling)?;
+        Ok(crate::scheduler::InferenceOutput {
+            text,
+            stats: crate::scheduler::InferenceStats::from_phases(phases, false),
+        })
+    }
 
     /// Default: run full generation then emit a single delta + done (stub/toy compatibility).
     fn generate_streaming(
@@ -186,6 +199,33 @@ impl ModelExecutor for LlamaExecutor {
         slot.as_mut()
             .unwrap()
             .generate_with_timings(prompt, max_tokens, sampling)
+    }
+    fn generate_output(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<crate::scheduler::InferenceOutput> {
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(LlamaRuntime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+            )?);
+        }
+        let runtime = slot.as_mut().unwrap();
+        let (text, phases) = runtime.generate_with_timings(prompt, max_tokens, sampling)?;
+        Ok(crate::scheduler::InferenceOutput {
+            text,
+            stats: crate::scheduler::InferenceStats::from_phases(
+                phases,
+                runtime.speculative_attempted(),
+            ),
+        })
     }
 
     fn generate_streaming(

@@ -32,8 +32,22 @@ void launch_prefill_gemm(QuantKind kind,const void *w,size_t row_bytes,const flo
 }
 struct LlamaBlock {
     static constexpr unsigned capacity=128;
+    static constexpr unsigned verify_capacity=16;
     float *p[9]={};
-    ~LlamaBlock() {for(auto ptr:p)if(ptr)cudaFree(ptr);}
+    float *verify_logits=nullptr,*verify_maxima=nullptr;
+    unsigned *verify_ids=nullptr,*verify_tokens=nullptr;
+    ~LlamaBlock() {for(auto ptr:p)if(ptr)cudaFree(ptr);if(verify_logits)cudaFree(verify_logits);if(verify_maxima)cudaFree(verify_maxima);if(verify_ids)cudaFree(verify_ids);if(verify_tokens)cudaFree(verify_tokens);}
+    bool init_verify(unsigned vocab) {
+        if(verify_logits)return true;
+        unsigned blocks=(vocab+255)/256;
+        float *logits=nullptr,*maxima=nullptr;unsigned *ids=nullptr,*tokens=nullptr;
+        bool ok=cudaMalloc(reinterpret_cast<void**>(&logits),size_t(verify_capacity)*vocab*sizeof(float))==cudaSuccess
+            && cudaMalloc(reinterpret_cast<void**>(&maxima),size_t(verify_capacity)*blocks*sizeof(float))==cudaSuccess
+            && cudaMalloc(reinterpret_cast<void**>(&ids),size_t(verify_capacity)*blocks*sizeof(unsigned))==cudaSuccess
+            && cudaMalloc(reinterpret_cast<void**>(&tokens),verify_capacity*sizeof(unsigned))==cudaSuccess;
+        if(!ok) {if(logits)cudaFree(logits);if(maxima)cudaFree(maxima);if(ids)cudaFree(ids);if(tokens)cudaFree(tokens);return false;}
+        verify_logits=logits;verify_maxima=maxima;verify_ids=ids;verify_tokens=tokens;return true;
+    }
     bool init(unsigned embd,unsigned ffn,unsigned stride) {
         unsigned widths[]={embd,embd,embd,stride,stride,embd,embd,ffn,ffn};
         for(unsigned i=0;i<9;i++)if(cudaMalloc(reinterpret_cast<void**>(&p[i]),size_t(widths[i])*capacity*sizeof(float))!=cudaSuccess)return false;

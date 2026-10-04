@@ -18,21 +18,24 @@ def main():
     p.add_argument('--library', type=pathlib.Path, required=True)
     p.add_argument('--output-dir', type=pathlib.Path, required=True)
     p.add_argument('--port', type=int, default=18106)
+    p.add_argument('--speculative', action='store_true', help='Validate native Llama PLD together with prefix reuse')
     args = p.parse_args(); root = args.output_dir; root.mkdir(parents=True, exist_ok=True)
     binary = root/'rbitnet.exe'; binary.write_bytes(args.binary.read_bytes())
     config = json.loads(args.config.read_text(encoding='utf-8'))
     config.update(rbitnet=str(binary.resolve()), cuda_quant_library=str(args.library.resolve()), port=args.port)
     report = dict(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), cases=[])
+                  library_sha256=hashlib.sha256(args.library.read_bytes()).hexdigest(), speculative=args.speculative, cases=[])
     original = subprocess.Popen
     def save(): (root/'results.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-    for model, block in [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]:
+    modes = [(config['models'][0], '1')] if args.speculative else [(config['models'][0], '0'), (config['models'][0], '1'), (config['models'][1], '0')]
+    for model, block in modes:
         label = model['id']+'-block'+block
         def popen(*a, **kw):
             if kw.get('env'):
                 kw['env'] = kw['env'].copy()
                 kw['env'].update(RBITNET_PREFIX_KV='1', RBITNET_CUDA_PREFIX_MB='256', RBITNET_CUDA_PREFIX_ENTRIES='8',
                                  RBITNET_QWEN_PREFIX_CHECKPOINT_TOKENS='32', RBITNET_CUDA_PREFILL=block,
+                                 RBITNET_SPECULATIVE_PLD='1' if args.speculative else '0', RBITNET_SPECULATIVE='0', RBITNET_SPECULATIVE_TOKENS='15',
                                  RBITNET_MAX_CONCURRENT='4')
                 for k in ['RBITNET_CHAT_TEMPLATE', 'RBITNET_CHAT_FORMAT']: kw['env'].pop(k, None)
             return original(*a, **kw)
@@ -74,13 +77,20 @@ def main():
             text = ''.join(pieces); expected_text = expected['choices'][0]['message']['content']
             report['cases'].append(dict(config=label, kind='explicit_stop_http_sse', request=body, response=expected, sse_text=text, done=done)); save()
             assert done and text == expected_text and 'Paris' not in text
-            bodies = [request(q, temperature=0) for q in ['Quelle est la capitale de la France ?', 'Calcule 13 + 29.',
-                                                        'Quelle est la capitale de l’Italie ?', 'Répète : été, café, résumé, 🙂.']]
+            questions = ['Quelle est la capitale de la France ?', 'Calcule 13 + 29.',
+                         'Quelle est la capitale de l’Italie ?', 'Répète : été, café, résumé, 🙂.']
+            if args.speculative:
+                questions[1] = 'Repeat the following sequence eight times without commentary: alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu.'
+                questions[2] = 'Return only this Python code, repeated six times:\ndef add(a, b):\n    return a + b\n'
+            bodies = [request(q, temperature=0) for q in questions]
             expected = [complete(body) for body in bodies]
+            before = server.metrics()
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: actual = list(pool.map(complete, bodies))
+            after = server.metrics(); delta = {k: after.get(k, 0)-before.get(k, 0) for k in after}
             equal = all(a['choices'][0]['message']['content'] == b['choices'][0]['message']['content'] for a,b in zip(expected, actual))
-            report['cases'].append(dict(config=label, kind='four_concurrent_requests_serialized_runtime', requests=bodies, expected=expected, actual=actual, equal=equal)); save()
+            report['cases'].append(dict(config=label, kind='four_concurrent_requests_serialized_runtime', requests=bodies, expected=expected, actual=actual, equal=equal, metrics_delta=delta)); save()
             assert equal, label
+            if args.speculative: assert delta.get('rbitnet_core_speculative_verify_blocks_total', 0) > 0
             print(label, 'stop and concurrency passed', flush=True)
         finally: server.close(); save()
 
