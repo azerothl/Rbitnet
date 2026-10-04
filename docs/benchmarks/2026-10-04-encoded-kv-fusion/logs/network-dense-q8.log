@@ -1,0 +1,8 @@
+llama32-1b-block0 greedy disconnect/resume passed
+llama32-1b-block0 sampling disconnect/resume passed
+llama32-1b-block0 penalties disconnect/resume passed
+llama32-1b-block0 stop and concurrency passed
+llama32-1b-block1 greedy disconnect/resume passed
+llama32-1b-block1 sampling disconnect/resume passed
+llama32-1b-block1 penalties disconnect/resume passed
+llama32-1b-block1 stop and concurrency passed

@@ -10,3 +10,17 @@ The current research mask treats token ID 123 as ASCII `{`. With Hugging Face BP
 - Anthropic tool definitions or forced choices return the same capability error. Incoming tool blocks are refused even without definitions, preventing their content from being dropped silently.
 
 The low-level ASCII fixture and the standalone schema validator remain available for research and validation of existing text. They are not evidence of JSON-constrained generation. A future implementation must map actual token pieces and special tokens, handle UTF-8 and EOS, enforce the grammar/schema before emission, and validate real JSON and tool responses via HTTP and SSE. This change closes one misleading capability in issue #24; it does not implement that future grammar or complete the other conversions in #24.
+
+Fresh validation on the four actual models and this NVIDIA Windows machine
+passed 208 HTTP refusals across CPU/CUDA, with unchanged forward counters and
+JSON errors even for streaming requests. Sixteen before/after control records
+each contain matching ordinary JSON and SSE responses. The workspace suite
+passed 300 tests, with one ignored test; check, Clippy and the Native build
+completed. [Original captures and source bindings](benchmarks/2026-10-04-structured-guards/README.md)
+describe the scope and preserve the raw results.
+
+GPT-OSS uses reasoning tokens before its visible answer. The control prompt
+required 16 total tokens to answer `Paris`; a budget of eight yielded empty
+visible content with `length`, identically in JSON and SSE. Its positive control
+uses 64 tokens. An empty visible completion under an exhausted budget does not
+establish a failed transport or validate a structured-generation capability.

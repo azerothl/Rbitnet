@@ -1,0 +1,15 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-parallel-fusion\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test native::graph::parallel_mla_tests::actual_mla_parallel_fusion_teacher_forcing_greedy_seed_penalty_and_reset ... MLA reference resident weights 1267 MiB; resident routed layers 46/47
+MLA real teacher-forcing + six generations passed graphs=0, split=0, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=0, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=1, prefix=0
+MLA real teacher-forcing + six generations passed graphs=1, split=1, prefix=1
+MLA real worst KL=2.363e-11, worst absolute target NLL delta=1.526e-5
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 153 filtered out; finished in 199.96s
+
