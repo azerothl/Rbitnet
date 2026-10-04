@@ -26,6 +26,130 @@ pub(super) struct ExpertGroup {
 mod tests {
     use super::*;
 
+    fn assert_device_group(cache: &ExpertCache, layer: usize, expert: usize, group: &ExpertGroup) {
+        for (projection, matrix) in ["gate", "up", "down"].into_iter().zip(&group.matrices) {
+            let tensor = cache
+                .archive
+                .tensor_by_name(&format!("blk.{layer}.ffn_{projection}_exps.weight"))
+                .unwrap();
+            let bytes = matrix.bytes();
+            let expected = &cache.archive.tensor_payload(tensor).unwrap()
+                [expert * bytes..(expert + 1) * bytes];
+            let actual = matrix.download_device_payload_for_test().unwrap();
+            assert_eq!(actual.len(), expected.len());
+            let mismatch = actual.iter().zip(expected).position(|(a, b)| a != b);
+            assert!(
+                mismatch.is_none(),
+                "device expert bytes differ: layer={layer}, expert={expert}, projection={projection}, first_byte={mismatch:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn optional_expert_cache_all_policies_preserve_device_bytes_across_refills_and_passes() {
+        if std::env::var("RBITNET_MOE_CACHE_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let path = std::env::var("RBITNET_TEST_GGUF").expect("real MoE GGUF required");
+        let archive = Arc::new(GgufArchive::mmap_path(std::path::Path::new(&path)).unwrap());
+        let rt = CudaRuntime::try_load().expect("CUDA required");
+        // GLM's first layer is dense; locate two actual expert layers instead
+        // of assuming the GPT-OSS layout. Four distinct experts force eviction.
+        let layers: Vec<usize> = archive
+            .tensors
+            .iter()
+            .filter_map(|tensor| {
+                tensor
+                    .name
+                    .strip_prefix("blk.")?
+                    .strip_suffix(".ffn_gate_exps.weight")?
+                    .parse()
+                    .ok()
+            })
+            .collect();
+        let mut layers = layers;
+        layers.sort_unstable();
+        assert!(layers.len() >= 2, "two routed layers required");
+        let layers = &layers[..2];
+        let group_bytes = |layer| {
+            ["gate", "up", "down"]
+                .into_iter()
+                .map(|projection| {
+                    let tensor = archive
+                        .tensor_by_name(&format!("blk.{layer}.ffn_{projection}_exps.weight"))
+                        .unwrap();
+                    assert!(tensor.dimensions.len() == 3 && tensor.dimensions[2] >= 4);
+                    crate::ggml::ggml_row_size(tensor.ggml_type, tensor.dimensions[0]).unwrap()
+                        * tensor.dimensions[1] as usize
+                })
+                .sum::<usize>()
+        };
+        let bytes = group_bytes(layers[0]);
+        assert_eq!(
+            bytes,
+            group_bytes(layers[1]),
+            "equal-sized test layers required"
+        );
+        let mut checked_groups = 0;
+        for policy in [Policy::Lru, Policy::Lfu, Policy::LeastStale] {
+            let mut cache = ExpertCache::new(Arc::clone(&archive), Arc::clone(&rt), 2 * bytes);
+            cache.policy = policy;
+            for sequence in 0..4 {
+                cache.begin_sequence(2);
+                for position in 0..3 {
+                    cache.begin_pass(position);
+                    for &layer in layers {
+                        let first = cache.acquire(layer, 0).unwrap().unwrap();
+                        let second = cache.acquire(layer, 1).unwrap().unwrap();
+                        let addresses: Vec<_> = second
+                            .matrices
+                            .iter()
+                            .map(|matrix| matrix.device_address())
+                            .collect();
+                        assert_device_group(&cache, layer, 0, &first);
+                        assert_device_group(&cache, layer, 1, &second);
+                        drop(second);
+                        let replacement = cache.acquire(layer, 2).unwrap().unwrap();
+                        assert_eq!(
+                            replacement
+                                .matrices
+                                .iter()
+                                .map(|m| m.device_address())
+                                .collect::<Vec<_>>(),
+                            addresses,
+                            "must actually exercise compatible slot reuse"
+                        );
+                        assert!(
+                            cache.acquire(layer, 3).unwrap().is_none(),
+                            "both slots leased"
+                        );
+                        assert_device_group(&cache, layer, 0, &first);
+                        assert_device_group(&cache, layer, 2, &replacement);
+                        let original = Arc::downgrade(&first);
+                        drop(first);
+                        drop(replacement);
+                        // A miss precedes a hit in router order. The selected
+                        // hit must survive even when the policy ranks it first.
+                        let selection = cache.acquire_selected(layer, &[3, 0]).unwrap().unwrap();
+                        assert!(Arc::ptr_eq(&selection[1], &original.upgrade().unwrap()));
+                        assert_device_group(&cache, layer, 3, &selection[0]);
+                        assert_device_group(&cache, layer, 0, &selection[1]);
+                        assert_eq!(cache.bytes, 2 * bytes);
+                        checked_groups += 6;
+                    }
+                }
+                eprintln!(
+                    "EXPERT_DEVICE_BYTES policy={policy:?} sequence={sequence} layers={layers:?}"
+                );
+            }
+        }
+        assert_eq!(checked_groups, 432);
+        eprintln!(
+            "EXPERT_DEVICE_BYTES_DONE groups={checked_groups} projections={}",
+            checked_groups * 3
+        );
+    }
+
     #[test]
     fn optional_expert_cache_protects_leases_reuses_slots_and_enforces_budget() {
         if std::env::var("RBITNET_MOE_CACHE_TEST").as_deref() != Ok("1") {

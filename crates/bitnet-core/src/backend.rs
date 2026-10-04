@@ -1080,6 +1080,22 @@ impl CudaDeviceQuantMatrix {
         self.device.as_ref().map(|buffer| buffer.ptr)
     }
 
+    /// Inspect the allocation itself; host backing alone cannot prove a refill.
+    /// This synchronous diagnostic is compiled only into tests.
+    #[cfg(test)]
+    pub(crate) fn download_device_payload_for_test(&self) -> Option<Vec<u8>> {
+        let device = self.device.as_ref()?;
+        let mut bytes = vec![0; self.bytes()];
+        device
+            .rt
+            .copy_device_to_host(
+                bytes.as_mut_ptr().cast(),
+                device.as_device_ptr(),
+                bytes.len(),
+            )
+            .then_some(bytes)
+    }
+
     pub fn bytes(&self) -> usize {
         self.row_bytes.saturating_mul(self.out_rows)
     }
