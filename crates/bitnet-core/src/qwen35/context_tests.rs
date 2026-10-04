@@ -7,6 +7,123 @@ use std::io::Read;
 type Bytes = unsafe extern "C" fn(*mut c_void, u32) -> usize;
 type Export = unsafe extern "C" fn(*mut c_void, u32, *mut f32, usize) -> i32;
 type Import = unsafe extern "C" fn(*mut c_void, u32, *const f32, usize) -> i32;
+
+#[test]
+fn optional_actual_combined_qwen_import_invalidates_speculative_nonce() {
+    if std::env::var("RBITNET_STACK_GUARD_TEST").as_deref() != Ok("1") {
+        return;
+    }
+    std::env::set_var("RBITNET_MAX_SEQ", "256");
+    std::env::set_var("RBITNET_CONTEXT_TIERS", "0");
+    std::env::set_var("RBITNET_PREFIX_KV", "0");
+    std::env::set_var("RBITNET_QWEN_SPECULATIVE", "0");
+    std::env::set_var("RBITNET_CUDA_QWEN_FULL", "1");
+    std::env::set_var("RBITNET_REQUIRE_QWEN_FULL", "1");
+    std::env::set_var("RBITNET_CUDA_QWEN_PREFILL", "1");
+    std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", "0");
+    let archive = Arc::new(
+        GgufArchive::mmap_path(Path::new(&std::env::var("RBITNET_QWEN_TEST_GGUF").unwrap()))
+            .unwrap(),
+    );
+    let tokenizer = std::path::PathBuf::from(std::env::var("RBITNET_QWEN_TEST_TOKENIZER").unwrap());
+    let lib = crate::ggml::load_cuda_quant_library().unwrap();
+    let size: Bytes = unsafe { *lib.get(b"rbitnet_cuda_qwen_portable_bytes\0").unwrap() };
+    let export: Export = unsafe { *lib.get(b"rbitnet_cuda_qwen_portable_export\0").unwrap() };
+    let import: Import = unsafe { *lib.get(b"rbitnet_cuda_qwen_portable_import\0").unwrap() };
+    let mut cases = 0;
+    for graph in ["0", "1"] {
+        std::env::set_var("RBITNET_CUDA_QWEN_FULL_GRAPH", graph);
+        for length in [33usize, 129] {
+            let mut reference =
+                Qwen35Runtime::load(Arc::clone(&archive), &tokenizer, BackendKind::Cuda).unwrap();
+            let mut actual =
+                Qwen35Runtime::load(Arc::clone(&archive), &tokenizer, BackendKind::Cuda).unwrap();
+            let ids = reference
+                .tokenizer
+                .encode_ids(
+                    &"Paris est une ville. Un robot apprend à lire dans une bibliothèque calme. "
+                        .repeat(40),
+                    true,
+                )
+                .unwrap();
+            assert!(ids.len() > length + 8);
+            actual.gpu_full.as_mut().unwrap().spec_configure().unwrap();
+            for (position, &token) in ids[..length].iter().enumerate() {
+                reference
+                    .forward_one(token, position, &archive, false)
+                    .unwrap();
+                actual
+                    .forward_one(token, position, &archive, false)
+                    .unwrap();
+            }
+            let context = actual.gpu_full.as_ref().unwrap().portable_context() as *mut c_void;
+            let bytes = unsafe { size(context, length as u32) };
+            assert!(bytes > 0 && bytes % 4 == 0);
+            let mut checkpoint = vec![0.0f32; bytes / 4];
+            assert_eq!(
+                unsafe { export(context, length as u32, checkpoint.as_mut_ptr(), bytes) },
+                0
+            );
+            let old = actual.gpu_full.as_mut().unwrap().spec_save().unwrap();
+            let value = checkpoint[0];
+            checkpoint[0] = f32::NAN;
+            assert_ne!(
+                unsafe { import(context, length as u32, checkpoint.as_ptr(), bytes) },
+                0
+            );
+            checkpoint[0] = value;
+            actual
+                .gpu_full
+                .as_mut()
+                .unwrap()
+                .spec_finish(old, true)
+                .unwrap();
+            let stale = actual.gpu_full.as_mut().unwrap().spec_save().unwrap();
+            assert_eq!(
+                unsafe { import(context, length as u32, checkpoint.as_ptr(), bytes) },
+                0
+            );
+            assert!(actual
+                .gpu_full
+                .as_mut()
+                .unwrap()
+                .spec_finish(stale, true)
+                .is_err());
+            assert!(actual
+                .gpu_full
+                .as_mut()
+                .unwrap()
+                .spec_finish(stale, false)
+                .is_err());
+            let fresh = actual.gpu_full.as_mut().unwrap().spec_save().unwrap();
+            assert_ne!(fresh, stale);
+            actual
+                .gpu_full
+                .as_mut()
+                .unwrap()
+                .spec_finish(fresh, true)
+                .unwrap();
+            for (offset, &token) in ids[length..length + 8].iter().enumerate() {
+                let expected = reference
+                    .forward_one(token, length + offset, &archive, true)
+                    .unwrap();
+                let observed = actual
+                    .forward_one(token, length + offset, &archive, true)
+                    .unwrap();
+                assert_eq!(observed.len(), expected.len());
+                assert!(
+                    observed
+                        .iter()
+                        .zip(expected)
+                        .all(|(a, b)| a.is_finite() && a.to_bits() == b.to_bits()),
+                    "import/nonce guard changed graph={graph} length={length} position={offset}"
+                );
+            }
+            cases += 1;
+        }
+    }
+    eprintln!("STACK_QWEN_IMPORT_GUARDS_DONE cases={cases} stale_nonce_refused=true invalid_import_preserved=true continuation_exact=true");
+}
 fn digest_file(path: &Path) -> [u8; 32] {
     let mut input = std::fs::File::open(path).unwrap();
     let mut hash = Sha256::new();

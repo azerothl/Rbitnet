@@ -22,6 +22,71 @@ pub(crate) struct BatchOptions {
     pub pages: Option<u32>,
     pub ordering: u32,
 }
+
+#[cfg(test)]
+mod integration_options_tests {
+    use super::*;
+
+    #[test]
+    fn combined_options_refuse_encoded_kv_and_context_tiers_before_native_start() {
+        let keys = [
+            "RBITNET_CUDA_CONTINUOUS",
+            "RBITNET_CUDA_KV_FORMAT",
+            "RBITNET_CONTEXT_TIERS",
+            "RBITNET_CUDA_PREFILL",
+            "RBITNET_CUDA_PREFILL_TOKENS",
+            "RBITNET_CUDA_KV_PAGE_LIMIT",
+            "RBITNET_CUDA_CONTINUOUS_SLOTS",
+            "RBITNET_CUDA_CONTINUOUS_QUEUE",
+            "RBITNET_CUDA_CONTINUOUS_TOKEN_BUDGET",
+            "RBITNET_CUDA_CONTINUOUS_ORDERING",
+            "RBITNET_PREFIX_KV",
+            "RBITNET_SPECULATIVE",
+            "RBITNET_SPECULATIVE_PLD",
+            "RBITNET_CUDA_SPLIT_KV",
+            "RBITNET_CUDA_PREFILL_TF32X3",
+            "RBITNET_CONTINUOUS_BATCHING",
+            "RBITNET_FUSED_MULTI_SEQ",
+            "RBITNET_MTP_K",
+        ];
+        struct Environment(Vec<(&'static str, Option<std::ffi::OsString>)>);
+        impl Drop for Environment {
+            fn drop(&mut self) {
+                for (key, value) in &self.0 {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
+                }
+            }
+        }
+        let _restore = Environment(
+            keys.iter()
+                .map(|&key| (key, std::env::var_os(key)))
+                .collect(),
+        );
+        for key in keys {
+            std::env::remove_var(key);
+        }
+        std::env::set_var("RBITNET_CUDA_CONTINUOUS", "1");
+        std::env::set_var("RBITNET_CUDA_PREFILL", "1");
+        let backend = crate::backend::BackendKind::Cuda;
+        assert!(BatchOptions::configured(backend).unwrap().is_some());
+        for format in ["f16", "q8"] {
+            std::env::set_var("RBITNET_CUDA_KV_FORMAT", format);
+            let error = BatchOptions::configured(backend).unwrap_err().to_string();
+            assert!(error.contains("requires F32 native KV"), "{error}");
+        }
+        std::env::set_var("RBITNET_CUDA_KV_FORMAT", "f32");
+        for tiers in ["1", "true"] {
+            std::env::set_var("RBITNET_CONTEXT_TIERS", tiers);
+            let error = BatchOptions::configured(backend).unwrap_err().to_string();
+            assert!(error.contains("context tiers are not validated"), "{error}");
+        }
+        std::env::set_var("RBITNET_CONTEXT_TIERS", "0");
+        assert!(BatchOptions::configured(backend).unwrap().is_some());
+    }
+}
 impl BatchOptions {
     pub(crate) fn configured(backend: crate::backend::BackendKind) -> Result<Option<Self>> {
         let enabled = match std::env::var("RBITNET_CUDA_CONTINUOUS") {

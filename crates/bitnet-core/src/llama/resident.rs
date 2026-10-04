@@ -1112,3 +1112,7 @@ mod continuous_tests;
 #[cfg(test)]
 #[path = "resident/context_tests.rs"]
 mod context_tests;
+
+#[cfg(test)]
+#[path = "resident/integration_guard_tests.rs"]
+mod integration_guard_tests;
