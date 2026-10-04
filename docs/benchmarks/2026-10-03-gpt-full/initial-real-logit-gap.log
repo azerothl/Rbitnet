@@ -1,0 +1,20 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+GPT reference resident weights 10659 MiB; fixed expert layers 24/24
+
+thread 'native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset' (57680) panicked at crates\bitnet-core\src\native\graph.rs:1225:25:
+corpus=0 pos=255 graphs=0 split=0 token=3: 5.032668 vs 5.012827
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... FAILED
+
+failures:
+
+failures:
+    native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 105 filtered out; finished in 33.54s
+
+error: test failed, to rerun pass `-p bitnet-core --lib`

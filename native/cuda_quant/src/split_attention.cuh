@@ -40,13 +40,14 @@ __global__ void attention_partials(const float *k,const float *v,const float *q,
         out[i+2]=value;
     }
 }
-__global__ void attention_merge(const float *scratch,unsigned heads,unsigned dim,unsigned parts,float *y) {
+__global__ void attention_merge(const float *scratch,unsigned heads,unsigned dim,unsigned parts,float *y,const float *sinks=nullptr) {
     extern __shared__ float weights[];
     const float *row=scratch+(size_t(blockIdx.y)*heads+blockIdx.x)*parts*(dim+2);
     if(!threadIdx.x) {
         float maximum=-CUDART_INF_F;
         for(unsigned p=0;p<parts;p++)if(row[size_t(p)*(dim+2)+1]>0)maximum=fmaxf(maximum,row[size_t(p)*(dim+2)]);
-        float sum=0;
+        if(sinks)maximum=fmaxf(maximum,sinks[blockIdx.x]);
+        float sum=sinks?expf(sinks[blockIdx.x]-maximum):0;
         for(unsigned p=0;p<parts;p++) {
             const float *src=row+size_t(p)*(dim+2);
             weights[p]=src[1]>0?expf(src[0]-maximum):0;
@@ -64,9 +65,9 @@ __global__ void attention_merge(const float *scratch,unsigned heads,unsigned dim
 }
 void launch_split_attention(const float *k,const float *v,const float *q,const unsigned *position,
     unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,unsigned capacity,
-    unsigned count,float *scratch,float *out,cudaStream_t stream) {
+    unsigned count,float *scratch,float *out,cudaStream_t stream,const float *sinks=nullptr) {
     unsigned parts=(capacity+attention_tile-1)/attention_tile;
     attention_partials<<<dim3(heads,parts,count),128,0,stream>>>(k,v,q,position,kv_heads,heads,dim,window,scale,parts,scratch);
-    attention_merge<<<dim3(heads,count),128,parts*sizeof(float),stream>>>(scratch,heads,dim,parts,out);
+    attention_merge<<<dim3(heads,count),128,parts*sizeof(float),stream>>>(scratch,heads,dim,parts,out,sinks);
 }
 }

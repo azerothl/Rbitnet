@@ -15,4 +15,5 @@ pub use quant_dot::{
     matvec_embd_out_mmap, matvec_ff_mmap, matvec_payload_quant, QuantKernelBackend,
     QuantMatvecKernel,
 };
+pub(crate) use quant_simd::f32_accumulator_lanes;
 pub use types::{ggml_nbytes, ggml_row_size};

@@ -44,7 +44,7 @@ __global__ void resident_rope_kv(float *q,float *k,const float *v,float *cache_k
     }
 }
 __global__ void resident_attention(const float *k,const float *v,const float *q,const unsigned *position,
-    unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,float *y) {
+    unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,float *y,const float *sinks=nullptr) {
     extern __shared__ float scores[];
     __shared__ float reductions[4];
     const unsigned tid=threadIdx.x,lane=tid&31,warp=tid/32;
@@ -63,12 +63,14 @@ __global__ void resident_attention(const float *k,const float *v,const float *q,
     for(int shift=16;shift;shift/=2)maximum=fmaxf(maximum,__shfl_down_sync(0xffffffff,maximum,shift));
     if(lane==0)reductions[warp]=maximum;
     __syncthreads();maximum=fmaxf(fmaxf(reductions[0],reductions[1]),fmaxf(reductions[2],reductions[3]));
+    if(sinks)maximum=fmaxf(maximum,sinks[head]);
     __syncthreads();
     float sum=0;
     for(unsigned i=tid;i<seq-first;i+=128) {scores[i]=expf(scores[i]-maximum);sum+=scores[i];}
     for(int shift=16;shift;shift/=2)sum+=__shfl_down_sync(0xffffffff,sum,shift);
     if(lane==0)reductions[warp]=sum;
     __syncthreads();sum=reductions[0]+reductions[1]+reductions[2]+reductions[3];
+    if(sinks)sum+=expf(sinks[head]-maximum);
     for(unsigned i=tid;i<dim;i+=128) {
         float output=0;
         for(unsigned p=first;p<seq;p++)output=fmaf(scores[p-first]/sum,v[size_t(p)*kv_heads*dim+kh*dim+i],output);

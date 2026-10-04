@@ -1,0 +1,33 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 9.12s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+GPT-OSS full F64 oracle passed format 0, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 2, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 6, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 8, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 12, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 13, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 14, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 39, graphs/eager, ordinary/split attention
+test native::graph::gpu_full::tests::full_graph_matches_f64_biases_sinks_windows_rope_gqa_reset_and_output_modes ... ok
+test native::graph::gpu_full::tests::router_matches_total_cmp_ties_nan_signed_zero_and_selected_softmax ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 105 filtered out; finished in 4.37s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.15s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 2 tests
+test native::graph::tests::opt_in_gpt_full_real_layer_diagnosis ... ok
+GPT reference resident weights 10659 MiB; fixed expert layers 24/24
+GPT-OSS real teacher-forcing + six generations passed graphs=0, split=0
+GPT-OSS real teacher-forcing + six generations passed graphs=1, split=0
+GPT-OSS real teacher-forcing + six generations passed graphs=1, split=1
+GPT real worst KL=3.465e-12, worst absolute target NLL delta=6.442e-6
+test native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 105 filtered out; finished in 54.72s
