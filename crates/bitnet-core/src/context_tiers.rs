@@ -694,6 +694,7 @@ mod tests {
         let objects = || {
             std::fs::read_dir(&format)
                 .unwrap()
+                .filter(|entry| entry.as_ref().unwrap().file_type().unwrap().is_dir())
                 .flat_map(|namespace| std::fs::read_dir(namespace.unwrap().path()).unwrap())
                 .map(|entry| entry.unwrap().path())
                 .filter(|path| path.extension().and_then(|v| v.to_str()) == Some("state"))
