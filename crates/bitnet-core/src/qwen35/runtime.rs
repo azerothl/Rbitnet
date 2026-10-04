@@ -359,6 +359,7 @@ impl Qwen35Runtime {
         sampling: SamplingOptions,
         mut events: Option<&mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         if self.draft.is_some() {
             return self.generate_with_owned_draft(prompt, max_tokens, sampling, events);
         }

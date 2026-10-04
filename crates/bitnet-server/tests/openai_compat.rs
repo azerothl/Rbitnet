@@ -1167,7 +1167,7 @@ fn structured_output_schema_golden() {
 }
 
 #[tokio::test]
-async fn response_format_rejects_non_json_stub() {
+async fn response_format_refuses_unvalidated_grammar_before_generation() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[
         ("RBITNET_MODEL", None),
@@ -1198,10 +1198,71 @@ async fn response_format_rejects_non_json_stub() {
         )
         .await
         .expect("chat");
-    assert_eq!(res.status(), http::StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(res.status(), http::StatusCode::NOT_IMPLEMENTED);
     let bytes = res.into_body().collect().await.unwrap().to_bytes();
     let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(v["error"]["code"], "structured_output_validation_failed");
+    assert_eq!(v["error"]["code"], "structured_output_not_supported");
+}
+
+#[tokio::test]
+async fn unsupported_structured_requests_are_json_errors_even_for_sse_and_busy_admission() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[("RBITNET_MODEL", None), ("RBITNET_TOY", None), ("RBITNET_STUB", Some("1")), ("RBITNET_STRUCTURED_OUTPUT", None)]);
+    let engine = Arc::new(Engine::from_env().unwrap());
+    let app = create_app_with_config(Arc::clone(&engine), Arc::new(ServerConfig { max_concurrent: 0, ..ServerConfig::test_defaults() }));
+    let call = |body: serde_json::Value| Request::builder().method("POST").uri("/v1/chat/completions").header("content-type", "application/json").body(Body::from(body.to_string())).unwrap();
+    for kind in ["json_object", "json_schema"] {
+        for streaming in [false, true] {
+            for maximum in [0, 8] {
+                let response = app.clone().oneshot(call(serde_json::json!({"model":"any", "messages":[{"role":"user","content":"hello"}], "max_tokens":maximum, "stream":streaming, "response_format":{"type":kind}}))).await.unwrap();
+                assert_eq!(response.status(), http::StatusCode::NOT_IMPLEMENTED);
+                assert!(response.headers()["content-type"].to_str().unwrap().starts_with("application/json"));
+                let body: serde_json::Value = serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+                assert_eq!(body["error"]["code"], "structured_output_not_supported");
+            }
+        }
+    }
+    for fields in [serde_json::json!({"tools":[{"type":"function","function":{"name":"lookup"}}]}), serde_json::json!({"tool_choice":"required"}), serde_json::json!({"tool_choice":{"type":"function","function":{"name":"lookup"}}}), serde_json::json!({"functions":[{"name":"lookup"}]}), serde_json::json!({"function_call":{"name":"lookup"}})] {
+        for streaming in [false, true] {
+            let mut body = serde_json::json!({"model":"any", "messages":[{"role":"user","content":"hello"}], "max_tokens":8, "stream":streaming});
+            body.as_object_mut().unwrap().extend(fields.as_object().unwrap().clone());
+            let response = app.clone().oneshot(call(body)).await.unwrap();
+            assert_eq!(response.status(), http::StatusCode::NOT_IMPLEMENTED);
+            let body: serde_json::Value = serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+            assert_eq!(body["error"]["code"], "tool_generation_not_supported");
+        }
+    }
+    let response = app.oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap()).await.unwrap();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(std::str::from_utf8(&bytes).unwrap().lines().any(|line| line == "rbitnet_inference_calls_total 0"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    for fields in [serde_json::json!({"tools":[], "response_format":{"type":"text"}}), serde_json::json!({"tools":[{"type":"function","function":{"name":"lookup"}}], "tool_choice":"none"}), serde_json::json!({"tool_choice":"auto"})] {
+        let mut body = serde_json::json!({"model":"any", "messages":[{"role":"user","content":"hello"}], "max_tokens":8});
+        body.as_object_mut().unwrap().extend(fields.as_object().unwrap().clone());
+        assert!(app.clone().oneshot(call(body)).await.unwrap().status().is_success());
+    }
+}
+
+#[tokio::test]
+async fn structured_environment_refuses_all_six_routes_before_opening_sse() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[("RBITNET_MODEL", None), ("RBITNET_TOY", None), ("RBITNET_STUB", Some("1")), ("RBITNET_STRUCTURED_OUTPUT", None)]);
+    let engine = Arc::new(Engine::from_env().unwrap());
+    let app = create_app_with_config(Arc::clone(&engine), Arc::new(ServerConfig::test_defaults()));
+    for mode in ["json", "tool", "tool-call", "tool_call", " JSON ", " TOOL "] {
+        std::env::set_var("RBITNET_STRUCTURED_OUTPUT", mode);
+        assert!(matches!(engine.complete("hello", 8, 0.0), Err(bitnet_core::error::BitNetError::NotImplemented(_))));
+        for endpoint in ["/v1/chat/completions", "/v1/completions", "/v1/messages"] {
+            for streaming in [false, true] {
+                let body = serde_json::json!({"model":"any", "messages":[{"role":"user","content":"hello"}], "prompt":"hello", "max_tokens":8, "stream":streaming});
+                let response = app.clone().oneshot(Request::builder().method("POST").uri(endpoint).header("content-type", "application/json").body(Body::from(body.to_string())).unwrap()).await.unwrap();
+                assert_eq!(response.status(), http::StatusCode::NOT_IMPLEMENTED, "{mode} {endpoint} stream={streaming}");
+                assert!(response.headers()["content-type"].to_str().unwrap().starts_with("application/json"));
+                let body: serde_json::Value = serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+                assert_eq!(body["error"]["code"], "structured_output_not_supported");
+            }
+        }
+    }
 }
 
 #[tokio::test]

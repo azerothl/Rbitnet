@@ -93,6 +93,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         let mut slot_rt = self
             .runtime
             .lock()
@@ -127,6 +128,7 @@ impl crate::model::ModelExecutor for Qwen35MoeExecutor {
         sampling: SamplingOptions,
         callback: &mut (dyn FnMut(crate::stream::StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let mut runtime = self
             .runtime
             .lock()

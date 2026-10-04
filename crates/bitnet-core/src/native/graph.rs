@@ -1219,6 +1219,7 @@ impl Runtime {
         sampling: SamplingOptions,
         mut events: Option<&mut (dyn FnMut(StreamEvent) -> Result<()> + Send)>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         for kv in &mut self.kv {
             kv.k.clear();
             kv.v.clear();
@@ -1445,6 +1446,7 @@ impl ModelExecutor for NativeExecutor {
         limit: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         self.runtime
             .lock()
             .map_err(|_| BitNetError::Inference("runtime lock poisoned".into()))?
@@ -1457,6 +1459,7 @@ impl ModelExecutor for NativeExecutor {
         sampling: SamplingOptions,
         callback: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        sampling.validate_structured_output()?;
         let (text, phases) = self
             .runtime
             .lock()
