@@ -317,6 +317,7 @@ RBITNET_CUDA_API int rbitnet_cuda_llama_paged_stats(const void*,RbitnetPagedKvSt
 RBITNET_CUDA_API int rbitnet_cuda_llama_paged_trim(void*);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_configure_ordered_prefill(void*,unsigned);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_configure(void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_q8_tile(void*,unsigned);
 RBITNET_CUDA_API uint64_t rbitnet_cuda_qwen_spec_bytes(void*);
 RBITNET_CUDA_API size_t rbitnet_cuda_qwen_spec_state_elements(void*);
 RBITNET_CUDA_API int rbitnet_cuda_qwen_spec_state_read(void*,float*,size_t);

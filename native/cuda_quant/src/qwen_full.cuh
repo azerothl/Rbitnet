@@ -95,6 +95,7 @@ struct QwenSpeculativeWorkspace {
     std::vector<void*> allocations;
     size_t backup_elements=0;
     unsigned saved_length=0;
+    unsigned q8_tile=0;
     uint64_t nonce=0;
     bool valid=false,poisoned=false;
     cudaGraph_t graphs[3][limit+1]={};cudaGraphExec_t executable[3][limit+1]={};
@@ -202,21 +203,21 @@ struct ResidentQwenFull {
     }
     void enqueue_verify(unsigned count,unsigned mode) {
         bool previous=ordered_prefill;ordered_prefill=true;
-        enqueue_block(count,0);ordered_prefill=previous;
+        enqueue_block(count,0,spec->q8_tile);ordered_prefill=previous;
         if(!mode)return;
         resident_norm<<<count,256,0,stream>>>(block->x,norm,epsilon,embd,spec->h);
         QuantKind kind;resident_kind(head.type,kind);
-        launch_ordered_gemm(kind,static_cast<const uint8_t*>(head.weights),head.row_bytes,spec->h,head.cols,head.rows,count,spec->logits,stream);
+        launch_ordered_gemm(kind,static_cast<const uint8_t*>(head.weights),head.row_bytes,spec->h,head.cols,head.rows,count,spec->logits,stream,spec->q8_tile);
         if(mode==2) {
             unsigned blocks=(vocab+255)/256;
             resident_argmax<<<dim3(blocks,count),256,0,stream>>>(spec->logits,nullptr,vocab,spec->maxima,spec->ids);
             resident_argmax<<<dim3(1,count),256,0,stream>>>(spec->maxima,spec->ids,blocks,spec->maximum,spec->tokens);
         }
     }
-    void enqueue_block(unsigned count,unsigned mode) {
+    void enqueue_block(unsigned count,unsigned mode,unsigned ordered_q8_tile=0) {
         for(const auto &layer:layers) {
-            if(layer.kind==0)qwen_recurrent_block(static_cast<ResidentQwenRecurrent*>(layer.context),block,count,stream,tf32_prefill,ordered_prefill);
-            else qwen_attention_block(static_cast<ResidentQwenAttention*>(layer.context),block,position,count,stream,tf32_prefill,ordered_prefill);
+            if(layer.kind==0)qwen_recurrent_block(static_cast<ResidentQwenRecurrent*>(layer.context),block,count,stream,tf32_prefill,ordered_prefill,ordered_q8_tile);
+            else qwen_attention_block(static_cast<ResidentQwenAttention*>(layer.context),block,position,count,stream,tf32_prefill,ordered_prefill,ordered_q8_tile);
         }
         output(mode,block->x+size_t(count-1)*embd);
     }
@@ -425,6 +426,13 @@ int rbitnet_cuda_qwen_spec_configure(void *p,unsigned enabled) {
     auto *s=new(std::nothrow) QwenSpeculativeWorkspace;if(!s)return 2;
     if(!s->init(r->embd,r->vocab,r->layers)) {delete s;cudaGetLastError();return 2;}
     r->spec=s;return 0;
+}
+// Configure before prompt/state/graphs exist; never mutate a captured graph.
+int rbitnet_cuda_qwen_spec_q8_tile(void *p,unsigned tile) {
+    auto *r=static_cast<ResidentQwenFull*>(p);
+    if(!r || !r->spec || r->filled || (tile!=0 && tile!=4) || r->spec->valid || r->spec->poisoned)return 1;
+    for(auto &mode:r->spec->graphs)for(auto graph:mode)if(graph)return 2;
+    r->spec->q8_tile=tile;return 0;
 }
 uint64_t rbitnet_cuda_qwen_spec_bytes(void *p) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || !r->spec)return 0;

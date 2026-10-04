@@ -377,6 +377,16 @@ impl GpuFull {
     pub(crate) fn spec_configure(&mut self) -> Result<usize> {
         type Configure = unsafe extern "C" fn(*mut c_void, u32) -> i32;
         type Bytes = unsafe extern "C" fn(*mut c_void) -> u64;
+        let q8_tile = match std::env::var("RBITNET_QWEN_SPEC_Q8_TILE") {
+            Err(std::env::VarError::NotPresent) => 0,
+            Ok(value) if value == "0" => 0,
+            Ok(value) if value == "4" => 4,
+            _ => {
+                return Err(BitNetError::Inference(
+                    "RBITNET_QWEN_SPEC_Q8_TILE must be 0 or 4".into(),
+                ))
+            }
+        };
         let lib = crate::ggml::load_cuda_quant_library()
             .ok_or_else(|| BitNetError::Inference("speculative DLL unavailable".into()))?;
         unsafe {
@@ -391,6 +401,19 @@ impl GpuFull {
                 return Err(BitNetError::Inference(format!(
                     "Qwen spec configure failed: {status}"
                 )));
+            }
+            if q8_tile != 0 {
+                let tile = lib
+                    .get::<Configure>(b"rbitnet_cuda_qwen_spec_q8_tile\0")
+                    .map_err(|e| {
+                        BitNetError::Inference(format!("Qwen Q8 tile ABI unavailable: {e}"))
+                    })?;
+                let status = tile(self.context as *mut c_void, q8_tile);
+                if status != 0 {
+                    return Err(BitNetError::Inference(format!(
+                        "Qwen Q8 tile configure failed: {status}"
+                    )));
+                }
             }
             usize::try_from(bytes(self.context as *mut c_void))
                 .map_err(|_| BitNetError::Inference("speculative byte count overflow".into()))

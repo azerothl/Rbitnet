@@ -25,6 +25,7 @@ fn opt_in_ordered_gemm_matches_original_bits_all_formats_tails_and_f64() {
         *lib.get::<Check>(b"rbitnet_cuda_ordered_gemm_check\0")
             .expect("ordered diagnostic ABI required")
     };
+    let mut cases = 0;
     for ty in [0, 2, 6, 8, 12, 13, 14, 39] {
         let columns: Vec<usize> = if ty == 0 {
             vec![17, 255, 256, 513]
@@ -77,6 +78,8 @@ fn opt_in_ordered_gemm_matches_original_bits_all_formats_tails_and_f64() {
                     .collect();
                 let modes: Vec<u32> = if ty == 39 {
                     vec![0, 1, 2, 3]
+                } else if ty == 8 {
+                    vec![0, 3, 4]
                 } else {
                     vec![0, 3]
                 };
@@ -104,6 +107,7 @@ fn opt_in_ordered_gemm_matches_original_bits_all_formats_tails_and_f64() {
                         0
                     );
                     assert!(elapsed.is_finite() && elapsed >= 0.0);
+                    cases += 1;
                     for t in 0..tokens {
                         for r in 0..rows {
                             let i = t * rows + r;
@@ -129,4 +133,6 @@ fn opt_in_ordered_gemm_matches_original_bits_all_formats_tails_and_f64() {
             }
         }
     }
+    assert_eq!(cases, 300);
+    println!("ORDERED_GEMM_ORACLE_DONE cases={cases} q8_four_token_cases=20");
 }

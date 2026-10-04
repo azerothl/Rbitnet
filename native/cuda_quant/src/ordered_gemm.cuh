@@ -11,8 +11,48 @@ __global__ void ordered_warp_gemm(const uint8_t *w,size_t row_bytes,const float 
     float value=quant_row_dot<kind>(w+size_t(row)*row_bytes,x+size_t(token)*cols,cols);
     if(!(threadIdx.x&31))y[size_t(token)*rows+row]=value;
 }
+
+// Four independent original Q8 dot chains share the same decoded weight.
+// Keep the format-specific lane assignment, FMA order and shuffle fold.
+__global__ void q8_ordered_gemm_four_tokens(const uint8_t *w,size_t row_bytes,
+    const float *x,unsigned cols,unsigned rows,unsigned tokens,float *y) {
+    const unsigned row=blockIdx.x*8+threadIdx.x/32,first=blockIdx.y*4;
+    if(row>=rows)return; // Whole warps take the same branch.
+    const unsigned lane=threadIdx.x&31,group=lane/8,j=(lane%8)*4;
+    const uint8_t *weights=w+size_t(row)*row_bytes;
+    float sum[4]={0,0,0,0};
+    for(unsigned block=0;block<cols/32;block+=4) {
+        const unsigned qb=block+group;
+        if(qb>=cols/32)continue;
+        const uint8_t *b=weights+size_t(qb)*34;
+        const float d=fp16_bits_to_f32(*reinterpret_cast<const uint16_t*>(b));
+        const uint32_t packed=uint32_t(*reinterpret_cast<const uint16_t*>(b+2+j))
+            |(uint32_t(*reinterpret_cast<const uint16_t*>(b+4+j))<<16);
+        float4 input[4];
+        #pragma unroll
+        for(unsigned t=0;t<4;t++)if(first+t<tokens)
+            input[t]=*reinterpret_cast<const float4*>(x+size_t(first+t)*cols+qb*32+j);
+        #pragma unroll
+        for(unsigned k=0;k<4;k++) {
+            const float value=d*float(int8_t(packed>>(k*8)));
+            #pragma unroll
+            for(unsigned t=0;t<4;t++)if(first+t<tokens) {
+                const float xi=k==0?input[t].x:k==1?input[t].y:k==2?input[t].z:input[t].w;
+                sum[t]=fmaf(value,xi,sum[t]);
+            }
+        }
+    }
+    #pragma unroll
+    for(unsigned t=0;t<4;t++) {
+        for(int shift=16;shift>0;shift/=2)sum[t]+=__shfl_down_sync(0xffffffff,sum[t],shift);
+        if(!lane && first+t<tokens)y[size_t(first+t)*rows+row]=sum[t];
+    }
+}
 void launch_ordered_gemm(QuantKind kind,const uint8_t *w,size_t row_bytes,const float *x,
     unsigned cols,unsigned rows,unsigned tokens,float *y,cudaStream_t stream,unsigned tile=0) {
+    if(kind==QuantKind::Q8_0 && tile==4) {
+        q8_ordered_gemm_four_tokens<<<dim3((rows+7)/8,(tokens+3)/4),256,0,stream>>>(w,row_bytes,x,cols,rows,tokens,y);return;
+    }
     if(kind==QuantKind::MXFP4 && tile==1) {
         dim3 grid((rows+3)/4,(tokens+3)/4);
         mxfp4_ordered_gemm<4,4><<<grid,512,0,stream>>>(w,row_bytes,x,cols,rows,tokens,y);return;
@@ -43,14 +83,16 @@ struct OrderedGemmDiagnostic {
 
 extern "C" {
 // mode0=ordered warps; 1=MXFP4 4rows*4tokens; 2=MXFP4 2rows*8tokens;
-// mode3=the original token GEMV launches. Always exports that baseline too.
+// mode3=original token GEMV launches; mode4=Q8 four-token weight reuse.
+// Always exports the original GEMV baseline too.
 int rbitnet_cuda_ordered_gemm_check(unsigned type,const void *weights,size_t row_bytes,
     const float *input,unsigned cols,unsigned rows,unsigned tokens,unsigned mode,
     unsigned repeats,float *out,float *reference,float *elapsed_ms) {
     QuantKind kind;
     if(!weights || !input || !out || !reference || !elapsed_ms || !resident_kind(type,kind)
         || !cols || cols>32768 || !rows || rows>65536 || !tokens || tokens>128
-        || size_t(rows)*tokens>1048576 || mode>3 || ((mode==1 || mode==2) && type!=39)
+        || size_t(rows)*tokens>1048576 || mode>4 || ((mode==1 || mode==2) && type!=39)
+        || (mode==4 && type!=8)
         || !repeats || repeats>1000)return 1;
     unsigned block=type==0?1:(type==12 || type==13 || type==14)?256:32;
     unsigned bytes=type==0?4:type==2?18:type==6?22:type==8?34:type==12?144:type==13?176:type==14?210:17;

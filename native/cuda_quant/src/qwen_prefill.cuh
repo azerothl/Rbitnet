@@ -43,9 +43,9 @@ void qwen_block_matrix(const RbitnetLlamaMatrix &m,const float *x,float *y,unsig
     QuantKind kind;resident_kind(m.type,kind);
     launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,stream,use_tf32_prefill(m.cols,m.rows,count,tensor));
 }
-void qwen_recurrent_block(ResidentQwenRecurrent *r,QwenPrefill *b,unsigned count,cudaStream_t stream,bool tensor,bool ordered=false) {
+void qwen_recurrent_block(ResidentQwenRecurrent *r,QwenPrefill *b,unsigned count,cudaStream_t stream,bool tensor,bool ordered=false,unsigned q8_tile=0) {
     const auto &c=r->cfg;unsigned inner=(2*c.num_k+c.num_v)*c.head,values=c.num_v*c.head;
-    auto matrix=[&](unsigned i,const float *x,float *y) {if(ordered){QuantKind kind;resident_kind(r->matrices[i].type,kind);const auto &m=r->matrices[i];launch_ordered_gemm(kind,static_cast<const uint8_t*>(m.weights),m.row_bytes,x,m.cols,m.rows,count,y,stream);}else qwen_block_matrix(r->matrices[i],x,y,count,stream,tensor);};
+    auto matrix=[&](unsigned i,const float *x,float *y) {if(ordered){QuantKind kind;resident_kind(r->matrices[i].type,kind);const auto &m=r->matrices[i];launch_ordered_gemm(kind,static_cast<const uint8_t*>(m.weights),m.row_bytes,x,m.cols,m.rows,count,y,stream,q8_tile);}else qwen_block_matrix(r->matrices[i],x,y,count,stream,tensor);};
     resident_norm<<<count,256,0,stream>>>(b->x,r->attn_norm,c.epsilon,c.embd,b->h);
     matrix(0,b->h,b->mixed);matrix(1,b->h,b->z);matrix(2,b->h,b->beta);matrix(3,b->h,b->alpha);
     qwen_conv_block<<<(inner+255)/256,256,0,stream>>>(b->mixed,r->history,r->conv,c.conv,inner,b->activated,count);
@@ -58,9 +58,9 @@ void qwen_recurrent_block(ResidentQwenRecurrent *r,QwenPrefill *b,unsigned count
     resident_silu<<<(count*c.ffn+255)/256,256,0,stream>>>(b->gate,b->up,count*c.ffn);
     matrix(7,b->gate,b->projection);resident_add<<<(count*c.embd+255)/256,256,0,stream>>>(b->x,b->projection,count*c.embd);
 }
-void qwen_attention_block(ResidentQwenAttention *r,QwenPrefill *b,unsigned *position,unsigned count,cudaStream_t stream,bool tensor,bool ordered=false) {
+void qwen_attention_block(ResidentQwenAttention *r,QwenPrefill *b,unsigned *position,unsigned count,cudaStream_t stream,bool tensor,bool ordered=false,unsigned q8_tile=0) {
     const auto &c=r->cfg;unsigned qs=c.heads*c.head_dim,ks=c.kv_heads*c.head_dim;
-    auto matrix=[&](unsigned i,const float *x,float *y) {if(ordered){QuantKind kind;resident_kind(r->matrices[i].type,kind);const auto &m=r->matrices[i];launch_ordered_gemm(kind,static_cast<const uint8_t*>(m.weights),m.row_bytes,x,m.cols,m.rows,count,y,stream);}else qwen_block_matrix(r->matrices[i],x,y,count,stream,tensor);};
+    auto matrix=[&](unsigned i,const float *x,float *y) {if(ordered){QuantKind kind;resident_kind(r->matrices[i].type,kind);const auto &m=r->matrices[i];launch_ordered_gemm(kind,static_cast<const uint8_t*>(m.weights),m.row_bytes,x,m.cols,m.rows,count,y,stream,q8_tile);}else qwen_block_matrix(r->matrices[i],x,y,count,stream,tensor);};
     resident_norm<<<count,256,0,stream>>>(b->x,r->attn_norm,c.epsilon,c.embd,b->h);
     matrix(0,b->h,b->q_full);matrix(1,b->h,b->k_raw);matrix(2,b->h,b->v);
     qwen_head_norm<<<dim3(c.heads,count),128,0,stream>>>(b->q_full,r->q_norm,c.head_dim,c.head_dim*(1+c.gated),c.epsilon,b->q,c.heads);
