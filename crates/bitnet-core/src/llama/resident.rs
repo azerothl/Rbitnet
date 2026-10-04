@@ -100,6 +100,28 @@ pub(crate) fn configured_page_limit() -> Result<Option<u32>> {
         )),
     }
 }
+type CreateKv = unsafe extern "C" fn(
+    *const Config,
+    *const Layer,
+    *const Matrix,
+    *const f32,
+    *const f32,
+    u32,
+    *const c_void,
+    u32,
+    u32,
+) -> *mut c_void;
+pub(crate) fn configured_kv_format() -> Result<u32> {
+    match std::env::var("RBITNET_CUDA_KV_FORMAT") {
+        Err(std::env::VarError::NotPresent) => Ok(0),
+        Ok(s) if s == "f32" => Ok(0),
+        Ok(s) if s == "f16" => Ok(1),
+        Ok(s) if s == "q8" => Ok(2),
+        _ => Err(BitNetError::Inference(
+            "RBITNET_CUDA_KV_FORMAT must be f32, f16 or q8".into(),
+        )),
+    }
+}
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32, *mut u32) -> i32;
 type Prefill =
     unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, u32, *mut f32, *mut u32) -> i32;
@@ -170,6 +192,8 @@ pub(super) struct Resident {
     prefixes: crate::native::prefix::PrefixStore<SavedPrefix>,
     kv_bytes_per_token: usize,
     pages: Option<Pages>,
+    kv_format: u32,
+    context_tier: Option<crate::context_native::Handle>,
 }
 impl Resident {
     pub fn new(model: &LlamaModel) -> Option<Self> {
@@ -186,12 +210,25 @@ impl Resident {
         if std::env::var("RBITNET_CUDA_RESIDENT").as_deref() == Ok("0") {
             return None;
         }
+        let kv_format = configured_kv_format().ok()?;
+        if page_limit.is_some_and(|n| n == 0 || n > 65536) {
+            return None;
+        }
+        if peer.is_some_and(|p| p.kv_format != kv_format) {
+            return None;
+        }
         let c = &model.cfg;
+        let vector_bytes = match kv_format {
+            0 => c.head_dim.checked_mul(4)?,
+            1 => c.head_dim.checked_mul(2)?,
+            2 => c.head_dim.checked_add(4)?,
+            _ => return None,
+        };
         let kv_bytes_per_token = c
             .n_layer
             .checked_mul(c.n_kv)?
-            .checked_mul(c.head_dim)?
-            .checked_mul(8)?;
+            .checked_mul(vector_bytes)?
+            .checked_mul(2)?;
         let mut weights = Vec::new();
         let mut matrix = |m: &MatrixWeights, cols: usize, rows: usize| -> Option<Matrix> {
             let MatrixWeights::CudaQuant { device, .. } = m else {
@@ -311,7 +348,27 @@ impl Resident {
         } else {
             None
         };
-        let context = if let Some(limit) = page_limit {
+        let variants = u32::from(std::env::var("RBITNET_CUDA_SPLIT_KV").as_deref() == Ok("1"))
+            | (u32::from(std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1")) << 1);
+        let context = if kv_format != 0 {
+            let create_kv = unsafe {
+                *lib.get::<CreateKv>(b"rbitnet_cuda_llama_create_kv\0")
+                    .ok()?
+            };
+            unsafe {
+                create_kv(
+                    &cfg,
+                    layers.as_ptr(),
+                    &output,
+                    model.output_norm.as_ptr(),
+                    frequency.as_ptr(),
+                    page_limit.unwrap_or(0),
+                    peer.map_or(std::ptr::null(), |p| p.context as *const c_void),
+                    variants,
+                    kv_format,
+                )
+            }
+        } else if let Some(limit) = page_limit {
             let create_paged = unsafe {
                 *lib.get::<CreatePaged>(b"rbitnet_cuda_llama_create_paged\0")
                     .ok()?
@@ -393,6 +450,8 @@ impl Resident {
             prefixes: crate::native::prefix::PrefixStore::from_env(),
             kv_bytes_per_token,
             pages,
+            kv_format,
+            context_tier: None,
         })
     }
     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
@@ -656,9 +715,33 @@ impl Resident {
         Ok((logits, next))
     }
 
+    pub(super) fn configure_context_tiers(
+        &mut self,
+        archive: &crate::gguf::GgufArchive,
+        tokenizer: &std::path::Path,
+        configuration: &str,
+    ) -> Result<()> {
+        self.context_tier =
+            crate::context_native::Handle::new("llama", archive, tokenizer, configuration)
+                .map_err(|error| BitNetError::Inference(format!("context tiers: {error}")))?;
+        Ok(())
+    }
+    fn restore_context(&mut self, tokens: &[u32]) -> Result<usize> {
+        let Some(tier) = &mut self.context_tier else {
+            return Ok(0);
+        };
+        let reusable = &tokens[..tokens.len().saturating_sub(1)];
+        match unsafe { tier.restore(self.context as *mut c_void, reusable) } {
+            Ok(length) => Ok(length),
+            Err(error) => {
+                tracing::warn!(%error, "context restore refused; recomputing prompt");
+                Ok(0)
+            }
+        }
+    }
     pub fn restore_prefix(&mut self, tokens: &[u32]) -> Result<usize> {
         if !crate::native::prefix::enabled() {
-            return Ok(0);
+            return self.restore_context(tokens);
         }
         let Some(api) = &self.snapshots else {
             return Ok(0);
@@ -685,10 +768,18 @@ impl Resident {
             return Ok(matched);
         }
         crate::perf::record_prefix_cache_miss();
-        Ok(0)
+        self.restore_context(tokens)
     }
 
     pub fn save_prefix(&mut self, tokens: &[u32]) {
+        if let Some(tier) = &mut self.context_tier {
+            let reusable = &tokens[..tokens.len().saturating_sub(1)];
+            if reusable.len() >= 8 {
+                if let Err(error) = unsafe { tier.capture(self.context as *mut c_void, reusable) } {
+                    tracing::warn!(%error, "context capture refused; normal decoding remains available");
+                }
+            }
+        }
         if !crate::native::prefix::enabled()
             || tokens.len() < crate::native::prefix::minimum_tokens()
         {
@@ -992,3 +1083,36 @@ mod tests {
 
 #[cfg(test)]
 mod paged_tests;
+
+#[cfg(test)]
+mod quantized_tests;
+
+#[cfg(test)]
+#[path = "resident/canonical_tests.rs"]
+mod canonical_tests;
+
+#[cfg(test)]
+#[path = "resident/encoded_guard_tests.rs"]
+mod encoded_guard_tests;
+
+#[path = "resident/continuous.rs"]
+mod continuous;
+#[path = "resident/controller.rs"]
+mod controller;
+#[cfg(test)]
+#[path = "resident/quantized_long_tests.rs"]
+mod quantized_long_tests;
+#[path = "resident/transient_batch.rs"]
+mod transient_batch;
+pub(crate) use controller::{BatchController, BatchOptions};
+#[cfg(test)]
+#[path = "resident/continuous_tests.rs"]
+mod continuous_tests;
+
+#[cfg(test)]
+#[path = "resident/context_tests.rs"]
+mod context_tests;
+
+#[cfg(test)]
+#[path = "resident/integration_guard_tests.rs"]
+mod integration_guard_tests;

@@ -154,7 +154,7 @@ Recent inference-engine features include:
 - `RBITNET_QUANT_KERNEL=auto` for the shared CPU-parallel quantized matvec path.
 - `RBITNET_BACKEND=hybrid` plus `RBITNET_HYBRID_POLICY={layers,hotcold,auto}` for CPU/GPU offload planning.
 - `RBITNET_LLAMA_PAGED_KV=1` and `RBITNET_KV_QUANT={off,q8,q4}` for paged Llama KV (Q8/Q4 = compact CPU pages, no F32 twin; see `scripts/bench_kv_q8.sh`).
-- `RBITNET_PREFILL_CHUNK_TOKENS`, `RBITNET_CONTINUOUS_BATCHING` + `RBITNET_ITERATION_TOKEN_BUDGET` (Sarathi stall-free), speculative draft hooks (`RBITNET_DRAFT_PATH`), and JSON/tool structured-output masking (`RBITNET_STRUCTURED_OUTPUT`).
+- `RBITNET_PREFILL_CHUNK_TOKENS`, `RBITNET_CONTINUOUS_BATCHING` + `RBITNET_ITERATION_TOKEN_BUDGET` (Sarathi stall-free), speculative draft hooks (`RBITNET_DRAFT_PATH`), and experimental JSON/tool sampler hooks (`RBITNET_STRUCTURED_OUTPUT`); structured generation returns HTTP 501 until a tokenizer-aware grammar is validated.
 - Runtime admin reload through `POST /v1/admin/reload`, useful for switching models/configs while the server stays up.
 
 Concrete public GGUF repos verified through the Hugging Face model API as `gguf.architecture=llama`:

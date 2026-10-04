@@ -1,0 +1,29 @@
+{"mode": "lru", "cycle": 0, "prompt": 0, "prefill_ms": 8510.0, "decode_ms": 5483.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 0, "prompt": 1, "prefill_ms": 5582.0, "decode_ms": 5260.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 0, "prompt": 2, "prefill_ms": 1081.0, "decode_ms": 40.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 1, "prompt": 0, "prefill_ms": 5144.0, "decode_ms": 4666.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 1, "prompt": 1, "prefill_ms": 5549.0, "decode_ms": 5331.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 1, "prompt": 2, "prefill_ms": 1107.0, "decode_ms": 40.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 2, "prompt": 0, "prefill_ms": 4935.0, "decode_ms": 4840.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 2, "prompt": 1, "prefill_ms": 5568.0, "decode_ms": 5204.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lru", "cycle": 2, "prompt": 2, "prefill_ms": 1033.0, "decode_ms": 37.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 0, "prompt": 0, "prefill_ms": 9013.0, "decode_ms": 10266.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 0, "prompt": 1, "prefill_ms": 5416.0, "decode_ms": 10624.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 0, "prompt": 2, "prefill_ms": 943.0, "decode_ms": 59.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 1, "prompt": 0, "prefill_ms": 4773.0, "decode_ms": 9875.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 1, "prompt": 1, "prefill_ms": 5231.0, "decode_ms": 10397.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 1, "prompt": 2, "prefill_ms": 916.0, "decode_ms": 55.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 2, "prompt": 0, "prefill_ms": 4691.0, "decode_ms": 9917.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 2, "prompt": 1, "prefill_ms": 5796.0, "decode_ms": 10130.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "lfu", "cycle": 2, "prompt": 2, "prefill_ms": 923.0, "decode_ms": 60.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "least-stale", "cycle": 0, "prompt": 0, "prefill_ms": 9355.0, "decode_ms": 7388.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "least-stale", "cycle": 0, "prompt": 1, "prefill_ms": 7395.0, "decode_ms": 7570.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "least-stale", "cycle": 0, "prompt": 2, "prefill_ms": 1003.0, "decode_ms": 70.0, "hits": 0.0, "blocks": 0.0, "matches": true}
+{"mode": "least-stale", "cycle": 1, "prompt": 0, "prefill_ms": 6714.0, "decode_ms": 7016.0, "hits": 0.0, "blocks": 0.0, "matches": false}
+Traceback (most recent call last):
+  File "E:\devs\Rbitnet\target\performance-cache\policy-study-harness\benchmark.py", line 234, in <module>
+    main()
+  File "E:\devs\Rbitnet\target\performance-cache\policy-study-harness\benchmark.py", line 186, in main
+    assert text and '\ufffd' not in text and row['matches_baseline'], (mode, cycle, index, text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('least-stale', 1, 0, "Le robot, modèle X-7, s'approcha silencieusement de la bibliothèque. Ses capteurs détectèrent immédiatement la chaleur émanant des livres et la présence de vie humaine. Il pénétra dans le hall, ses yeux lumineux balayant les rayonnages.\n\nIl s'arrêta devant une encyclopédie ancienne, fasciné par la texture du papier. Le robot s'approcha, mais un gardien lui fit signe de reculer. X-7 ajusta son capteur de distance et observa les visiteurs lire dans")

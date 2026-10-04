@@ -1,0 +1,3782 @@
+[
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "lru",
+    "router_events": 84096,
+    "trace_sha256": "8d269cefa6202189fc52e566fd5f2437272cd09eae133362c781e7f12b84e5ad",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 64827,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 239424,
+          "upload_bytes": 3164993740800
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 96960,
+          "upload_bytes": 1281733632000
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "ce5c44b4a703cd2d85b47293b390418bb8fbccd144d75c6f6f1b81637a519274"
+  },
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "lfu",
+    "router_events": 84096,
+    "trace_sha256": "8d269cefa6202189fc52e566fd5f2437272cd09eae133362c781e7f12b84e5ad",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 64827,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 239424,
+          "upload_bytes": 3164993740800
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 96960,
+          "upload_bytes": 1281733632000
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "92f5ac91791e11e9bd311b19e0c0e4fef5d6233d05690318098909f38b6f71f7"
+  },
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "least-stale",
+    "router_events": 84096,
+    "trace_sha256": "8d269cefa6202189fc52e566fd5f2437272cd09eae133362c781e7f12b84e5ad",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 336384,
+      "evictions": 336344,
+      "upload_bytes": 4446727372800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 64827,
+      "peak_bytes": 528768000,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 239424,
+          "upload_bytes": 3164993740800
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 96960,
+          "upload_bytes": 1281733632000
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "5cc9eefb71a450bbcff20f8fd1eedb3eb5384a67761da189f8a4ed311056a14b"
+  },
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "lru",
+    "router_events": 84096,
+    "trace_sha256": "7b61ea22d0f90f43fb628a790eb8378ad67596cf04b51e63327d5ed3f4bac94a",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 333045,
+      "misses": 3339,
+      "evictions": 2690,
+      "upload_bytes": 44138908800
+    },
+    "replay": {
+      "hits": 333045,
+      "misses": 3339,
+      "evictions": 2690,
+      "upload_bytes": 44138908800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 61,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 237203,
+          "misses": 2221,
+          "upload_bytes": 29359843200
+        },
+        "decode": {
+          "hits": 95842,
+          "misses": 1118,
+          "upload_bytes": 14779065600
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "9d39889324ba379096f4d98c79aca7dfce8a86165ddf6692a81e693ccb26b0aa"
+  },
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "lfu",
+    "router_events": 84096,
+    "trace_sha256": "7b61ea22d0f90f43fb628a790eb8378ad67596cf04b51e63327d5ed3f4bac94a",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 328822,
+      "misses": 7562,
+      "evictions": 6913,
+      "upload_bytes": 99963590400
+    },
+    "replay": {
+      "hits": 328822,
+      "misses": 7562,
+      "evictions": 6913,
+      "upload_bytes": 99963590400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 670,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 237805,
+          "misses": 1619,
+          "upload_bytes": 21401884800
+        },
+        "decode": {
+          "hits": 91017,
+          "misses": 5943,
+          "upload_bytes": 78561705600
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "fdc6c051e56db3e62f1e6cae43a07fef55b5198b5b09487c99381a56e6df278e"
+  },
+  {
+    "model": "gpt-oss-20b",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "least-stale",
+    "router_events": 84096,
+    "trace_sha256": "7b61ea22d0f90f43fb628a790eb8378ad67596cf04b51e63327d5ed3f4bac94a",
+    "canonical_trace_sha256": "11a5df466ffcfcd10ddadf2e4e5c13106227ac93e7760d65f97de072f5813fa3",
+    "measured_counters": {
+      "hits": 306320,
+      "misses": 30064,
+      "evictions": 29415,
+      "upload_bytes": 397422028800
+    },
+    "replay": {
+      "hits": 306320,
+      "misses": 30064,
+      "evictions": 29415,
+      "upload_bytes": 397422028800,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 0,
+      "peak_bytes": 8579260800,
+      "phases": {
+        "prefill": {
+          "hits": 217803,
+          "misses": 21621,
+          "upload_bytes": 285812323200
+        },
+        "decode": {
+          "hits": 88517,
+          "misses": 8443,
+          "upload_bytes": 111609705600
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 336384,
+        "evictions": 336344,
+        "upload_bytes": 4446727372800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 64827,
+        "peak_bytes": 528768000,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 239424,
+            "upload_bytes": 3164993740800
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 96960,
+            "upload_bytes": 1281733632000
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 193447,
+        "misses": 142937,
+        "evictions": 142775,
+        "upload_bytes": 1889512790400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14866,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 134303,
+            "misses": 105121,
+            "upload_bytes": 1389615523200
+          },
+          "decode": {
+            "hits": 59144,
+            "misses": 37816,
+            "upload_bytes": 499897267200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 124581,
+        "misses": 211803,
+        "evictions": 211641,
+        "upload_bytes": 2799866217600,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 39738,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 93632,
+            "misses": 145792,
+            "upload_bytes": 1927253606400
+          },
+          "decode": {
+            "hits": 30949,
+            "misses": 66011,
+            "upload_bytes": 872612611200
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 167765,
+        "misses": 168619,
+        "evictions": 168457,
+        "upload_bytes": 2229008284800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2141510400,
+        "phases": {
+          "prefill": {
+            "hits": 117512,
+            "misses": 121912,
+            "upload_bytes": 1611579110400
+          },
+          "decode": {
+            "hits": 50253,
+            "misses": 46707,
+            "upload_bytes": 617429174400
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 285234,
+        "misses": 51150,
+        "evictions": 50826,
+        "upload_bytes": 676162080000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 2715,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 204407,
+            "misses": 35017,
+            "upload_bytes": 462896726400
+          },
+          "decode": {
+            "hits": 80827,
+            "misses": 16133,
+            "upload_bytes": 213265353600
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 227334,
+        "misses": 109050,
+        "evictions": 108726,
+        "upload_bytes": 1441553760000,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 9939,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 177580,
+            "misses": 61844,
+            "upload_bytes": 817528204800
+          },
+          "decode": {
+            "hits": 49754,
+            "misses": 47206,
+            "upload_bytes": 624025555200
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 214297,
+        "misses": 122087,
+        "evictions": 121763,
+        "upload_bytes": 1613892470400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4283020800,
+        "phases": {
+          "prefill": {
+            "hits": 150579,
+            "misses": 88845,
+            "upload_bytes": 1174459824000
+          },
+          "decode": {
+            "hits": 63718,
+            "misses": 33242,
+            "upload_bytes": 439432646400
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 333045,
+        "misses": 3339,
+        "evictions": 2690,
+        "upload_bytes": 44138908800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 61,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237203,
+            "misses": 2221,
+            "upload_bytes": 29359843200
+          },
+          "decode": {
+            "hits": 95842,
+            "misses": 1118,
+            "upload_bytes": 14779065600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 328822,
+        "misses": 7562,
+        "evictions": 6913,
+        "upload_bytes": 99963590400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 670,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 237805,
+            "misses": 1619,
+            "upload_bytes": 21401884800
+          },
+          "decode": {
+            "hits": 91017,
+            "misses": 5943,
+            "upload_bytes": 78561705600
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 306320,
+        "misses": 30064,
+        "evictions": 29415,
+        "upload_bytes": 397422028800,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8579260800,
+        "phases": {
+          "prefill": {
+            "hits": 217803,
+            "misses": 21621,
+            "upload_bytes": 285812323200
+          },
+          "decode": {
+            "hits": 88517,
+            "misses": 8443,
+            "upload_bytes": 111609705600
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "6d8c9ff17f1204ce328d70d08f82306f4b12d3a4418f321ca1fb864a9f3cfd2b"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "lru",
+    "router_events": 111550,
+    "trace_sha256": "2fbe0010d8da27ceb4f30e9cf9016f04e1dad5fce071377641c09904be2d6ec5",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 97712,
+      "peak_bytes": 536739840,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 294216,
+          "upload_bytes": 1675939479552
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 151984,
+          "upload_bytes": 865744846848
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "3af8632927e6237b6e36f985b61164b8d222cdee2847b10f8ac7014876b1abc7"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "lfu",
+    "router_events": 111550,
+    "trace_sha256": "2fbe0010d8da27ceb4f30e9cf9016f04e1dad5fce071377641c09904be2d6ec5",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 97712,
+      "peak_bytes": 536739840,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 294216,
+          "upload_bytes": 1675939479552
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 151984,
+          "upload_bytes": 865744846848
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "1049409da03f0049aac9b56b8ee140031eee6b75cc7e7de27197cd0bbb9ff9af"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 512,
+    "actual_budget_bytes": 536870912,
+    "policy": "least-stale",
+    "router_events": 111550,
+    "trace_sha256": "2fbe0010d8da27ceb4f30e9cf9016f04e1dad5fce071377641c09904be2d6ec5",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400
+    },
+    "replay": {
+      "hits": 0,
+      "misses": 446200,
+      "evictions": 446107,
+      "upload_bytes": 2541684326400,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 98239,
+      "peak_bytes": 536739840,
+      "phases": {
+        "prefill": {
+          "hits": 0,
+          "misses": 294216,
+          "upload_bytes": 1675939479552
+        },
+        "decode": {
+          "hits": 0,
+          "misses": 151984,
+          "upload_bytes": 865744846848
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "e8ed1522728773130b15156137602300d218a9e85fe73fcc8680f5546b53ccca"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "lru",
+    "router_events": 111550,
+    "trace_sha256": "985d04f2e2c49a0ea230cb109d3b56b704009fa7aeae037a2b8fa8f0f3bf54bc",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 399131,
+      "misses": 47069,
+      "evictions": 45569,
+      "upload_bytes": 268132220928
+    },
+    "replay": {
+      "hits": 399131,
+      "misses": 47069,
+      "evictions": 45569,
+      "upload_bytes": 268132220928,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 628,
+      "peak_bytes": 8589754368,
+      "phases": {
+        "prefill": {
+          "hits": 258587,
+          "misses": 35629,
+          "upload_bytes": 202772275200
+        },
+        "decode": {
+          "hits": 140544,
+          "misses": 11440,
+          "upload_bytes": 65359945728
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "13f86d1a67030cb0c5ac588f16092168a9f35dba0cc67e32e408cada3cef2e4f"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "lfu",
+    "router_events": 111550,
+    "trace_sha256": "985d04f2e2c49a0ea230cb109d3b56b704009fa7aeae037a2b8fa8f0f3bf54bc",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 371397,
+      "misses": 74803,
+      "evictions": 73295,
+      "upload_bytes": 426282541056
+    },
+    "replay": {
+      "hits": 371397,
+      "misses": 74803,
+      "evictions": 73295,
+      "upload_bytes": 426282541056,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 4238,
+      "peak_bytes": 8589828096,
+      "phases": {
+        "prefill": {
+          "hits": 263351,
+          "misses": 30865,
+          "upload_bytes": 176574652416
+        },
+        "decode": {
+          "hits": 108046,
+          "misses": 43938,
+          "upload_bytes": 249707888640
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "13a8dc1eebfe48af1357b89538a4e60bd5b8592125419f6d5087c1839aa093bb"
+  },
+  {
+    "model": "glm47-flash",
+    "requested_budget_mib": 8192,
+    "actual_budget_bytes": 8589934592,
+    "policy": "least-stale",
+    "router_events": 111550,
+    "trace_sha256": "985d04f2e2c49a0ea230cb109d3b56b704009fa7aeae037a2b8fa8f0f3bf54bc",
+    "canonical_trace_sha256": "74f8ab691a7b8546b65aa26cd2b8cd89c560d01a75f8e36ab00fcf8722eb8742",
+    "measured_counters": {
+      "hits": 298153,
+      "misses": 148047,
+      "evictions": 146548,
+      "upload_bytes": 843323351040
+    },
+    "replay": {
+      "hits": 298153,
+      "misses": 148047,
+      "evictions": 146548,
+      "upload_bytes": 843323351040,
+      "cpu_fallback_layers": 0,
+      "collision_misses": 0,
+      "peak_bytes": 8589901824,
+      "phases": {
+        "prefill": {
+          "hits": 194951,
+          "misses": 99265,
+          "upload_bytes": 565315190784
+        },
+        "decode": {
+          "hits": 103202,
+          "misses": 48782,
+          "upload_bytes": 278008160256
+        }
+      }
+    },
+    "same_trace_budget_sweep": [
+      {
+        "budget_mib": 512,
+        "policy": "lru",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "lfu",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 97712,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 512,
+        "policy": "least-stale",
+        "hits": 0,
+        "misses": 446200,
+        "evictions": 446107,
+        "upload_bytes": 2541684326400,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 98239,
+        "peak_bytes": 536739840,
+        "phases": {
+          "prefill": {
+            "hits": 0,
+            "misses": 294216,
+            "upload_bytes": 1675939479552
+          },
+          "decode": {
+            "hits": 0,
+            "misses": 151984,
+            "upload_bytes": 865744846848
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lru",
+        "hits": 216781,
+        "misses": 229419,
+        "evictions": 229042,
+        "upload_bytes": 1310278828032,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 14986,
+        "peak_bytes": 2147328000,
+        "phases": {
+          "prefill": {
+            "hits": 132201,
+            "misses": 162015,
+            "upload_bytes": 924987727872
+          },
+          "decode": {
+            "hits": 84580,
+            "misses": 67404,
+            "upload_bytes": 385291100160
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "lfu",
+        "hits": 140857,
+        "misses": 305343,
+        "evictions": 304964,
+        "upload_bytes": 1739844698112,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 57645,
+        "peak_bytes": 2147401728,
+        "phases": {
+          "prefill": {
+            "hits": 100296,
+            "misses": 193920,
+            "upload_bytes": 1105883652096
+          },
+          "decode": {
+            "hits": 40561,
+            "misses": 111423,
+            "upload_bytes": 633961046016
+          }
+        }
+      },
+      {
+        "budget_mib": 2048,
+        "policy": "least-stale",
+        "hits": 185281,
+        "misses": 260919,
+        "evictions": 260556,
+        "upload_bytes": 1481502744576,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 2147475456,
+        "phases": {
+          "prefill": {
+            "hits": 113800,
+            "misses": 180416,
+            "upload_bytes": 1024000376832
+          },
+          "decode": {
+            "hits": 71481,
+            "misses": 80503,
+            "upload_bytes": 457502367744
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lru",
+        "hits": 302343,
+        "misses": 143857,
+        "evictions": 143108,
+        "upload_bytes": 822201090048,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4400,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 191030,
+            "misses": 103186,
+            "upload_bytes": 589675216896
+          },
+          "decode": {
+            "hits": 111313,
+            "misses": 40671,
+            "upload_bytes": 232525873152
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "lfu",
+        "hits": 236224,
+        "misses": 209976,
+        "evictions": 209223,
+        "upload_bytes": 1194050617344,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 16844,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 167195,
+            "misses": 127021,
+            "upload_bytes": 723012157440
+          },
+          "decode": {
+            "hits": 69029,
+            "misses": 82955,
+            "upload_bytes": 471038459904
+          }
+        }
+      },
+      {
+        "budget_mib": 4096,
+        "policy": "least-stale",
+        "hits": 218387,
+        "misses": 227813,
+        "evictions": 227084,
+        "upload_bytes": 1289093677056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 4294950912,
+        "phases": {
+          "prefill": {
+            "hits": 137831,
+            "misses": 156385,
+            "upload_bytes": 884353867776
+          },
+          "decode": {
+            "hits": 80556,
+            "misses": 71428,
+            "upload_bytes": 404739809280
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lru",
+        "hits": 399131,
+        "misses": 47069,
+        "evictions": 45569,
+        "upload_bytes": 268132220928,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 628,
+        "peak_bytes": 8589754368,
+        "phases": {
+          "prefill": {
+            "hits": 258587,
+            "misses": 35629,
+            "upload_bytes": 202772275200
+          },
+          "decode": {
+            "hits": 140544,
+            "misses": 11440,
+            "upload_bytes": 65359945728
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "lfu",
+        "hits": 371397,
+        "misses": 74803,
+        "evictions": 73295,
+        "upload_bytes": 426282541056,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 4238,
+        "peak_bytes": 8589828096,
+        "phases": {
+          "prefill": {
+            "hits": 263351,
+            "misses": 30865,
+            "upload_bytes": 176574652416
+          },
+          "decode": {
+            "hits": 108046,
+            "misses": 43938,
+            "upload_bytes": 249707888640
+          }
+        }
+      },
+      {
+        "budget_mib": 8192,
+        "policy": "least-stale",
+        "hits": 298153,
+        "misses": 148047,
+        "evictions": 146548,
+        "upload_bytes": 843323351040,
+        "cpu_fallback_layers": 0,
+        "collision_misses": 0,
+        "peak_bytes": 8589901824,
+        "phases": {
+          "prefill": {
+            "hits": 194951,
+            "misses": 99265,
+            "upload_bytes": 565315190784
+          },
+          "decode": {
+            "hits": 103202,
+            "misses": 48782,
+            "upload_bytes": 278008160256
+          }
+        }
+      }
+    ],
+    "compressed_trace_sha256": "c5eecb15dd1bb9d63ea52dd356f30b6612744809dea822fa1893fc84960615e9"
+  }
+]

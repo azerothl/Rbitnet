@@ -1,0 +1,166 @@
+{
+  "base_commit": "6f67224184e767f1c9dfcfc5633d106ae4d0463a",
+  "implementation_paths": [
+    "native/cuda_quant/src/kv_storage.cuh",
+    "native/cuda_quant/src/kv_attention_oracle.cuh",
+    "native/cuda_quant/src/llama_resident.cuh",
+    "native/cuda_quant/src/paged_kernels.cuh",
+    "native/cuda_quant/src/paged_pool.cuh",
+    "native/cuda_quant/src/quant_matvec.cu",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h",
+    "crates/bitnet-core/src/llama/resident.rs",
+    "crates/bitnet-core/src/llama/runtime.rs",
+    "crates/bitnet-core/src/llama/resident/quantized_tests.rs",
+    "crates/bitnet-core/src/llama/resident/canonical_tests.rs",
+    "crates/bitnet-core/src/llama/resident/quantized_long_tests.rs"
+  ],
+  "implementation_sha256": {
+    "native/cuda_quant/src/kv_storage.cuh": "9bbecfa13846ee37af6facdfe0f2bc50051aa2a6584b749bcde17ad73b03524c",
+    "native/cuda_quant/src/kv_attention_oracle.cuh": "b66f4d5e08f2e8b4b0f7ee65c1628778e98b2dc8e81c6e8706dcdffafe5951e9",
+    "native/cuda_quant/src/llama_resident.cuh": "a588d434b9755beecfaa29f5ad05c52cfc02945e5c8b5949582a5eff5f52bc13",
+    "native/cuda_quant/src/paged_kernels.cuh": "152f18d0f20612adda36d53583115fc94437cd2ff8b935f08cac2813ea4418f0",
+    "native/cuda_quant/src/paged_pool.cuh": "357db2740304b425f2bad6a133fe6e1f457e0deae254c8e147156c0b80eb0a33",
+    "native/cuda_quant/src/quant_matvec.cu": "f2090933a0103233faf3555d45f227b57f59b18d436375fc70cad4ec320d8a89",
+    "native/cuda_quant/include/rbitnet_cuda_quant.h": "d22d41103b60bf6219e348ce2a3a3a47190f7d66d5dc8e2534e8a7d3c560a5aa",
+    "crates/bitnet-core/src/llama/resident.rs": "8c3b840e25883c776484dd08bddd255f745f32a065a6a4b6141ef7e42bcb4554",
+    "crates/bitnet-core/src/llama/runtime.rs": "07fba03c23296c2060f1e89600351854d699a0d54623f9172b747778e89a0890",
+    "crates/bitnet-core/src/llama/resident/quantized_tests.rs": "2bd311b16fcb188547ce14a9ce3c1990b9f4f1726ea7177d57db5f4713445d49",
+    "crates/bitnet-core/src/llama/resident/canonical_tests.rs": "e70fac9a89f0bf3bd30e1ec56c84eafc44a3212a05e0f533bf847486aaf7477f",
+    "crates/bitnet-core/src/llama/resident/quantized_long_tests.rs": "63cb58796611a1cd96ba75912c2ba39a3585e5dc1ff44183a8400b9e8bb541a4"
+  },
+  "private_binary_sha256": "f8b4de53ebf5b9a4d6d621831eb02fe9895c361866c311e230b061bc29bf52a3",
+  "private_library_sha256": "c3a661fd2d9f0158f922dfa6b94f918363834024db5f10377e6a17bb814ddf4a",
+  "artifacts": {
+    "private-source-manifest.json": {
+      "source_sha256": "92a4e4921a9fc63f0c7760ccfc7537519eba2da30304ecffaa347664ebb350cd",
+      "saved_sha256": "4ddd15e2f5fee19dca96c623982e7dd1e8e5018adc4019e7448295fe3c222b24"
+    },
+    "private-measurement-manifest.json": {
+      "source_sha256": "50ae2a3ca1dfba8a0ffdc9f05570d557389fd98c2f8ef228ed3dea5890e4db73",
+      "saved_sha256": "8f50100b0c73f0dcf414fd42c953f7770d86ede8511b05d87338e0ad00472549"
+    },
+    "quality-plan.json": {
+      "source_sha256": "25e93a219e0863d66b0cd2f40b0f5e15a058f8813fe510482833c4b1d91e612e",
+      "saved_sha256": "25e93a219e0863d66b0cd2f40b0f5e15a058f8813fe510482833c4b1d91e612e"
+    },
+    "attention-oracle.json": {
+      "source_sha256": "60d271d474c06eba3cf9355a706c254bc99d819b1e6c30423cc0e7f44969852c",
+      "saved_sha256": "7dd84d6eb3e687fcb9e6b61ab86b260f8842e44a7bd183ca0f578eefed56dd62"
+    },
+    "canonical-actual-pages-f16-split0.log.gz": {
+      "uncompressed_sha256": "8add542ee7fe7b8a7b5f5b2a170b0084490887732444e58868978ad4c60bbe4a",
+      "saved_sha256": "8f8b3ae61fa1478d5c57e6f1083cc531f2c6930a71ee717e9728750c99cddb65"
+    },
+    "canonical-actual-pages-f16-split1.log.gz": {
+      "uncompressed_sha256": "a5b4fb9686d8ff77fb93ab31eac1ae69ba1d361dace5811da0ea1631861efa74",
+      "saved_sha256": "069e4b39483cd264a8c90008354b3cfaf74c32844e3ceb964b28caa006bd9355"
+    },
+    "canonical-actual-pages-q8-split0.log.gz": {
+      "uncompressed_sha256": "803b48e3ba25e518360be533b64b81b61d8ddf9f17ddcadc04ab6ad2b80d04dc",
+      "saved_sha256": "87888ca5d5cfc33ffdce8a71b650357a1038b823b5be65a30c052205830acee4"
+    },
+    "canonical-actual-pages-q8-split1.log.gz": {
+      "uncompressed_sha256": "30137d6c2b61efe595a230e3d1f52cc99e8f5a91bdaabb4f0ae5b1d60093da47",
+      "saved_sha256": "bca95c6891a4a2945f1007cacd269a726371014ba2b31f8ac7f81427acc0dae8"
+    },
+    "canonical-actual-quality-lifetime-split0.log.gz": {
+      "uncompressed_sha256": "d28828435217db2af204f3cbff1de731aaf6bafdd838c06c8cc34820fed36b45",
+      "saved_sha256": "4f49f25919cf411420304e2cbef28b3fd1392be441f7d973740eb01275c9cae2"
+    },
+    "canonical-actual-quality-lifetime-split1.log.gz": {
+      "uncompressed_sha256": "edfae86be0d9a8f587c86ac7473c13db62253f5e589a079c118bd997b4903c3b",
+      "saved_sha256": "cdf06bfde61f1b968c9c51c3d7381234ec68d64a000e02d3df4ea21cbb867447"
+    },
+    "canonical-canonical-regression-split0.log.gz": {
+      "uncompressed_sha256": "4732270c04b5235780aa5f5dae9a47ad3ca652065df52ff8460eb88596f57a2a",
+      "saved_sha256": "d0bab4eaac84fd730108f095a0a85f660d88f072e71c2c5d9ea2882bc17ce069"
+    },
+    "canonical-canonical-regression-split1.log.gz": {
+      "uncompressed_sha256": "28ed560c4fbcbfc090ef1bfc8cc0d228ea791451711b54d96246f9a078f5a7c6",
+      "saved_sha256": "c4075e395b17e7c08a4f08943fc3f015fef47aa275e80c5de2ae262c284b0f7a"
+    },
+    "canonical-independent-f64-attention.log.gz": {
+      "uncompressed_sha256": "0b2fd94898805f2020221c4372fd0f50bd8167928046f1f2061e74713912d317",
+      "saved_sha256": "02a6d0bea5cb59b7e0a4b2672bdf0e357d9bb1a15c0412395a459cfdfee016f9"
+    },
+    "canonical-native-build.log.gz": {
+      "uncompressed_sha256": "2611c9447b5b4681c529166e28699316c252e64ec39a9f7c73a8cd29eb0b5714",
+      "saved_sha256": "ee0902da39e707669d5b4112f31728c9670a7369fd28f9f67f687042aa795ad2"
+    },
+    "canonical-reproducer-initial-fixture-type-error.log.gz": {
+      "uncompressed_sha256": "c169a8eb2e4fa51a499025182b0fc4d60ccb636b67b1d28798ceef875d76b590",
+      "saved_sha256": "ca99594c6740904cb3a1833f10d1aa7a9bbf3644fedbe5ffb2663c9d549a557f"
+    },
+    "canonical-reproducer-original-library.log.gz": {
+      "uncompressed_sha256": "d585d5ff5018b82434e4784a4510681a53d51cc924b96a49c65cd328a84c84c0",
+      "saved_sha256": "3e8d67b32b232a7a7bbc62fc2c28d6508a5c6a822a1719467eaa64f079856296"
+    },
+    "actual-full-target-nll.log.gz": {
+      "uncompressed_sha256": "aa9eba8c795cd226e71948b90bc39dd0520d80913e564868f6734fbbd5d6152e",
+      "saved_sha256": "5a0cf6f043ac0821d67103364e849c963390b89c31bfb397f0083e144c379730"
+    },
+    "actual-long-context2048-split0.log.gz": {
+      "uncompressed_sha256": "d0629d7364f3fc059ee7ee654820594d4bff74e57dce64dfd138080362744148",
+      "saved_sha256": "c381e56c4d4147716f73b19ed1f686b19065c2429b53028616c7a4126d3f193a"
+    },
+    "actual-long-context2048-split1.log.gz": {
+      "uncompressed_sha256": "6f2f0fc72940c0a148e96e0596d2f5a024eb44f8c962338c7f9f5e5d68e48110",
+      "saved_sha256": "555a4982fd628f845516dc0894fd6568e5221fdd51648213787334e4c74fc2c3"
+    },
+    "actual-long-context8192-split0.log.gz": {
+      "uncompressed_sha256": "e8ae5d3ba9f9bd7855be4c7f82810921e87252aa13796b977a9a07c1fb2819c7",
+      "saved_sha256": "9e96a4109a8595d3eacb801d7f77e8b0ae6800971eba43d7ed19a31acd16a8f5"
+    },
+    "actual-long-context8192-split1.log.gz": {
+      "uncompressed_sha256": "7117cdd9df5c2a562d766e808db9a2ca25996e3b56f9a90cd099b2184b7e5bf7",
+      "saved_sha256": "0c8fb6d71b40c4bc732c3ca0b7188198f47f3a6485461d1c87b32344a4529d6a"
+    },
+    "quiet-dense-context2048.json.gz": {
+      "uncompressed_sha256": "647e0b8545dd41ab79eb1abee05813da0fd83314dec39d38424abe1ddf159b12",
+      "saved_sha256": "186f49955acc8eefcd3a4f41191f1b26e8b598b89fe6eb6e26ccfc9be886daea"
+    },
+    "quiet-dense-context512.json.gz": {
+      "uncompressed_sha256": "0d4644f4f13f5aff0010c95cde421d00b04777776a73d57c428466735a239bbd",
+      "saved_sha256": "be8bba551ad2570ae5d4f5856df4d57e0946e35d56c12372af71408f228f7eb1"
+    },
+    "quiet-dense-context8192.json.gz": {
+      "uncompressed_sha256": "3448aa533e68173c854ec36bc6938f4fafb742236b0f9d314a84324b506d5a73",
+      "saved_sha256": "c2b8714a9e979b3a659da5ab9f7f58ad9e1603b49237be8a74d35e03717f2165"
+    },
+    "quiet-paged-context2048.json.gz": {
+      "uncompressed_sha256": "eee07f6dc434ae868e3f7b7ba8f084e536cab68bf8f1ee13f64240cbb78df0d2",
+      "saved_sha256": "8fcae2e7cf781cc07e2799060bc86ee91ba11751eba54217f56ad56ba211c63c"
+    },
+    "quiet-paged-context512.json.gz": {
+      "uncompressed_sha256": "3056a18ed95a0039671fc84ed74cfd41bb2d0fdc17534e8eb527aad1adac8f5a",
+      "saved_sha256": "5452ef1e19c0b3a211e0df3597397ca190871b75ed9a25945adb1b17e7b8a8f0"
+    },
+    "quiet-paged-context8192.json.gz": {
+      "uncompressed_sha256": "398f1be1df19f5b777cbbdb7b5faaa2ca9f4ee31d138372cba4a3ac0c454ffdf",
+      "saved_sha256": "9a7819798248f87a8e51de2f35a27e1ced939011892e174d03a53a976f15eeff"
+    },
+    "live-dense-f16.json.gz": {
+      "uncompressed_sha256": "8c39f00bda63d4d00e03a471ecd76d9c5844ac52a97aace9430cbc20dfbce68f",
+      "saved_sha256": "3e55d7752c1a83b4baa4ea57ff756abb7e619eb1fe7ed9b702be9a73a032bbdd"
+    },
+    "live-dense-q8.json.gz": {
+      "uncompressed_sha256": "ab387dd4b4ecb7b534d227491b23795a6100f4164e582b423dda55c72b953a0f",
+      "saved_sha256": "899312f976717477ddb46f833f86c8f2ca0e5b14e0f5dea805e300969c94c381"
+    },
+    "live-paged-f16.json.gz": {
+      "uncompressed_sha256": "4a59d211539ee9a837c4e3b6138dc4c2087c4ccce48d781a31c57fea1ec121da",
+      "saved_sha256": "6fc35408f6cc458927e9c70183789b6c1498f7d9882436f5735f2f263bb1308c"
+    },
+    "live-paged-q8.json.gz": {
+      "uncompressed_sha256": "2e77646036ea6c40900ad02ac7a41c39754f2521fa171c7fc1daa5452043c349",
+      "saved_sha256": "3ac90930e1973fcf806ccd8f35058f86543d6f2c7a6229aa7f4e3c6d7515924e"
+    },
+    "initial-failed-warmed-prefix.json.gz": {
+      "uncompressed_sha256": "dbe285c4970f246d7fdf468987da5768ca815f8d6f0fdcfe36e7a6598da03917",
+      "saved_sha256": "2fa8e62d77af9eed5707cced2637b4090f705a01a3452d5a9d5420eb949ba96e"
+    }
+  },
+  "adoption_validation": "Pending: this worktree preserves later async Rust code and has not yet had its own build/GPU/network validation.",
+  "default": "f32",
+  "recommendation": "Optional capacity only; F16/Q8 decode is slower in the captured Llama-3.2-1B workload."
+}

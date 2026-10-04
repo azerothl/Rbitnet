@@ -107,7 +107,14 @@ impl LlamaRuntime {
                     .into(),
             ));
         }
-        let resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
+        let native_format = super::resident::configured_kv_format()?;
+        if native_format != 0 && (backend_kind != BackendKind::Cuda || kv.as_paged().is_some()) {
+            return Err(BitNetError::Inference(
+                "encoded native K/V requires CUDA dense Llama residency and no host paged KV"
+                    .into(),
+            ));
+        }
+        let mut resident = if backend_kind == BackendKind::Cuda && kv.as_paged().is_none() {
             super::resident::Resident::new(&model)
         } else {
             None
@@ -116,6 +123,32 @@ impl LlamaRuntime {
             return Err(BitNetError::Inference(
                 "native CUDA KV paging unavailable or pool/context allocation refused".into(),
             ));
+        }
+        if native_format != 0 && resident.is_none() {
+            return Err(BitNetError::Inference(
+                "encoded native K/V unavailable or context allocation refused".into(),
+            ));
+        }
+        if crate::context_native::enabled() {
+            if std::env::var("RBITNET_CUDA_KV_FORMAT").is_ok_and(|value| value != "f32")
+                || super::speculative::enabled()
+                || std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1")
+                || model.cfg.max_seq > 8192
+            {
+                return Err(BitNetError::NotImplemented("context tiers require F32 Llama without TF32/speculative decoding and capacity <= 8192"));
+            }
+            let resident = resident.as_mut().ok_or(BitNetError::NotImplemented(
+                "context tiers require full Native Llama CUDA residency",
+            ))?;
+            let configuration = format!(
+                "{:?};rope={:?};split={:?};tensor={:?};head={:?}",
+                model.cfg,
+                model.rope_inv_freq,
+                std::env::var("RBITNET_CUDA_SPLIT_KV"),
+                std::env::var("RBITNET_CUDA_PREFILL_TF32X3"),
+                std::env::var("RBITNET_CUDA_HEAD")
+            );
+            resident.configure_context_tiers(&archive, tokenizer_path, &configuration)?;
         }
         let backend = make_backend(backend_kind);
         let prefill_chunk_tokens = std::env::var("RBITNET_PREFILL_CHUNK_TOKENS")
@@ -191,6 +224,7 @@ impl LlamaRuntime {
         sampling: SamplingOptions,
         mut on_event: Option<&mut dyn FnMut(StreamEvent) -> Result<()>>,
     ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
         self.last_speculative_attempted = false;
         if inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));

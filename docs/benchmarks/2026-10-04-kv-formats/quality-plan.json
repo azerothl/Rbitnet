@@ -1,0 +1,36 @@
+{
+  "created_utc": "2026-10-03T22:36:29.939808+00:00",
+  "status": "pre-experiment; device KV F16/Q8 not implemented or measured",
+  "baseline": "actual GPU F32 dense/paged on identical GGUF/tokenizer, single RTX 4080 SUPER",
+  "formats": [
+    "f16",
+    "q8"
+  ],
+  "numerical_limits": {
+    "f16": {
+      "observed_mean_target_kl_max": 0.0001,
+      "observed_worst_target_kl_max": 0.001,
+      "mean_abs_target_nll_delta_max": 0.02,
+      "worst_abs_target_nll_delta_max": 0.05
+    },
+    "q8": {
+      "observed_mean_target_kl_max": 0.01,
+      "observed_worst_target_kl_max": 0.1,
+      "mean_abs_target_nll_delta_max": 0.05,
+      "worst_abs_target_nll_delta_max": 0.2
+    }
+  },
+  "requirements": [
+    "F64 oracle of decoded quantized keys/values and resulting attention, scales and actual allocation counted",
+    "finite extreme values, zeros, saturation and explicit unsupported/nonfinite refusal cases",
+    "forced identical tokens/positions at page boundaries, context tails and multiple prompt corpora; report actual sample counts",
+    "F32 reference and quantized target-NLL, KL, argmax disagreements and output differences all retained; no bit-identical-ID requirement",
+    "short factual controls already passed by F32 must remain passed; bounded synthetic long-context controls and reference failures documented",
+    "snapshot/COW/truncation/cancel/reload numerical modes have independent identities, no full host KV shadow",
+    "memory/latency/throughput measured at contexts 512/2048/8192 and shared contexts 1/4/8; shared contexts do not prove batched kernels",
+    "HTTP/SSE seed, penalties, EOS, stops, disconnect/resume and stream output are checked within each format",
+    "Qwen recurrent GDN/convolution states excluded from attention KV quantization",
+    "KIVI per-channel keys/per-token values/residual-window is a separate experiment and separate go/no-go",
+    "leave default F32; only adopt optional modes whose bounded quality/lifecycle tests pass; publish performance regressions"
+  ]
+}
