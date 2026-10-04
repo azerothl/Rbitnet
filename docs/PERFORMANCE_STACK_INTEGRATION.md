@@ -21,12 +21,12 @@ The following cross-feature protections were added here:
 
 Actual-model preservation fixtures cover F16/Q8 dense/paged owners with graphs
 off/on, unchanged page counters and continuation logits after refusal, plus
-Qwen imported GDN/convolution state and stale/fresh nonce behavior. They are
-prepared, not yet compiled or executed. An additional option test verifies
+Qwen imported GDN/convolution state and stale/fresh nonce behavior. They passed the fresh combined build; see
+[the executed proof](benchmarks/2026-10-04-performance-stack-fresh/README.md). An additional option test verifies
 refusal before Native initialization. Optional features retain their defaults.
 
-Fresh workspace, Native, model, HTTP/SSE and cross-engine CPU/GPU measurements
-remain pending. This branch is not a release, a claim of engine parity or
+Fresh workspace, Native, actual-model and HTTP/SSE validation passed. The
+cross-engine CPU/GPU comparison and subsequent namespace hardening remain pending. This branch is not a release, a claim of engine parity or
 completion of the performance epic. Learned prediction, KIVI, MoE continuous
 serving, true tokenizer-aware grammar and non-NVIDIA validation are still
 separate work.
