@@ -1861,3 +1861,10 @@ mod async_profile_tests;
 #[cfg(test)]
 #[path = "async_config_tests.rs"]
 mod async_config_tests;
+
+#[cfg(test)]
+#[path = "gpt_norm_runtime_tests.rs"]
+mod gpt_norm_runtime_tests;
+#[cfg(test)]
+#[path = "gpt_norm_tests.rs"]
+mod gpt_norm_tests;
