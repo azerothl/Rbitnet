@@ -71,6 +71,7 @@ pub struct InferenceStats {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
     pub speculative_attempted: bool,
+    pub finish_reason: crate::timings::GenerationFinishReason,
 }
 
 impl InferenceStats {
@@ -92,6 +93,7 @@ impl InferenceStats {
             prompt_tokens: p.prompt_tokens,
             completion_tokens: p.completion_tokens,
             speculative_attempted,
+            finish_reason: p.finish_reason,
         }
     }
 
@@ -126,6 +128,7 @@ impl InferenceStats {
             prompt_tokens: draft.prompt_tokens,
             completion_tokens,
             speculative_attempted: true,
+            finish_reason: verify.finish_reason,
         }
     }
 }
@@ -240,20 +243,16 @@ impl ContinuousBatchScheduler {
         let (mut text, mut phases_acc) =
             executor.generate_with_timings(&req.prompt, first_burst, req.sampling)?;
         let remaining = req.max_tokens.saturating_sub(phases_acc.completion_tokens);
-        if remaining > 0 {
+        if remaining > 0 && phases_acc.finish_reason != crate::timings::GenerationFinishReason::Stop
+        {
             let tail_prompt = format!("{}{}", req.prompt, text);
             let (tail, tail_phases) =
                 executor.generate_with_timings(&tail_prompt, remaining, req.sampling)?;
             text.push_str(&tail);
-            phases_acc.encode_ms = phases_acc
-                .encode_ms
-                .saturating_add(tail_phases.encode_ms);
-            phases_acc.prefill_ms = phases_acc
-                .prefill_ms
-                .saturating_add(tail_phases.prefill_ms);
-            phases_acc.decode_ms = phases_acc
-                .decode_ms
-                .saturating_add(tail_phases.decode_ms);
+            phases_acc.finish_reason = tail_phases.finish_reason;
+            phases_acc.encode_ms = phases_acc.encode_ms.saturating_add(tail_phases.encode_ms);
+            phases_acc.prefill_ms = phases_acc.prefill_ms.saturating_add(tail_phases.prefill_ms);
+            phases_acc.decode_ms = phases_acc.decode_ms.saturating_add(tail_phases.decode_ms);
             phases_acc.completion_tokens = phases_acc
                 .completion_tokens
                 .saturating_add(tail_phases.completion_tokens);
@@ -270,12 +269,7 @@ impl ContinuousBatchScheduler {
         req: &InferenceRequest,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
-        executor.generate_streaming(
-            &req.prompt,
-            req.max_tokens,
-            req.sampling,
-            on_event,
-        )
+        executor.generate_streaming(&req.prompt, req.max_tokens, req.sampling, on_event)
     }
 
     /// Batch entry point used by server/runtime orchestration.
@@ -396,6 +390,7 @@ impl ContinuousBatchScheduler {
                         .entry(id)
                         .or_insert_with(|| (String::new(), PhaseTimings::default()));
                     if entry.1.completion_tokens >= orig.request.max_tokens {
+                        entry.1.finish_reason = crate::timings::GenerationFinishReason::Length;
                         queue.mark_done(id);
                         continue;
                     }
@@ -413,8 +408,16 @@ impl ContinuousBatchScheduler {
                         .saturating_add(phases.completion_tokens);
                     budget = budget.saturating_sub(1);
                     decode_steps = decode_steps.saturating_add(1);
-                    if entry.1.completion_tokens >= orig.request.max_tokens {
+                    if phases.finish_reason == crate::timings::GenerationFinishReason::Stop {
+                        entry.1.finish_reason = phases.finish_reason;
                         queue.mark_done(id);
+                    } else if entry.1.completion_tokens >= orig.request.max_tokens {
+                        entry.1.finish_reason = crate::timings::GenerationFinishReason::Length;
+                        queue.mark_done(id);
+                    } else if phases.completion_tokens == 0 {
+                        return Err(crate::error::BitNetError::Inference(
+                            "decode step made no progress without an explicit stop reason".into(),
+                        ));
                     }
                 }
             }
@@ -482,7 +485,13 @@ impl ContinuousBatchScheduler {
                     req.id,
                     InferenceOutput {
                         text: String::new(),
-                        stats: InferenceStats::from_phases(PhaseTimings::default(), false),
+                        stats: InferenceStats::from_phases(
+                            PhaseTimings {
+                                finish_reason: crate::timings::GenerationFinishReason::Length,
+                                ..Default::default()
+                            },
+                            false,
+                        ),
                     },
                 ));
             }
@@ -520,6 +529,7 @@ impl ContinuousBatchScheduler {
                 .entry(id)
                 .or_insert_with(|| (String::new(), PhaseTimings::default()));
             if entry.1.completion_tokens >= orig.request.max_tokens {
+                entry.1.finish_reason = crate::timings::GenerationFinishReason::Length;
                 done_ids.push(id);
                 continue;
             }
@@ -567,8 +577,16 @@ impl ContinuousBatchScheduler {
                 .completion_tokens
                 .saturating_add(phases.completion_tokens);
             steps = steps.saturating_add(1);
-            if entry.1.completion_tokens >= orig.request.max_tokens {
+            if phases.finish_reason == crate::timings::GenerationFinishReason::Stop {
+                entry.1.finish_reason = phases.finish_reason;
                 queue.mark_done(id);
+            } else if entry.1.completion_tokens >= orig.request.max_tokens {
+                entry.1.finish_reason = crate::timings::GenerationFinishReason::Length;
+                queue.mark_done(id);
+            } else if phases.completion_tokens == 0 {
+                return Err(crate::error::BitNetError::Inference(
+                    "decode step made no progress without an explicit stop reason".into(),
+                ));
             }
         }
         Ok((steps, steps))
@@ -624,7 +642,6 @@ impl DraftPath {
             _ => Self::TargetModel,
         }
     }
-
 }
 
 /// Prompt Lookup Decoding (Saxena): copy the continuation after the longest n-gram
@@ -691,5 +708,4 @@ mod tests {
         // Suffix "the cat sat" matches earlier; continuation "on the mat".
         assert_eq!(draft, "on the mat");
     }
-
 }

@@ -1,0 +1,5 @@
+FINISH_REASON_ACTUAL llama32-1b eos_completion_tokens 2
+FINISH_REASON_ACTUAL qwen35-2b eos_completion_tokens 1
+FINISH_REASON_ACTUAL gpt-oss-20b eos_completion_tokens 16
+FINISH_REASON_ACTUAL glm47-flash eos_completion_tokens 1
+FINISH_REASON_NETWORK_DONE actual_models=4

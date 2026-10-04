@@ -1,0 +1,560 @@
+{
+  "generated_date": "2026-10-04",
+  "hardware": "Ryzen 7 9800X3D, RTX 4080 SUPER 16 GiB",
+  "sources": {
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json": {
+      "sha256": "4c4f4722ec8c100672388a589707d24fb678675e73642c07df9d64e33f641d8d",
+      "bytes": 19652
+    },
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json": {
+      "sha256": "76d4a541c40f23023e35b442826d55395792b89577fdec2e7841d2e9ada39e3a",
+      "bytes": 18516
+    },
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json": {
+      "sha256": "7b2cee2f286d81a0f12cef47d9c5f8c75497f7da51d0ab149ad2dbf40dabe5ee",
+      "bytes": 17916
+    },
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\llama-summary.json": {
+      "sha256": "dd91e10d4de8cc941bb3ac60c2ed56c47c306426d7f8c3537c3ef981b5a8f033",
+      "bytes": 5615
+    },
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\qwen-summary.json": {
+      "sha256": "b1d7710ec55c511d54785e72720e9b1ae0945c9d7109683b6620720e7a4067dd",
+      "bytes": 3445
+    },
+    "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-gpt-full\\summary.json": {
+      "sha256": "52b48ddfc0c14d3e65ea6f86caaed25aae91676c52b2729d014cc89546085ff2",
+      "bytes": 3499
+    },
+    "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-norm-delivery-proof\\analysis.json": {
+      "sha256": "b2d55ac718b8b356d08bed75a4701294399c4d3e7bd0ca92a3feb84f30132a48",
+      "bytes": 7615
+    },
+    "E:\\devs\\Rbitnet\\target\\performance-cache\\cpu-direct-rows-proof\\analysis.json": {
+      "sha256": "3239df825c41033fb03c950a8242d25bd828360b4446c2e5e32ec8d755c2a2f9",
+      "bytes": 5856
+    },
+    "E:\\devs\\Rbitnet\\target\\performance-cache\\qwen-serving-proof\\analysis.json": {
+      "sha256": "66477c656ee45151a4f08d665699305fc33d1340a85134c0b573097910abedd0",
+      "bytes": 4897
+    },
+    "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json": {
+      "sha256": "8398b4947c7a2540227d8052bd2102669c189ff9cf131bd1338bf5e637f78838",
+      "bytes": 1596
+    },
+    "E:\\devs\\Rbitnet\\target\\performance-cache\\expert-arena-proof\\quiet-analysis.json": {
+      "sha256": "83f63690015b74c105009df4f9cefc4ac1c76237959186a1f5683ec1d453a7fa",
+      "bytes": 13746
+    }
+  },
+  "records": [
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "llama32-1b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": 1.5931494573334661,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "llama32-1b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 16.904384574749077,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "llama32-1b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 38.55421686746988,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "qwen35-2b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "qwen35-2b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 10.533245556287032,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "qwen35-2b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 16.736401673640167,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "gpt-oss-20b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "gpt-oss-20b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 3.7105751391465676,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "gpt-oss-20b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 11.725906925613778,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "glm47-flash",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "glm47-flash",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 4.969715794378009,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "cpu",
+      "model": "glm47-flash",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 8.016032064128256,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "llama32-1b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": 4.1934215699122,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "llama32-1b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 53.96290050590219,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "llama32-1b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 477.6119402985075,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "qwen35-2b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "qwen35-2b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 38.50782190132371,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "qwen35-2b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 144.79638009049773,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "gpt-oss-20b",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "gpt-oss-20b",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 22.06896551724138,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "gpt-oss-20b",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 56.4373897707231,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "glm47-flash",
+      "step": "Initial / 7eca9ad",
+      "metric": "decode_tokens_per_second",
+      "value": null,
+      "status": "error",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "glm47-flash",
+      "step": "Architectures + SIMD / c5e5a8a + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 9.054895302773062,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-optimized\\summary.json"
+    },
+    {
+      "figure": "history",
+      "panel": "gpu",
+      "model": "glm47-flash",
+      "step": "CUDA résident / FFN / ab520d0 + modifications",
+      "metric": "decode_tokens_per_second",
+      "value": 14.04741000877963,
+      "status": "ok",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-parity-round2\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "1. Llama — attention par tuiles KV (#103)",
+      "model": "llama32-1b",
+      "step": "Référence",
+      "metric": "Tokens/s de décodage",
+      "value": 85.93651400362756,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\llama-summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "1. Llama — attention par tuiles KV (#103)",
+      "model": "llama32-1b",
+      "step": "Split KV",
+      "metric": "Tokens/s de décodage",
+      "value": 377.02585458962346,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\llama-summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "2. Qwen — attention par tuiles KV (#103)",
+      "model": "qwen35-2b",
+      "step": "Référence",
+      "metric": "Tokens/s de décodage",
+      "value": 100.82711292294138,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\qwen-summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "2. Qwen — attention par tuiles KV (#103)",
+      "model": "qwen35-2b",
+      "step": "Split KV",
+      "metric": "Tokens/s de décodage",
+      "value": 233.1511839708561,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-split-kv\\qwen-summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "3. GPT-OSS — pipeline résident (#106)",
+      "model": "gpt-oss-20b",
+      "step": "Référence",
+      "metric": "Tokens/s de décodage",
+      "value": 39.107348492059494,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-gpt-full\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "3. GPT-OSS — pipeline résident (#106)",
+      "model": "gpt-oss-20b",
+      "step": "Résident",
+      "metric": "Tokens/s de décodage",
+      "value": 58.86410980342396,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-gpt-full\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "3. GPT-OSS — pipeline résident (#106)",
+      "model": "gpt-oss-20b",
+      "step": "Résident / + split KV",
+      "metric": "Tokens/s de décodage",
+      "value": 90.61948038148395,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\docs\\benchmarks\\2026-10-03-gpt-full\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "4. GPT-OSS — normalisation ordonnée (#124)",
+      "model": "gpt-oss-20b",
+      "step": "Avant",
+      "metric": "Tokens/s de décodage",
+      "value": 92.21902017291066,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-norm-delivery-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "4. GPT-OSS — normalisation ordonnée (#124)",
+      "model": "gpt-oss-20b",
+      "step": "Après",
+      "metric": "Tokens/s de décodage",
+      "value": 118.02676552111143,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\gpt-norm-delivery-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "5. CPU — sortie directe des lignes (prototype)",
+      "model": "four-models",
+      "step": "Llama",
+      "metric": "Indice de débit — référence = 100",
+      "value": 106.15365775416153,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\cpu-direct-rows-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "5. CPU — sortie directe des lignes (prototype)",
+      "model": "four-models",
+      "step": "Qwen",
+      "metric": "Indice de débit — référence = 100",
+      "value": 97.02672007628918,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\cpu-direct-rows-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "5. CPU — sortie directe des lignes (prototype)",
+      "model": "four-models",
+      "step": "GPT-OSS",
+      "metric": "Indice de débit — référence = 100",
+      "value": 101.62026986517813,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\cpu-direct-rows-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "5. CPU — sortie directe des lignes (prototype)",
+      "model": "four-models",
+      "step": "GLM",
+      "metric": "Indice de débit — référence = 100",
+      "value": 99.05320618862649,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\cpu-direct-rows-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "6. Qwen — décodage spéculatif (#123)",
+      "model": "qwen35-2b",
+      "step": "Cible seule",
+      "metric": "Tokens/s de décodage",
+      "value": 235.2941176470588,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\qwen-serving-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "6. Qwen — décodage spéculatif (#123)",
+      "model": "qwen35-2b",
+      "step": "Draft 1",
+      "metric": "Tokens/s de décodage",
+      "value": 142.7007194942039,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\qwen-serving-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "6. Qwen — décodage spéculatif (#123)",
+      "model": "qwen35-2b",
+      "step": "Draft 4",
+      "metric": "Tokens/s de décodage",
+      "value": 92.22979163887186,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\qwen-serving-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "6. Qwen — décodage spéculatif (#123)",
+      "model": "qwen35-2b",
+      "step": "Draft 8",
+      "metric": "Tokens/s de décodage",
+      "value": 62.61059300339255,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\qwen-serving-proof\\analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "7. Llama — batching continu (#120)",
+      "model": "llama32-1b",
+      "step": "Sérialisé",
+      "metric": "Débit TOTAL HTTP — tokens/s",
+      "value": 140.6177380196512,
+      "status": "measured",
+      "source": "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "7. Llama — batching continu (#120)",
+      "model": "llama32-1b",
+      "step": "Dense / 1 slot",
+      "metric": "Débit TOTAL HTTP — tokens/s",
+      "value": 137.72601870919834,
+      "status": "measured",
+      "source": "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "7. Llama — batching continu (#120)",
+      "model": "llama32-1b",
+      "step": "Dense / 4 slots",
+      "metric": "Débit TOTAL HTTP — tokens/s",
+      "value": 169.58047337078136,
+      "status": "measured",
+      "source": "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "7. Llama — batching continu (#120)",
+      "model": "llama32-1b",
+      "step": "Dense / 8 slots",
+      "metric": "Débit TOTAL HTTP — tokens/s",
+      "value": 186.81449585219275,
+      "status": "measured",
+      "source": "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "7. Llama — batching continu (#120)",
+      "model": "llama32-1b",
+      "step": "Pagé / 8 slots",
+      "metric": "Débit TOTAL HTTP — tokens/s",
+      "value": 185.35906600921442,
+      "status": "measured",
+      "source": "C:\\Users\\azero\\.codex\\worktrees\\llama-continuous-delivery\\Rbitnet\\docs\\benchmarks\\2026-10-04-llama-continuous-fresh\\summary.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "8. MoE — arène d’experts (#121)",
+      "model": "GPT-OSS / GLM",
+      "step": "GPT-OSS / asynchrone",
+      "metric": "Pic GPU GLOBAL − niveau initial (MiB)",
+      "value": 13170.0,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\expert-arena-proof\\quiet-analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "8. MoE — arène d’experts (#121)",
+      "model": "GPT-OSS / GLM",
+      "step": "GPT-OSS / + arène",
+      "metric": "Pic GPU GLOBAL − niveau initial (MiB)",
+      "value": 9674.0,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\expert-arena-proof\\quiet-analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "8. MoE — arène d’experts (#121)",
+      "model": "GPT-OSS / GLM",
+      "step": "GLM / asynchrone",
+      "metric": "Pic GPU GLOBAL − niveau initial (MiB)",
+      "value": 13605.0,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\expert-arena-proof\\quiet-analysis.json"
+    },
+    {
+      "figure": "ablations",
+      "panel": "8. MoE — arène d’experts (#121)",
+      "model": "GPT-OSS / GLM",
+      "step": "GLM / + arène",
+      "metric": "Pic GPU GLOBAL − niveau initial (MiB)",
+      "value": 10569.0,
+      "status": "measured",
+      "source": "E:\\devs\\Rbitnet\\target\\performance-cache\\expert-arena-proof\\quiet-analysis.json"
+    }
+  ],
+  "limits": [
+    "History covers three comparable 32-token campaigns, not current combined-stack throughput.",
+    "Each 128-token ablation has its own baseline and option set; do not compound gains or connect across panels.",
+    "Errors have no throughput value. Three short quality probes are not a general quality evaluation.",
+    "Continuous serving is aggregate HTTP throughput; arena memory is global GPU sampling.",
+    "CPU direct-row source is an isolated prototype; combined validation remains pending.",
+    "The latest four-engine CPU/GPU comparison is queued; no value is invented for it."
+  ]
+}

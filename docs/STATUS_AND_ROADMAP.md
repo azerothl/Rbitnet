@@ -182,7 +182,7 @@ Phased detail and experiment gates live in [INFERENCE_STACK_V2.md](INFERENCE_STA
 |------|------------|--------|
 | **Metrics surface** — TTFT, decode tok/s, `prefix_hit`, `draft_accept` on `/metrics` + `/ui` | Akasha scrape + akasha-os Models UX parity | Extend [AKASHA_METRICS.md](AKASHA_METRICS.md) series; status line in UI |
 | **Model provenance** — SHA256 in catalog/recipes; optional `RBITNET_TRUSTED_MODELS_ONLY` | Ecosystem security (GGUF trust) | Harden `rbitnet models install` / recipes |
-| **Structured output** stabilize | SGLang-style FSM already env-flagged | `RBITNET_STRUCTURED_OUTPUT` + JSON-schema tests |
+| **Structured output** | **Not implemented for generation** — JSON/tool requests return HTTP 501 before SSE | Tokenizer-aware grammar required; ASCII-ID mask and standalone schema validator are research/validation utilities, not a generation guarantee. See [limits](STRUCTURED_OUTPUT.md). |
 | **Speculative verify + metrics** | [2211.17192](https://arxiv.org/abs/2211.17192) | Native Llama CUDA block verification, rollback and target-coupled sampling opt-in; a small GGUF draft and recurrent rollback remain [#97](https://github.com/azerothl/Rbitnet/issues/97) |
 | **Prompt-lookup / n-gram draft** (no second GGUF) | PLD / [2304.04487](https://arxiv.org/abs/2304.04487) | Token-based Llama PLD with measured cost guard; [published ablation](benchmarks/2026-10-03-speculative-llama/README.md), no general default activation |
 | **BitNet recipe / null-loss criteria** | [2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285) | Document `bitnet-b158` pack + golden gate |

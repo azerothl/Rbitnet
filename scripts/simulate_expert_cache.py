@@ -9,6 +9,8 @@ from collections import defaultdict
 
 
 def simulate(rows, budget, policy):
+    if budget < 0 or policy not in ("lru", "lfu", "least-stale"):
+        raise ValueError("budget must be nonnegative and policy must be lru, lfu or least-stale")
     entries, clock, occupied = {}, 0, 0
     result = dict(hits=0, misses=0, evictions=0, upload_bytes=0, cpu_fallback_layers=0,
                   collision_misses=0, peak_bytes=0)
@@ -19,7 +21,9 @@ def simulate(rows, budget, policy):
         if len(selected) * size > budget:
             result['cpu_fallback_layers'] += 1
             continue
-        protected = set()
+        # Native acquisition pins every ready selected expert before its first
+        # miss. Protect later router slots as well as slots already acquired.
+        protected = {(layer, expert) for expert in selected}
         for expert in selected:
             clock += 1; key = (layer, expert); phase = phases[row['phase']]
             if key in entries:
@@ -52,17 +56,26 @@ def main():
     parser.add_argument('trace', type=pathlib.Path)
     parser.add_argument('--budgets-mib', type=int, nargs='+', default=[512, 2048, 4096, 8192])
     parser.add_argument('--output', type=pathlib.Path, required=True)
+    parser.add_argument('--cache-dir', type=pathlib.Path, help='Reuse deterministic counter replays for identical router input/source/budget/policy; never inference timings.')
     parser.add_argument('--events', type=int, help='Replay only the first N router events (for measured-counter validation).')
     args = parser.parse_args()
+    if any(mib < 0 for mib in args.budgets_mib): parser.error("budgets must be nonnegative")
     payload = gzip.decompress(args.trace.read_bytes()) if args.trace.suffix == '.gz' else args.trace.read_bytes()
     rows = [json.loads(line) for line in payload.decode('utf-8').splitlines() if line.strip()]
     total = len(rows)
     if args.events is not None:
         if args.events <= 0 or args.events > total: parser.error('--events must be between 1 and trace length')
         rows = rows[:args.events]
+    if args.cache_dir is not None:
+        from policy_replay_cache import ReplayCache, canonical_sha
+        cache = ReplayCache(args.cache_dir, simulate, hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest())
+        digest = canonical_sha(rows)
+        replay = lambda budget, policy: cache.replay(rows, budget, policy, digest)
+    else:
+        replay = lambda budget, policy: simulate(rows, budget, policy)
     report = {'trace':str(args.trace), 'trace_sha256':hashlib.sha256(payload).hexdigest(),
               'total_router_events':total, 'router_events':len(rows), 'results':[
-        {'budget_mib':mib, 'policy':policy, **simulate(rows, mib*1024*1024, policy)}
+        {'budget_mib':mib, 'policy':policy, **replay(mib*1024*1024, policy)}
         for mib in args.budgets_mib for policy in ['lru','lfu','least-stale']]}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')

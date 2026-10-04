@@ -36,6 +36,10 @@ pub struct MessagesRequest {
     pub temperature: f32,
     #[serde(default)]
     pub stream: Option<bool>,
+    #[serde(default)]
+    pub tools: Option<Vec<Value>>,
+    #[serde(default)]
+    pub tool_choice: Option<Value>,
 }
 
 fn default_temperature() -> f32 {
@@ -56,7 +60,7 @@ pub struct MessagesResponse {
     pub role: &'static str,
     pub content: Vec<ContentBlock>,
     pub model: String,
-    pub stop_reason: &'static str,
+    pub stop_reason: Option<&'static str>,
     pub usage: Usage,
 }
 
@@ -108,6 +112,46 @@ pub async fn messages(
             .into_response());
     }
     let sampling = SamplingOptions::from_temperature(req.temperature);
+    let tool_blocks = req.messages.iter().any(|message| {
+        message.content.as_array().is_some_and(|blocks| {
+            blocks.iter().any(|block| {
+                matches!(
+                    block.get("type").and_then(Value::as_str),
+                    Some("tool_use" | "tool_result")
+                )
+            })
+        })
+    });
+    if tool_blocks
+        || crate::tool_generation_requested(req.tools.as_deref(), req.tool_choice.as_ref())
+    {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"type": "error", "error": {
+                "type": "not_implemented_error", "code": "tool_generation_not_supported",
+                "message": "tool-call generation requires a validated tokenizer-aware grammar"
+            }})),
+        )
+            .into_response());
+    }
+    if let Err(error) = sampling.validate_structured_output() {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"type": "error", "error": {
+                "type": "not_implemented_error", "code": "structured_output_not_supported",
+                "message": error.to_string()
+            }})),
+        )
+            .into_response());
+    }
     let id = format!("msg_{}", uuid::Uuid::new_v4());
 
     if req.stream == Some(true) {
@@ -147,7 +191,11 @@ pub async fn messages(
             text: output.text,
         }],
         model: req.model,
-        stop_reason: "end_turn",
+        stop_reason: match output.stats.finish_reason {
+            bitnet_core::timings::GenerationFinishReason::Stop => Some("end_turn"),
+            bitnet_core::timings::GenerationFinishReason::Length => Some("max_tokens"),
+            bitnet_core::timings::GenerationFinishReason::Unknown => None,
+        },
         usage: Usage {
             input_tokens: output.stats.prompt_tokens,
             output_tokens: output.stats.completion_tokens,
@@ -280,7 +328,7 @@ async fn live_stream_messages(
                 let message_delta = json!({
                     "type": "message_delta",
                     "delta": {
-                        "stop_reason": "end_turn",
+                        "stop_reason": match output.stats.finish_reason {bitnet_core::timings::GenerationFinishReason::Stop=>Some("end_turn"),bitnet_core::timings::GenerationFinishReason::Length=>Some("max_tokens"),bitnet_core::timings::GenerationFinishReason::Unknown=>None},
                         "stop_sequence": serde_json::Value::Null
                     },
                     "usage": {

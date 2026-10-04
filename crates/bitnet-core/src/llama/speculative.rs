@@ -68,6 +68,7 @@ pub(super) struct Decision {
     pub confirmed: Vec<u32>,
     pub pending: Option<u32>,
     pub accepted: usize,
+    pub ended_on_eos: bool,
 }
 
 /// The caller has already emitted the first input token of the verification
@@ -84,6 +85,7 @@ pub(super) fn decide(
         confirmed: Vec::new(),
         pending: None,
         accepted: 0,
+        ended_on_eos: false,
     };
     for index in 0..=proposals.len() {
         if decision.confirmed.len() == remaining {
@@ -91,6 +93,7 @@ pub(super) fn decide(
         }
         let target = sample(index, &history);
         if eos.contains(&target) {
+            decision.ended_on_eos = true;
             break;
         }
         if proposals.get(index) != Some(&target) {
@@ -178,5 +181,25 @@ mod tests {
         }
         assert_eq!(accepted, counts[1]);
         assert!((counts[2] as f64 / (counts[0] + counts[2]) as f64 - 6.0 / 7.0).abs() < 0.006);
+    }
+}
+
+#[cfg(test)]
+mod finish_tests {
+    #[test]
+    fn eos_inside_verification_and_budget_exhaustion_are_distinct() {
+        let eos = super::decide(&[2, 3], 2, &[99], &[], |i, _| [2, 99][i]);
+        assert!(eos.ended_on_eos);
+        assert_eq!(eos.confirmed, [2]);
+        assert_eq!(eos.pending, None);
+        let budget = super::decide(&[2, 3], 2, &[99], &[], |i, _| [2, 3][i]);
+        assert!(!budget.ended_on_eos);
+        assert_eq!(budget.confirmed, [2, 3]);
+        assert_eq!(budget.pending, None);
+        let zero = super::decide(&[2], 0, &[99], &[], |_, _| {
+            panic!("zero budget must not consume a sample")
+        });
+        assert!(!zero.ended_on_eos);
+        assert!(zero.confirmed.is_empty());
     }
 }

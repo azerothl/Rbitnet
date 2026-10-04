@@ -21,6 +21,7 @@ __global__ void gpt_norm_ordered(float *x,const float *weights,float epsilon,uns
     __syncthreads();
     for(unsigned i=threadIdx.x;i<n;i+=256)y[i]=__fmul_rn(__fmul_rn(x[i],inv),weights[i]);
 }
+#include "gpt_ordered_norm.cuh"
 __global__ void gpt_router_matrix_ordered(const float *weights,size_t row_bytes,const float *x,unsigned cols,unsigned rows,unsigned lanes,float *out) {
     const unsigned token=blockIdx.y;x+=size_t(token)*cols;out+=size_t(token)*rows;
     unsigned row=(blockIdx.x*blockDim.x+threadIdx.x)/32,lane=threadIdx.x&31;
@@ -147,7 +148,7 @@ struct ResidentGpt {
     }
     void bias(float *out,const float *b,unsigned n) {resident_add<<<(n+255)/256,256,0,stream>>>(out,b,n);}
     void normalize(float *input,const float *norm,float *out,const float *residual=nullptr) {
-        if(cfg.ordered)gpt_norm_ordered<<<1,256,0,stream>>>(input,norm,cfg.epsilon,cfg.embd,out,residual);
+        if(cfg.ordered)launch_gpt_ordered_norm(input,norm,cfg.epsilon,cfg.embd,out,residual,1,stream);
         else resident_norm<<<1,256,0,stream>>>(input,norm,cfg.epsilon,cfg.embd,out,residual);
     }
     void enqueue(unsigned mode,float *trace=nullptr) {

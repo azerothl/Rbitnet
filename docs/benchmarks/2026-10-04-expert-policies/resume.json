@@ -1,0 +1,95 @@
+[
+  {
+    "name": "trace-gpt-oss-20b-cache512",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\gpt-oss-20b-cache512\\results.json",
+    "result_sha256": "363f0f3d6801b52fc4b3e57494b1225649a1e9b6e8cd251cab6b8ae4737e2cef",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "quiet-gpt-oss-20b-cache512",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\gpt-oss-20b-cache512\\results.json",
+    "result_sha256": "2940a043544a175ec2bbf2736b88c2c1c653c6ef32dd9134e8ac308cf8606abc",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "trace-gpt-oss-20b-cache8192",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\gpt-oss-20b-cache8192\\results.json",
+    "result_sha256": "b7bfbd5841c55ccb10c1703e1e39ea5c8e2014651dd6e0e5aa8c9e469155a2d1",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "quiet-gpt-oss-20b-cache8192",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\gpt-oss-20b-cache8192\\results.json",
+    "result_sha256": "d203defbbfc864165235c04a1946bc38a33c4b5e2c5de4d9a1ca936b5aed8234",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "network-gpt-oss-20b-lru",
+    "action": "preserved_incomplete_capture",
+    "reason": "'harness_sha256'",
+    "paths": [
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-lru-1791107586431137500\\0-gpt-oss-20b-lru",
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-lru-1791107586431137500\\1-network-gpt-oss-20b-lru.log"
+    ]
+  },
+  {
+    "name": "network-gpt-oss-20b-lfu",
+    "action": "preserved_incomplete_capture",
+    "reason": "'harness_sha256'",
+    "paths": [
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-lfu-1791107729470754200\\0-gpt-oss-20b-lfu",
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-lfu-1791107729470754200\\1-network-gpt-oss-20b-lfu.log"
+    ]
+  },
+  {
+    "name": "network-gpt-oss-20b-least-stale",
+    "action": "preserved_incomplete_capture",
+    "reason": "'harness_sha256'",
+    "paths": [
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-least-stale-1791107871745177100\\0-gpt-oss-20b-least-stale",
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-gpt-oss-20b-least-stale-1791107871745177100\\1-network-gpt-oss-20b-least-stale.log"
+    ]
+  },
+  {
+    "name": "trace-glm47-flash-cache512",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\glm47-flash-cache512\\results.json",
+    "result_sha256": "e2ef3c42dd8f94d5140e71c18586ff7ac41c6612639a1a5b98aca45f38f9fb7a",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "quiet-glm47-flash-cache512",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\glm47-flash-cache512\\results.json",
+    "result_sha256": "6e4f8d817486602d084e94c807e71e1d905cf48bb7257b9bf8e599ef6ce14cd3",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "trace-glm47-flash-cache8192",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\traced\\glm47-flash-cache8192\\results.json",
+    "result_sha256": "052135f746884e15d059c7ff9ccb6ef9eecc49d8b3f0eb7a6136add2129f3e00",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "quiet-glm47-flash-cache8192",
+    "result": "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\quiet\\glm47-flash-cache8192\\results.json",
+    "result_sha256": "bc16aef6fff179ae33ec84e94c9e9183f8f4b50540a972393d9e5e587a55d550",
+    "action": "reused_after_full_capture_validation"
+  },
+  {
+    "name": "network-glm47-flash-lru",
+    "action": "preserved_incomplete_capture",
+    "reason": "'harness_sha256'",
+    "paths": [
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-glm47-flash-lru-1791108016836500900\\0-glm47-flash-lru",
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-glm47-flash-lru-1791108016836500900\\1-network-glm47-flash-lru.log"
+    ]
+  },
+  {
+    "name": "network-glm47-flash-lfu",
+    "action": "preserved_incomplete_capture",
+    "reason": "'harness_sha256'",
+    "paths": [
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-glm47-flash-lfu-1791108181984944000\\0-glm47-flash-lfu",
+      "E:\\devs\\Rbitnet\\target\\performance-cache\\policy-measurements-128\\interrupted\\network-glm47-flash-lfu-1791108181984944000\\1-network-glm47-flash-lfu.log"
+    ]
+  }
+]

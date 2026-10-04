@@ -1,0 +1,37 @@
+POLICY_SUMMARY_DONE cases=36 measured_repetitions=2 warmups=1 prompts_separated=true
+
+Policy delivery prepared with preserved raw bytes, strict synchronous live captures and unresolved negative evidence. C:\Users\azero\.codex\worktrees\moe-replay-delivery\Rbitnet\docs\benchmarks\2026-10-04-expert-policies
+
+test_cli_cached_replays_equal_uncached_and_reuse_only_counters (test_simulate_expert_cache.PlacementReplayTests.test_cli_cached_replays_equal_uncached_and_reuse_only_counters) ... ok
+test_invalid_policy_and_negative_budget_are_refused (test_simulate_expert_cache.PlacementReplayTests.test_invalid_policy_and_negative_budget_are_refused) ... ok
+test_later_selected_ready_expert_survives_first_demand_miss (test_simulate_expert_cache.PlacementReplayTests.test_later_selected_ready_expert_survives_first_demand_miss) ... ok
+test_selected_leases_and_byte_budgets (test_simulate_expert_cache.PlacementReplayTests.test_selected_leases_and_byte_budgets) ... ok
+test_stale_layer_order_differs_from_recency_and_frequency (test_simulate_expert_cache.PlacementReplayTests.test_stale_layer_order_differs_from_recency_and_frequency) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.258s
+
+OK
+
+test_all_semantic_identity_fields_invalidate (test_policy_replay_cache.ReplayCacheTests.test_all_semantic_identity_fields_invalidate) ... ok
+test_reuse_and_corruption (test_policy_replay_cache.ReplayCacheTests.test_reuse_and_corruption) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.030s
+
+OK
+
+test_async_option_is_refused_in_this_sync_study (test_policy_network_options.NetworkOptions.test_async_option_is_refused_in_this_sync_study) ... ok
+test_final_child_options_and_capture_match_each_sync_policy (test_policy_network_options.NetworkOptions.test_final_child_options_and_capture_match_each_sync_policy) ... ok
+test_old_unrecorded_async_capture_is_archived_instead_of_reused (test_policy_network_options.NetworkOptions.test_old_unrecorded_async_capture_is_archived_instead_of_reused) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.435s
+
+OK
+
+POLICY_DELIVERY_VERIFIED files=50 exact_replays=12 staged=False negative_evidence_preserved=true
+
+warning: in the working copy of 'docs/PERFORMANCE_CACHE_STACK.md', LF will be replaced by CRLF the next time Git touches it
+
+POLICY_DELIVERY_READY exact raw bytes and 12 replay counters verified; 10 Python regressions passed; commit/push pending.

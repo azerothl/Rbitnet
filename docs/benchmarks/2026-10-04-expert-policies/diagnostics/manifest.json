@@ -1,0 +1,67 @@
+{
+  "production": {
+    "source_sha256": {
+      "crates/bitnet-core/src/backend.rs": "8961e2bd903ca36d71916e6b7f801815a9b82e1a690969ef6bc453f2381cd431",
+      "crates/bitnet-core/src/backend/async_upload.rs": "f1f5723d892c47cf3d7918d78e52e4f0b6732f5e017937f9d1b89d8c88de8403",
+      "crates/bitnet-core/src/native/weights.rs": "d471264dfc5b9c4b7e8fac205f8401a3decbc3b56ad5537e31eb82eef7383488",
+      "crates/bitnet-core/src/native/expert_cache.rs": "011540a781ddec07a522cb36be5e4bd4b0acfaf486111b2e8b5d4542d99beddf",
+      "crates/bitnet-core/src/native/expert_cache/async_cache.rs": "1f0628cf86675584e8a166986b597ef5d7590db1e3c8501c057442b0ad7723af",
+      "crates/bitnet-core/src/native/expert_cache/async_cache/tests.rs": "0b45fbd5d9df3df99cc9cf64459243cdc6bdcce12542ebd21e0f2cb6a499105a",
+      "crates/bitnet-core/src/native/moe.rs": "e964959d306c5965f82975f6dfea7705fb8538eaf39a227dd13d73c17060f431",
+      "crates/bitnet-core/src/native/moe_metrics.rs": "af0ec9d6cf6f078604e9692e9b4b478236f31953f708c4df04e524ff3dde4ed6",
+      "crates/bitnet-core/src/perf.rs": "ab9295cb6311eefc7263fbda1581569c2b6ee227ebccfbf621e939bddd0febe1",
+      "crates/bitnet-core/src/native/async_runtime_tests.rs": "f0b5c51c45d091f266ee286ed07861470fd1add947416b2d3c1cb20b930d1ced",
+      "crates/bitnet-core/src/native/async_profile_tests.rs": "4a065cc69659fa66bee478f97d8cd91927de8b296560bbbc9464a307a80df238",
+      "crates/bitnet-core/src/native/async_config_tests.rs": "fae55ab700672aa246d95e4a242a94ef1bedaa41fa722f4482d8e4f780738a86",
+      "crates/bitnet-core/src/native/graph.rs": "9c9e0108764647cb8c31d59582403ce214ba2b82c6a7cd4ae97a599f55b70c2c"
+    },
+    "binary_sha256": "5d937ad9f035c20548e12bebf7a4121ff389a2d09f3d1034f706f8194cf91470",
+    "frozen_test_binary_sha256": "87d89452f1aed1e666b79074e4e0b1d3ca2d4da97216a77c225c8c05ac6d2ca6",
+    "library_sha256": "b86c8fa6d5cf34f500c01e860bae1f87fcb2411862d1ed2e0f68dc08f9411e38",
+    "native_source_sha256": {
+      "native/cuda_quant/src/device_memory.cuh": "14869e0ea819fd846a9b4e859ee5a99a806bbf88f0a56ea693a2c0c2d5babf2c",
+      "native/cuda_quant/src/gpt_full.cuh": "1199969f8a172027ef2541bce7097a8ab481eff8edd9ea81ceefd011ae7734ed",
+      "native/cuda_quant/src/gpt_prefill.cuh": "5123201667575ada74b1b43aac986a468739c6c2350386f7a57f3afe484fa787",
+      "native/cuda_quant/src/grouped_moe.cuh": "4454acd9ef9a9cc8435c2d5cd8dc6980fcf26f3e6ffa13d13f7c3cb1d315c95a",
+      "native/cuda_quant/src/llama_resident.cuh": "e55bb0b9d80b1f2e4e0a04af5d1a5d7a367835c2f0e34e6571e3732a24c02579",
+      "native/cuda_quant/src/mla_full.cuh": "a6b2a9c5c9b90382188b3cbeffa2c3fd5d6e7b44e170f42a315d7538d1a211fb",
+      "native/cuda_quant/src/moe_fused.cuh": "6d166145883e5f11452aa951fd674d667c05eade5c0c9f859f1ef6aa0521988e",
+      "native/cuda_quant/src/moe_resident.cuh": "282a99abad4a845f8185221a49a762f3fabccbfb994272647dd824f469108fc1",
+      "native/cuda_quant/src/mxfp4_ordered_gemm.cuh": "4292f7bce0b946df6f1f4c602c3948d69b0399a6877b537456118dfdd9f8c27f",
+      "native/cuda_quant/src/native_completion.cuh": "eaa924c6cf9c247c4f8ec550b6904170e1a0e2ad5b6e8b6f4cba7ca4a21016ee",
+      "native/cuda_quant/src/native_completion_check.cuh": "61711961057026b8f215b07154024b0f86496d0142f76ad98725795c93aa2188",
+      "native/cuda_quant/src/ordered_gemm.cuh": "5f0f5fe8464fddab5c74ea91add2c0f2e8c1cdeccca1ac452b7c0240c4578a3e",
+      "native/cuda_quant/src/output_head.cuh": "6668a0486e14ce66ef7a018f974a1b1d70d0b52679b4810260f81cf74985fe02",
+      "native/cuda_quant/src/paged_kernels.cuh": "8bc7ea8a3e89838caa89df29a580ede31f843d9a79693c0013e1e62163e8654b",
+      "native/cuda_quant/src/paged_pool.cuh": "2e53cb130d2041184dae680468162e91887130b45ff9c6ac348c904e33b6df39",
+      "native/cuda_quant/src/prefill_quant.cuh": "7e07c9d2fc085f8f0c7dfa2dac5755bbcf7fde06aa0f1d47fa387ebbe77e65ff",
+      "native/cuda_quant/src/quant_matvec.cu": "614ee38b9f3e77f4f9a1a6621de4ba92d0887c08cdad1d68eb8cb2cbd85b50e5",
+      "native/cuda_quant/src/qwen_full.cuh": "8999e8a96fda7807a8165a62913e60629075ac7f17847740a0f89ab72e6a4d3b",
+      "native/cuda_quant/src/qwen_prefill.cuh": "99e4cdafcb1403e58de9467bd008eeab870c83b02c76369d2fc38c6735276cad",
+      "native/cuda_quant/src/qwen_recurrent.cuh": "69d612227d0e25fcc099642b52c367500eb880628b9bdfdd72c6a53d0de03bed",
+      "native/cuda_quant/src/split_attention.cuh": "f8f8effeda891cf8b3e24fab2ef7365344f9cc66098c068d1207802b88372e23",
+      "native/cuda_quant/include/rbitnet_cuda_quant.h": "b0c7b8f7ecb9adfa02f3870e365fc32fda126efb8736af51be39fc3ecd523648"
+    }
+  },
+  "library_sha256": "b86c8fa6d5cf34f500c01e860bae1f87fcb2411862d1ed2e0f68dc08f9411e38",
+  "prepared": {
+    "root_commit": "6f67224184e767f1c9dfcfc5633d106ae4d0463a",
+    "test_sha256": "c1ebc9044c033f0fbb58a5e728c22bb68b0523268a60942a677b6daf5adb926a",
+    "limits": [
+      "Diagnostic only; no production change. Compilation and actual model test pending.",
+      "Adds output-head readback after the normal device argmax; timing is not a throughput benchmark.",
+      "Exact failed story prompt token count is checked; complete logits and device/host argmax must match at every generated position."
+    ]
+  },
+  "logs": {
+    "actual.log": "0b9028b2fd5be91e66aab1e6c59c4c9d45e268c78ccffa72d3e5456ee0c5f4b2",
+    "attention-memcheck.log": "f6d11cb0dcc3196e69611efc38d3cba8a093022e21ad0b0b6baa63ff7b80e94a",
+    "attention-racecheck.log": "312359ce698ff4883ce10e851fc944571bf1f44eb48f8dcceac267e451a85401",
+    "compile.log": "e6f93f1a75262a0b7439c9d8b4a4f318c4f232996c315f418f2dbc79e708ac72"
+  },
+  "limits": [
+    "Exact diagnostic full logits and device/host argmax at 1536 positions, same forced token history.",
+    "Extra output-head readback changes scheduling; passing this diagnostic does not erase an earlier quiet HTTP divergence.",
+    "No performance improvement or root implementation change."
+  ]
+}

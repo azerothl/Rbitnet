@@ -1,0 +1,56 @@
+[
+  {
+    "cycle": 0,
+    "prompt": 0,
+    "matches_frozen_lru": true,
+    "content_sha256": "17b85fe14125dc4824cf6908ff3fc49e73e02081b9df038d90d8e457a834e4c4"
+  },
+  {
+    "cycle": 0,
+    "prompt": 1,
+    "matches_frozen_lru": true,
+    "content_sha256": "5997b3dfc4ef10ddbaaceaf9c1e9a52797ba5dafe0cc1b22199063b5a750f2ff"
+  },
+  {
+    "cycle": 0,
+    "prompt": 2,
+    "matches_frozen_lru": true,
+    "content_sha256": "5dd272b4f316b776a7b8e3d0894b37e1e42be3d5d3b204b8a5836cc50597a6b1"
+  },
+  {
+    "cycle": 1,
+    "prompt": 0,
+    "matches_frozen_lru": true,
+    "content_sha256": "17b85fe14125dc4824cf6908ff3fc49e73e02081b9df038d90d8e457a834e4c4"
+  },
+  {
+    "cycle": 1,
+    "prompt": 1,
+    "matches_frozen_lru": true,
+    "content_sha256": "5997b3dfc4ef10ddbaaceaf9c1e9a52797ba5dafe0cc1b22199063b5a750f2ff"
+  },
+  {
+    "cycle": 1,
+    "prompt": 2,
+    "matches_frozen_lru": true,
+    "content_sha256": "5dd272b4f316b776a7b8e3d0894b37e1e42be3d5d3b204b8a5836cc50597a6b1"
+  },
+  {
+    "cycle": 2,
+    "prompt": 0,
+    "matches_frozen_lru": true,
+    "content_sha256": "17b85fe14125dc4824cf6908ff3fc49e73e02081b9df038d90d8e457a834e4c4"
+  },
+  {
+    "cycle": 2,
+    "prompt": 1,
+    "matches_frozen_lru": true,
+    "content_sha256": "5997b3dfc4ef10ddbaaceaf9c1e9a52797ba5dafe0cc1b22199063b5a750f2ff"
+  },
+  {
+    "cycle": 2,
+    "prompt": 2,
+    "matches_frozen_lru": true,
+    "content_sha256": "5dd272b4f316b776a7b8e3d0894b37e1e42be3d5d3b204b8a5836cc50597a6b1"
+  }
+]
