@@ -1,0 +1,4 @@
+Encoded attention oracle: initializing CUDA before NumPy.
+Encoded attention oracle: DLL loaded; configuring managed allocation ceiling.
+Encoded attention oracle: CUDA and NumPy initialized.
+Encoded K/V decode/scales/physical bytes and actual F64 attention oracle: 64 cases passed.

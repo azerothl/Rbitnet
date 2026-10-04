@@ -1,0 +1,228 @@
+nvcc: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\nvcc.exe
+cl:   C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\bin\HostX64\x64\cl.exe
+out:  E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\cuda\rbitnet_cuda_quant64.dll
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh(293): warning #177-D: variable "kv" was declared but never referenced
+      size_t kv=size_t(cfg->layers)*cfg->capacity*cfg->kv_heads*cfg->head_dim;
+             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh(293): warning #177-D: variable "kv" was declared but never referenced
+      size_t kv=size_t(cfg->layers)*cfg->capacity*cfg->kv_heads*cfg->head_dim;
+             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh(293): warning #177-D: variable "kv" was declared but never referenced
+      size_t kv=size_t(cfg->layers)*cfg->capacity*cfg->kv_heads*cfg->head_dim;
+             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh(293): warning #177-D: variable "kv" was declared but never referenced
+      size_t kv=size_t(cfg->layers)*cfg->capacity*cfg->kv_heads*cfg->head_dim;
+             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=true]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=true]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=true]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "lane" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+               ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "warp" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                           ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\kv_storage.cuh(83): warning #177-D: variable "maxima" was declared but never referenced
+      unsigned lane=tid&31,warp=tid/32;__declspec(__shared__) float maxima[4];
+                                                                    ^
+          detected during:
+            instantiation of "void <unnamed>::encoded_kv_fused_rope_store(float *, float *, const float *, <unnamed>::EncodedKvView<Format, Paged>, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int *) [with Format=1U, Paged=false]" at line 220
+            instantiation of "void <unnamed>::launch_encoded_kv(<unnamed>::EncodedKvView<Format, Paged>, float *, float *, const float *, const float *, const unsigned int *, unsigned int, unsigned int, unsigned int, unsigned int, __nv_bool, float *, float *, unsigned int *, cudaStream_t) [with Format=1U, Paged=false]" at line 179 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+            instantiation of "void <unnamed>::ResidentLlama::encoded_layer_t<Format,Paged>(float *, float *, const float *, unsigned int, unsigned int, float *, float *) [with Format=1U, Paged=false]" at line 182 of E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\llama_resident.cuh
+
+quant_matvec.cu
+tmpxft_0000af14_00000000-7_quant_matvec.compute_75.cudafe1.cpp
+   Création de la bibliothèque E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\cuda\rbitnet_cuda_quant64.lib et de l'objet E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\cuda\rbitnet_cuda_quant64.exp
+Built OK. Add to PATH or set RBITNET_CUDA_QUANT_LIB=E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\cuda\rbitnet_cuda_quant64.dll
+
+FullName      : E:\devs\Rbitnet\target\performance-cache\encoded-store-fusion-native\cuda\rbitnet_cuda_quant64.dll
+Length        : 5559296
+LastWriteTime : 04/10/2026 13:21:27
+

@@ -1,0 +1,691 @@
+{
+  "binary_sha256": "7d3c8022e10c93c6736a4b393b45997b435db2289c9fb1f831799a21f2f22be7",
+  "library_sha256": "c47dfc70baf629233df1f5755eda2881f61d93e64f023cdc756deb62eb612369",
+  "speculative": false,
+  "qwen_full": false,
+  "gpt_full": true,
+  "split_kv": true,
+  "tf32x3": false,
+  "moe_cache_mib": 8192,
+  "moe_execution": "cache",
+  "mla_full": false,
+  "gpt_segmented": true,
+  "cases": [
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "greedy",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer. Conçu par le professeur Armand, ce robot n’était pas un simple assemblage de métal et de circuits ; il était doté d’un cœur de silicium, d’une mémoire infinie et d’une curiosité insatiable. Sa mission : explorer chaque recoin de la",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111198,
+        "id": "chatcmpl-1791111198",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer. Conçu par le professeur Armand, ce robot n’était pas un simple assemblage de métal et de circuits ; il était doté d’un cœur de silicium, d’une mémoire infinie et d’une curiosité insatiable. Sa mission : explorer chaque recoin de la",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111199,
+        "id": "chatcmpl-1791111199",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "sampling",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0.7,
+        "seed": 42
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs inondés de lumière douce d’une vieille bibliothèque, où les étagères s’étiraient jusqu’à l’horizon comme des sentinelles de silence, un robot nommé Léo se déplaçait, silencieux mais déterminé. Sa coque d’aluminium poli reflétait les reflets dorés des livres, et son cœur, un champ d’énergie quantique, battait à une fréquence presque humaine lorsqu’il parcourait ces lieux saints.  \n\nLéo n’était pas un simple dispositif mécanique ; il avait été conçu par",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111201,
+        "id": "chatcmpl-1791111201",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs inondés de lumière douce d’une vieille bibliothèque, où les étagères s’étiraient jusqu’à l’horizon comme des sentinelles de silence, un robot nommé Léo se déplaçait, silencieux mais déterminé. Sa coque d’aluminium poli reflétait les reflets dorés des livres, et son cœur, un champ d’énergie quantique, battait à une fréquence presque humaine lorsqu’il parcourait ces lieux saints.  \n\nLéo n’était pas un simple dispositif mécanique ; il avait été conçu par",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111203,
+        "id": "chatcmpl-1791111203",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "mode": "penalties",
+      "kind": "client_disconnect_then_resume",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Écris un long récit sur un robot qui explore une bibliothèque."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "frequency_penalty": 0.2,
+        "presence_penalty": 0.1
+      },
+      "cancelled_fragments": [
+        "Dans",
+        " les"
+      ],
+      "expected": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer dans ses circuits. Léo n’était pas un robot ordinaire. Conçu par le professeur Armand, un bibliothécaire passionné de science-fiction, il était doté d’un cerveau artificiel capable de traiter des données à la vitesse de la lumière et d’un cœur mécanique qui",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111205,
+        "id": "chatcmpl-1791111205",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "resumed": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "Dans les couloirs silencieux d’une bibliothèque ancestrale, où les étagères s’étendent jusqu’au plafond comme des sentinelles de papier et de cuir, un robot nommé Léo se préparait à vivre une aventure qu’il n’aurait jamais pu imaginer dans ses circuits. Léo n’était pas un robot ordinaire. Conçu par le professeur Armand, un bibliothécaire passionné de science-fiction, il était doté d’un cerveau artificiel capable de traiter des données à la vitesse de la lumière et d’un cœur mécanique qui",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111207,
+        "id": "chatcmpl-1791111207",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 104,
+          "total_tokens": 232
+        }
+      },
+      "equal": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "kind": "explicit_stop_http_sse",
+      "request": {
+        "model": "gpt-oss-20b",
+        "messages": [
+          {
+            "role": "system",
+            "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+          },
+          {
+            "role": "user",
+            "content": "Quelle est la capitale de la France ? Réponds en un mot."
+          }
+        ],
+        "max_tokens": 128,
+        "temperature": 0,
+        "stop": [
+          "Paris"
+        ]
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "content": "",
+              "role": "assistant"
+            }
+          }
+        ],
+        "created": 1791111207,
+        "id": "chatcmpl-1791111207",
+        "model": "gpt-oss-20b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 21,
+          "prompt_tokens": 106,
+          "total_tokens": 127
+        }
+      },
+      "sse_text": "",
+      "done": true
+    },
+    {
+      "config": "gpt-oss-20b-block0",
+      "kind": "four_concurrent_requests_serialized_runtime",
+      "requests": [
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de la France ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Calcule 13 + 29."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Quelle est la capitale de l’Italie ?"
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        },
+        {
+          "model": "gpt-oss-20b",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un assistant précis. Réponds en français et commence directement ta réponse."
+            },
+            {
+              "role": "user",
+              "content": "Répète : été, café, résumé, 🙂."
+            }
+          ],
+          "max_tokens": 128,
+          "temperature": 0
+        }
+      ],
+      "expected": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111208,
+          "id": "chatcmpl-1791111208",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 16,
+            "prompt_tokens": 99,
+            "total_tokens": 115
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111209,
+          "id": "chatcmpl-1791111209",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 99,
+            "total_tokens": 122
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l’Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111209,
+          "id": "chatcmpl-1791111209",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 100,
+            "total_tokens": 123
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111210,
+          "id": "chatcmpl-1791111210",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 30,
+            "prompt_tokens": 103,
+            "total_tokens": 133
+          }
+        }
+      ],
+      "actual": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Paris.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111210,
+          "id": "chatcmpl-1791111210",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 16,
+            "prompt_tokens": 99,
+            "total_tokens": 115
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "13 + 29 = 42.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111211,
+          "id": "chatcmpl-1791111211",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 99,
+            "total_tokens": 122
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "La capitale de l’Italie est Rome.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111210,
+          "id": "chatcmpl-1791111210",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 23,
+            "prompt_tokens": 100,
+            "total_tokens": 123
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "été, café, résumé, 🙂",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1791111210,
+          "id": "chatcmpl-1791111210",
+          "model": "gpt-oss-20b",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 30,
+            "prompt_tokens": 103,
+            "total_tokens": 133
+          }
+        }
+      ],
+      "equal": true,
+      "metrics_delta": {
+        "rbitnet_chat_requests_total": 4.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 1532.0,
+        "rbitnet_inference_calls_total": 4.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 51.0,
+        "rbitnet_inference_ttft_ms_avg": -93.0,
+        "rbitnet_inference_decode_tokens_per_sec": 0.282472999999996,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 51.0,
+        "rbitnet_inference_decode_ms_sum": 1172.0,
+        "rbitnet_inference_itl_us_sum": 50931.0,
+        "rbitnet_inference_tpot_us_sum": 50931.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 92.0,
+        "rbitnet_native_accelerated_calls_total": 4.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 0.0,
+        "rbitnet_core_cuda_managed_live_bytes": 0.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 0.0,
+        "rbitnet_core_cuda_managed_allocations_total": 0.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 96.0,
+        "rbitnet_core_gpu_mla_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 2304.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 9216.0,
+        "rbitnet_core_native_moe_resident_layers_total": 2304.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 269436100.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 0.0,
+        "rbitnet_core_expert_cache_evictions_total": 0.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 0.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 0.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 1327488.0,
+        "rbitnet_core_gpu_download_bytes_total": 74112.0,
+        "rbitnet_core_gpu_gemv_calls_total": 18528.0,
+        "rbitnet_core_gpu_attention_calls_total": 2304.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 9437184.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 4.0,
+        "rbitnet_core_prefix_hit": 4.0,
+        "rbitnet_core_prefix_cache_misses_total": 0.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 39026688.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 4704.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 765952.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      },
+      "all_cases_metrics_delta": {
+        "rbitnet_chat_requests_total": 19.0,
+        "rbitnet_chat_errors_total": 0.0,
+        "rbitnet_inference_timeouts_total": 0.0,
+        "rbitnet_inference_ms_sum": 18397.0,
+        "rbitnet_inference_calls_total": 16.0,
+        "rbitnet_unauthorized_total": 0.0,
+        "rbitnet_model_unloads_total": 0.0,
+        "rbitnet_model_reloads_total": 0.0,
+        "rbitnet_model_reload_failures_total": 0.0,
+        "rbitnet_model_reload_ms_sum": 0.0,
+        "rbitnet_structured_output_validation_failures_total": 0.0,
+        "rbitnet_inference_ttft_ms_sum": 4666.0,
+        "rbitnet_inference_ttft_ms_avg": 291.0,
+        "rbitnet_inference_decode_tokens_per_sec": 75.612354,
+        "rbitnet_inference_encode_ms_sum": 0.0,
+        "rbitnet_inference_prefill_ms_sum": 4653.0,
+        "rbitnet_inference_decode_ms_sum": 13146.0,
+        "rbitnet_inference_itl_us_sum": 201679.0,
+        "rbitnet_inference_tpot_us_sum": 201679.0,
+        "rbitnet_speculative_requests_total": 0.0,
+        "rbitnet_completion_tokens_total": 994.0,
+        "rbitnet_native_accelerated_calls_total": 16.0,
+        "rbitnet_core_cuda_managed_memory_available": 0.0,
+        "rbitnet_core_cuda_managed_limit_bytes": 0.0,
+        "rbitnet_core_cuda_managed_live_bytes": 60063744.0,
+        "rbitnet_core_cuda_managed_peak_bytes": 60063744.0,
+        "rbitnet_core_cuda_managed_allocations_total": 6.0,
+        "rbitnet_core_cuda_managed_refusals_total": 0.0,
+        "rbitnet_core_gpu_qwen_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_gpt_full_tokens_total": 1207.0,
+        "rbitnet_core_gpu_mla_full_tokens_total": 0.0,
+        "rbitnet_core_gpu_split_attention_queries_total": 28968.0,
+        "rbitnet_core_gpu_tensor_gemm_calls_total": 0.0,
+        "rbitnet_core_speculative_verify_blocks_total": 0.0,
+        "rbitnet_core_speculative_target_tokens_total": 0.0,
+        "rbitnet_core_speculative_rollbacks_total": 0.0,
+        "rbitnet_core_speculative_draft_ns_total": 0.0,
+        "rbitnet_core_speculative_verify_ns_total": 0.0,
+        "rbitnet_core_gpu_prefill_blocks_total": 0.0,
+        "rbitnet_core_gpu_prefill_tokens_total": 0.0,
+        "rbitnet_core_gpu_quant_gemm_calls_total": 0.0,
+        "rbitnet_core_expert_cache_hits_total": 115079.0,
+        "rbitnet_core_native_moe_resident_layers_total": 28968.0,
+        "rbitnet_core_native_moe_fallback_layers_total": 0.0,
+        "rbitnet_core_native_moe_resident_ns_total": 6412839000.0,
+        "rbitnet_core_native_moe_fallback_ns_total": 0.0,
+        "rbitnet_core_expert_cache_misses_total": 793.0,
+        "rbitnet_core_expert_cache_evictions_total": 144.0,
+        "rbitnet_core_expert_cache_upload_bytes_total": 10482825600.0,
+        "rbitnet_core_expert_cache_upload_ns_total": 3010066374.0,
+        "rbitnet_core_quant_matvec_calls_total": 0.0,
+        "rbitnet_core_quant_matvec_rows_total": 0.0,
+        "rbitnet_core_quant_matvec_ns_total": 0.0,
+        "rbitnet_core_gpu_upload_bytes_total": 10499515996.0,
+        "rbitnet_core_gpu_download_bytes_total": 440105204.0,
+        "rbitnet_core_gpu_gemv_calls_total": 232799.0,
+        "rbitnet_core_gpu_attention_calls_total": 28968.0,
+        "rbitnet_core_scratch_alloc_bytes_total": 0.0,
+        "rbitnet_core_scratch_reuse_hits_total": 0.0,
+        "rbitnet_core_kv_write_bytes_total": 118652928.0,
+        "rbitnet_core_kv_physical_pages": 0.0,
+        "rbitnet_core_kv_new_physical_pages_total": 0.0,
+        "rbitnet_core_kv_reused_physical_pages_total": 0.0,
+        "rbitnet_core_kv_quant_format_code": 0.0,
+        "rbitnet_core_kv_pool_active_seqs": 0.0,
+        "rbitnet_core_kv_pool_allocated_pages": 0.0,
+        "rbitnet_core_kv_pool_free_pages": 0.0,
+        "rbitnet_core_kv_pool_fragmentation_permille": 0.0,
+        "rbitnet_core_model_load_ms_total": 0.0,
+        "rbitnet_core_model_loads_total": 0.0,
+        "rbitnet_core_scheduler_batches_total": 0.0,
+        "rbitnet_core_scheduler_batch_items_total": 0.0,
+        "rbitnet_core_prefix_cache_hits_total": 18.0,
+        "rbitnet_core_prefix_hit": 18.0,
+        "rbitnet_core_prefix_cache_misses_total": 1.0,
+        "rbitnet_core_prefix_cache_bytes_saved_total": 174882816.0,
+        "rbitnet_core_speculative_draft_tokens_total": 0.0,
+        "rbitnet_core_speculative_verified_tokens_total": 0.0,
+        "rbitnet_core_speculative_accepted_tokens_total": 0.0,
+        "rbitnet_core_draft_accept": 0.0,
+        "rbitnet_core_cuda_graph_replays_total": 59143.0,
+        "rbitnet_core_scheduler_decode_waves_total": 0.0,
+        "rbitnet_core_scheduler_prefill_chunks_total": 0.0,
+        "rbitnet_core_scheduler_stall_free_iters_total": 0.0,
+        "rbitnet_core_scheduler_iteration_budget_tokens": 0.0,
+        "rbitnet_core_memory_budget_checks_total": 0.0,
+        "rbitnet_core_memory_budget_refusals_total": 0.0,
+        "rbitnet_core_memory_budget_estimated_load_bytes": 0.0,
+        "rbitnet_core_memory_budget_weight_bytes": 0.0,
+        "rbitnet_core_memory_budget_kv_estimate_bytes": 0.0,
+        "rbitnet_process_rss_bytes": 9590571008.0,
+        "rbitnet_process_vram_measurement_available": 0.0
+      }
+    }
+  ]
+}

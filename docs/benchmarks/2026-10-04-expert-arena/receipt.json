@@ -1,0 +1,96 @@
+{
+  "preparation": {
+    "workspace": "C:\\Users\\azero\\.codex\\worktrees\\expert-arena-delivery\\Rbitnet",
+    "base_head": "86731958cadb7c0f6f48833cd6a47ff7fc83012d",
+    "private_preparation": {
+      "root_commit": "6f67224184e767f1c9dfcfc5633d106ae4d0463a",
+      "source_sha256": {
+        "crates/bitnet-core/src/backend.rs": "7907f0d106c29d6c4df9a9e8b20531b098603b51690b57004a8c77b241abb146",
+        "crates/bitnet-core/src/backend/expert_arena.rs": "c8ef7deb8712eb56f71738a02045594e080f255470b38e62af46c58d69834f08",
+        "crates/bitnet-core/src/backend/async_upload.rs": "c2317d9ffa8e752e5212c708e31fb597dfda3eb9074d82238d9ddc95f716f272",
+        "crates/bitnet-core/src/native/weights.rs": "9d17b796ac485663fe43f9f6342061c10907953d0da2ccf5f324119900109a45",
+        "crates/bitnet-core/src/native/expert_cache/async_cache.rs": "1ddfabf72d44073c175749ca98f09e5e2ad0724b0f588e846d6828b34d04eab1",
+        "crates/bitnet-core/src/native/expert_cache/async_cache/arena_tests.rs": "56e66a0502e81f81b087a506a8cf72140e61b200abc2a379c74fe006ab57f5d9",
+        "crates/bitnet-core/src/native/async_runtime_tests.rs": "3c1f4464bfe0048adc4db35e6dea957ec9d0b1430e7fd9bce94f341871faf597"
+      },
+      "limitations": [
+        "Prepared only; no Rust compilation or real CUDA test has run.",
+        "Fixed max-format projection slots in one allocation; no dynamic compaction.",
+        "Opt-in RBITNET_MOE_ARENA=1 requires existing asynchronous expert pool.",
+        "Physical padding is charged to cache budget and may reduce capacity.",
+        "A lease on any view retains the entire arena until its last owner drops."
+      ]
+    },
+    "implementation_sha256": {
+      "crates/bitnet-core/src/backend.rs": "7907f0d106c29d6c4df9a9e8b20531b098603b51690b57004a8c77b241abb146",
+      "crates/bitnet-core/src/backend/expert_arena.rs": "c8ef7deb8712eb56f71738a02045594e080f255470b38e62af46c58d69834f08",
+      "crates/bitnet-core/src/backend/async_upload.rs": "c2317d9ffa8e752e5212c708e31fb597dfda3eb9074d82238d9ddc95f716f272",
+      "crates/bitnet-core/src/native/weights.rs": "9d17b796ac485663fe43f9f6342061c10907953d0da2ccf5f324119900109a45",
+      "crates/bitnet-core/src/native/expert_cache/async_cache.rs": "1ddfabf72d44073c175749ca98f09e5e2ad0724b0f588e846d6828b34d04eab1",
+      "crates/bitnet-core/src/native/expert_cache/async_cache/arena_tests.rs": "56e66a0502e81f81b087a506a8cf72140e61b200abc2a379c74fe006ab57f5d9",
+      "crates/bitnet-core/src/native/async_runtime_tests.rs": "3c1f4464bfe0048adc4db35e6dea957ec9d0b1430e7fd9bce94f341871faf597"
+    },
+    "unchanged_native_sha256": {
+      "native/cuda_quant/src/device_memory.cuh": "f18e3f51d40ed72f3dc2e8b8e5b9ee44fa42f9baa600fee9e2aac59c967fab56",
+      "native/cuda_quant/src/gpt_full.cuh": "b1542241026a02e343df1b09a4fb1056ca5a2ed30b00edabb121f0e878300a32",
+      "native/cuda_quant/src/gpt_prefill.cuh": "8c9167c7525412bc059bc64a6af3f20cc34a5e10ff27d69fc63fb1ddef5fb6e4",
+      "native/cuda_quant/src/grouped_moe.cuh": "c0e3278374885c253658b43b64f3d6e816b49633bb44f904bc0437e5b49ceb1f",
+      "native/cuda_quant/src/llama_resident.cuh": "95ed7c29cbf1d6ddc3da5699321715480a918be3c9a8155f5991d7dcc28a0d5b",
+      "native/cuda_quant/src/mla_full.cuh": "15814137cc574c9c3168b4038695d3278740db640a27868da04533f7fee1b050",
+      "native/cuda_quant/src/moe_fused.cuh": "6e68941bde59596cfdcacb03d1ae7b1145c09230b167a62127f233641922df70",
+      "native/cuda_quant/src/moe_resident.cuh": "c2a58c5612fa32d01d1298f8ec7c001141f8f1dee518883bfceee7d8d27bafe4",
+      "native/cuda_quant/src/mxfp4_ordered_gemm.cuh": "5bcad275acfd50a47d7ca5fb7bc84f10e62b3bb806dbb50a14faf956e0e597ac",
+      "native/cuda_quant/src/native_completion.cuh": "a8884eaf6ecd553dc4548b02a4244ea90d8fee761d9d57cf790fbe4528ddb526",
+      "native/cuda_quant/src/native_completion_check.cuh": "9a0b465a12e79b1ce28c5f0fbc162881b1482e289f335c6d972ef208ebffcd25",
+      "native/cuda_quant/src/ordered_gemm.cuh": "c4863550dea6c7f910026760ed02581e3e5ceaeeed838d40fc3bceb0cd80c146",
+      "native/cuda_quant/src/output_head.cuh": "79b13120bd60dd479e541f4cf17773c0f50c45eea0ac4544eced13715c241993",
+      "native/cuda_quant/src/paged_kernels.cuh": "06327109f671a10292f264e161ea82a4ac4cc88bb6111ee85cab8c337c382ee3",
+      "native/cuda_quant/src/paged_pool.cuh": "737cb4469cee76e2e5a3298671e949b1b4aee4d5efecc0ff907d20221bdfb509",
+      "native/cuda_quant/src/prefill_quant.cuh": "e7b55fd18affc924e9de6d306f09dcbe681818c8c79e10851bc100d0b47e7150",
+      "native/cuda_quant/src/quant_matvec.cu": "4f87465854cd76dcb8c2c043b3a8f571343cdbb7c322f01d1abceee13372754f",
+      "native/cuda_quant/src/qwen_full.cuh": "4ea329469ac6c5320a22eceb25b6fc36dc8b8d9c5125b06ad5197afd8e3c4c87",
+      "native/cuda_quant/src/qwen_prefill.cuh": "99e4cdafcb1403e58de9467bd008eeab870c83b02c76369d2fc38c6735276cad",
+      "native/cuda_quant/src/qwen_recurrent.cuh": "1927620fbf33faf2724ddfdd549959197c44d5f43c3209a1bc9ca7eb10e4867b",
+      "native/cuda_quant/src/split_attention.cuh": "f51edb1442a130757b59a3f8e6dc26acb8731a40325241754feebe214c4a2f76",
+      "native/cuda_quant/include/rbitnet_cuda_quant.h": "73a780ea4b20cc22d700171306239ab3304365cbdf4c9bfe39bdd2672d3c0799"
+    },
+    "native_content_equal_after_newline_normalization": true,
+    "limits": [
+      "Seven private-proven Rust paths ported exactly; public checkout is uncompiled.",
+      "First preparation stopped after copying due only to CRLF/LF raw Native SHA differences; normalized Native content was verified identical.",
+      "Private GLM quiet/network and public fresh validation are pending."
+    ],
+    "finish_harness_sha256": "41b4006b5f41d334d1427446cdca4e59a9243c128ef85d673304831138eeb854",
+    "original_finish_harness_sha256": "0fd806fac367035e14ab6afa3fbf6e45236f7d379af29cbeb4da40289bc4240d"
+  },
+  "isolated_manifest_sha256": "5a8593a5748d7710cc85cbbf0f0de8b4a546cb74ec942ee6c1dac1f52a0d1a10",
+  "completed_isolated_stage": {
+    "script": "check_expert_arena.py",
+    "source_sha256": "87fb5f1c8b3124337a35274d9ee2a11d6421df63f16a44c1335f83cdc224f7b4",
+    "status": "passed",
+    "started_utc": "2026-10-04T13:00:22Z",
+    "log_start_byte": 2155,
+    "pid": 45012,
+    "returncode": 0,
+    "finished_utc": "2026-10-04T14:07:18Z",
+    "log_capture_sha256": "4b13aab848f6a3518a22b4994dc030b53584eced8e50ca9a97daf25d4bcb5ede"
+  },
+  "harness_sha256": {
+    "benchmark.py": "f63c71a4ba84cdf9fe29662e8206855146b2cca859bdc5e18c7fd9f9b085f971",
+    "live.py": "7e697127c9ae8ab9e59b244a43b94846c9d026e8f53ec1d9f971cbd5f3d0da61",
+    "check_expert_arena.py": "87fb5f1c8b3124337a35274d9ee2a11d6421df63f16a44c1335f83cdc224f7b4",
+    "check_expert_arena_delivery.py": "a1c80648fd58eada2eed46cf3a940d87c9a6a5f517102d606532e7a3f0b38011",
+    "analyse_expert_arena_quiet.py": "3c11a1acc8be03d2e63577564948ddd1d7e07d648ad6ffe2f36d5918749071a7",
+    "expert_arena_finish_live.py": "41b4006b5f41d334d1427446cdca4e59a9243c128ef85d673304831138eeb854",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c"
+  },
+  "summary_sha256": "83f63690015b74c105009df4f9cefc4ac1c76237959186a1f5683ec1d453a7fa",
+  "isolated_binary_sha256": "1a550ae188da95b4279f393d8ed71dbed121351be9b797b0cc680578f73e6fe2",
+  "isolated_library_sha256": "b86c8fa6d5cf34f500c01e860bae1f87fcb2411862d1ed2e0f68dc08f9411e38",
+  "fresh_public_validation": "queued, not yet run",
+  "limits": [
+    "Native content equal after newline normalization; seven Rust implementation paths byte-identical.",
+    "Public finish-reason base differs from isolated source base; isolated performance is separately identified.",
+    "No binary/model artifacts, dynamic compaction, prediction training or independent engine parity."
+  ]
+}
