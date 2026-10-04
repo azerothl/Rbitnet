@@ -1,0 +1,121 @@
+{
+  "kind": "rbitnet-gguf-http-smoke-v1",
+  "captured_at_utc": "2026-10-03T09:09:32.4010726Z",
+  "model_path": "E:\\devs\\Rbitnet\\models\\exported-llama\\model.gguf",
+  "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+  "metadata": {
+    "architecture": "llama",
+    "backend": "cpu",
+    "backend_accelerated": false,
+    "context_length": 131072,
+    "hybrid_offload": null,
+    "model_path": "./models/exported-llama/model.gguf",
+    "perf": {
+      "cuda_graph_replays": 0,
+      "expert_cache_evictions": 0,
+      "expert_cache_hits": 0,
+      "expert_cache_misses": 0,
+      "expert_cache_upload_bytes": 0,
+      "expert_cache_upload_ns": 0,
+      "gpu_attention_calls": 0,
+      "gpu_download_bytes": 0,
+      "gpu_gemv_calls": 0,
+      "gpu_prefill_blocks": 0,
+      "gpu_prefill_tokens": 0,
+      "gpu_quant_gemm_calls": 0,
+      "gpu_upload_bytes": 0,
+      "kv_new_physical_pages": 0,
+      "kv_physical_pages": 0,
+      "kv_pool_active_seqs": 0,
+      "kv_pool_allocated_pages": 0,
+      "kv_pool_fragmentation_permille": 0,
+      "kv_pool_free_pages": 0,
+      "kv_quant_format_code": 0,
+      "kv_reused_physical_pages": 0,
+      "kv_write_bytes": 0,
+      "model_load_ms": 36,
+      "model_loads": 1,
+      "prefix_cache_bytes_saved": 0,
+      "prefix_cache_hits": 0,
+      "prefix_cache_misses": 0,
+      "quant_matvec_calls": 0,
+      "quant_matvec_cols": 0,
+      "quant_matvec_ns": 0,
+      "quant_matvec_rows": 0,
+      "scheduler_batch_items": 0,
+      "scheduler_batches": 0,
+      "scheduler_decode_waves": 0,
+      "scheduler_iteration_budget": 0,
+      "scheduler_prefill_chunks": 0,
+      "scheduler_stall_free_iters": 0,
+      "scratch_alloc_bytes": 0,
+      "scratch_reuse_hits": 0,
+      "speculative_accepted_tokens": 0,
+      "speculative_draft_tokens": 0,
+      "speculative_verified_tokens": 0
+    },
+    "quantization": "type0:34,type12:96,type14:17",
+    "ready": true,
+    "summary": "GGUF v3 arch=llama tensors=147 tensor_data@7831456",
+    "tensor_count": 147
+  },
+  "request": {
+    "stream": false,
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the capital of France? Answer in one word."
+      }
+    ],
+    "temperature": 0,
+    "max_tokens": 16,
+    "model": "rbitnet-llama"
+  },
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "Paris.",
+          "role": "assistant"
+        }
+      }
+    ],
+    "created": 1791018572,
+    "id": "chatcmpl-1791018572",
+    "model": "rbitnet-llama",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 2,
+      "prompt_tokens": 22,
+      "total_tokens": 24
+    }
+  },
+  "elapsed_ms": 1351,
+  "validation": "GGUF path, SHA-256 and HTTP generation passed. Exact manual factual check: Paris. Training and local export were not performed.",
+  "engine_binary_sha256": "7e830dd1274e93b10d83f88fc69c3cda1149c77e3ec4ee3593dc78de64d6434a",
+  "engine_commit": "75c1e38c4a5121e8a7291bcdeee5e11eff0551a1",
+  "runtime_note": "Release build from codex/performance-cache-stack with local cache changes; CPU inference unchanged from merged PR #82.",
+  "machine": {
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "ram_bytes": 66157723648,
+    "os": "Microsoft Windows NT 10.0.26220.0",
+    "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)",
+    "logical_cores": 16
+  },
+  "model": {
+    "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+    "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    "bytes": 807694368,
+    "revision": "b69aef112e9f895e6f98d7ae0949f72ff09aa401",
+    "sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1"
+  },
+  "tokenizer": {
+    "repo": "unsloth/Llama-3.2-1B-Instruct",
+    "file": "tokenizer.json",
+    "revision": "5a8abab4a5d6f164389b1079fb721cfab8d7126c",
+    "sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b"
+  },
+  "recipe": "recipes/exported-llama.recipe.json"
+}

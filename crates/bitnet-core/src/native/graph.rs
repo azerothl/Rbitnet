@@ -609,13 +609,15 @@ impl Runtime {
                 *w /= sum;
             }
         }
-        let mut result = if let Some(gpu) = &mut self.gpu_moe[il] {
+        let gpu_result = if let Some(gpu) = &mut self.gpu_moe[il] {
             let scaled: Vec<_> = weights.iter().map(|&w| w * c.weight_scale).collect();
             gpu.run(x, &selected, &scaled)?
         } else {
-            vec![0.0; c.embd]
+            None
         };
-        if self.gpu_moe[il].is_none() {
+        let fallback = gpu_result.is_none();
+        let mut result = gpu_result.unwrap_or_else(|| vec![0.0; c.embd]);
+        if fallback {
             for (&expert, &weight) in selected.iter().zip(&weights) {
                 let gate = self.expert(il, "ffn_gate_exps", expert, x)?;
                 let up = self.expert(il, "ffn_up_exps", expert, x)?;
@@ -821,6 +823,12 @@ impl Runtime {
         logits: bool,
         greedy: bool,
     ) -> Result<(Vec<f32>, Option<u32>)> {
+        if let Some(cache) = &self.weights.expert_cache {
+            cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?
+                .begin_pass(pos);
+        }
         let c = &self.cfg;
         if pos >= c.max_seq || token as usize >= c.vocab {
             return Err(BitNetError::Inference("token/context out of bounds".into()));
@@ -893,6 +901,12 @@ impl Runtime {
             ));
         }
         let pf = Instant::now();
+        if let Some(cache) = &self.weights.expert_cache {
+            cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?
+                .begin_sequence(ids.len());
+        }
         let mut logits = Vec::new();
         let mut next_token = None;
         let gpu_greedy = self.gpu_head.is_some() && sampling.device_greedy_eligible();
@@ -944,6 +958,12 @@ impl Runtime {
         };
         if let Some(callback) = events.as_deref_mut() {
             emit_text_delta(&previous, &mut emitted, true, callback)?;
+        }
+        if let Some(cache) = &self.weights.expert_cache {
+            cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?
+                .flush_trace();
         }
         Ok((previous, phases))
     }

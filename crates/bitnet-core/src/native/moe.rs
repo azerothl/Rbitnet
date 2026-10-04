@@ -1,4 +1,5 @@
 //! Keep routed expert activations on CUDA; one synchronization per FFN layer.
+use super::expert_cache::SharedCache;
 use super::weights::Weights;
 use crate::backend::CudaDeviceQuantMatrix;
 use crate::error::{BitNetError, Result};
@@ -31,12 +32,32 @@ type Create = unsafe extern "C" fn(
 ) -> *mut c_void;
 type Destroy = unsafe extern "C" fn(*mut c_void);
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, *const u32, *const f32, *mut f32) -> i32;
+type DynamicStep = unsafe extern "C" fn(
+    *mut c_void,
+    *const f32,
+    *const u32,
+    *const f32,
+    *mut f32,
+    *const *const c_void,
+) -> i32;
+
+enum Storage {
+    Fixed {
+        _weights: [CudaDeviceQuantMatrix; 3],
+    },
+    Cached {
+        cache: SharedCache,
+        layer: usize,
+        step: DynamicStep,
+        selected_bytes: usize,
+    },
+}
 
 pub(super) struct GpuMoe {
     context: usize,
     destroy: Destroy,
     step: Step,
-    _weights: [CudaDeviceQuantMatrix; 3],
+    storage: Storage,
     embd: usize,
     used: usize,
     experts: usize,
@@ -53,11 +74,16 @@ impl GpuMoe {
             return None;
         }
         let name = |suffix: &str| format!("blk.{layer}.ffn_{suffix}_exps");
-        let owned = [
-            weights.device_matrix(&(name("gate") + ".weight"))?,
-            weights.device_matrix(&(name("up") + ".weight"))?,
-            weights.device_matrix(&(name("down") + ".weight"))?,
-        ];
+        let cached = weights.expert_cache.clone();
+        let owned = if cached.is_none() {
+            Some([
+                weights.device_matrix(&(name("gate") + ".weight"))?,
+                weights.device_matrix(&(name("up") + ".weight"))?,
+                weights.device_matrix(&(name("down") + ".weight"))?,
+            ])
+        } else {
+            None
+        };
         let matrix = |m: &CudaDeviceQuantMatrix| -> Option<Matrix> {
             Some(Matrix {
                 weights: m.device_address()? as *const c_void,
@@ -67,8 +93,31 @@ impl GpuMoe {
                 rows: m.out_rows().try_into().ok()?,
             })
         };
-        let (gate, up, down) = (matrix(&owned[0])?, matrix(&owned[1])?, matrix(&owned[2])?);
-        if experts == 0 || used == 0 || used > experts || owned[0].out_rows() % experts != 0 {
+        let descriptor = |projection: &str| -> Option<Matrix> {
+            let t = weights.tensor(&(name(projection) + ".weight")).ok()?;
+            if t.dimensions.len() != 3
+                || t.dimensions[2] as usize != experts
+                || !crate::ggml::ggml_type_supports_cuda_quant(t.ggml_type)
+            {
+                return None;
+            }
+            Some(Matrix {
+                weights: std::ptr::null(),
+                row_bytes: crate::ggml::ggml_row_size(t.ggml_type, t.dimensions[0]).ok()?,
+                ty: t.ggml_type,
+                cols: t.dimensions[0].try_into().ok()?,
+                rows: t.dimensions[1]
+                    .checked_mul(t.dimensions[2])?
+                    .try_into()
+                    .ok()?,
+            })
+        };
+        let (gate, up, down) = if let Some(ref owned) = owned {
+            (matrix(&owned[0])?, matrix(&owned[1])?, matrix(&owned[2])?)
+        } else {
+            (descriptor("gate")?, descriptor("up")?, descriptor("down")?)
+        };
+        if experts == 0 || used == 0 || used > experts || gate.rows as usize % experts != 0 {
             return None;
         }
         let bias = |suffix: &str, rows: usize| -> Option<*const f32> {
@@ -80,15 +129,40 @@ impl GpuMoe {
         };
         let cfg = Config {
             embd: gate.cols,
-            ffn: (owned[0].out_rows() / experts).try_into().ok()?,
+            ffn: (gate.rows as usize / experts).try_into().ok()?,
             experts: experts.try_into().ok()?,
             used: used.try_into().ok()?,
             oai: u32::from(oai),
         };
         let lib = crate::ggml::load_cuda_quant_library()?;
-        let create = unsafe { lib.get::<Create>(b"rbitnet_cuda_moe_create\0").ok()? };
+        let create = unsafe {
+            lib.get::<Create>(if cached.is_some() {
+                b"rbitnet_cuda_moe_dynamic_create\0"
+            } else {
+                b"rbitnet_cuda_moe_create\0"
+            })
+            .ok()?
+        };
         let destroy = unsafe { *lib.get::<Destroy>(b"rbitnet_cuda_moe_destroy\0").ok()? };
         let step = unsafe { *lib.get::<Step>(b"rbitnet_cuda_moe_step\0").ok()? };
+        let storage = if let Some(cache) = cached {
+            Storage::Cached {
+                cache,
+                layer,
+                step: unsafe {
+                    *lib.get::<DynamicStep>(b"rbitnet_cuda_moe_dynamic_step\0")
+                        .ok()?
+                },
+                selected_bytes: [(&gate, cfg.ffn), (&up, cfg.ffn), (&down, cfg.embd)]
+                    .iter()
+                    .try_fold(0usize, |n, (m, rows)| {
+                        n.checked_add(m.row_bytes.checked_mul(*rows as usize)?)
+                    })?
+                    .checked_mul(used)?,
+            }
+        } else {
+            Storage::Fixed { _weights: owned? }
+        };
         let context = unsafe {
             create(
                 &cfg,
@@ -107,7 +181,7 @@ impl GpuMoe {
             context,
             destroy,
             step,
-            _weights: owned,
+            storage,
             embd: cfg.embd as usize,
             used,
             experts,
@@ -118,7 +192,7 @@ impl GpuMoe {
         input: &[f32],
         selected: &[usize],
         probabilities: &[f32],
-    ) -> Result<Vec<f32>> {
+    ) -> Result<Option<Vec<f32>>> {
         if input.len() != self.embd
             || selected.len() != self.used
             || probabilities.len() != self.used
@@ -130,14 +204,56 @@ impl GpuMoe {
         }
         let indices: Vec<u32> = selected.iter().map(|&i| i as u32).collect();
         let mut output = vec![0.0; self.embd];
-        let status = unsafe {
-            (self.step)(
-                self.context as *mut c_void,
-                input.as_ptr(),
-                indices.as_ptr(),
-                probabilities.as_ptr(),
-                output.as_mut_ptr(),
-            )
+        let status = if let Storage::Cached {
+            cache,
+            layer,
+            step,
+            selected_bytes,
+        } = &self.storage
+        {
+            let mut cache = cache
+                .lock()
+                .map_err(|_| BitNetError::Inference("expert cache lock poisoned".into()))?;
+            cache.trace_route(*layer, selected, *selected_bytes / self.used);
+            if !cache.fits(*selected_bytes) {
+                return Ok(None);
+            }
+            let mut leases = Vec::with_capacity(self.used);
+            for &expert in selected {
+                let Some(group) = cache.acquire(*layer, expert)? else {
+                    return Ok(None);
+                };
+                leases.push(group);
+            }
+            drop(cache);
+            let mut pointers = Vec::with_capacity(3 * self.used);
+            for projection in 0..3 {
+                for group in &leases {
+                    pointers.push(group.matrices[projection].device_address().ok_or_else(|| {
+                        BitNetError::Inference("cached expert missing device buffer".into())
+                    })? as *const c_void);
+                }
+            }
+            unsafe {
+                step(
+                    self.context as *mut c_void,
+                    input.as_ptr(),
+                    indices.as_ptr(),
+                    probabilities.as_ptr(),
+                    output.as_mut_ptr(),
+                    pointers.as_ptr(),
+                )
+            }
+        } else {
+            unsafe {
+                (self.step)(
+                    self.context as *mut c_void,
+                    input.as_ptr(),
+                    indices.as_ptr(),
+                    probabilities.as_ptr(),
+                    output.as_mut_ptr(),
+                )
+            }
         };
         if status != 0 {
             return Err(BitNetError::Inference(format!(
@@ -145,12 +261,17 @@ impl GpuMoe {
             )));
         }
         crate::perf::record_gpu_transfer(
-            ((input.len() + 2 * self.used) * 4) as u64,
+            ((input.len() + 2 * self.used) * 4
+                + if matches!(self.storage, Storage::Cached { .. }) {
+                    3 * self.used * std::mem::size_of::<usize>()
+                } else {
+                    0
+                }) as u64,
             (output.len() * 4) as u64,
             3,
         );
         crate::perf::record_cuda_graph_replay();
-        Ok(output)
+        Ok(Some(output))
     }
 }
 impl Drop for GpuMoe {
@@ -175,6 +296,14 @@ mod tests {
         let create = unsafe { *lib.get::<Create>(b"rbitnet_cuda_moe_create\0").unwrap() };
         let destroy = unsafe { *lib.get::<Destroy>(b"rbitnet_cuda_moe_destroy\0").unwrap() };
         let step = unsafe { *lib.get::<Step>(b"rbitnet_cuda_moe_step\0").unwrap() };
+        let dynamic_create = unsafe {
+            *lib.get::<Create>(b"rbitnet_cuda_moe_dynamic_create\0")
+                .unwrap()
+        };
+        let dynamic_step = unsafe {
+            *lib.get::<DynamicStep>(b"rbitnet_cuda_moe_dynamic_step\0")
+                .unwrap()
+        };
         const N: usize = 256;
         const EXPERTS: usize = 5;
         for ty in [0, 2, 6, 8, 12, 13, 14, 39] {
@@ -233,6 +362,57 @@ mod tests {
                         .collect::<Vec<_>>(),
                 );
             }
+            if std::env::var("RBITNET_CUDA_PREFILL_TEST").as_deref() == Ok("1") {
+                type Gemm = unsafe extern "C" fn(
+                    u32,
+                    *const c_void,
+                    usize,
+                    *const f32,
+                    u32,
+                    u32,
+                    u32,
+                    *mut f32,
+                ) -> i32;
+                let gemm = unsafe {
+                    *lib.get::<Gemm>(b"rbitnet_cuda_quant_gemm_device\0")
+                        .unwrap()
+                };
+                for tokens in [1usize, 2, 17] {
+                    let input: Vec<f32> =
+                        (0..tokens * N).map(|i| (i as f32 * 0.23).sin()).collect();
+                    let x = rt.upload_f32(&input).unwrap();
+                    let y = rt.upload_f32(&vec![0.0; tokens * N * EXPERTS]).unwrap();
+                    for (p, matrix) in owned.iter().enumerate() {
+                        assert_eq!(
+                            unsafe {
+                                gemm(
+                                    ty,
+                                    matrix.device_address().unwrap() as *const c_void,
+                                    row_bytes,
+                                    x.as_device_ptr().cast(),
+                                    N as u32,
+                                    (N * EXPERTS) as u32,
+                                    tokens as u32,
+                                    y.as_device_ptr().cast(),
+                                )
+                            },
+                            0
+                        );
+                        let actual = y.download_f32().unwrap();
+                        for token in 0..tokens {
+                            for row in 0..N * EXPERTS {
+                                let expected: f64 = dense[p][row * N..(row + 1) * N]
+                                    .iter()
+                                    .zip(&input[token * N..(token + 1) * N])
+                                    .map(|(&w, &v)| w as f64 * v as f64)
+                                    .sum();
+                                let got = actual[token * N * EXPERTS + row] as f64;
+                                assert!((got-expected).abs() < 2e-5*(1.0+expected.abs()), "GEMM format {ty} tokens {tokens} projection {p} row {row}: {got} vs {expected}");
+                            }
+                        }
+                    }
+                }
+            }
             let matrices: Vec<_> = owned
                 .iter()
                 .map(|m| Matrix {
@@ -243,7 +423,7 @@ mod tests {
                     rows: (N * EXPERTS) as u32,
                 })
                 .collect();
-            for oai in [0, 1] {
+            for (oai, dynamic) in [(0, false), (1, false), (0, true), (1, true)] {
                 let cfg = Config {
                     embd: N as u32,
                     ffn: N as u32,
@@ -252,7 +432,7 @@ mod tests {
                     oai,
                 };
                 let context = unsafe {
-                    create(
+                    (if dynamic { dynamic_create } else { create })(
                         &cfg,
                         &matrices[0],
                         &matrices[1],
@@ -264,7 +444,39 @@ mod tests {
                 };
                 assert!(!context.is_null());
                 let probabilities = [0.5, 0.3, 0.2];
-                for selected in [[3, 1, 4], [4, 0, 2]] {
+                let mut slots: Vec<CudaDeviceQuantMatrix> = Vec::new();
+                for (iteration, selected) in
+                    [[3, 1, 4], [4, 0, 2], [1, 4, 3]].into_iter().enumerate()
+                {
+                    // Replay both after compatible slot refills and after all
+                    // selected allocations are freed/replaced (eviction).
+                    if iteration == 2 {
+                        slots.clear();
+                    }
+                    if dynamic {
+                        for (p, bank) in owned.iter().enumerate() {
+                            for (s, &e) in selected.iter().enumerate() {
+                                let slab = row_bytes * N;
+                                let payload = bank.host_payload()
+                                    [e as usize * slab..(e as usize + 1) * slab]
+                                    .to_vec();
+                                if iteration == 1 {
+                                    assert!(slots[p * 3 + s].refill(payload).unwrap());
+                                } else {
+                                    slots.push(
+                                        CudaDeviceQuantMatrix::from_payload(
+                                            Some(&rt),
+                                            ty,
+                                            payload,
+                                            N,
+                                            N,
+                                        )
+                                        .unwrap(),
+                                    );
+                                }
+                            }
+                        }
+                    }
                     let x: Vec<f32> = (0..N).map(|i| (i as f32 * 0.23).sin() * 4.0).collect();
                     let mut expected = vec![0.0f64; N];
                     let dot = |p: usize, e: usize, row: usize, input: &[f64]| -> f64 {
@@ -297,13 +509,28 @@ mod tests {
                     let mut output = vec![0.0; N];
                     assert_eq!(
                         unsafe {
-                            step(
-                                context,
-                                x.as_ptr(),
-                                selected.as_ptr(),
-                                probabilities.as_ptr(),
-                                output.as_mut_ptr(),
-                            )
+                            if dynamic {
+                                let pointers: Vec<_> = slots
+                                    .iter()
+                                    .map(|m| m.device_address().unwrap() as *const c_void)
+                                    .collect();
+                                dynamic_step(
+                                    context,
+                                    x.as_ptr(),
+                                    selected.as_ptr(),
+                                    probabilities.as_ptr(),
+                                    output.as_mut_ptr(),
+                                    pointers.as_ptr(),
+                                )
+                            } else {
+                                step(
+                                    context,
+                                    x.as_ptr(),
+                                    selected.as_ptr(),
+                                    probabilities.as_ptr(),
+                                    output.as_mut_ptr(),
+                                )
+                            }
                         },
                         0
                     );

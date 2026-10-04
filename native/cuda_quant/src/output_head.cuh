@@ -15,7 +15,8 @@ struct ResidentHead {
     }
     template<typename T> bool alloc(T *&p,size_t n,const T *host=nullptr) {
         if(cudaMalloc(reinterpret_cast<void**>(&p),n*sizeof(T))!=cudaSuccess)return false;
-        allocations.push_back(p);return !host || cudaMemcpy(p,host,n*sizeof(T),cudaMemcpyHostToDevice)==cudaSuccess;
+        allocations.push_back(p);return !host || (cudaMemcpyAsync(p,host,n*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess
+            && cudaStreamSynchronize(stream)==cudaSuccess);
     }
     void enqueue(unsigned mode) {
         resident_norm<<<1,256,0,stream>>>(x,norm,epsilon,matrix.cols,h);

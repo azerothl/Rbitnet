@@ -66,17 +66,17 @@
       "files": [
         "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
       ],
-      "notes": "Windows CPU HTTP smoke on 2026-10-02 loaded this exact Q4_K_M file with the unsloth/Llama-3.2-1B-Instruct tokenizer and returned text, but the response was repetitive and incorrect. Quality/golden parity remains unverified; verified/tested stay false. See docs/UNSLOTH_TO_RBITNET.md and docs/validation/2026-10-02-unsloth-llama32-1b.json. Use chat format llama3. SHA-256 comes from publisher LFS metadata; pin revisions with the walkthrough for reproduction.",
+      "notes": "Windows CPU recipe and SHA-256/path checked on 2026-10-03: the HTTP capital-of-France response is Paris. The same GGUF has published CPU/CUDA benchmarks and real-model greedy sequence checks. See docs/validation/2026-10-03-unsloth-llama32-1b.json, docs/UNSLOTH_TO_RBITNET.md and docs/benchmarks/2026-10-03-parity-round2/README.md. This validates the prebuilt pack, not a training or local export run. Use chat format llama3. The failed 2026-10-02 smoke is retained separately.",
       "tier": "recommended_beginner",
       "use_case": [
         "chat",
         "code"
       ],
       "min_ram_gb": 4,
-      "verified": false,
+      "verified": true,
       "golden_tier": "best_effort",
       "min_ram": "4 GB for Q4_K_M plus runtime headroom",
-      "tested": false,
+      "tested": true,
       "min_rbitnet_version": "0.1.0",
       "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
     },

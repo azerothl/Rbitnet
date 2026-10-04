@@ -94,7 +94,8 @@ struct ResidentQwenRecurrent {
     template<typename T> bool alloc(T *&p,size_t n,const T *host=nullptr) {
         if(cudaMalloc(reinterpret_cast<void**>(&p),n*sizeof(T))!=cudaSuccess)return false;
         allocations.push_back(p);
-        return !host || cudaMemcpy(p,host,n*sizeof(T),cudaMemcpyHostToDevice)==cudaSuccess;
+        return !host || (cudaMemcpyAsync(p,host,n*sizeof(T),cudaMemcpyHostToDevice,stream)==cudaSuccess
+            && cudaStreamSynchronize(stream)==cudaSuccess);
     }
     void matrix(unsigned i,const float *input,float *output) {
         const auto &m=matrices[i];QuantKind kind;resident_kind(m.type,kind);
@@ -130,6 +131,11 @@ bool qwen_matrix_valid(const RbitnetLlamaMatrix &m,unsigned cols,unsigned rows) 
     }
     return cols%block==0 && m.row_bytes==size_t(cols)/block*bytes;
 }
+struct QwenRecurrentSnapshot {
+    unsigned head,num_k,num_v,conv,length;
+    float *state=nullptr,*history=nullptr;
+    ~QwenRecurrentSnapshot() { if(state)cudaFree(state);if(history)cudaFree(history); }
+};
 }
 extern "C" {
 void *rbitnet_cuda_qwen_recurrent_create(const RbitnetQwenRecurrentConfig *c,
@@ -180,5 +186,32 @@ int rbitnet_cuda_qwen_recurrent_step(void *context,const float *input,unsigned p
     if(cudaGetLastError()!=cudaSuccess || cudaMemcpyAsync(output,r->x,r->cfg.embd*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess
         || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
     r->filled=pos+1;return 0;
+}
+void *rbitnet_cuda_qwen_recurrent_snapshot(void *context) {
+    auto *r=static_cast<ResidentQwenRecurrent*>(context);
+    if(!r || !r->filled)return nullptr;
+    auto *s=new(std::nothrow) QwenRecurrentSnapshot;if(!s)return nullptr;
+    s->head=r->cfg.head;s->num_k=r->cfg.num_k;s->num_v=r->cfg.num_v;s->conv=r->cfg.conv;s->length=r->filled;
+    size_t state=size_t(s->num_v)*s->head*s->head*sizeof(float);
+    size_t history=size_t(2*s->num_k+s->num_v)*s->head*s->conv*sizeof(float);
+    if(cudaMalloc(reinterpret_cast<void**>(&s->state),state)!=cudaSuccess
+        || cudaMalloc(reinterpret_cast<void**>(&s->history),history)!=cudaSuccess
+        || cudaMemcpyAsync(s->state,r->state,state,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+        || cudaMemcpyAsync(s->history,r->history,history,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess) {delete s;return nullptr;}
+    return s;
+}
+void rbitnet_cuda_qwen_recurrent_snapshot_destroy(void *snapshot) {delete static_cast<QwenRecurrentSnapshot*>(snapshot);}
+int rbitnet_cuda_qwen_recurrent_restore(void *context,const void *snapshot,unsigned length) {
+    auto *r=static_cast<ResidentQwenRecurrent*>(context);auto *s=static_cast<const QwenRecurrentSnapshot*>(snapshot);
+    // Recurrent state is a checkpoint, never a truncatable KV prefix.
+    if(!r || !s || !length || length!=s->length || s->head!=r->cfg.head
+        || s->num_k!=r->cfg.num_k || s->num_v!=r->cfg.num_v || s->conv!=r->cfg.conv)return 1;
+    size_t state=size_t(s->num_v)*s->head*s->head*sizeof(float);
+    size_t history=size_t(2*s->num_k+s->num_v)*s->head*s->conv*sizeof(float);
+    if(cudaMemcpyAsync(r->state,s->state,state,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+        || cudaMemcpyAsync(r->history,s->history,history,cudaMemcpyDeviceToDevice,r->stream)!=cudaSuccess
+        || cudaStreamSynchronize(r->stream)!=cudaSuccess)return 2;
+    r->filled=length;return 0;
 }
 }
