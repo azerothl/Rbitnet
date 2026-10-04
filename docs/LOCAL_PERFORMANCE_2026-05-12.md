@@ -259,3 +259,7 @@ measure:
 - CUDA runs with peak VRAM and GPU utilization captured from `nvidia-smi`.
 - Correct chat templates for TinyLlama, Mistral, and Qwen3.
 - Longer prompts split into encode, prefill, and decode timing from `/metrics`.
+
+### Update, 2026-10-04: structured generation limit
+
+The historical ASCII/byte-token FSM row above concerns a low-level fixture. It does not validate the IDs of real GGUF tokenizers. High-level JSON/tool generation is now explicitly refused until a tokenizer-aware grammar is implemented; see [STRUCTURED_OUTPUT.md](STRUCTURED_OUTPUT.md).

@@ -47,6 +47,27 @@ impl Drop for EnvGuard {
     }
 }
 
+#[tokio::test]
+async fn tool_requests_and_tool_blocks_refuse_before_streaming_or_inference() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[("RBITNET_MODEL", None), ("RBITNET_TOY", None), ("RBITNET_STUB", Some("1")), ("RBITNET_STRUCTURED_OUTPUT", None)]);
+    let app = create_app_with_config(Arc::new(Engine::from_env().unwrap()), Arc::new(ServerConfig::test_defaults()));
+    for fields in [json!({"tools":[{"name":"lookup","input_schema":{"type":"object"}}]}), json!({"tool_choice":{"type":"any"}}), json!({"messages":[{"role":"assistant","content":[{"type":"tool_use","id":"a","name":"lookup","input":{}}]}]}), json!({"messages":[{"role":"user","content":[{"type":"tool_result","tool_use_id":"a","content":"result"}]}]})] {
+        for streaming in [false, true] {
+            let mut body = json!({"model":"any", "messages":[{"role":"user","content":"hello"}], "max_tokens":8, "stream":streaming});
+            body.as_object_mut().unwrap().extend(fields.as_object().unwrap().clone());
+            let response = app.clone().oneshot(Request::builder().method("POST").uri("/v1/messages").header("content-type","application/json").body(Body::from(body.to_string())).unwrap()).await.unwrap();
+            assert_eq!(response.status(), http::StatusCode::NOT_IMPLEMENTED);
+            assert!(response.headers()["content-type"].to_str().unwrap().starts_with("application/json"));
+            let body: serde_json::Value = serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+            assert_eq!(body["error"]["code"], "tool_generation_not_supported");
+        }
+    }
+    let response = app.oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap()).await.unwrap();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(std::str::from_utf8(&bytes).unwrap().lines().any(|line|line == "rbitnet_inference_calls_total 0"));
+}
+
 #[test]
 fn anthropic_prompt_conversion_string_and_blocks() {
     let messages = [

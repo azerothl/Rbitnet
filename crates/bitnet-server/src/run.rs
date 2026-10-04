@@ -15,6 +15,18 @@ use crate::{
 
 type AppFactory = Box<dyn FnOnce() -> (axum::Router, AppState)>;
 
+/// A proxy runner is scoped to its registry key even without a child registry.
+pub(crate) fn standalone_model_id(
+    engine_id: Option<String>,
+    active_id: Option<&str>,
+) -> Option<String> {
+    active_id
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .or(engine_id)
+}
+
 fn warn_if_insecure_bind(bind: &str) {
     if bind.starts_with("0.0.0.0:") || bind == "0.0.0.0" {
         warn!(
@@ -124,7 +136,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>
                 }
             };
             let expected_request_model_id = if server_config.require_model_match {
-                engine.openai_model_id()
+                standalone_model_id(
+                    engine.openai_model_id(),
+                    std::env::var("RBITNET_ACTIVE_MODEL_ID").ok().as_deref(),
+                )
             } else {
                 None
             };
@@ -233,4 +248,73 @@ pub async fn try_idle_unload(state: &AppState, idle_ms: u64) -> bool {
         .fetch_add(1, Ordering::Relaxed);
     tracing::info!("idle unload: engine swapped for stub");
     true
+}
+
+#[cfg(test)]
+mod runner_identity_tests {
+    use super::{standalone_model_id, stub_engine, Arc, ServerConfig};
+
+    #[test]
+    fn registry_alias_takes_precedence_and_blank_alias_keeps_engine_identity() {
+        assert_eq!(
+            standalone_model_id(Some("rbitnet-llama".into()), Some(" llama32-1b ")),
+            Some("llama32-1b".into())
+        );
+        for value in [None, Some(""), Some(" \t ")] {
+            assert_eq!(
+                standalone_model_id(Some("rbitnet-qwen35".into()), value),
+                Some("rbitnet-qwen35".into())
+            );
+        }
+        assert_eq!(standalone_model_id(None, None), None);
+    }
+
+    #[tokio::test]
+    async fn runner_catalog_exposes_its_alias_and_rejects_a_different_model() {
+        use axum::body::Body;
+        use http::Request;
+        use http_body_util::BodyExt;
+        use tower::ServiceExt;
+
+        let (app, _) = crate::create_app_with_expected_model(
+            Arc::new(stub_engine()),
+            Arc::new(ServerConfig::test_defaults()),
+            Some("my-registry-alias".into()),
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(response.status().is_success());
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let catalog: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(catalog["data"][0]["id"], "my-registry-alias");
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"model":"wrong-alias","messages":[{"role":"user","content":"hello"}]}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), http::StatusCode::BAD_REQUEST);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let error: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("my-registry-alias"));
+    }
 }

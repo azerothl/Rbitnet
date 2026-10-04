@@ -1,0 +1,286 @@
+{
+  "journal": {
+    "pid": 45732,
+    "status": "passed",
+    "complete": true,
+    "checker_sha256": "af62f55250d90a29a52c21147e9853bfb2ba3be6452f159d5f2dd97e67df7b13",
+    "harness_sha256": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e",
+    "started_utc": "2026-10-04T16:54:20Z",
+    "hardware_started_utc": "2026-10-04T16:54:20Z",
+    "current_step": "glm47-flash-gpu",
+    "finished_utc": "2026-10-04T17:33:51Z"
+  },
+  "compiled_head": "f1257e5bd564543fa3b46a31acf351260d188f9c",
+  "publication_head": "87fefb0499a4e180e6d03e0be2440eb48788b755",
+  "captures": [
+    {
+      "path": "raw/environment.json.gz",
+      "raw_sha256": "cf42b4e0ab7b93f0ead6904430f982b0e3f92cb348c7860a2892b80c03712455",
+      "gzip_sha256": "40abf4d441f7afdfa973e36e2f8e15cec740a000ff86266fda43193bc20722ef"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/checker.log.gz",
+      "raw_sha256": "0a87a16b4fa50534dcf3319d62731f3e85a1f69a4719b56f6fc318f6e9839c59",
+      "gzip_sha256": "a8cbab364ecce2338627ffc4fe1c232cbad27d2fb6fff1dc6f8f0625f676cc15"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/glm47-flash-prompts.json.gz",
+      "raw_sha256": "013a6eb56230ee142635f0aa5c449cf3875c622e74b97a98d444b1cee6e68045",
+      "gzip_sha256": "8ce9b78d8a8024c4048b97e641855743ebf9f0707db749e9b205236628027b98"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/logs/glm47-flash-llama.cpp-cpu.log.gz",
+      "raw_sha256": "82a613f244d35cea672530d62026eea22d932b85786d5c297df6be540080219a",
+      "gzip_sha256": "e0453b578c545233eed90267e401b1710ef07902f0eda9f76ca6067ad8cb20de"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/logs/glm47-flash-rbitnet-cpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/manifest.json.gz",
+      "raw_sha256": "d4aa0a8ee15d00d660f08ca502573aa0c0b7774fd52b161592bf1f04f77fb016",
+      "gzip_sha256": "1188596a03099c66f2c327328363ad95ada1c9b7804694e65b2e46a1fa748c3f"
+    },
+    {
+      "path": "raw/glm47-flash-cpu/results.json.gz",
+      "raw_sha256": "b8939f812149f4af1795bb35d09085ecee4e094de59421bf00e69ff9d91b207d",
+      "gzip_sha256": "626474a7e1227833f02d65d4833eae49094e406d45eb505d52fd8b7bb790ac5b"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/checker.log.gz",
+      "raw_sha256": "80aef0ec05725c72a754496d9a5dbb268b88f57d791dbac128ed86ec2f371b29",
+      "gzip_sha256": "6514fbd8f31d407bb71106b0056e85214ae87117e84310e48e2703cc4f0f35ee"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/glm47-flash-prompts.json.gz",
+      "raw_sha256": "013a6eb56230ee142635f0aa5c449cf3875c622e74b97a98d444b1cee6e68045",
+      "gzip_sha256": "8ce9b78d8a8024c4048b97e641855743ebf9f0707db749e9b205236628027b98"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/logs/glm47-flash-llama.cpp-gpu.log.gz",
+      "raw_sha256": "da9d9d2e253b41148ff304a3c8bcd8510b54817a1b3bcaa42c56715fc887c9f1",
+      "gzip_sha256": "de87fe0967400b1b91a9a7aa43bcbb1b0aeb5aa9b46ea288179a95e348938820"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/logs/glm47-flash-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/manifest.json.gz",
+      "raw_sha256": "4ab8b8ac57783a8163b3dab18049efb3bba4b0a6ebbcbd153c7ef8c0962c13e1",
+      "gzip_sha256": "fb836a0934fadae7d60267af88ce2234e20d6819e969b32c32e3659e913f4e62"
+    },
+    {
+      "path": "raw/glm47-flash-gpu/results.json.gz",
+      "raw_sha256": "02f3174e2c239aeccb8f3f4ae109751b8ac8472b1a4f1d6369c8d9ba87750ac3",
+      "gzip_sha256": "448e3caa4a42284048ddb3ceca99989b0c8830847c08c54e939b9f7aed3af8fb"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/checker.log.gz",
+      "raw_sha256": "e55a086bdfeb39155465cfbfafada8fd925b5880de0e8772e9ba79e73c735bca",
+      "gzip_sha256": "26ccc2b7c753beee4fa14cedd5ad9e36700e0c0bd04c7421583720e625c29f88"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/gpt-oss-20b-prompts.json.gz",
+      "raw_sha256": "bd14dcbbf04613f05ab9a59a2cd6054f9a7f419b12c89fc19781c8f927672fb1",
+      "gzip_sha256": "95c2c4a491b5394c13d82d482b75da9b4e5bb102c2e6e7ce870ab962225d8819"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/logs/gpt-oss-20b-llama.cpp-cpu.log.gz",
+      "raw_sha256": "f6b0625163ce535221c8a6c1d56559ac4dfd4c6afaf052de5a4e510d25b12a8b",
+      "gzip_sha256": "76a84dbbe2b040f37f48bda23649f0ef0d41f7d9ec104578d9b3df2a2d975ae7"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/logs/gpt-oss-20b-rbitnet-cpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/manifest.json.gz",
+      "raw_sha256": "c2b0a29d04772420e631311130b39052d2ca40b37fccef7ad86f565eab0a79ce",
+      "gzip_sha256": "11998e2b02d5c3f846000e9062563bda253176874f024e1ec0bf75bb68cd8418"
+    },
+    {
+      "path": "raw/gpt-oss-20b-cpu/results.json.gz",
+      "raw_sha256": "2d2f8d69c260a79ae90956ad73e8329d09a35862bc4dd0c526e11ba5ec83c71c",
+      "gzip_sha256": "dd4ca935d9b8302135a6dbdd33db9c8aafcb5640f85b1053898e864f61e97d7a"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/checker.log.gz",
+      "raw_sha256": "c40bac8f8be5b7532306f6176f0810df6eeb75d6d7b48cacdfe0a8118652d745",
+      "gzip_sha256": "6a6f5095eb1d40849ee4ac585ad1c17bba9b40632694b0fd516c6e6291cf30d0"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/gpt-oss-20b-prompts.json.gz",
+      "raw_sha256": "bd14dcbbf04613f05ab9a59a2cd6054f9a7f419b12c89fc19781c8f927672fb1",
+      "gzip_sha256": "95c2c4a491b5394c13d82d482b75da9b4e5bb102c2e6e7ce870ab962225d8819"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/logs/gpt-oss-20b-llama.cpp-gpu.log.gz",
+      "raw_sha256": "b0e037458d04fac243535dd0537b21c76ccea132b315fca88b4cc3eefa995672",
+      "gzip_sha256": "d0149aea7a178f41068c1cedd296532a0e8e0c17acbd17d787fdf8932d1b5c42"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/logs/gpt-oss-20b-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/manifest.json.gz",
+      "raw_sha256": "69399abdc05d5075a948aec2f6651b9017ac30b6b92be0ee4193e17f848d7733",
+      "gzip_sha256": "20b6e0c1c2d4b404f58f40ef77216a90c014edf5291dcb7c5cf65c62fc25f1ee"
+    },
+    {
+      "path": "raw/gpt-oss-20b-gpu/results.json.gz",
+      "raw_sha256": "e0ea10b1165dca6e03e5b491284de95bd34cdcb6ed6b020e7b4cb6432560fd03",
+      "gzip_sha256": "b6278ba10ae961fdad547691211d6f527cd4d3bc6380e22160eb13c861c048e5"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/checker.log.gz",
+      "raw_sha256": "f9992809d9d80398356988b7847d0de9f16d3ec32fa22244603c01dd72460303",
+      "gzip_sha256": "210fd83a5395b9fc055f016fdef8840991266235df6427fb6aec69fe6aa0b0a3"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/llama32-1b-prompts.json.gz",
+      "raw_sha256": "789ff47661bb193eb72d34de133deba7b0cf069b0b786c7ba680dff4d8412710",
+      "gzip_sha256": "0162edd1a0c10fba87af7f70565c8facc5cee212cf6d8c9376a8b3cbff54105e"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/logs/llama32-1b-llama.cpp-cpu.log.gz",
+      "raw_sha256": "720529af0d8361ecf176947c376824e347378b90822fc9ac02d15dd5a63f2804",
+      "gzip_sha256": "3e9deec30120d304f898f2d46046a93740e2ca8e2fca4e62cdddc0f54d913477"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/logs/llama32-1b-rbitnet-cpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/manifest.json.gz",
+      "raw_sha256": "c693e74c0eb7bea23fbb88cbc0fb5b661bbbc874e7b0d101151a9a38b5695a0f",
+      "gzip_sha256": "ce9951607a133945f2445e7babfef562ae1788ae2d05dae8260c5ae2af8ed45e"
+    },
+    {
+      "path": "raw/llama32-1b-cpu/results.json.gz",
+      "raw_sha256": "9e5d1b18366f804603a72fc80c819fb71b5782dc77a01d6c7e2eebfb79ba9b72",
+      "gzip_sha256": "e72da31cf8bc214f611aa125bd4194fef5fef83479b916b1dc0eb5edeea5295b"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/checker.log.gz",
+      "raw_sha256": "04bcceddbc9230a38a8dad442b9008b74ade5c11722ad5bb7fab835ba28c3270",
+      "gzip_sha256": "aaf39f9f95491bf9079b0b38fe9167e43f20b32f8b7052e9b41819157313f1b9"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/llama32-1b-prompts.json.gz",
+      "raw_sha256": "789ff47661bb193eb72d34de133deba7b0cf069b0b786c7ba680dff4d8412710",
+      "gzip_sha256": "0162edd1a0c10fba87af7f70565c8facc5cee212cf6d8c9376a8b3cbff54105e"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/logs/llama32-1b-llama.cpp-gpu.log.gz",
+      "raw_sha256": "b4f7215b61bbff1a40279f3de76d57318dd06329503d951bde5d800b9e97d4ca",
+      "gzip_sha256": "fb23cb9f931f35eae38c76fc52b6e54f2814d1795ad720ba14e159276a60e392"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/logs/llama32-1b-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/manifest.json.gz",
+      "raw_sha256": "d2ad680183003479b7a5c9e0e9bf6b6af7d52721f3c04beb7bf1844e2a64dfcc",
+      "gzip_sha256": "1d94f6c3e6f2144fc21d4e23db46c5c9023d6c2717499c2f798f29e375254349"
+    },
+    {
+      "path": "raw/llama32-1b-gpu/results.json.gz",
+      "raw_sha256": "0d1e6cf9434d8683aed2bdd50ceb6b558752ab59ca573278f1df0610eca0f297",
+      "gzip_sha256": "22427d9e6b2d270b3c94b3c9ae662c3772a7cab17eee90bd3319d0d31dafeb46"
+    },
+    {
+      "path": "raw/ollama-private.log.gz",
+      "raw_sha256": "0acffd915f2bfc3210ab4dcd9db2a5dce1599b91703fa3ba0609d2d0b3020cd7",
+      "gzip_sha256": "8bacce9cff0a11217105fe88eab3977d3e59c92530f47c612e5194fd0792786f"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/checker.log.gz",
+      "raw_sha256": "248d64da21cce14f3a81c5274bbead883f46a8b5a1efbca158607e7cdb2efdaf",
+      "gzip_sha256": "1856e196e6c4d62902e21c75d80ca27384dcd7e7f74ee6a1c5871bb45c326f54"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/logs/qwen35-2b-llama.cpp-cpu.log.gz",
+      "raw_sha256": "19d140dbd95d06d43a7c90f76b911a4208f2eb13f9b21e3b542e98ce3bfb0941",
+      "gzip_sha256": "a5bd94c5232da48e010417b0e0cb10281e76b1c3e07970e63b68471541f4642b"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/logs/qwen35-2b-rbitnet-cpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/manifest.json.gz",
+      "raw_sha256": "80019f449553ae79eaa404a8eaec05c84a12d99304bedf2a77820712506e953e",
+      "gzip_sha256": "70f03c83eda76fe122f3bb1c0ab9c740662b6a760382429e0b56783036434cf3"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/qwen35-2b-prompts.json.gz",
+      "raw_sha256": "2d96d14d1f964ecb52de647c4e72ea5ee6352553a8cba1373d5ce547e3e8db2b",
+      "gzip_sha256": "7fb541f437914ec35f12bffd6022a5d90939c8ab520b9c472189f46ea02e6d0a"
+    },
+    {
+      "path": "raw/qwen35-2b-cpu/results.json.gz",
+      "raw_sha256": "2c09bc6cf9a0df3475a2d09cc0a1e7ae0f429a1bb82d7c3e6ccd5e91bf159527",
+      "gzip_sha256": "3440d151cb885a37a5907c2dd2826b2722069c352d1ee5e15163e27973738500"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/checker.log.gz",
+      "raw_sha256": "0d24def7b84eca0ca93e344e796416e4e06e2f8f95c15082d9a04b2e8f33a5d5",
+      "gzip_sha256": "d34ec8ce21a43013252ef73595971bcb064a5948f7c778e4f7b67d4bf1a97ff8"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/logs/qwen35-2b-llama.cpp-gpu.log.gz",
+      "raw_sha256": "322618ddf0f9908fa9249a0d6eb3510d84e0aa09fe8738f4ea184ef02d022dc7",
+      "gzip_sha256": "80680f37ec5fdcaf1bf998b518f056b87712eebd77a7e4bd2bb281f0a7567413"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/logs/qwen35-2b-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/manifest.json.gz",
+      "raw_sha256": "8fc4fd952e7b371743534c8e11e181dc126d293590fbe5ff21561d0b71a50ab3",
+      "gzip_sha256": "2098471452de752e75cd02e977ce586da04d6be963c28d7f06a4cf20de275981"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/qwen35-2b-prompts.json.gz",
+      "raw_sha256": "2d96d14d1f964ecb52de647c4e72ea5ee6352553a8cba1373d5ce547e3e8db2b",
+      "gzip_sha256": "7fb541f437914ec35f12bffd6022a5d90939c8ab520b9c472189f46ea02e6d0a"
+    },
+    {
+      "path": "raw/qwen35-2b-gpu/results.json.gz",
+      "raw_sha256": "e5d172e68e4d7326f88d6307aae41f313165944d4dc9c94246ff84ab663acfa4",
+      "gzip_sha256": "33dbddceb2142b593767d0dbc8c6fb9b25bddb68563c9db86cefd155a1c9007b"
+    },
+    {
+      "path": "raw/summary.json.gz",
+      "raw_sha256": "532c8306869bc537d3ff0d5158fd5085335a9013a8fb9b8951a6c63cec4b82c5",
+      "gzip_sha256": "c51f7294c75fd74fb3bbbebcc524f445200605fe16aceccda50fd56588b8c8ee"
+    },
+    {
+      "path": "raw/compiled-manifest.json.gz",
+      "raw_sha256": "bf428cdb92db4fa997831acb454d8d2ddbb52dfe515fbac84c6379435824d3dc",
+      "gzip_sha256": "c739beb8e6549e380b7b6f32951b487514323c3b9689d99e4526d779b339ce27"
+    }
+  ],
+  "harness_sha256": {
+    "check_stack_parity.py": "af62f55250d90a29a52c21147e9853bfb2ba3be6452f159d5f2dd97e67df7b13",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c",
+    "benchmark_engines.py": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e"
+  },
+  "limits": [
+    "Llama GPU row ran host-paged hybrid, not Native paged.",
+    "Native Llama comparison pending; no overall parity claim."
+  ]
+}

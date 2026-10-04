@@ -10,9 +10,9 @@ mod model;
 #[cfg(feature = "profile-llama")]
 pub mod profile;
 mod resident;
-mod speculative;
 mod runtime;
 pub mod slim_attention;
+mod speculative;
 
 pub use config::LlamaConfig;
 pub use cuda_graph::{CudaDecodeGraph, DecodeGraphMode};
@@ -26,3 +26,5 @@ pub use slim_attention::{
     attention_baseline, attention_tiled, slim_attention_enabled, tile_tokens_from_env,
     DEFAULT_TILE_TOKENS,
 };
+
+pub(crate) use resident::{BatchController, BatchOptions};

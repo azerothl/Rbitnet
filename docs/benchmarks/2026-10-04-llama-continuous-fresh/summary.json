@@ -1,0 +1,58 @@
+{
+  "protocol": {
+    "repeated_wave_cycles": 3,
+    "warmup_cycles": 1,
+    "arrival_delay_ms": 20,
+    "max_tokens": 128,
+    "context": 2048,
+    "kv": "f32",
+    "graphs": true,
+    "prefix": false,
+    "split_kv": false,
+    "notes": "Client SSE intervals concern text chunks; no equivalence to individual token intervals is assumed."
+  },
+  "rows": [
+    {
+      "config": "reference",
+      "tokens_per_second": 140.6177380196512,
+      "wall_ms": 5674.963799998295,
+      "change_percent": 0.0
+    },
+    {
+      "config": "dense-slots1",
+      "tokens_per_second": 137.72601870919834,
+      "wall_ms": 5794.114199999967,
+      "change_percent": -2.0564399279760393
+    },
+    {
+      "config": "dense-slots4",
+      "tokens_per_second": 169.58047337078136,
+      "wall_ms": 4705.760200000441,
+      "change_percent": 20.59678654984669
+    },
+    {
+      "config": "dense-slots8",
+      "tokens_per_second": 186.81449585219275,
+      "wall_ms": 4271.74130000094,
+      "change_percent": 32.85272433132553
+    },
+    {
+      "config": "paged-slots1",
+      "tokens_per_second": 134.76500428003894,
+      "wall_ms": 5921.485949998896,
+      "change_percent": -4.162158929618354
+    },
+    {
+      "config": "paged-slots4",
+      "tokens_per_second": 167.59116196006448,
+      "wall_ms": 4761.814850000519,
+      "change_percent": 19.182092046341825
+    },
+    {
+      "config": "paged-slots8",
+      "tokens_per_second": 185.35906600921442,
+      "wall_ms": 4305.172349999339,
+      "change_percent": 31.817698549034155
+    }
+  ]
+}

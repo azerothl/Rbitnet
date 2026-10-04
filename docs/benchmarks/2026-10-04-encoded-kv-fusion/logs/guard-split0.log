@@ -1,0 +1,11 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-encoded-fusion\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-encoded-fusion\crates\bitnet-core)
+    Finished `release` profile [optimized] target(s) in 13.13s
+     Running unittests src\lib.rs (E:\devs\Rbitnet\target\performance-cache\check-release\release\deps\bitnet_core-f006a63f826a33c4.exe)
+
+running 1 test
+test llama::resident::encoded_guard_tests::optional_actual_encoded_tf32_mutable_configuration_refused ... ENCODED_GUARD_DONE F16/Q8 mutable TF32 requests refused before any sequence
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 146 filtered out; finished in 0.74s
+

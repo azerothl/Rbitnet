@@ -1,0 +1,1 @@
+Private fused RoPE/F16-Q8 store and encoded TF32 ABI guard prepared; no build, numerical or performance result yet.

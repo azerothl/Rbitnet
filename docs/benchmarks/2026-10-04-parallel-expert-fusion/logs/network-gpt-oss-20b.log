@@ -1,0 +1,4 @@
+gpt-oss-20b-block0 greedy disconnect/resume passed
+gpt-oss-20b-block0 sampling disconnect/resume passed
+gpt-oss-20b-block0 penalties disconnect/resume passed
+gpt-oss-20b-block0 stop and concurrency passed
