@@ -104,6 +104,8 @@ pub struct LlamaExecutor {
     config: crate::llama::LlamaConfig,
     prompt_tokenizer: Arc<LoadedPromptTokenizer>,
     runtime: Mutex<Option<LlamaRuntime>>,
+    batch_options: Option<crate::llama::BatchOptions>,
+    batch: Mutex<Option<Arc<crate::llama::BatchController>>>,
 }
 
 impl LlamaExecutor {
@@ -127,6 +129,8 @@ impl LlamaExecutor {
             prompt_tokenizer,
             family_reported: "llama",
             runtime: Mutex::new(None),
+            batch_options: crate::llama::BatchOptions::configured(backend_kind)?,
+            batch: Mutex::new(None),
         })
     }
 
@@ -153,10 +157,36 @@ impl LlamaExecutor {
             prompt_tokenizer,
             family_reported: architecture_slug,
             runtime: Mutex::new(None),
+            batch_options: crate::llama::BatchOptions::configured(backend_kind)?,
+            batch: Mutex::new(None),
         })
     }
 }
 
+impl LlamaExecutor {
+    fn native_batch_controller(&self) -> Result<Option<Arc<crate::llama::BatchController>>> {
+        let Some(options) = self.batch_options else {
+            return Ok(None);
+        };
+        let mut slot = self
+            .batch
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("batch startup lock poisoned: {e}")))?;
+        if slot.is_none() {
+            let model = Arc::new(crate::llama::LlamaModel::from_gguf_arc_with_config(
+                Arc::clone(&self.gguf),
+                self.backend_kind,
+                self.config.clone(),
+            )?);
+            *slot = Some(Arc::new(crate::llama::BatchController::start(
+                model,
+                Arc::clone(&self.prompt_tokenizer),
+                options,
+            )?));
+        }
+        Ok(slot.as_ref().cloned())
+    }
+}
 impl ModelExecutor for LlamaExecutor {
     fn context_capacity(&self) -> Option<usize> {
         Some(self.config.max_seq)
@@ -188,6 +218,11 @@ impl ModelExecutor for LlamaExecutor {
     }
 
     fn offload_metadata(&self) -> Option<String> {
+        if let Some(options) = self.batch_options {
+            let initialized = self.batch.lock().ok().is_some_and(|slot| slot.is_some());
+            return Some(format!("experimental CUDA continuous Llama: configured=true, initialized={initialized}, slots={}, queued={}, real_prefill_budget={}, F32 mono",options.slots,options.queued,options.token_budget));
+        }
+
         if self.backend_kind == BackendKind::Hybrid {
             Some(format!(
                 "hybrid policy: mode={}, layers={}, max_vram_mb={}, min_rows={}, output={}",
@@ -208,6 +243,9 @@ impl ModelExecutor for LlamaExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
+        if let Some(batch) = self.native_batch_controller()? {
+            return batch.generate_with_timings(prompt, max_tokens, sampling);
+        }
         let mut slot = self
             .runtime
             .lock()
@@ -231,6 +269,9 @@ impl ModelExecutor for LlamaExecutor {
         max_tokens: u32,
         sampling: SamplingOptions,
     ) -> Result<crate::scheduler::InferenceOutput> {
+        if let Some(batch) = self.native_batch_controller()? {
+            return batch.generate_output(prompt, max_tokens, sampling);
+        }
         let mut slot = self
             .runtime
             .lock()
@@ -262,6 +303,9 @@ impl ModelExecutor for LlamaExecutor {
         sampling: SamplingOptions,
         on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
     ) -> Result<()> {
+        if let Some(batch) = self.native_batch_controller()? {
+            return batch.generate_streaming(prompt, max_tokens, sampling, on_event);
+        }
         let mut slot = self
             .runtime
             .lock()
