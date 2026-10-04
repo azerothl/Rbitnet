@@ -1,6 +1,7 @@
 //! Autoregressive GPT-OSS and DeepSeek/GLM MLA graphs over GGUF quantized weights.
 //! Operations follow llama.cpp 631109b34 openai-moe.cpp and deepseek2.cpp.
 use super::moe_cost::{Cost, Execution};
+use crate::native::moe::GpuMoe;
 use super::weights::Weights;
 use crate::backend::BackendKind;
 use crate::cancel::inference_cancelled;
@@ -535,6 +536,11 @@ impl Runtime {
                 std::env::var("RBITNET_CUDA_ATTENTION").as_deref(),
                 Ok("0" | "false" | "no")
             );
+        let fused= gpu_moe.iter().flatten().filter(|m|m.is_fused()).count();
+        if std::env::var("RBITNET_REQUIRE_FUSED_MOE").as_deref()==Ok("1")
+            && (fused==0 || fused!=gpu_moe.iter().flatten().count()) {
+            return Err(BitNetError::Inference("requested fused MoE unavailable: compatible GPU contexts and native fusion ABI are required".into()));
+        }
         let gpu_full = gpu_full::GpuFull::new(&weights, &cfg, &gpu_moe, kind);
         if std::env::var("RBITNET_REQUIRE_GPT_FULL").as_deref() == Ok("1") && gpu_full.is_none() {
             return Err(BitNetError::Inference("resident GPT-OSS unavailable: requires CUDA or hybrid, supported native DLL, CPU quant SIMD, compatible biased GPT backbone within budget and fixed or host-admitted expert execution".into()));
@@ -542,6 +548,10 @@ impl Runtime {
         let gpu_mla = gpu_mla::GpuMla::new(&weights, &cfg, &gpu_moe, kind);
         if std::env::var("RBITNET_REQUIRE_MLA_FULL").as_deref() == Ok("1") && gpu_mla.is_none() {
             return Err(BitNetError::Inference("resident MLA unavailable: requires CUDA, supported native DLL, CPU quant SIMD, compatible unbiased MLA projections and backbone weights within budget".into()));
+        }
+        if std::env::var("RBITNET_REQUIRE_GPT_PREFILL").as_deref()==Ok("1")
+            && gpu_full.as_ref().is_none_or(|f|f.prefill_capacity()==0) {
+            return Err(BitNetError::Inference("requested GPT block prefill unavailable: fixed expert banks, compatible ABI and state budget are required".into()));
         }
         let gpu_head = if gpu_full.is_none() && gpu_mla.is_none() {
             super::head::GpuHead::new(&weights, "output.weight", cfg.eps)
@@ -724,6 +734,7 @@ impl Runtime {
         crate::perf::record_native_moe(!fallback, 1, elapsed);
         if let Some(metrics) = &self.weights.moe_metrics {
             metrics.ffn(il, !fallback, Some(elapsed));
+            if !fallback && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
         }
         if self
             .weights
@@ -870,6 +881,7 @@ impl Runtime {
                 crate::perf::record_native_moe(resident, 1, elapsed);
                 if let Some(metrics) = &self.weights.moe_metrics {
                     metrics.ffn(il, resident, Some(elapsed));
+                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
                 }
             }
             full.end(logits, greedy)
@@ -943,6 +955,7 @@ impl Runtime {
                 crate::perf::record_native_moe(resident, 1, elapsed);
                 if let Some(metrics) = &self.weights.moe_metrics {
                     metrics.ffn(il, resident, Some(elapsed));
+                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused){metrics.fused_ffn(il);}
                 }
             }
             full.end(logits, greedy)
@@ -1236,8 +1249,31 @@ impl Runtime {
         } else {
             0
         };
-        for (pos, &id) in ids.iter().enumerate().skip(reused) {
-            (logits, next_token) = self.forward(id, pos, pos + 1 == ids.len(), gpu_greedy)?;
+        let block_capacity=self.gpu_full.as_ref().map_or(0,|f|f.prefill_capacity());
+        if block_capacity>0 {
+            let mut full=self.gpu_full.take().unwrap();
+            let result=(|| {
+                let tensor=self.weights.tensor("token_embd.weight")?;
+                let mut pos=reused;
+                while pos<ids.len() {
+                    if inference_cancelled() {return Err(BitNetError::Inference("inference cancelled".into()));}
+                    let count=block_capacity.min(ids.len()-pos);
+                    let mut embeddings=vec![0.0;count*self.cfg.embd];
+                    for (&token,row) in ids[pos..pos+count].iter().zip(embeddings.chunks_exact_mut(self.cfg.embd)) {
+                        if token as usize>=self.cfg.vocab {return Err(BitNetError::Inference("block token out of bounds".into()));}
+                        crate::ggml::embedding_row_mmap(&self.weights.archive,tensor,token as usize,self.cfg.embd,self.cfg.vocab,row)?;
+                    }
+                    (logits,next_token)=full.prefill(&embeddings,pos,count,pos+count==ids.len(),gpu_greedy)?;
+                    pos+=count;
+                }
+                Ok(())
+            })();
+            self.gpu_full=Some(full);
+            result?;
+        }else {
+            for (pos,&id) in ids.iter().enumerate().skip(reused) {
+                (logits,next_token)=self.forward(id,pos,pos+1==ids.len(),gpu_greedy)?;
+            }
         }
         if let Some(full) = &mut self.gpu_full {
             full.save_prefix(&ids)?;
@@ -1364,7 +1400,9 @@ impl ModelExecutor for NativeExecutor {
             } else {
                 format!("resident quantized weights: {} MiB; fully resident GPT-OSS token pipeline: false; resident output head: {}; resident routed expert layers: {}; attention GPU enabled: {}; remaining operations execute on CPU; context capacity: {}",r.weights.resident_bytes/(1024*1024),r.gpu_head.is_some(),r.gpu_moe.iter().filter(|m|m.is_some()).count(),r.use_gpu_attention,r.cfg.max_seq)
             };
-            format!("{execution}; weight budget bytes: {}; native state reservation bytes: {}",r.weights.residency_budget_bytes,r.weights.state_reserve_bytes)
+            let gpt_block=r.gpu_full.as_ref().map_or(0,|f|f.prefill_capacity());
+            let execution=format!("{execution}; GPT block prefill capacity: {gpt_block}");
+            format!("{execution}; weight budget bytes: {}; native state reservation bytes: {}; fused resident expert contexts: {}/{}",r.weights.residency_budget_bytes,r.weights.state_reserve_bytes,r.gpu_moe.iter().flatten().filter(|m|m.is_fused()).count(),r.gpu_moe.iter().flatten().count())
         })
     }
     fn generate_with_timings(
@@ -1770,3 +1808,7 @@ mod mla_runtime_tests;
 #[cfg(test)]
 #[path = "moe_policy_runtime_tests.rs"]
 mod moe_policy_runtime_tests;
+
+#[cfg(test)]
+#[path="gpt_block_runtime_tests.rs"]
+mod gpt_block_runtime_tests;

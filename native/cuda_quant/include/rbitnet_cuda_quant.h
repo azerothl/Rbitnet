@@ -289,6 +289,22 @@ RBITNET_CUDA_API int rbitnet_cuda_mla_attention_check(const float*,const float*,
 /* Diagnostic completion guard; mode1 returns after queueing device work and
  * mode2 abandons a capture. Cleanup waits without inducing a hardware fault. */
 RBITNET_CUDA_API int rbitnet_cuda_native_completion_check(unsigned,float*);
+
+/* Opt-in fixed-bank GPT block prefill, configured once before the first token.
+ * Capacity 1..32; ordered projections and per-expert grouped FFNs. tile=0 uses
+ * ordered warps, tile=1 additionally shares original MXFP4 bytes across tokens.
+ * No new quantization, changed router, or automatic segmented/cache block path.
+ * Configure refuses unsupported/over-budget workspaces and leaves serial usable. */
+RBITNET_CUDA_API int rbitnet_cuda_gpt_configure_prefill(void*,unsigned capacity,unsigned tile);
+RBITNET_CUDA_API unsigned rbitnet_cuda_gpt_prefill_capacity(void*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_full_prefill(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_full_verify(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
+/* Numerical/isolated kernel diagnostics take HOST weight/input/output arrays.
+ * Not serving paths; their temporary allocations are included in the ledger. */
+RBITNET_CUDA_API int rbitnet_cuda_ordered_gemm_check(unsigned,const void*,size_t,const float*,unsigned,unsigned,unsigned,unsigned,unsigned,float*,float*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_moe_group_check(const RbitnetMoeConfig*,const RbitnetLlamaMatrix*,const float*,const float*,const float*,const float*,const unsigned*,const float*,unsigned,unsigned,unsigned,unsigned,float*,float*,float*);
+
+RBITNET_CUDA_API int rbitnet_cuda_moe_configure_fused(void*,unsigned enabled);
 #ifdef __cplusplus
 }
 #endif
