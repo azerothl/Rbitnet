@@ -19,6 +19,7 @@ Les optimisations de l'[épique #98](https://github.com/azerothl/Rbitnet/issues/
 | `RBITNET_CUDA_QWEN_FULL=1` | Pipeline Qwen3.5 dense entièrement résident pour `cuda`, contexte maximal 8 192 : attention complète, blocs GDN, FFN et sortie sur un flux. Une entrée d'embedding et une position sont transférées par token ; seuls les logits ou l'ID glouton reviennent sur CPU. |
 | `RBITNET_CUDA_QWEN_FULL_GRAPH=0` | Désactive le graphe de ce pipeline pour vérifier le chemin eager. Les activations restent sur GPU. |
 | `RBITNET_REQUIRE_QWEN_FULL=1` | Refuse le chargement si le pipeline complet demandé est indisponible. Sans cette exigence, une ancienne DLL, un modèle MoE, `hybrid`, un contexte trop grand, un debug partiel ou des poids non résidents conservent le chemin antérieur et sa métadonnée de placement. |
+| `RBITNET_CUDA_SPLIT_KV=1` | Attention exacte par tuiles de 256 positions dans Llama résident et Qwen dense complet. Softmax partiels puis fusion stable max/somme/numérateur, sans éviction de tokens ni compression. Scratch et grilles stables pour les graphes ; option lue lors de la création du contexte natif. Désactivée par défaut. |
 
 Le budget des experts est plafonné par `RBITNET_HYBRID_MAX_VRAM_MB` moins les poids non experts déjà résidents. Ce plafond ne compte pas le KV actif, les snapshots, les normes/biais et le scratch natif : il ne représente pas la consommation totale de VRAM. Les matrices d'experts gardent aussi un miroir RAM de leurs octets quantifiés.
 
@@ -26,9 +27,13 @@ Les experts utilisés sont protégés par des leases jusqu'à la fin du FFN. Une
 
 Les snapshots appartiennent au runtime : poids, tokenizer, configuration RoPE et layout ne changent pas pendant sa durée de vie. Un autre chargement de modèle crée un autre cache. Ils ne sont pas persistés sur disque. Une ancienne DLL sans API de snapshot garde le repli hôte Llama ou désactive la réutilisation Qwen ; une DLL sans GEMM garde le préremplissage résident token par token.
 
+Le compteur `rbitnet_core_gpu_split_attention_queries_total` mesure les positions exécutées, sommées sur les couches réellement configurées avec les nouveaux noyaux. Le CLI interroge le contexte natif ; un flag demandé avec une ancienne DLL ne produit pas de faux compteur. Le scratch split-KV est supplémentaire au KV actif et au budget des snapshots. Llama réserve le scratch de décodage à la création et celui des blocs au premier prefill/vérification, puis conserve leurs adresses. Qwen réserve un scratch par bloc d'attention complète. Cette option conserve les K/V F32 denses ; elle ne termine pas les tickets de pages/compression/batching.
+
 ## Mesurer et reproduire
 
 Les [mesures et preuves du 3 octobre 2026](benchmarks/2026-10-03-cache-foundation/README.md) publient les réponses brutes, les tests GPU/CPU, les limites du pilote MoE et les statistiques des ablations finales.
+
+Les [ablations d'attention partitionnée et comparatifs remesurés](benchmarks/2026-10-03-split-kv/README.md) montrent un décodage long Llama de 85,9 à 377,0 tok/s et Qwen de 100,8 à 233,2 tok/s sur cette machine. Le comparatif des trois moteurs conserve un écart majeur de préremplissage froid et de latence totale ; les résultats courts, la qualité, les empreintes et les différences de capacités de contexte/KV sont publiés avec les mesures.
 
 `scripts/benchmark_cache_stack.py` compare les modes sur le même binaire et la même DLL. Il conserve requêtes/réponses, chauffe, répétitions, temps de préremplissage/décodage, latence HTTP, compteurs, empreintes et mémoire. Il vérifie les réponses SSE en glouton, sampling avec seed et pénalités, ainsi qu'un arrêt explicite. Les séquences de référence et les tests de snapshots vérifient séparément l'annulation puis la reprise.
 

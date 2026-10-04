@@ -112,6 +112,7 @@ pub(super) struct Resident {
     matrix_count: u64,
     layers: u64,
     graphs: bool,
+    split_layers: u64,
     snapshots: Option<SnapshotApi>,
     prefixes: crate::native::prefix::PrefixStore<SavedPrefix>,
     kv_bytes_per_token: usize,
@@ -245,8 +246,14 @@ impl Resident {
         if context == 0 {
             return None;
         }
+        type SplitLayers = unsafe extern "C" fn(*mut c_void) -> u32;
+        let split_layers = unsafe {
+            lib.get::<SplitLayers>(b"rbitnet_cuda_llama_split_attention_layers\0")
+                .map_or(0, |query| query(context as *mut c_void) as u64)
+        };
         tracing::info!(
             graphs = cfg.graphs != 0,
+            split_layers,
             "fully resident Llama CUDA token graph enabled"
         );
         Some(Self {
@@ -264,6 +271,7 @@ impl Resident {
             matrix_count: 7 * c.n_layer as u64,
             layers: c.n_layer as u64,
             graphs: cfg.graphs != 0,
+            split_layers,
             snapshots,
             prefixes: crate::native::prefix::PrefixStore::from_env(),
             kv_bytes_per_token,
@@ -360,6 +368,7 @@ impl Resident {
         for _ in 0..self.layers {
             crate::perf::record_gpu_attention();
         }
+        crate::perf::record_split_attention(self.split_layers * tokens.len() as u64);
         Ok(if greedy {
             Verified::Greedy(next)
         } else {
@@ -476,6 +485,7 @@ impl Resident {
             for _ in 0..self.layers {
                 crate::perf::record_gpu_attention();
             }
+            crate::perf::record_split_attention(self.split_layers * chunk.len() as u64);
             crate::perf::record_gpu_transfer(
                 (self.prefill_embeddings.len() * 4 + 4) as u64,
                 if mode == 1 {
@@ -617,6 +627,7 @@ impl Resident {
         for _ in 0..self.layers {
             crate::perf::record_gpu_attention();
         }
+        crate::perf::record_split_attention(self.split_layers);
         Ok(next)
     }
     pub fn forward(

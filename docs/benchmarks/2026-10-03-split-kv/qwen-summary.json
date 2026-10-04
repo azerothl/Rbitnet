@@ -1,0 +1,144 @@
+{
+  "warmup_excluded": true,
+  "control_prompt_excluded": true,
+  "modes": {
+    "baseline": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 10122.122549997584,
+        "min": 10110.010399992461,
+        "max": 10149.865799990948
+      },
+      "prefill_ms": {
+        "median": 8842.0,
+        "min": 8829.0,
+        "max": 8877.0
+      },
+      "decode_ms": {
+        "median": 1269.5,
+        "min": 1267.0,
+        "max": 1277.0
+      },
+      "upload_bytes": {
+        "median": 13170972.0,
+        "min": 13170972.0,
+        "max": 13170972.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 100.82711292294138,
+        "min": 100.23492560689115,
+        "max": 101.02604577742699
+      }
+    },
+    "split": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 5667.590600001859,
+        "min": 5653.093299988541,
+        "max": 5726.252599997679
+      },
+      "prefill_ms": {
+        "median": 5102.5,
+        "min": 5099.0,
+        "max": 5164.0
+      },
+      "decode_ms": {
+        "median": 549.0,
+        "min": 549.0,
+        "max": 558.0
+      },
+      "upload_bytes": {
+        "median": 13170972.0,
+        "min": 13170972.0,
+        "max": 13170972.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 233.1511839708561,
+        "min": 229.39068100358423,
+        "max": 233.1511839708561
+      }
+    },
+    "split-prefix": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 570.8081000047969,
+        "min": 565.225799990003,
+        "max": 580.4896000045119
+      },
+      "prefill_ms": {
+        "median": 4.5,
+        "min": 4.0,
+        "max": 5.0
+      },
+      "decode_ms": {
+        "median": 557.0,
+        "min": 557.0,
+        "max": 557.0
+      },
+      "upload_bytes": {
+        "median": 1049088.0,
+        "min": 1049088.0,
+        "max": 1049088.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 229.80251346499102,
+        "min": 229.80251346499102,
+        "max": 229.80251346499102
+      }
+    }
+  },
+  "response_count": 27,
+  "response_matches": 27,
+  "sse_pairs": 9,
+  "sse_matches": 9,
+  "memory": {
+    "baseline": {
+      "peak_process_tree_rss_bytes": 4439175168,
+      "gpu_global_baseline_mib": 2044.0,
+      "gpu_global_peak_mib": 4728.0,
+      "gpu_global_peak_delta_mib": 2684.0
+    },
+    "split": {
+      "peak_process_tree_rss_bytes": 4437426176,
+      "gpu_global_baseline_mib": 2156.0,
+      "gpu_global_peak_mib": 4759.0,
+      "gpu_global_peak_delta_mib": 2603.0
+    },
+    "split-prefix": {
+      "peak_process_tree_rss_bytes": 4437897216,
+      "gpu_global_baseline_mib": 2036.0,
+      "gpu_global_peak_mib": 4918.0,
+      "gpu_global_peak_delta_mib": 2882.0
+    }
+  }
+}

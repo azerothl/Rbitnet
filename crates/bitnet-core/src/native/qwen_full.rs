@@ -104,6 +104,7 @@ pub(crate) struct GpuFull {
     kv_stride: usize,
     matrices: u64,
     graphs: bool,
+    split_layers: u64,
 }
 impl GpuFull {
     pub fn new(
@@ -265,6 +266,11 @@ impl GpuFull {
         if context == 0 {
             return None;
         }
+        type SplitLayers = unsafe extern "C" fn(*mut c_void) -> u32;
+        let split_layers = unsafe {
+            lib.get::<SplitLayers>(b"rbitnet_cuda_qwen_split_attention_layers\0")
+                .map_or(0, |query| query(context as *mut c_void) as u64)
+        };
         Some(Self {
             context,
             destroy,
@@ -281,6 +287,7 @@ impl GpuFull {
             kv_stride: cfg.n_head_kv * cfg.head_dim,
             matrices,
             graphs,
+            split_layers,
         })
     }
     pub fn prefix_bytes(&self, length: usize) -> usize {
@@ -404,6 +411,7 @@ impl GpuFull {
             crate::perf::record_gpu_attention();
         }
         crate::perf::record_qwen_full_token();
+        crate::perf::record_split_attention(self.split_layers);
         if self.graphs {
             crate::perf::record_cuda_graph_replay();
         }

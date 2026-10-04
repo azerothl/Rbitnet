@@ -99,3 +99,26 @@ pwsh -NoProfile -File scripts/validate_qwen_full.ps1 -Eager
 
 The mode stays opt-in. Missing new symbols retain the prior recurrent/host
 pipeline; `RBITNET_REQUIRE_QWEN_FULL=1` makes that fallback a load error.
+
+## Exact split-KV attention
+
+`RBITNET_CUDA_SPLIT_KV=1` selects `split_attention.cuh` at native context
+creation, for resident Llama and full dense Qwen. Tiles of 256 positions store
+their maximum, exponential sum and unnormalized value numerator. A second
+kernel rescales to the global maximum and merges them. Empty/causally masked
+tiles contribute zero without reading stale scratch. No tokens are evicted;
+K/V stay dense F32. Grids and scratch pointers remain fixed across graph replay,
+including block prefill/verification and restored prefixes.
+
+The Rust wrappers query the actual native context and report
+`rbitnet_core_gpu_split_attention_queries_total`, counting each query position
+per split-enabled layer. Old DLLs lacking this optional capability return no
+claim of split execution. The diagnostic `split_attention_check` API exercises
+the same kernels with host arrays for an independent F64 oracle; production
+uses resident device buffers. Scratch is extra memory outside snapshot/expert
+budgets, and the option remains off by default.
+
+The composition follows the exact attention-state reduction discussed in
+[FlashInfer §2.2 and Appendix D](https://arxiv.org/html/2501.01005v1).
+This is Rbitnet's own SIMT implementation. The heuristic unified maximum from
+[FlashDecoding++](https://arxiv.org/abs/2311.01282) is not used.
