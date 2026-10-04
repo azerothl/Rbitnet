@@ -292,6 +292,10 @@ fn sample_multinomial(weights: &[f32], rng: &mut impl Rng) -> u32 {
 }
 
 fn sample_top_p(weights: &[f32], top_p: f32, rng: &mut impl Rng) -> Option<u32> {
+    if std::env::var("RBITNET_CPU_TOP_P_HEAP").as_deref() == Ok("1") {
+        return top_p_heap::sample_top_p_heap(weights, top_p, rng);
+    }
+
     let top_p = top_p.clamp(0.0, 1.0);
     if top_p >= 1.0 {
         return None;
@@ -384,3 +388,8 @@ mod tests {
         std::env::remove_var("RBITNET_STRUCTURED_OUTPUT");
     }
 }
+
+#[cfg(test)]
+#[path = "sampling/heap_tests.rs"]
+mod heap_tests;
+mod top_p_heap;
