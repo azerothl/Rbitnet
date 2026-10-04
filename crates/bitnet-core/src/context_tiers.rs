@@ -1,5 +1,7 @@
 //! Opt-in host/disk prefix checkpoints. Native transfers are owned by the caller.
-//! Budgets are per model runtime; no SSD access occurs inside token decoding.
+//! RAM budgets are per runtime; optional disk quotas span managed namespaces.
+//! No SSD access occurs inside token decoding.
+mod global_quota;
 use crate::portable_envelope::{self, Compatibility, HostCheckpoint};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -15,6 +17,7 @@ pub(crate) struct Policy {
     pub directory: PathBuf,
     pub ram_bytes: usize,
     pub disk_bytes: usize,
+    pub global_disk_bytes: Option<usize>,
     pub entries: usize,
     pub retention: Duration,
 }
@@ -48,6 +51,11 @@ impl Policy {
             directory,
             ram_bytes: mib("RBITNET_CONTEXT_RAM_MB", 256)?,
             disk_bytes: mib("RBITNET_CONTEXT_DISK_MB", 2048)?,
+            global_disk_bytes: if std::env::var_os("RBITNET_CONTEXT_DISK_GLOBAL_MB").is_some() {
+                Some(mib("RBITNET_CONTEXT_DISK_GLOBAL_MB", 2048)?)
+            } else {
+                None
+            },
             entries: number("RBITNET_CONTEXT_ENTRIES", 64)?,
             retention: Duration::from_secs(number("RBITNET_CONTEXT_TTL_SECS", 1800)? as u64),
         };
@@ -376,6 +384,35 @@ impl Store {
         }
         Ok(())
     }
+    fn persist(&mut self, tokens: &[u32], values: &[f32], bound: usize) -> io::Result<PathBuf> {
+        let quota = self
+            .policy
+            .global_disk_bytes
+            .map(|limit| global_quota::Guard::open(self.directory.parent().unwrap(), limit))
+            .transpose()?;
+        self.trim_disk(bound, None)?;
+        if let Some(quota) = &quota {
+            while !quota.reserve(&self.directory, bound)? {
+                let id = self
+                    .entries
+                    .iter()
+                    .filter(|(_, entry)| entry.file.is_some())
+                    .min_by_key(|(_, entry)| entry.used)
+                    .map(|(id, _)| id.clone())
+                    .ok_or_else(|| invalid("global disk quota held by active namespaces"))?;
+                self.remove(&id)?;
+            }
+        }
+        // The global OS lock remains held through temporary allocation, rename
+        // and metadata publication; a competing writer cannot spend this space.
+        portable_envelope::write_checkpoint(
+            &self.directory,
+            &self.key,
+            tokens,
+            values,
+            self.policy.ram_bytes,
+        )
+    }
     fn reserve_ram(&mut self, bytes: usize) -> bool {
         if bytes == 0 || bytes > self.policy.ram_bytes {
             return false;
@@ -454,15 +491,7 @@ impl Store {
             // Reserve the complete sealed object and its temporary write, not just tensor bytes.
             let bound = portable_envelope::sealed_size(&self.key, tokens, bytes)?;
             let started = std::time::Instant::now();
-            match self.trim_disk(bound, None).and_then(|_| {
-                portable_envelope::write_checkpoint(
-                    &self.directory,
-                    &self.key,
-                    tokens,
-                    &lease.checkpoint.values,
-                    self.policy.ram_bytes,
-                )
-            }) {
+            match self.persist(tokens, &lease.checkpoint.values, bound) {
                 Ok(path) => {
                     file_bytes = usize::try_from(std::fs::metadata(&path)?.len())
                         .map_err(|_| invalid("sealed size overflow"))?;
@@ -589,6 +618,7 @@ mod tests {
             directory: directory.into(),
             ram_bytes,
             disk_bytes: 65536,
+            global_disk_bytes: None,
             entries: 8,
             retention: Duration::from_secs(1800),
         }
@@ -600,6 +630,125 @@ mod tests {
                 Ok(())
             })
             .unwrap()
+    }
+    #[test]
+    fn global_quota_counts_active_namespaces_and_reclaims_only_idle_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let mut first = Store::open(key(), p.clone()).unwrap();
+        assert!(capture(&mut first, &[1], 1.0));
+        assert_eq!(first.disk_used(), bound);
+        let held = first.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        let old_file = first.entries.values().next().unwrap().file.clone().unwrap();
+        let note = first.directory.join("keep.txt");
+        std::fs::write(&note, b"unmanaged note").unwrap();
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut second = Store::open(other, p).unwrap();
+        assert!(capture(&mut second, &[2], 2.0));
+        assert_eq!(
+            second.disk_used(),
+            0,
+            "active namespace may not be reclaimed"
+        );
+        assert_eq!(second.stats.write_failures, 1);
+        assert!(old_file.exists());
+        drop(first);
+        assert!(capture(&mut second, &[3], 3.0));
+        assert_eq!(second.disk_used(), bound);
+        assert!(!old_file.exists());
+        assert_eq!(std::fs::read(&note).unwrap(), b"unmanaged note");
+        assert!(held.checkpoint.values.iter().all(|value| *value == 1.0));
+    }
+    #[test]
+    fn global_quota_reclaims_own_lru_without_losing_active_host_leases() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let mut store = Store::open(key(), p).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        let held = store.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.disk_used(), bound);
+        assert_eq!(store.stats.writes, 2);
+        assert!(held.checkpoint.values.iter().all(|value| *value == 1.0));
+    }
+    #[test]
+    fn global_quota_contention_and_conflicting_caps_keep_ram_checkpoint() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        let quota = global_quota::Guard::open(store.directory.parent().unwrap(), 65536).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        drop(quota);
+        store.policy.global_disk_bytes = Some(131072);
+        assert!(capture(&mut store, &[2], 2.0));
+        assert_eq!(store.stats.write_failures, 2);
+        assert_eq!(store.disk_used(), 0);
+        assert!(store.lookup(&[2, 3], |_| 64).unwrap().is_some());
+    }
+    #[test]
+    fn global_quota_io_refusal_does_not_discard_host_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        // An actual filesystem refusal, not a simulated successful disk write.
+        let lock = store.directory.parent().unwrap().join(".disk-quota.lock");
+        std::fs::create_dir(&lock).unwrap();
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        let held = store.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        assert!(held.checkpoint.values.iter().all(|v| *v == 1.0));
+    }
+    #[test]
+    fn global_quota_charges_interrupted_writes_in_inactive_namespace() {
+        let dir = tempfile::tempdir().unwrap();
+        let bound = portable_envelope::sealed_size(&key(), &[1], 64).unwrap();
+        let mut p = policy(dir.path(), 128);
+        p.global_disk_bytes = Some(bound);
+        let first = Store::open(key(), p.clone()).unwrap();
+        let temporary = first
+            .directory
+            .join(format!(".{}-123-456.tmp", "a".repeat(64)));
+        std::fs::write(&temporary, vec![0u8; bound]).unwrap();
+        drop(first);
+        let mut other = key();
+        other.model_sha256 = [5; 32];
+        let mut second = Store::open(other, p).unwrap();
+        assert!(capture(&mut second, &[1], 2.0));
+        assert!(!temporary.exists());
+        assert_eq!(second.disk_used(), bound);
+    }
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn global_quota_refuses_redirected_foreign_namespace_without_touching_target() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("root");
+        let outside = parent.path().join("outside");
+        std::fs::create_dir(&outside).unwrap();
+        let note = outside.join(format!("{}.state", "c".repeat(64)));
+        std::fs::write(&note, b"preserve outside object").unwrap();
+        let mut p = policy(&root, 128);
+        p.global_disk_bytes = Some(65536);
+        let mut store = Store::open(key(), p).unwrap();
+        let link = store.directory.parent().unwrap().join("b".repeat(64));
+        redirect_directory(&link, &outside);
+        assert!(capture(&mut store, &[1], 1.0));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(std::fs::read(&note).unwrap(), b"preserve outside object");
+        #[cfg(windows)]
+        std::fs::remove_dir(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
     }
     #[cfg(any(windows, unix))]
     fn redirect_directory(link: &Path, target: &Path) {

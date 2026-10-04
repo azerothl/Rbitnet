@@ -79,6 +79,31 @@ host payload budget.
 
 ## Evidence required before adoption
 
+### Prepared global SSD admission (validation pending)
+
+`RBITNET_CONTEXT_DISK_GLOBAL_MB` opts into a cooperative global disk cap below
+the configured cache root. RAM and ordinary per-namespace disk limits remain
+unchanged. A shared OS lock protects admission through the temporary write and
+rename. The scan counts sealed objects and recognized interrupted temporaries
+across compatibility namespaces. Inactive namespaces can lose their oldest
+derived files; active foreign namespaces remain protected. The current runtime
+can evict its own cold files while external RAM leases remain valid.
+
+Lock contention, an active-namespace capacity shortage or an I/O refusal retains
+the RAM checkpoint and ordinary replay. The global cap is registered once in
+`.disk-quota.lock`; inconsistent caps are refused. To change the registered cap,
+stop writers and choose a fresh root. Legacy writers without this option do not
+participate in global admission and must not share the root with enabled writers.
+Existing active data above a newly introduced cap cannot be reclaimed while
+its namespace is locked; new disk admission is refused rather than deleting it.
+Only recognized managed objects count, not arbitrary user files in the root.
+
+Six new filesystem fixtures are prepared for cross-model accounting, active
+namespace refusal, own LRU reclamation with live RAM leases, contention, differing
+caps, I/O refusal, interrupted temporaries and redirected foreign namespaces.
+Compilation, cross-process and actual model/proxy execution remain pending.
+This does not claim a physical ENOSPC or timed process-crash recovery sweep.
+
 The validation must cover actual Llama and Qwen prompt outputs, seeded sampling,
 RAM hits, RAM eviction to disk, a separate server-process restart, corruption
 replay, stop strings and disconnected streams. It must also cover two model
