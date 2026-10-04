@@ -1,0 +1,44 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-finish-reason\crates\bitnet-core)
+warning: fields `query` and `trim` are never read
+  --> crates\bitnet-core\src\llama\resident.rs:81:5
+   |
+79 | struct Pages {
+   |        ----- fields in this struct
+80 |     limit: u32,
+81 |     query: QueryPages,
+   |     ^^^^^
+82 |     trim: TrimPages,
+   |     ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `page_stats` and `trim_pages` are never used
+   --> crates\bitnet-core\src\llama\resident.rs:398:19
+    |
+174 | impl Resident {
+    | ------------- methods in this implementation
+...
+398 |     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
+    |                   ^^^^^^^^^^
+...
+411 |     pub(crate) fn trim_pages(&mut self) -> Result<()> {
+    |                   ^^^^^^^^^^
+
+warning: `bitnet-core` (lib) generated 2 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.13s
+     Running tests\scheduler_speculative.rs (E:\devs\Rbitnet\target\performance-cache\check-build\debug\deps\scheduler_speculative-464d77ddf47061a4.exe)
+
+running 9 tests
+test continuous_batching_waves_increment_decode_wave_counter ... ok
+test eos_zero_output_finishes_both_queue_modes_while_other_members_reach_their_budget ... ok
+test fused_multi_seq_decode_uses_generate_decode_batch ... ok
+test legacy_burst_respects_first_eos_and_uses_the_last_actual_termination_reason ... ok
+test sarathi_prefill_decode_queue_starts_prefill_only ... ok
+test sarathi_stall_free_records_prefill_chunks_and_budget_iters ... ok
+test scheduler_batch_two_preserves_order ... ok
+test scheduler_regular_mode_passthrough ... ok
+test scheduler_speculative_unsupported_executor_preserves_one_target_generation ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

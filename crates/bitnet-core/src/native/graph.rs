@@ -1313,6 +1313,7 @@ impl Runtime {
         let dec = Instant::now();
         let mut previous = String::new();
         let mut emitted = String::new();
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
         for step in 0..limit {
             if inference_cancelled() {
                 return Err(BitNetError::Inference("inference cancelled".into()));
@@ -1321,6 +1322,7 @@ impl Runtime {
                 .take()
                 .unwrap_or_else(|| sample_token(&logits, &sampling, &generated, &mut rng));
             if stop.contains(&next) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
                 break;
             }
             generated.push(next);
@@ -1345,6 +1347,7 @@ impl Runtime {
             decode_ms: dec.elapsed().as_millis() as u64,
             prompt_tokens: ids.len() as u32,
             completion_tokens: generated.len() as u32,
+            finish_reason,
         };
         if let Some(callback) = events.as_deref_mut() {
             emit_text_delta(&previous, &mut emitted, true, callback)?;
