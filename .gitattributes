@@ -2,3 +2,7 @@
 docs/benchmarks/2026-10-04-qwen-draft-serving/raw/** -text
 docs/benchmarks/2026-10-04-qwen-draft-serving/receipt.json -text
 docs/benchmarks/2026-10-04-qwen-draft-serving/harness/** -text
+
+docs/benchmarks/2026-10-04-q8-weight-reuse-fresh/raw/** -text
+docs/benchmarks/2026-10-04-q8-weight-reuse-fresh/receipt.json -text
+docs/benchmarks/2026-10-04-q8-weight-reuse-fresh/harness/** -text
