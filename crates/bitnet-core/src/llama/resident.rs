@@ -113,6 +113,7 @@ pub(super) struct Resident {
     layers: u64,
     graphs: bool,
     split_layers: u64,
+    tensor_gemm_calls: Option<unsafe extern "C" fn(*mut c_void) -> u32>,
     snapshots: Option<SnapshotApi>,
     prefixes: crate::native::prefix::PrefixStore<SavedPrefix>,
     kv_bytes_per_token: usize,
@@ -251,6 +252,23 @@ impl Resident {
             lib.get::<SplitLayers>(b"rbitnet_cuda_llama_split_attention_layers\0")
                 .map_or(0, |query| query(context as *mut c_void) as u64)
         };
+        type ConfigureTensor = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+        if let Ok(configure) =
+            unsafe { lib.get::<ConfigureTensor>(b"rbitnet_cuda_llama_configure_tensor_prefill\0") }
+        {
+            let enabled =
+                u32::from(std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1"));
+            let status = unsafe { configure(context as *mut c_void, enabled) };
+            if status != 0 {
+                unsafe { destroy(context as *mut c_void) };
+                return None;
+            }
+        }
+        let tensor_gemm_calls = unsafe {
+            lib.get::<SplitLayers>(b"rbitnet_cuda_llama_tensor_gemm_calls\0")
+                .ok()
+                .map(|query| *query)
+        };
         tracing::info!(
             graphs = cfg.graphs != 0,
             split_layers,
@@ -273,12 +291,19 @@ impl Resident {
             graphs: cfg.graphs != 0,
             split_layers,
             snapshots,
+            tensor_gemm_calls,
             prefixes: crate::native::prefix::PrefixStore::from_env(),
             kv_bytes_per_token,
         })
     }
     pub fn supports_prefix_cache(&self) -> bool {
         self.snapshots.is_some()
+    }
+    fn record_tensor_gemm(&self) {
+        let calls = self
+            .tensor_gemm_calls
+            .map_or(0, |query| unsafe { query(self.context as *mut c_void) });
+        crate::perf::record_gpu_tensor_gemm(calls as u64);
     }
     pub fn supports_verification(&self) -> bool {
         self.verify.is_some() && self.truncate.is_some()
@@ -369,6 +394,7 @@ impl Resident {
             crate::perf::record_gpu_attention();
         }
         crate::perf::record_split_attention(self.split_layers * tokens.len() as u64);
+        self.record_tensor_gemm();
         Ok(if greedy {
             Verified::Greedy(next)
         } else {
@@ -486,6 +512,7 @@ impl Resident {
                 crate::perf::record_gpu_attention();
             }
             crate::perf::record_split_attention(self.split_layers * chunk.len() as u64);
+            self.record_tensor_gemm();
             crate::perf::record_gpu_transfer(
                 (self.prefill_embeddings.len() * 4 + 4) as u64,
                 if mode == 1 {
@@ -666,6 +693,65 @@ impl Drop for Resident {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn optional_real_tensor_prefill_teacher_forcing_matches_simt() {
+        if std::env::var("RBITNET_CUDA_TENSOR_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let gguf = std::env::var("RBITNET_TEST_GGUF").expect("real GGUF required");
+        let tokenizer = tokenizers::Tokenizer::from_file(
+            std::env::var("RBITNET_TOKENIZER").expect("tokenizer required"),
+        )
+        .unwrap();
+        let archive = std::sync::Arc::new(
+            crate::gguf::GgufArchive::mmap_path(std::path::Path::new(&gguf)).unwrap(),
+        );
+        let model =
+            LlamaModel::from_gguf_arc_for_backend(archive, crate::backend::BackendKind::Cuda)
+                .unwrap();
+        std::env::set_var("RBITNET_CUDA_PREFILL", "1");
+        std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", "0");
+        let mut reference = Resident::new(&model).unwrap();
+        std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", "1");
+        let mut tensor = Resident::new(&model).unwrap();
+        let before = crate::perf::snapshot().gpu_tensor_gemm_calls;
+        let mut checked = 0;
+        let mut worst_kl: f64 = 0.0;
+        let mut worst_nll_delta: f64 = 0.0;
+        for content in [
+            "Le robot entre dans une bibliothèque et cherche un livre sur les étoiles. Il découvre un jardin calme derrière le bâtiment. ",
+            "fn sum(values: &[i32]) -> i32 { values.iter().sum() } // Explain the time complexity and provide a checked version. ",
+        ] {
+            let prompt=format!("<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",content.repeat(20));
+            let ids=tokenizer.encode(prompt,false).unwrap();let ids=ids.get_ids();
+            for count in [63,64,129,257] {
+                let (mut expected,_)=reference.prefill(&model,&ids[..count],0,false).unwrap();
+                let (mut actual,_)=tensor.prefill(&model,&ids[..count],0,false).unwrap();
+                for pos in count..count+6 {
+                    let log_probs=|x:&[f32]| {
+                        let max=x.iter().copied().fold(f32::NEG_INFINITY,f32::max) as f64;
+                        let log_z=x.iter().map(|&v|(v as f64-max).exp()).sum::<f64>().ln()+max;
+                        x.iter().map(|&v|v as f64-log_z).collect::<Vec<_>>()
+                    };
+                    let p=log_probs(&expected);let q=log_probs(&actual);
+                    let kl=p.iter().zip(&q).map(|(&p,&q)|p.exp()*(p-q)).sum::<f64>();
+                    let nll_delta=(p[ids[pos] as usize]-q[ids[pos] as usize]).abs();
+                    worst_kl=worst_kl.max(kl);worst_nll_delta=worst_nll_delta.max(nll_delta);
+                    assert!(kl.is_finite() && kl<=1e-5 && nll_delta<=1e-3,"count={count} pos={pos} KL={kl} NLL delta={nll_delta}");
+                    let max_id=|x:&[f32]|x.iter().enumerate().max_by(|a,b|a.1.total_cmp(b.1)).unwrap().0;
+                    assert_eq!(max_id(&actual),max_id(&expected));
+                    for (&a,&b) in actual.iter().zip(&expected) {assert!(a.is_finite() && (a-b).abs()<=0.003*(1.0+b.abs()));}
+                    checked+=1;
+                    if pos+1<count+6 {
+                        expected=reference.forward(&model,ids[pos],pos,true).unwrap();
+                        actual=tensor.forward(&model,ids[pos],pos,true).unwrap();
+                    }
+                }
+            }
+        }
+        assert!(crate::perf::snapshot().gpu_tensor_gemm_calls > before);
+        eprintln!("Teacher-forced positions={checked}, worst KL={worst_kl:.3e}, worst abs NLL delta={worst_nll_delta:.3e}; argmax and logits within tolerance");
+    }
     #[test]
     fn optional_real_verification_logits_argmax_and_rollback_match_serial() {
         if std::env::var("RBITNET_CUDA_VERIFY_TEST").as_deref() != Ok("1") {

@@ -1,0 +1,144 @@
+{
+  "warmup_excluded": true,
+  "control_prompt_excluded": true,
+  "modes": {
+    "baseline": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 1860.0284999993164,
+        "min": 1848.8071999890963,
+        "max": 1876.6747000045143
+      },
+      "prefill_ms": {
+        "median": 1512.5,
+        "min": 1508.0,
+        "max": 1519.0
+      },
+      "decode_ms": {
+        "median": 337.0,
+        "min": 335.0,
+        "max": 339.0
+      },
+      "upload_bytes": {
+        "median": 15196724.0,
+        "min": 15188532.0,
+        "max": 15204916.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 379.8219584569733,
+        "min": 377.5811209439528,
+        "max": 382.089552238806
+      }
+    },
+    "tensor": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 1273.293400001421,
+        "min": 1252.2104000090621,
+        "max": 1276.5129999897908
+      },
+      "prefill_ms": {
+        "median": 923.5,
+        "min": 911.0,
+        "max": 933.0
+      },
+      "decode_ms": {
+        "median": 338.5,
+        "min": 337.0,
+        "max": 339.0
+      },
+      "upload_bytes": {
+        "median": 15196724.0,
+        "min": 15188532.0,
+        "max": 15204916.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 378.1396728980119,
+        "min": 377.5811209439528,
+        "max": 379.8219584569733
+      }
+    },
+    "tensor-prefix": {
+      "rows": 4,
+      "wall_ms": {
+        "median": 353.63055000198074,
+        "min": 341.0471000097459,
+        "max": 366.56460000085644
+      },
+      "prefill_ms": {
+        "median": 3.0,
+        "min": 3.0,
+        "max": 3.0
+      },
+      "decode_ms": {
+        "median": 335.0,
+        "min": 334.0,
+        "max": 335.0
+      },
+      "upload_bytes": {
+        "median": 1049088.0,
+        "min": 1049088.0,
+        "max": 1049088.0
+      },
+      "download_bytes": {
+        "median": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "completion_tokens": {
+        "median": 128.0,
+        "min": 128,
+        "max": 128
+      },
+      "decode_tokens_per_second": {
+        "median": 382.089552238806,
+        "min": 382.089552238806,
+        "max": 383.23353293413174
+      }
+    }
+  },
+  "response_count": 27,
+  "response_matches": 27,
+  "sse_pairs": 9,
+  "sse_matches": 9,
+  "memory": {
+    "baseline": {
+      "peak_process_tree_rss_bytes": 1992466432,
+      "gpu_global_baseline_mib": 2166.0,
+      "gpu_global_peak_mib": 3825.0,
+      "gpu_global_peak_delta_mib": 1659.0
+    },
+    "tensor": {
+      "peak_process_tree_rss_bytes": 1990615040,
+      "gpu_global_baseline_mib": 2111.0,
+      "gpu_global_peak_mib": 3827.0,
+      "gpu_global_peak_delta_mib": 1716.0
+    },
+    "tensor-prefix": {
+      "peak_process_tree_rss_bytes": 1991266304,
+      "gpu_global_baseline_mib": 2117.0,
+      "gpu_global_peak_mib": 4050.0,
+      "gpu_global_peak_delta_mib": 1933.0
+    }
+  }
+}

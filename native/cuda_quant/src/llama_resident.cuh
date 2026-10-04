@@ -123,6 +123,8 @@ struct ResidentLlama {
     float *attention_scratch=nullptr,*block_attention_scratch=nullptr;
     size_t attention_scratch_size=0;
     bool split_kv=false;
+    bool tf32_prefill=false;
+    unsigned tensor_gemm_calls=0;
     unsigned filled=0;
     cudaStream_t stream=nullptr;
     cudaGraph_t graphs[3]={};
@@ -191,6 +193,7 @@ void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlama
     if(!r)return nullptr;
     r->cfg=*cfg;r->output=*output;r->layers.assign(layers,layers+cfg->layers);r->use_graphs=cfg->graphs!=0;
     r->split_kv=split_attention_enabled();
+    r->tf32_prefill=tf32_prefill_requested();
     r->attention_scratch_size=size_t(cfg->heads)*((cfg->capacity+attention_tile-1)/attention_tile)*(size_t(cfg->head_dim)+2);
     QuantKind kind;
     if(!resident_kind(output->type,kind)) {delete r;return nullptr;}
@@ -218,6 +221,13 @@ void rbitnet_cuda_llama_destroy(void *context) {delete static_cast<ResidentLlama
 unsigned rbitnet_cuda_llama_split_attention_layers(void *p) {
     auto *r=static_cast<ResidentLlama*>(p);return r && r->split_kv?r->cfg.layers:0;
 }
+unsigned rbitnet_cuda_llama_tensor_gemm_calls(void *p) {
+    auto *r=static_cast<ResidentLlama*>(p);return r?r->tensor_gemm_calls:0;
+}
+int rbitnet_cuda_llama_configure_tensor_prefill(void *p,unsigned enabled) {
+    auto *r=static_cast<ResidentLlama*>(p);if(!r || enabled>1 || r->block)return 1;
+    r->tf32_prefill=enabled && tf32_prefill_supported();return 0;
+}
 static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos,unsigned count,
     unsigned mode,float *logits,unsigned *token,bool all) {
     auto *r=static_cast<ResidentLlama*>(context);
@@ -235,12 +245,16 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(all && !r->block->init_verify(c.vocab))return 3;
     if(cudaMemcpyAsync(p[0],embeddings,size_t(count)*c.embd*sizeof(float),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess
         || cudaMemcpyAsync(r->position,&pos,sizeof(pos),cudaMemcpyHostToDevice,r->stream)!=cudaSuccess)return 4;
+    unsigned tensor_calls=0;
+    auto uses_tensor=[&](const RbitnetLlamaMatrix &m) {return use_tf32_prefill(m.cols,m.rows,count,r->tf32_prefill);};
+    for(const auto &layer:r->layers)for(const auto &m:{layer.q,layer.k,layer.v,layer.out,layer.gate,layer.up,layer.down})tensor_calls+=uses_tensor(m);
+    if(mode && all)tensor_calls+=uses_tensor(r->output);
     bool use_graph=all && r->use_graphs;
     if(!use_graph || !r->verify_executable[mode-1][count]) {
     if(use_graph && cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 9;
     auto matrix=[&](const RbitnetLlamaMatrix &m,const float *x,float *y) {
         QuantKind kind;resident_kind(m.type,kind);
-        launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,r->stream);
+        launch_prefill_gemm(kind,m.weights,m.row_bytes,x,m.cols,m.rows,count,y,r->stream,uses_tensor(m));
     };
     size_t layer_stride=size_t(stride)*c.capacity;
     resident_norm<<<count,256,0,r->stream>>>(p[0],r->layers[0].attn_norm,c.epsilon,c.embd,p[1]);
@@ -287,7 +301,7 @@ static int llama_prefill_impl(void *context,const float *embeddings,unsigned pos
     if(mode==1 && cudaMemcpyAsync(logits,all?r->block->verify_logits:r->logits,size_t(all?count:1)*c.vocab*sizeof(float),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 6;
     if(mode==2 && cudaMemcpyAsync(token,all?r->block->verify_tokens:r->token,size_t(all?count:1)*sizeof(unsigned),cudaMemcpyDeviceToHost,r->stream)!=cudaSuccess)return 7;
     if(cudaStreamSynchronize(r->stream)!=cudaSuccess)return 8;
-    r->filled=pos+count;return 0;
+    r->filled=pos+count;r->tensor_gemm_calls=tensor_calls;return 0;
 }
 int rbitnet_cuda_llama_prefill(void *context,const float *embeddings,unsigned pos,unsigned count,unsigned mode,float *logits,unsigned *token) {
     return llama_prefill_impl(context,embeddings,pos,count,mode,logits,token,false);

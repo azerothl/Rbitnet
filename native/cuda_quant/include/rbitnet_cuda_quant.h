@@ -165,6 +165,11 @@ RBITNET_CUDA_API int rbitnet_cuda_qwen_full_step(void*,const float*,unsigned,uns
 RBITNET_CUDA_API int rbitnet_cuda_qwen_full_restored(void*,unsigned length);
 /* Number of layers actually configured with the optional split-KV kernels. */
 RBITNET_CUDA_API unsigned rbitnet_cuda_llama_split_attention_layers(void*);
+/* Number of Tensor Core GEMM launches in the last successful block operation. */
+RBITNET_CUDA_API unsigned rbitnet_cuda_llama_tensor_gemm_calls(void*);
+/* Configure before first block/capture. Explicit ABI avoids a DLL CRT getenv
+ * snapshot diverging from Rust SetEnvironmentVariable on Windows. */
+RBITNET_CUDA_API int rbitnet_cuda_llama_configure_tensor_prefill(void*,unsigned enabled);
 RBITNET_CUDA_API unsigned rbitnet_cuda_qwen_split_attention_layers(void*);
 
 /* Diagnostic split-KV oracle runner, using host arrays. The same captured
@@ -173,6 +178,12 @@ RBITNET_CUDA_API unsigned rbitnet_cuda_qwen_split_attention_layers(void*);
 RBITNET_CUDA_API int rbitnet_cuda_split_attention_check(const float *k,const float *v,const float *q,
     unsigned capacity,unsigned kv_heads,unsigned heads,unsigned dim,unsigned window,float scale,
     unsigned count,const unsigned *positions,unsigned steps,unsigned graphs,float *out);
+
+/* Diagnostic host-array GGUF GEMM, with same hot kernels and CUDA-event timing.
+ * tf32x3=1 requires compute capability >=8.0; unsupported returns 2. */
+RBITNET_CUDA_API int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,size_t row_bytes,
+    const float *input,unsigned columns,unsigned rows,unsigned tokens,unsigned tf32x3,
+    unsigned repeats,float *output,float *elapsed_ms);
 
 /* Shared resident output RMSNorm, quantized head and optional greedy reduction.
  * mode=0 downloads logits, mode=1 downloads only the chosen token. */

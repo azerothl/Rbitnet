@@ -10,5 +10,7 @@ pub(crate) mod prefix;
 pub(crate) mod qwen_full;
 pub(crate) mod qwen_recurrent;
 #[cfg(test)]
+mod quant_gemm;
+#[cfg(test)]
 mod split_attention;
 pub(crate) mod weights;

@@ -1,0 +1,76 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+GGUF type=0 K=512 M=33 N=7 mode=0 event_ms=0.015360 worst_error_over_l1=8.776e-9
+GGUF type=0 K=512 M=33 N=7 mode=1 event_ms=0.025088 worst_error_over_l1=8.941e-9
+GGUF type=0 K=512 M=33 N=16 mode=0 event_ms=0.015360 worst_error_over_l1=9.387e-9
+GGUF type=0 K=512 M=33 N=16 mode=1 event_ms=0.025088 worst_error_over_l1=1.022e-8
+GGUF type=0 K=512 M=33 N=33 mode=0 event_ms=0.015360 worst_error_over_l1=1.073e-8
+GGUF type=0 K=512 M=33 N=33 mode=1 event_ms=0.027648 worst_error_over_l1=1.122e-8
+GGUF type=0 K=512 M=33 N=128 mode=0 event_ms=0.014848 worst_error_over_l1=1.319e-8
+GGUF type=0 K=512 M=33 N=128 mode=1 event_ms=0.027648 worst_error_over_l1=1.442e-8
+GGUF type=2 K=512 M=33 N=7 mode=0 event_ms=0.014384 worst_error_over_l1=1.774e-7
+GGUF type=2 K=512 M=33 N=7 mode=1 event_ms=0.028672 worst_error_over_l1=4.851e-8
+GGUF type=2 K=512 M=33 N=16 mode=0 event_ms=0.015840 worst_error_over_l1=2.666e-7
+GGUF type=2 K=512 M=33 N=16 mode=1 event_ms=0.029184 worst_error_over_l1=4.851e-8
+GGUF type=2 K=512 M=33 N=33 mode=0 event_ms=0.015872 worst_error_over_l1=3.248e-7
+GGUF type=2 K=512 M=33 N=33 mode=1 event_ms=0.031744 worst_error_over_l1=5.676e-8
+GGUF type=2 K=512 M=33 N=128 mode=0 event_ms=0.015360 worst_error_over_l1=3.248e-7
+GGUF type=2 K=512 M=33 N=128 mode=1 event_ms=0.031232 worst_error_over_l1=6.263e-8
+GGUF type=6 K=512 M=33 N=7 mode=0 event_ms=0.015872 worst_error_over_l1=3.720e-8
+GGUF type=6 K=512 M=33 N=7 mode=1 event_ms=0.038912 worst_error_over_l1=1.853e-8
+GGUF type=6 K=512 M=33 N=16 mode=0 event_ms=0.017920 worst_error_over_l1=5.697e-8
+GGUF type=6 K=512 M=33 N=16 mode=1 event_ms=0.038400 worst_error_over_l1=2.259e-8
+GGUF type=6 K=512 M=33 N=33 mode=0 event_ms=0.018432 worst_error_over_l1=5.697e-8
+GGUF type=6 K=512 M=33 N=33 mode=1 event_ms=0.041472 worst_error_over_l1=2.259e-8
+GGUF type=6 K=512 M=33 N=128 mode=0 event_ms=0.017920 worst_error_over_l1=7.489e-8
+GGUF type=6 K=512 M=33 N=128 mode=1 event_ms=0.041408 worst_error_over_l1=2.259e-8
+GGUF type=8 K=512 M=33 N=7 mode=0 event_ms=0.015856 worst_error_over_l1=2.312e-8
+GGUF type=8 K=512 M=33 N=7 mode=1 event_ms=0.031744 worst_error_over_l1=1.219e-8
+GGUF type=8 K=512 M=33 N=16 mode=0 event_ms=0.016384 worst_error_over_l1=2.359e-8
+GGUF type=8 K=512 M=33 N=16 mode=1 event_ms=0.031744 worst_error_over_l1=1.321e-8
+GGUF type=8 K=512 M=33 N=33 mode=0 event_ms=0.015872 worst_error_over_l1=2.551e-8
+GGUF type=8 K=512 M=33 N=33 mode=1 event_ms=0.034816 worst_error_over_l1=1.426e-8
+GGUF type=8 K=512 M=33 N=128 mode=0 event_ms=0.015904 worst_error_over_l1=2.869e-8
+GGUF type=8 K=512 M=33 N=128 mode=1 event_ms=0.034304 worst_error_over_l1=1.858e-8
+GGUF type=12 K=512 M=33 N=7 mode=0 event_ms=0.015872 worst_error_over_l1=2.831e-8
+GGUF type=12 K=512 M=33 N=7 mode=1 event_ms=0.039424 worst_error_over_l1=1.384e-8
+GGUF type=12 K=512 M=33 N=16 mode=0 event_ms=0.016384 worst_error_over_l1=2.831e-8
+GGUF type=12 K=512 M=33 N=16 mode=1 event_ms=0.039936 worst_error_over_l1=1.384e-8
+GGUF type=12 K=512 M=33 N=33 mode=0 event_ms=0.016384 worst_error_over_l1=3.151e-8
+GGUF type=12 K=512 M=33 N=33 mode=1 event_ms=0.043008 worst_error_over_l1=1.735e-8
+GGUF type=12 K=512 M=33 N=128 mode=0 event_ms=0.016384 worst_error_over_l1=3.896e-8
+GGUF type=12 K=512 M=33 N=128 mode=1 event_ms=0.043008 worst_error_over_l1=1.735e-8
+GGUF type=13 K=512 M=33 N=7 mode=0 event_ms=0.016384 worst_error_over_l1=3.358e-8
+GGUF type=13 K=512 M=33 N=7 mode=1 event_ms=0.039936 worst_error_over_l1=1.317e-8
+GGUF type=13 K=512 M=33 N=16 mode=0 event_ms=0.016384 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=16 mode=1 event_ms=0.039936 worst_error_over_l1=1.513e-8
+GGUF type=13 K=512 M=33 N=33 mode=0 event_ms=0.016384 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=33 mode=1 event_ms=0.043520 worst_error_over_l1=1.513e-8
+GGUF type=13 K=512 M=33 N=128 mode=0 event_ms=0.016384 worst_error_over_l1=5.577e-8
+GGUF type=13 K=512 M=33 N=128 mode=1 event_ms=0.043520 worst_error_over_l1=1.603e-8
+GGUF type=14 K=512 M=33 N=7 mode=0 event_ms=0.015360 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=7 mode=1 event_ms=0.038912 worst_error_over_l1=3.310e-8
+GGUF type=14 K=512 M=33 N=16 mode=0 event_ms=0.017408 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=16 mode=1 event_ms=0.039936 worst_error_over_l1=3.639e-8
+GGUF type=14 K=512 M=33 N=33 mode=0 event_ms=0.017408 worst_error_over_l1=1.006e-7
+GGUF type=14 K=512 M=33 N=33 mode=1 event_ms=0.043520 worst_error_over_l1=3.639e-8
+GGUF type=14 K=512 M=33 N=128 mode=0 event_ms=0.017488 worst_error_over_l1=1.279e-7
+GGUF type=14 K=512 M=33 N=128 mode=1 event_ms=0.043008 worst_error_over_l1=4.031e-8
+GGUF type=39 K=512 M=33 N=7 mode=0 event_ms=0.016384 worst_error_over_l1=3.942e-8
+GGUF type=39 K=512 M=33 N=7 mode=1 event_ms=0.042496 worst_error_over_l1=1.043e-8
+GGUF type=39 K=512 M=33 N=16 mode=0 event_ms=0.018432 worst_error_over_l1=4.748e-8
+GGUF type=39 K=512 M=33 N=16 mode=1 event_ms=0.042496 worst_error_over_l1=1.539e-8
+GGUF type=39 K=512 M=33 N=33 mode=0 event_ms=0.018384 worst_error_over_l1=4.748e-8
+GGUF type=39 K=512 M=33 N=33 mode=1 event_ms=0.045568 worst_error_over_l1=1.539e-8
+GGUF type=39 K=512 M=33 N=128 mode=0 event_ms=0.018432 worst_error_over_l1=6.764e-8
+GGUF type=39 K=512 M=33 N=128 mode=1 event_ms=0.045520 worst_error_over_l1=2.030e-8
+GGUF type=0 K=513 M=65 N=17 mode=0 event_ms=0.015872 worst_error_over_l1=1.353e-8
+GGUF type=0 K=513 M=65 N=17 mode=1 event_ms=0.028160 worst_error_over_l1=1.083e-8
+GGUF type=0 K=33 M=3 N=2 mode=0 event_ms=0.005120 worst_error_over_l1=5.471e-8
+GGUF type=0 K=33 M=3 N=2 mode=1 event_ms=0.006656 worst_error_over_l1=3.929e-8
+test native::quant_gemm::opt_in_compensated_gemm_matches_f64_all_formats_and_dynamic_ranges ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 0.16s
