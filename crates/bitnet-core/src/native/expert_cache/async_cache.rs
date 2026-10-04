@@ -26,6 +26,7 @@ pub(super) struct AsyncState {
     previous: BTreeMap<usize, Vec<usize>>,
     current: BTreeMap<usize, Vec<usize>>,
     group_bytes: usize,
+    arena: Option<Arc<crate::backend::CudaDeviceBuffer>>,
     predictor: bool,
     failed: bool,
 }
@@ -104,7 +105,25 @@ impl AsyncState {
             tensors.push(t);
             geometry.push((t.ggml_type, rows, cols));
         }
-        let count = cache.budget / group_bytes;
+        let arena_layout = if crate::backend::expert_arena::from_env()? {
+            let spans = std::array::from_fn(|projection| {
+                let tensor = tensors[projection];
+                crate::ggml::ggml_row_size(tensor.ggml_type, tensor.dimensions[0]).unwrap()
+                    * geometry[projection].1
+            });
+            Some(crate::backend::expert_arena::Layout::new(
+                spans,
+                cache.budget,
+            )?)
+        } else {
+            None
+        };
+        if let Some(layout) = &arena_layout {
+            group_bytes = layout.group_bytes();
+        }
+        let count = arena_layout
+            .as_ref()
+            .map_or(cache.budget / group_bytes, |layout| layout.groups());
         if count == 0 {
             return Err(BitNetError::Inference(
                 "async cache budget cannot hold one expert group".into(),
@@ -117,25 +136,47 @@ impl AsyncState {
             .map(|_| CopySlot::new(Arc::clone(&channel), group_bytes))
             .collect::<Result<Vec<_>>>()?;
         let mut blanks = Vec::with_capacity(count);
-        for _ in 0..count {
-            let mut matrices = Vec::with_capacity(3);
-            for (t, &(_, rows, cols)) in tensors.iter().zip(&geometry) {
-                let matrix = UnpublishedQuant::allocate(
-                    &cache.rt,
-                    Arc::clone(&cache.archive),
-                    t,
-                    0,
-                    rows,
-                    cols,
-                )?
-                .ok_or_else(|| {
-                    BitNetError::Inference(
-                        "managed CUDA budget cannot preallocate async cache pool".into(),
-                    )
-                })?;
-                matrices.push(matrix);
+        let mut arena = None;
+        if let Some(layout) = &arena_layout {
+            let (owner, all_views) = crate::backend::expert_arena::allocate(&cache.rt, layout)?;
+            arena = Some(owner);
+            for views in all_views {
+                let mut matrices = Vec::with_capacity(3);
+                for ((buffer, tensor), &(_, rows, cols)) in
+                    views.into_iter().zip(&tensors).zip(&geometry)
+                {
+                    matrices.push(UnpublishedQuant::from_arena(
+                        &cache.rt,
+                        Arc::clone(&cache.archive),
+                        tensor,
+                        rows,
+                        cols,
+                        buffer,
+                    )?);
+                }
+                blanks.push(Blank { matrices });
             }
-            blanks.push(Blank { matrices });
+        } else {
+            for _ in 0..count {
+                let mut matrices = Vec::with_capacity(3);
+                for (t, &(_, rows, cols)) in tensors.iter().zip(&geometry) {
+                    let matrix = UnpublishedQuant::allocate(
+                        &cache.rt,
+                        Arc::clone(&cache.archive),
+                        t,
+                        0,
+                        rows,
+                        cols,
+                    )?
+                    .ok_or_else(|| {
+                        BitNetError::Inference(
+                            "managed CUDA budget cannot preallocate async cache pool".into(),
+                        )
+                    })?;
+                    matrices.push(matrix);
+                }
+                blanks.push(Blank { matrices });
+            }
         }
         Ok(Self {
             blanks,
@@ -145,6 +186,7 @@ impl AsyncState {
             previous: BTreeMap::new(),
             current: BTreeMap::new(),
             group_bytes,
+            arena,
             predictor,
             failed: false,
         })
@@ -194,8 +236,10 @@ impl AsyncState {
         self.predicted.clear();
         self.previous.clear();
         self.current.clear();
-        cache.bytes =
-            cache.entries.values().map(|e| e.group.bytes).sum::<usize>() + self.reserved();
+        cache.bytes = self.arena.as_ref().map_or_else(
+            || cache.entries.values().map(|e| e.group.bytes).sum::<usize>() + self.reserved(),
+            |arena| arena.nbytes(),
+        );
         self.pool_gauges(cache);
     }
     fn pool_gauges(&self, cache: &ExpertCache) {
@@ -598,3 +642,6 @@ impl ExpertCache {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod arena_tests;
