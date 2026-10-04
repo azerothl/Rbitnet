@@ -1,0 +1,29 @@
+warning: E:\devs\Rbitnet\target\performance-cache\check-paged-current\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Checking bitnet-core v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-paged-current\crates\bitnet-core)
+warning: fields `query` and `trim` are never read
+  --> crates\bitnet-core\src\llama\resident.rs:61:25
+   |
+61 | struct Pages {limit:u32,query:QueryPages,trim:TrimPages}
+   |        -----            ^^^^^            ^^^^
+   |        |
+   |        fields in this struct
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `page_stats` and `trim_pages` are never used
+   --> crates\bitnet-core\src\llama\resident.rs:328:19
+    |
+142 | impl Resident {
+    | ------------- methods in this implementation
+...
+328 |     pub(crate) fn page_stats(&self)->Result<Option<PageStats>> {
+    |                   ^^^^^^^^^^
+...
+335 |     pub(crate) fn trim_pages(&mut self)->Result<()> {
+    |                   ^^^^^^^^^^
+
+warning: `bitnet-core` (lib) generated 2 warnings
+    Checking bitnet-server v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-paged-current\crates\bitnet-server)
+    Checking rbitnet-cli v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-paged-current\crates\rbitnet-cli)
+    Checking rbitnet-runner v0.1.0 (E:\devs\Rbitnet\target\performance-cache\check-paged-current\crates\rbitnet-runner)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.35s

@@ -305,6 +305,16 @@ RBITNET_CUDA_API int rbitnet_cuda_ordered_gemm_check(unsigned,const void*,size_t
 RBITNET_CUDA_API int rbitnet_cuda_moe_group_check(const RbitnetMoeConfig*,const RbitnetLlamaMatrix*,const float*,const float*,const float*,const float*,const unsigned*,const float*,unsigned,unsigned,unsigned,unsigned,float*,float*,float*);
 
 RBITNET_CUDA_API int rbitnet_cuda_moe_configure_fused(void*,unsigned enabled);
+/* Optional F32 Llama pages. Old dense ABI/config remains unchanged. A peer
+ * shares a pool only for exactly matching weight descriptors, norms and RoPE.
+ * The caller retains the shared quantized weight buffers through each context. */
+typedef struct {
+    uint64_t allocated_pages,peak_pages,limit_pages,bytes_per_page,referenced_pages,references;
+    uint64_t active_pages,tokens,allocations,reuses,cow_pages,refusals;
+} RbitnetPagedKvStats;
+RBITNET_CUDA_API void *rbitnet_cuda_llama_create_paged(const RbitnetLlamaConfig*,const RbitnetLlamaLayer*,const RbitnetLlamaMatrix*,const float*,const float*,unsigned,const void*,unsigned);
+RBITNET_CUDA_API int rbitnet_cuda_llama_paged_stats(const void*,RbitnetPagedKvStats*);
+RBITNET_CUDA_API int rbitnet_cuda_llama_paged_trim(void*);
 #ifdef __cplusplus
 }
 #endif

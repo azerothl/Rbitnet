@@ -1,0 +1,78 @@
+[
+  {
+    "mode": "dense",
+    "measured_long_rows": 4,
+    "median_prefill_ms": 518.0,
+    "median_decode_tps": 390.2439024390244,
+    "median_http_ms": 855.3666499938117,
+    "after_complete_protocol_categories": {
+      "weights": 799592448,
+      "kv_state": 134217728,
+      "activations": 23772212,
+      "prefix": 0,
+      "experts": 0,
+      "scratch": 0,
+      "other": 0
+    },
+    "final_kv_plus_prefix_mib": 128.0,
+    "median_long_managed_live_mib": 913.2217292785645,
+    "peak_managed_mib": 913.2217292785645
+  },
+  {
+    "mode": "dense-prefix",
+    "measured_long_rows": 4,
+    "median_prefill_ms": 3.0,
+    "median_decode_tps": 374.81778738145465,
+    "median_http_ms": 349.79109998675995,
+    "after_complete_protocol_categories": {
+      "weights": 799592448,
+      "kv_state": 134217728,
+      "activations": 23772212,
+      "prefix": 125829120,
+      "experts": 0,
+      "scratch": 0,
+      "other": 0
+    },
+    "final_kv_plus_prefix_mib": 248.0,
+    "median_long_managed_live_mib": 994.4717292785645,
+    "peak_managed_mib": 994.4717292785645
+  },
+  {
+    "mode": "paged",
+    "measured_long_rows": 4,
+    "median_prefill_ms": 545.0,
+    "median_decode_tps": 358.0482614002692,
+    "median_http_ms": 906.8077499978244,
+    "after_complete_protocol_categories": {
+      "weights": 799592448,
+      "kv_state": 50332672,
+      "activations": 23772212,
+      "prefix": 0,
+      "experts": 0,
+      "scratch": 0,
+      "other": 0
+    },
+    "final_kv_plus_prefix_mib": 48.0009765625,
+    "median_long_managed_live_mib": 833.2227058410645,
+    "peak_managed_mib": 833.2227058410645
+  },
+  {
+    "mode": "paged-prefix",
+    "measured_long_rows": 4,
+    "median_prefill_ms": 3.0,
+    "median_decode_tps": 356.06728879397065,
+    "median_http_ms": 379.6779499971308,
+    "after_complete_protocol_categories": {
+      "weights": 799592448,
+      "kv_state": 58721280,
+      "activations": 23772212,
+      "prefix": 0,
+      "experts": 0,
+      "scratch": 0,
+      "other": 0
+    },
+    "final_kv_plus_prefix_mib": 56.0009765625,
+    "median_long_managed_live_mib": 841.2227058410645,
+    "peak_managed_mib": 841.2227058410645
+  }
+]

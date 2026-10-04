@@ -48,6 +48,58 @@ type Create = unsafe extern "C" fn(
     *const f32,
 ) -> *mut c_void;
 type Destroy = unsafe extern "C" fn(*mut c_void);
+type CreatePaged = unsafe extern "C" fn(
+    *const Config,
+    *const Layer,
+    *const Matrix,
+    *const f32,
+    *const f32,
+    u32,
+    *const c_void,
+    u32,
+) -> *mut c_void;
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy, serde::Serialize)]
+pub(crate) struct PageStats {
+    pub allocated_pages: u64,
+    pub peak_pages: u64,
+    pub limit_pages: u64,
+    pub bytes_per_page: u64,
+    pub referenced_pages: u64,
+    pub references: u64,
+    pub active_pages: u64,
+    pub tokens: u64,
+    pub allocations: u64,
+    pub reuses: u64,
+    pub cow_pages: u64,
+    pub refusals: u64,
+}
+type QueryPages = unsafe extern "C" fn(*const c_void, *mut PageStats) -> i32;
+type TrimPages = unsafe extern "C" fn(*mut c_void) -> i32;
+struct Pages {
+    limit: u32,
+    query: QueryPages,
+    trim: TrimPages,
+}
+pub(crate) fn configured_page_limit() -> Result<Option<u32>> {
+    match std::env::var("RBITNET_CUDA_KV_PAGE_LIMIT") {
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Ok(s) if s == "0" => Ok(None),
+        Ok(s) => s
+            .parse::<u32>()
+            .ok()
+            .filter(|n| (1..=65536).contains(n))
+            .map(Some)
+            .ok_or_else(|| {
+                BitNetError::Inference(
+                    "RBITNET_CUDA_KV_PAGE_LIMIT must be 0 or 1..65536 pages".into(),
+                )
+            }),
+        Err(_) => Err(BitNetError::Inference(
+            "RBITNET_CUDA_KV_PAGE_LIMIT is not Unicode".into(),
+        )),
+    }
+}
 type Step = unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, *mut f32, *mut u32) -> i32;
 type Prefill =
     unsafe extern "C" fn(*mut c_void, *const f32, u32, u32, u32, *mut f32, *mut u32) -> i32;
@@ -117,9 +169,20 @@ pub(super) struct Resident {
     snapshots: Option<SnapshotApi>,
     prefixes: crate::native::prefix::PrefixStore<SavedPrefix>,
     kv_bytes_per_token: usize,
+    pages: Option<Pages>,
 }
 impl Resident {
     pub fn new(model: &LlamaModel) -> Option<Self> {
+        Self::new_with_pages(model, configured_page_limit().ok()?, None)
+    }
+    pub(super) fn new_with_pages(
+        model: &LlamaModel,
+        page_limit: Option<u32>,
+        peer: Option<&Self>,
+    ) -> Option<Self> {
+        if peer.is_some() && (page_limit.is_none() || peer?.pages.as_ref()?.limit != page_limit?) {
+            return None;
+        }
         if std::env::var("RBITNET_CUDA_RESIDENT").as_deref() == Ok("0") {
             return None;
         }
@@ -235,14 +298,49 @@ impl Resident {
         if crate::native::prefix::enabled() && snapshots.is_none() {
             return None;
         }
-        let context = unsafe {
-            create(
-                &cfg,
-                layers.as_ptr(),
-                &output,
-                model.output_norm.as_ptr(),
-                frequency.as_ptr(),
-            )
+        let pages = if let Some(limit) = page_limit {
+            let query = unsafe {
+                *lib.get::<QueryPages>(b"rbitnet_cuda_llama_paged_stats\0")
+                    .ok()?
+            };
+            let trim = unsafe {
+                *lib.get::<TrimPages>(b"rbitnet_cuda_llama_paged_trim\0")
+                    .ok()?
+            };
+            Some(Pages { limit, query, trim })
+        } else {
+            None
+        };
+        let context = if let Some(limit) = page_limit {
+            let create_paged = unsafe {
+                *lib.get::<CreatePaged>(b"rbitnet_cuda_llama_create_paged\0")
+                    .ok()?
+            };
+            let variants = u32::from(std::env::var("RBITNET_CUDA_SPLIT_KV").as_deref() == Ok("1"))
+                | (u32::from(std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1"))
+                    << 1);
+            unsafe {
+                create_paged(
+                    &cfg,
+                    layers.as_ptr(),
+                    &output,
+                    model.output_norm.as_ptr(),
+                    frequency.as_ptr(),
+                    limit,
+                    peer.map_or(std::ptr::null(), |p| p.context as *const c_void),
+                    variants,
+                )
+            }
+        } else {
+            unsafe {
+                create(
+                    &cfg,
+                    layers.as_ptr(),
+                    &output,
+                    model.output_norm.as_ptr(),
+                    frequency.as_ptr(),
+                )
+            }
         } as usize;
         if context == 0 {
             return None;
@@ -294,7 +392,32 @@ impl Resident {
             tensor_gemm_calls,
             prefixes: crate::native::prefix::PrefixStore::from_env(),
             kv_bytes_per_token,
+            pages,
         })
+    }
+    pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
+        let Some(pages) = &self.pages else {
+            return Ok(None);
+        };
+        let mut out = PageStats::default();
+        let status = unsafe { (pages.query)(self.context as *const c_void, &mut out) };
+        if status != 0 {
+            return Err(BitNetError::Inference(format!(
+                "CUDA physical KV page stats failed: {status}"
+            )));
+        }
+        Ok(Some(out))
+    }
+    pub(crate) fn trim_pages(&mut self) -> Result<()> {
+        if let Some(pages) = &self.pages {
+            let status = unsafe { (pages.trim)(self.context as *mut c_void) };
+            if status != 0 {
+                return Err(BitNetError::Inference(format!(
+                    "CUDA physical KV page trim failed: {status}"
+                )));
+            }
+        }
+        Ok(())
     }
     pub fn supports_prefix_cache(&self) -> bool {
         self.snapshots.is_some()
@@ -866,3 +989,6 @@ mod tests {
         assert!(block.verify(&model, &[], 0, true).is_err());
     }
 }
+
+#[cfg(test)]
+mod paged_tests;

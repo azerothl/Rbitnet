@@ -48,6 +48,8 @@ Le compteur `rbitnet_core_gpu_split_attention_queries_total` mesure les position
 
 ## Mesurer et reproduire
 
+Les [pages KV F32 natives Llama](benchmarks/2026-10-04-paged-kv/README.md) partagent les préfixes et copient seulement les pages encore référencées lors des écritures. Le pool et ses tables sont chargés une fois dans le registre physique. Les essais GGUF/serveur et ablations documentent la réduction de mémoire et le coût du décodage ; le dense reste le défaut. Les 1/4/8 contextes de la fixture ne constituent pas du batching GPU.
+
 Les [preuves de capacité et tokenizer](benchmarks/2026-10-04-context-tokenizer/README.md) distinguent le contexte GGUF de la capacité allouée et refusent les requêtes trop longues avant SSE. Le tokenizer immuable est partagé entre comptage et génération ; Mistral SentencePiece est confronté au processeur original et au JSON HF sur les mêmes IDs, sur CPU/CUDA et serveur réel. Ces corrections ne constituent pas un forward multi-séquences.
 
 Le placement quantifié partagé et le cache d'experts de GPT-OSS/MLA gardent désormais des vues du GGUF mappé pour leurs grands poids, avec propriétaire `Arc` conservé pendant les copies et calculs. Les matrices créées depuis des buffers autonomes conservent ce mode de stockage. Une vue/clône active interdit le remplissage du même propriétaire CUDA ; les leases de groupes protègent aussi les victimes du cache. Les octets GGUF et le format quantifié restent identiques. Les pages du fichier mappé peuvent toujours compter dans le RSS : il faut mesurer la RAM physique, pas assimiler un mmap à zéro RAM.
