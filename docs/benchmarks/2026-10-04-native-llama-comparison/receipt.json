@@ -1,0 +1,119 @@
+{
+  "journal": {
+    "pid": 51660,
+    "status": "passed",
+    "complete": true,
+    "checker_sha256": "be0aab729914407ba694e54c459b25c391f5fee29f4cb2a8c9d55d5284848801",
+    "harness_sha256": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e",
+    "started_utc": "2026-10-04T17:33:29Z",
+    "hardware_started_utc": "2026-10-04T18:11:14Z",
+    "current_step": "llama32-1b-paged",
+    "finished_utc": "2026-10-04T18:12:15Z"
+  },
+  "compiled_head": "f1257e5bd564543fa3b46a31acf351260d188f9c",
+  "publication_head": "886ceb4de08ed288478993cdd6fbba21174faac4",
+  "captures": [
+    {
+      "path": "raw/environment.json.gz",
+      "raw_sha256": "21a5961c43c45fb40ba582c099d617a52d94e7142452f2d918450bdd4ae5fb2c",
+      "gzip_sha256": "8b14a91f91fe4a5d6c7f0da9cbd6270ec8c26279ee1195e01a99f2190dfc0371"
+    },
+    {
+      "path": "raw/llama32-1b-dense/checker.log.gz",
+      "raw_sha256": "49792e2e706cfdc4e13ff1d9366ec09389f0683d30ba823a28e593a8d0f95619",
+      "gzip_sha256": "de1ea5663928db54e2ec37f416909704798a39553da048712d122abf786bf6f2"
+    },
+    {
+      "path": "raw/llama32-1b-dense/llama32-1b-prompts.json.gz",
+      "raw_sha256": "789ff47661bb193eb72d34de133deba7b0cf069b0b786c7ba680dff4d8412710",
+      "gzip_sha256": "0162edd1a0c10fba87af7f70565c8facc5cee212cf6d8c9376a8b3cbff54105e"
+    },
+    {
+      "path": "raw/llama32-1b-dense/logs/llama32-1b-llama.cpp-cpu.log.gz",
+      "raw_sha256": "5aa29070de789fc80f26bb449d14a6775808d8942b8f6184669ba91ac2bf3e5b",
+      "gzip_sha256": "93d32f26d03248a3eb54de462427f48fa118be20db88dcc673a828913eb252d0"
+    },
+    {
+      "path": "raw/llama32-1b-dense/logs/llama32-1b-llama.cpp-gpu.log.gz",
+      "raw_sha256": "5c4cb0ce8d1c62ba447cc440ca1f98fb81417f360e844154d5706432966f9d9e",
+      "gzip_sha256": "c5301d9fbb26f769ee8af0642ebaa92337a8c1f180298be94866e7a45d003e97"
+    },
+    {
+      "path": "raw/llama32-1b-dense/logs/llama32-1b-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/llama32-1b-dense/manifest.json.gz",
+      "raw_sha256": "80a95b14e73d473a6d2953a2fd3933ebcfe9ea0cf87e7aa06410bc46bfbaddbb",
+      "gzip_sha256": "3ed2a269b859ebe44fd08ee43a867bfc8d42171fb9b129ace9766f6fc3eec32b"
+    },
+    {
+      "path": "raw/llama32-1b-dense/results.json.gz",
+      "raw_sha256": "fc576809a708612a7982b7121c71991a21ecbfaf7dcc3b2e5f33fe1a2dd7d2bd",
+      "gzip_sha256": "0fdb2c871b299100620dbf64b6e2c057b85d1af147f97bee5da9e17abdd82a59"
+    },
+    {
+      "path": "raw/llama32-1b-paged/checker.log.gz",
+      "raw_sha256": "f133bf30c6ed37ae2a6888858db1872869238a9adadea9ce2feb12e6c1f10b4d",
+      "gzip_sha256": "39b25f38499691f58f01946d2ed39ea98a90e9bd7289dde8d265dba25fab0d02"
+    },
+    {
+      "path": "raw/llama32-1b-paged/llama32-1b-prompts.json.gz",
+      "raw_sha256": "789ff47661bb193eb72d34de133deba7b0cf069b0b786c7ba680dff4d8412710",
+      "gzip_sha256": "0162edd1a0c10fba87af7f70565c8facc5cee212cf6d8c9376a8b3cbff54105e"
+    },
+    {
+      "path": "raw/llama32-1b-paged/logs/llama32-1b-llama.cpp-cpu.log.gz",
+      "raw_sha256": "7e95a5673cd5c1a0b45e8386305acea3c4ce2c92b017305028192da8ea375fb5",
+      "gzip_sha256": "36d39c10ce69b1e16504f6fc5b11552e8d443ed5146739b72b3ec74d3dfb4faa"
+    },
+    {
+      "path": "raw/llama32-1b-paged/logs/llama32-1b-llama.cpp-gpu.log.gz",
+      "raw_sha256": "c7bace824bfd361ea4fafcf65de6a065081a7c08e6268e09ef1301a0802196a1",
+      "gzip_sha256": "0f2fdf295e86edd4984d0f1aa43a08f7974934de086e4dfbc8e79af09bb0ce5d"
+    },
+    {
+      "path": "raw/llama32-1b-paged/logs/llama32-1b-rbitnet-gpu.log.gz",
+      "raw_sha256": "2a01aec4ad2bd834395185a62eac35636b5441193aece55e58d6c052a8f6bdd1",
+      "gzip_sha256": "0d6017fb2f0efb18db27e0a46023c3e45a1c49962450e5feae178aa31f14e2a6"
+    },
+    {
+      "path": "raw/llama32-1b-paged/manifest.json.gz",
+      "raw_sha256": "d058b3f0aeb0faa86d4e796f7a3ce4e38b228bbef450fb465bf8490a4a454b2f",
+      "gzip_sha256": "f0b2e40439a78e16d0cc14bdbd935d122517e900a0c1421285dcb781b3df3a89"
+    },
+    {
+      "path": "raw/llama32-1b-paged/results.json.gz",
+      "raw_sha256": "943e19234e284a6bd3785220fed4b28edc09623aa75c9bd5f2d378264213d642",
+      "gzip_sha256": "4b7d8bada988e1295a3e2ab76c3bac03f6d2164b615e283bafabb92e53a8fd2b"
+    },
+    {
+      "path": "raw/ollama-private.log.gz",
+      "raw_sha256": "44331511851c47b387582705dac394baa5e07b698e72368fb7af2cdaab4c8136",
+      "gzip_sha256": "e627b4549555920979d41eed663d63a4b3bb8a1f4f051ba4d3d141c3120d25c0"
+    },
+    {
+      "path": "raw/summary.json.gz",
+      "raw_sha256": "be7c3717af90fd1d17bf33aa4f8babb9474ec88e3cbdf9f0c2ad9b5e2c3ecf59",
+      "gzip_sha256": "a5755822e048a12a9b5f879f8d750f993379c97509b178686ca66572f8260c57"
+    },
+    {
+      "path": "raw/compiled-manifest.json.gz",
+      "raw_sha256": "bf428cdb92db4fa997831acb454d8d2ddbb52dfe515fbac84c6379435824d3dc",
+      "gzip_sha256": "c739beb8e6549e380b7b6f32951b487514323c3b9689d99e4526d779b339ce27"
+    }
+  ],
+  "harness_sha256": {
+    "check_native_llama_parity.py": "be0aab729914407ba694e54c459b25c391f5fee29f4cb2a8c9d55d5284848801",
+    "atomic_journal.py": "92cc940c603f21a6fbf57f0a1a66ac762eeac259eb4ac9efba117ace6071816c",
+    "benchmark_engines.py": "02edb728ce1c0501f744b01690c93cd5d0085383e1a3f05fb67c536d2005aa2e"
+  },
+  "limits": [
+    "Different KV dtypes; no strict dtype-identical comparison.",
+    "Three short quality probes are not a general model quality evaluation.",
+    "Single-client throughput; continuous multi-client benefit is a separate experiment.",
+    "GPU memory samples are machine-global; other applications can affect them.",
+    "Only this NVIDIA machine is validated."
+  ]
+}
