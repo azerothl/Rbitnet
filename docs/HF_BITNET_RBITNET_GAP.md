@@ -9,7 +9,7 @@ This document explains why many BitNet-related Hugging Face repositories do not 
 | **Weights** | A **GGUF** file on disk (`RBITNET_MODEL`). Rbitnet does **not** load Safetensors checkpoints. |
 | **Architecture** | A **Llama-shaped** graph: [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) and metadata keys such as `llama.*` (see [BITNET_SPEC.md](BITNET_SPEC.md)). |
 | **Tokenizer** | A **`tokenizer.json`** or **`tokenizer.model`** next to the GGUF, or `RBITNET_TOKENIZER` pointing at such a file (see [USAGE.md](USAGE.md)). Raw SentencePiece protobuf `.model` files may fail to load; prefer `tokenizer.json` exported from Hugging Face. |
-| **Quantization** | GGML types with mmap GEMV or `tensor_to_f32` in [`types.rs` / `dequant.rs` / `iq.rs`](../crates/bitnet-core/src/ggml/types.rs). Unknown types fail with `UnsupportedGgmlType` (numeric id). Implemented: common `Q4_*` / `Q8_*` / `Q4_K` / `Q6_K` / `BF16` / `TQ1_0` / `TQ2_0` plus **IQ2_XS / IQ2_S / IQ3_XXS / IQ3_S**. Still unwired: IQ2_XXS, IQ1_*, IQ4_*. |
+| **Quantization** | GGML types with mmap GEMV or `tensor_to_f32` in [`types.rs` / `dequant.rs` / `iq.rs`](../crates/bitnet-core/src/ggml/types.rs). Unknown types fail with `UnsupportedGgmlType` (numeric id). Implemented: common `Q4_*` / `Q8_*` / `Q4_K` / `Q6_K` / `BF16` / `TQ1_0` / `TQ2_0` plus **IQ2_XXS / IQ2_XS / IQ2_S / IQ3_XXS / IQ3_S / IQ1_S / IQ1_M / IQ4_XS**. Still unwired: IQ4_NL. |
 
 ## Typical Hugging Face BitNet layouts
 

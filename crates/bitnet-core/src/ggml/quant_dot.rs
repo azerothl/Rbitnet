@@ -184,7 +184,8 @@ fn bf16_to_f32(bits: u16) -> f32 {
 pub fn ggml_type_supported_mmap_matvec(ty: u32) -> bool {
     matches!(
         ty,
-        0 | 1 | 2 | 6 | 8 | 12 | 13 | 14 | 17 | 18 | 21 | 22 | 30 | 34 | 35 | 39
+        0 | 1 | 2 | 6 | 8 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 21 | 22 | 23 | 29 | 30 | 34 | 35
+            | 39
     )
 }
 
@@ -204,7 +205,7 @@ pub fn dot_row(ty: u32, row_payload: &[u8], x: &[f32]) -> Result<f32> {
         1 => dot_row_f16(row_payload, x),
         30 => dot_row_bf16(row_payload, x),
         2 => dot_row_q4_0(row_payload, x),
-        6 | 13 | 17 | 18 | 21 | 22 | 39 => dot_row_extra_quant(ty, row_payload, x),
+        6 | 13 | 16 | 17 | 18 | 19 | 21 | 22 | 23 | 29 | 39 => dot_row_extra_quant(ty, row_payload, x),
         8 => dot_row_q8_0(row_payload, x),
         12 => dot_row_q4_k(row_payload, x),
         14 => dot_row_q6_k(row_payload, x),
@@ -486,7 +487,7 @@ pub fn decode_row_to_f32(ty: u32, row_payload: &[u8], out: &mut [f32]) -> Result
                 out[i] = bf16_to_f32(h);
             }
         }
-        6 | 13 | 17 | 18 | 21 | 22 | 39 => {
+        6 | 13 | 16 | 17 | 18 | 19 | 21 | 22 | 23 | 29 | 39 => {
             let (elements, bytes) = types::type_layout(ty)?;
             for (block, dst) in row_payload
                 .chunks_exact(bytes)
