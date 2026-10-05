@@ -1111,4 +1111,74 @@ mod tests {
         assert_eq!(store.disk_used(), 0);
         assert_eq!(std::fs::read_to_string(note).unwrap(), "keep");
     }
+    #[test]
+    fn open_reclaims_crash_mid_write_temporary() {
+        let directory = tempfile::tempdir().unwrap();
+        let configuration = policy(directory.path(), 128);
+        let store = Store::open(key(), configuration.clone()).unwrap();
+        let temporary = store
+            .directory
+            .join(format!(".{}-1-99.tmp", "ab".repeat(32)));
+        std::fs::write(&temporary, vec![0u8; 64]).unwrap();
+        drop(store);
+        assert!(temporary.exists());
+        let reopened = Store::open(key(), configuration).unwrap();
+        assert!(
+            !temporary.exists(),
+            "crash-mid-write temps must be reclaimed on exclusive open"
+        );
+        drop(reopened);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn physical_enospc_keeps_ram_checkpoint() {
+        struct Tmpfs(PathBuf);
+        impl Drop for Tmpfs {
+            fn drop(&mut self) {
+                let _ = std::process::Command::new("sudo")
+                    .args(["-n", "umount", "-l"])
+                    .arg(&self.0)
+                    .status();
+                let _ = std::fs::remove_dir(&self.0);
+            }
+        }
+        let mount = std::env::temp_dir().join(format!("rbitnet-enospc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&mount);
+        std::fs::create_dir_all(&mount).unwrap();
+        let mounted = std::process::Command::new("sudo")
+            .args(["-n", "mount", "-t", "tmpfs", "-o", "size=512k", "tmpfs"])
+            .arg(&mount)
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if !mounted {
+            let _ = std::fs::remove_dir(&mount);
+            eprintln!("PHYSICAL_ENOSPC_SKIPPED no tmpfs (need sudo -n mount)");
+            return;
+        }
+        let _guard = Tmpfs(mount.clone());
+        let mut store = Store::open(key(), policy(&mount, 128)).unwrap();
+        let pad = mount.join("pad.bin");
+        let mut filler = std::fs::File::create(&pad).unwrap();
+        let chunk = [0u8; 4096];
+        loop {
+            match std::io::Write::write_all(&mut filler, &chunk) {
+                Ok(()) => continue,
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::StorageFull
+                        || error.raw_os_error() == Some(28) =>
+                {
+                    break;
+                }
+                Err(error) => panic!("unexpected pad write: {error}"),
+            }
+        }
+        drop(filler);
+        assert!(capture(&mut store, &[1], 0.5));
+        assert_eq!(store.stats.write_failures, 1);
+        assert_eq!(store.disk_used(), 0);
+        let held = store.lookup(&[1, 2], |_| 64).unwrap().unwrap();
+        assert!(held.checkpoint.values.iter().all(|value| *value == 0.5));
+        eprintln!("PHYSICAL_ENOSPC_DONE ram lease kept after OS ENOSPC");
+    }
 }

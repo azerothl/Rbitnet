@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-05",
+  "model": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF",
+  "file": "Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf",
+  "bytes": 10094357632,
+  "tokenizer": "Qwen/Qwen3.8-27B tokenizer.json",
+  "host": "cloud VM 4 vCPU 16 GiB RAM no GPU no swap",
+  "backend": "cpu",
+  "bind": "127.0.0.1:8080",
+  "inspect_histogram_decode": [
+    "F32",
+    "Q2_K",
+    "Q4_K",
+    "IQ2_XXS",
+    "IQ2_XS",
+    "IQ3_XXS",
+    "IQ1_S",
+    "IQ3_S",
+    "IQ2_S",
+    "IQ4_XS",
+    "IQ1_M",
+    "BF16"
+  ],
+  "inspect_histogram_unsupported": [],
+  "load": "GGUF v3 arch=qwen35 tensors=851 — no UnsupportedGgmlType",
+  "http": [
+    {
+      "path": "/v1/chat/completions",
+      "model": "rbitnet-qwen35",
+      "max_tokens": 1,
+      "prompt": "Hi",
+      "http_code": 200,
+      "wall_s": 127.44,
+      "prompt_tokens": 3,
+      "completion_tokens": 1,
+      "finish_reason": "length",
+      "content": ""
+    },
+    {
+      "path": "/v1/chat/completions",
+      "model": "rbitnet-qwen35",
+      "max_tokens": 8,
+      "prompt": "Say hi",
+      "http_code": 200,
+      "wall_s": 462.26,
+      "prompt_tokens": 4,
+      "completion_tokens": 8,
+      "finish_reason": "length",
+      "content": ""
+    }
+  ],
+  "rss_kib_after_8_token": 8289524,
+  "notes": "I-quant + Q2_K mmap GEMV. Qwen35 decode_ids skip_special_tokens=true so detokenized content was empty while usage.completion_tokens counted. Not CUDA; I-quants are not in ggml_type_supports_cuda_quant. mmproj/mtp not loaded."
+}

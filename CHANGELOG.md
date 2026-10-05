@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- GGML I-quant mmap GEMV + `tensor_to_f32` for **IQ2_XS / IQ2_S / IQ3_XXS / IQ3_S** (issue #138; GSQ-RCO mixed packs). `inspect_gguf` prints type names and decode flags.
+- GGML I-quant mmap GEMV + `tensor_to_f32` for **IQ2_XXS / IQ2_XS / IQ2_S / IQ3_XXS / IQ3_S / IQ1_S / IQ1_M / IQ4_XS** (issue #138; GSQ-RCO mixed packs). `inspect_gguf` prints type names and decode flags. **Q2_K** mmap GEMV so mixed GSQ-RCO rows that use type 10 actually decode.
 - [CHANGELOG.md](CHANGELOG.md) (this file), [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md), [docs/profiling/](docs/profiling/README.md), [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md).
 - `rbitnet serve` / `rbitnet-server`: optional `--api-key` and `--bind` when env vars are unset.
 - `RBITNET_MAX_PROMPT_TOKENS` optional HTTP guard; `Engine::count_prompt_tokens` / `ModelExecutor::count_prompt_tokens`.
