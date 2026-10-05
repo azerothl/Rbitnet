@@ -346,7 +346,11 @@ impl Runtime {
                 if t.dimensions.len() >= 2
                     && !crate::ggml::ggml_type_supported_mmap_matvec(t.ggml_type)
                 {
-                    return Err(BitNetError::UnsupportedGgmlType(t.ggml_type));
+                    return Err(BitNetError::Inference(format!(
+                        "unsupported GGML tensor type {} ({}) for `{name}`",
+                        t.ggml_type,
+                        crate::ggml::ggml_type_name(t.ggml_type)
+                    )));
                 }
             }
             let shape = |suffix: &str, expected: &[usize]| -> Result<()> {

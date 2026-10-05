@@ -48,8 +48,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let show = 20.min(arch.tensors.len());
     println!("First {show} tensors:");
     for t in arch.tensors.iter().take(show) {
+        let name = bitnet_core::ggml::ggml_type_name(t.ggml_type);
+        let decode = if bitnet_core::ggml::ggml_type_dequant_supported(t.ggml_type) {
+            "decode=yes"
+        } else {
+            "decode=NO"
+        };
         println!(
-            "  {:50} dims={:?} ggml_type={}",
+            "  {:50} dims={:?} ggml_type={} ({name}) {decode}",
             t.name, t.dimensions, t.ggml_type
         );
     }
@@ -63,7 +69,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let mut pairs: Vec<_> = hist.into_iter().collect();
     pairs.sort_by_key(|p| p.0);
-    println!("ggml_type histogram (type -> count): {:?}", pairs);
+    println!("ggml_type histogram (type -> count):");
+    for (ty, n) in &pairs {
+        let name = bitnet_core::ggml::ggml_type_name(*ty);
+        let decode = if bitnet_core::ggml::ggml_type_dequant_supported(*ty) {
+            "decode"
+        } else {
+            "UNSUPPORTED"
+        };
+        println!("  {ty} {name} x{n} ({decode})");
+    }
 
     Ok(())
 }

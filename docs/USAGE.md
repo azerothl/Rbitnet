@@ -502,7 +502,7 @@ The first call that needs generation will load the tokenizer (same rules as abov
 
 ## Limitations and troubleshooting
 
-- **Quantization types:** Some rare GGML types may not be implemented yet; loading can fail with `UnsupportedGgmlType`. Prefer widely used types (for example Q4_K, Q8_0, or F16 layers) or re-export with a supported layout.
+- **Quantization types:** Load fails with `unsupported GGML tensor type N (NAME)` if a weight uses a type without mmap GEMV. Wired I-quants: **IQ2_XS, IQ2_S, IQ3_XXS, IQ3_S** (GSQ-RCO mixed packs). Prefer Q4_K / Q8_0 when possible. `inspect_gguf` lists types and decode support. Qwen3.8-27B GSQ-RCO: tokenizer from `Qwen/Qwen3.8-27B` via `RBITNET_TOKENIZER` (often missing from the GGUF repo). Vision `mmproj` and `-mtp` files are not a Rbitnet path.
 - **Tensor names:** The loader expects **llama.cpp-style** names, with a few **aliases** (for example `lm_head.weight` vs `output.weight`). See [BITNET_SPEC.md](BITNET_SPEC.md). Odd exports may still need renaming or loader tweaks.
 - **Context length:** Generation is bounded by `llama.context_length` (capped internally for safety). Very long prompts can hit limits or run slowly on CPU.
 - **Performance:** Pure Rust + dequantized matmuls is correct but not as fast as highly optimized C++/GPU stacks; for production throughput, profile on your hardware.

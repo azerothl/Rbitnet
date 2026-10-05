@@ -1,6 +1,8 @@
 //! GGML type sizes and dequantization (reference: llama.cpp `ggml`).
 
 mod dequant;
+mod iq;
+mod iq_tables;
 mod quant_dot;
 mod quant_simd;
 pub(crate) mod simd;
@@ -16,7 +18,7 @@ pub use quant_dot::{
 };
 pub(crate) use quant_dot::{cuda_quant_library_identity, load_cuda_quant_library};
 pub(crate) use quant_simd::f32_accumulator_lanes;
-pub use types::{ggml_nbytes, ggml_row_size};
+pub use types::{ggml_nbytes, ggml_row_size, ggml_type_dequant_supported, ggml_type_name};
 
 #[doc(hidden)]
 pub use quant_dot::direct_row_calls;

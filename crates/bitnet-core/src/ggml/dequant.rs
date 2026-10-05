@@ -47,6 +47,7 @@ pub fn tensor_to_f32(data: &[u8], ty: u32, dims: &[u64]) -> Result<Vec<f32>> {
         13 => dequant_q5_k(data, nelements),
         14 => dequant_q6_k(data, nelements),
         30 => dequant_bf16(data, nelements),
+        17 | 18 | 21 | 22 => crate::ggml::iq::dequant_iquant(ty, data, nelements),
         34 => dequant_tq1_0(data, nelements),
         35 => dequant_tq2_0(data, nelements),
         39 => dequant_mxfp4(data, nelements),
@@ -107,6 +108,9 @@ pub(crate) fn decode_extra_block(ty: u32, data: &[u8], out: &mut [f32]) -> Resul
                 out[j] = d * KVALUES_MXFP4[(data[j + 1] & 15) as usize] as f32;
                 out[j + 16] = d * KVALUES_MXFP4[(data[j + 1] >> 4) as usize] as f32;
             }
+        }
+        17 | 18 | 21 | 22 if out.len() == 256 => {
+            crate::ggml::iq::decode_iq_block(ty, data, out)?;
         }
         _ => return Err(BitNetError::InvalidGguf("invalid extra quant block".into())),
     }

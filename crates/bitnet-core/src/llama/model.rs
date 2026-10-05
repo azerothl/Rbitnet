@@ -267,7 +267,12 @@ fn llama_mmap_quant_supported_with_config(archive: &GgufArchive, cfg: &LlamaConf
             BitNetError::Inference(format!("mmap check: missing tensor {:?}", names))
         })?;
         if !matrix_mmap_supported(t) {
-            return Err(BitNetError::UnsupportedGgmlType(t.ggml_type));
+            return Err(BitNetError::Inference(format!(
+                "unsupported GGML tensor type {} ({}) for {:?}",
+                t.ggml_type,
+                crate::ggml::ggml_type_name(t.ggml_type),
+                names
+            )));
         }
         Ok(())
     };
@@ -931,13 +936,7 @@ impl LlamaModel {
         match mode {
             LlamaWeightMode::Dense => Self::from_gguf_dense_internal(archive, cfg),
             LlamaWeightMode::MmapQuant => {
-                if llama_mmap_quant_supported_with_config(archive.as_ref(), &cfg).is_err() {
-                    return Err(BitNetError::Inference(
-                        "mmap_quant: unsupported ggml_type on one or more Llama matrices \
-                         (see ggml::ggml_type_supported_mmap_matvec)"
-                            .into(),
-                    ));
-                }
+                llama_mmap_quant_supported_with_config(archive.as_ref(), &cfg)?;
                 Self::from_gguf_mmap_internal(archive, cfg)
             }
             LlamaWeightMode::Auto => {

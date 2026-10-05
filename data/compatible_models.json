@@ -123,6 +123,28 @@
       "tested": false,
       "min_rbitnet_version": "0.1.0",
       "smoke_test": "cargo test -p rbitnet-cli parse_minimal_catalog && RBITNET_TEST_GGUF=/path/to/model.gguf cargo test -p bitnet-core optional_gguf_from_env_smoke -- --nocapture"
+    },
+    {
+      "id": "qwen38-27b-gsq-rco-iq3-s",
+      "repo": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF",
+      "file": "Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf",
+      "description": "Qwen3.8 27B GSQ-RCO mixed I-quant GGUF (arch qwen35). I-quants IQ2_XS/IQ2_S/IQ3_XXS/IQ3_S decode in Rbitnet; vision mmproj and -mtp heads are out of scope.",
+      "files": [
+        "Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf"
+      ],
+      "tokenizer_repo": "Qwen/Qwen3.8-27B",
+      "notes": "Tokenizer is not in the GGUF repo — download tokenizer.json from Qwen/Qwen3.8-27B and set RBITNET_TOKENIZER. Do not load mmproj or -mtp files. verified=false until a measured /v1 smoke is recorded. IQ3_XXS is the smaller alternative if RAM is tight.",
+      "tier": "power",
+      "use_case": [
+        "chat"
+      ],
+      "min_ram_gb": 16,
+      "verified": false,
+      "golden_tier": "best_effort",
+      "min_ram": "16 GB class for IQ3_S plus runtime KV; IQ3_XXS if tighter",
+      "tested": false,
+      "min_rbitnet_version": "0.1.0",
+      "smoke_test": "RBITNET_MODEL=/path/Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf RBITNET_TOKENIZER=/path/tokenizer.json rbitnet-server"
     }
   ]
 }
