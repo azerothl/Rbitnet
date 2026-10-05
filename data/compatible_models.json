@@ -128,21 +128,21 @@
       "id": "qwen38-27b-gsq-rco-iq3-s",
       "repo": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF",
       "file": "Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf",
-      "description": "Qwen3.8 27B GSQ-RCO mixed I-quant GGUF (arch qwen35). I-quants IQ2_XS/IQ2_S/IQ3_XXS/IQ3_S decode in Rbitnet; vision mmproj and -mtp heads are out of scope.",
+      "description": "Qwen3.8 27B GSQ-RCO mixed I-quant GGUF (arch qwen35). Wired types include IQ2_XXS/XS/S, IQ3_XXS/S, IQ1_S/M, IQ4_XS and Q2_K mmap GEMV. Vision mmproj and -mtp heads are out of scope.",
       "files": [
         "Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf"
       ],
       "tokenizer_repo": "Qwen/Qwen3.8-27B",
-      "notes": "Tokenizer is not in the GGUF repo — download tokenizer.json from Qwen/Qwen3.8-27B and set RBITNET_TOKENIZER. Do not load mmproj or -mtp files. verified=false until a measured /v1 smoke is recorded. IQ3_XXS is the smaller alternative if RAM is tight.",
+      "notes": "Tokenizer is not in the GGUF repo — download tokenizer.json from Qwen/Qwen3.8-27B and set RBITNET_TOKENIZER. Do not load mmproj or -mtp files. CPU mmap /v1 smoke on 2026-10-05 used the smaller IQ3_XXS sibling (10.09 GB): HTTP 200, completion_tokens counted, RSS ~8.2 GiB, ~127 s/token-class wall on 4 vCPU/16 GiB. Detokenized content was empty (qwen35 skip_special_tokens). See docs/validation/2026-10-05-qwen38-27b-iq3-xxs.json.",
       "tier": "power",
       "use_case": [
         "chat"
       ],
       "min_ram_gb": 16,
-      "verified": false,
+      "verified": true,
       "golden_tier": "best_effort",
-      "min_ram": "16 GB class for IQ3_S plus runtime KV; IQ3_XXS if tighter",
-      "tested": false,
+      "min_ram": "16 GB class for IQ3_S plus runtime KV; IQ3_XXS smoked at ~8.2 GiB RSS",
+      "tested": true,
       "min_rbitnet_version": "0.1.0",
       "smoke_test": "RBITNET_MODEL=/path/Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf RBITNET_TOKENIZER=/path/tokenizer.json rbitnet-server"
     }

@@ -84,6 +84,9 @@ pub(crate) fn decode_extra_block(ty: u32, data: &[u8], out: &mut [f32]) -> Resul
                     * d;
             }
         }
+        10 if data.len() == 84 && out.len() == 256 => {
+            decode_q2_k_block(data, out)?;
+        }
         13 if data.len() == 176 && out.len() == 256 => {
             let d = fp16_to_f32(u16::from_le_bytes(data[..2].try_into().unwrap()));
             let min = fp16_to_f32(u16::from_le_bytes(data[2..4].try_into().unwrap()));
@@ -431,6 +434,47 @@ fn get_scale_min_k4(j: usize, q: &[u8]) -> (u8, u8) {
 }
 
 /// Q2_K super-blocks (`k_quants.c` `dequantize_row_q2_K`, `QK_K == 256`).
+fn decode_q2_k_block(data: &[u8], out: &mut [f32]) -> Result<()> {
+    if data.len() != 84 || out.len() != QK_K {
+        return Err(BitNetError::InvalidGguf("q2_K block size".into()));
+    }
+    let d = fp16_to_f32(u16::from_le_bytes(data[0..2].try_into().unwrap()));
+    let min = fp16_to_f32(u16::from_le_bytes(data[2..4].try_into().unwrap()));
+    let scales = &data[4..20];
+    let qs = &data[20..84];
+    let mut o = 0usize;
+    let mut q_off = 0usize;
+    let mut is = 0usize;
+    for _ in 0..2 {
+        let mut shift = 0u32;
+        for _ in 0..4 {
+            let sc = scales[is];
+            is += 1;
+            let dl = d * (sc & 0x0F) as f32;
+            let ml = min * (sc >> 4) as f32;
+            for l in 0..16 {
+                let qv = ((qs[q_off + l] >> shift) & 3) as i8;
+                out[o] = dl * f32::from(qv) - ml;
+                o += 1;
+            }
+            let sc = scales[is];
+            is += 1;
+            let dl = d * (sc & 0x0F) as f32;
+            let ml = min * (sc >> 4) as f32;
+            for l in 0..16 {
+                let qv = ((qs[q_off + l + 16] >> shift) & 3) as i8;
+                out[o] = dl * f32::from(qv) - ml;
+                o += 1;
+            }
+            shift += 2;
+        }
+        q_off += 32;
+    }
+    debug_assert_eq!(o, QK_K);
+    debug_assert_eq!(is, 16);
+    Ok(())
+}
+
 fn dequant_q2_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
     if n % QK_K != 0 {
         return Err(BitNetError::InvalidGguf("q2_K nelements % 256 != 0".into()));
@@ -443,44 +487,7 @@ fn dequant_q2_k(data: &[u8], n: usize) -> Result<Vec<f32>> {
         if data.len() < o + BLOCK {
             return Err(BitNetError::InvalidGguf("q2_K tensor truncated".into()));
         }
-        let d = fp16_to_f32(u16::from_le_bytes(data[o..o + 2].try_into().unwrap()));
-        let min = fp16_to_f32(u16::from_le_bytes(data[o + 2..o + 4].try_into().unwrap()));
-        let scales = &data[o + 4..o + 20];
-        let qs = &data[o + 20..o + 84];
-
-        let base = i * QK_K;
-        let mut out = base;
-        let mut q_off = 0usize;
-        let mut is = 0usize;
-        for _ in 0..2 {
-            let mut shift = 0u32;
-            for _ in 0..4 {
-                let sc = scales[is];
-                is += 1;
-                let dl = d * (sc & 0x0F) as f32;
-                let ml = min * (sc >> 4) as f32;
-                for l in 0..16 {
-                    let qv = ((qs[q_off + l] >> shift) & 3) as i8;
-                    y[out] = dl * f32::from(qv) - ml;
-                    out += 1;
-                }
-
-                let sc = scales[is];
-                is += 1;
-                let dl = d * (sc & 0x0F) as f32;
-                let ml = min * (sc >> 4) as f32;
-                for l in 0..16 {
-                    let qv = ((qs[q_off + l + 16] >> shift) & 3) as i8;
-                    y[out] = dl * f32::from(qv) - ml;
-                    out += 1;
-                }
-
-                shift += 2;
-            }
-            q_off += 32;
-        }
-        debug_assert_eq!(out, base + QK_K);
-        debug_assert_eq!(is, 16);
+        decode_q2_k_block(&data[o..o + BLOCK], &mut y[i * QK_K..(i + 1) * QK_K])?;
     }
     Ok(y)
 }
