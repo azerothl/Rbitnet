@@ -59,7 +59,7 @@ CUDA and hybrid have measured native GGUF paths; other backends retain the limit
 
 ## GGUF / GGML
 
-- **Unknown `ggml_type` values** fail with a clear error (`UnsupportedGgmlType`) once a tensor is dequantized; see `crates/bitnet-core/src/ggml/types.rs` for layout coverage.
+- **Unknown `ggml_type` values** fail at **load** (mmap GEMV check) or dequant with `UnsupportedGgmlType` / an inference error that includes the **numeric** `ggml_type` and a name (`IQ2_XXS`, …). `inspect_gguf` prints a histogram with `decode` vs `UNSUPPORTED`. **I-quants wired for mmap GEMV:** IQ2_XS (17), IQ3_XXS (18), IQ3_S (21), IQ2_S (22) — enough for GSQ-RCO mixed packs such as [Qwen3.8-27B-GSQ-RCO](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF). Still unwired: IQ2_XXS, IQ1_*, IQ4_*. Vision `mmproj` and `-mtp` heads stay out of scope.
 - **Tensor names** must follow llama.cpp-style conventions; odd exports may need renaming or loader extensions.
 - **BitNet native scope:** the supported native path assumes Microsoft/llama.cpp-style BitNet GGUF naming (`token_embd.weight`, `blk.N.attn_q.weight`, `blk.N.ffn_*`, `output.weight`) and Llama-like metadata (`llama.*` or BitNet aliases for shape fields). Non-Llama BitNet research layouts are not covered yet.
 

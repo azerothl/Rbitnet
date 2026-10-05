@@ -77,3 +77,49 @@ pub fn ggml_nbytes(dims: &[u64], ty: u32) -> Result<usize> {
     }
     Ok(n)
 }
+
+/// Human-readable GGML type label for `inspect_gguf` / load errors.
+pub fn ggml_type_name(ty: u32) -> &'static str {
+    match ty {
+        0 => "F32",
+        1 => "F16",
+        2 => "Q4_0",
+        3 => "Q4_1",
+        6 => "Q5_0",
+        7 => "Q5_1",
+        8 => "Q8_0",
+        9 => "Q8_1",
+        10 => "Q2_K",
+        11 => "Q3_K",
+        12 => "Q4_K",
+        13 => "Q5_K",
+        14 => "Q6_K",
+        15 => "Q8_K",
+        16 => "IQ2_XXS",
+        17 => "IQ2_XS",
+        18 => "IQ3_XXS",
+        19 => "IQ1_S",
+        20 => "IQ4_NL",
+        21 => "IQ3_S",
+        22 => "IQ2_S",
+        23 => "IQ4_XS",
+        24 => "I8",
+        25 => "I16",
+        26 => "I32",
+        27 => "I64",
+        28 => "F64",
+        29 => "IQ1_M",
+        30 => "BF16",
+        34 => "TQ1_0",
+        35 => "TQ2_0",
+        39 => "MXFP4",
+        40 => "NVFP4",
+        41 => "Q1_0",
+        _ => "unknown",
+    }
+}
+
+/// True when row GEMV or dense `tensor_to_f32` can decode `ty`.
+pub fn ggml_type_dequant_supported(ty: u32) -> bool {
+    crate::ggml::ggml_type_supported_mmap_matvec(ty) || matches!(ty, 3 | 7 | 9 | 10 | 11)
+}
