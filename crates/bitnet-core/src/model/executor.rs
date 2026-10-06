@@ -57,6 +57,20 @@ pub trait ModelExecutor: Send + Sync {
         ))
     }
 
+    /// Prefill using precomputed `[n_patches × n_embd]` patch embeddings.
+    fn generate_with_vision_patches(
+        &self,
+        _prompt: &str,
+        _patches: &[f32],
+        _n_patches: usize,
+        _max_tokens: u32,
+        _sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        Err(BitNetError::NotImplemented(
+            "vision patch inject not available for this executor",
+        ))
+    }
+
     fn generate(&self, prompt: &str, max_tokens: u32, temperature: f32) -> Result<String> {
         self.generate_with_timings(
             prompt,
@@ -182,6 +196,34 @@ impl LlamaExecutor {
         self.mmproj = Some(encoder);
         Ok(self)
     }
+
+    /// Prefill with precomputed patch embeddings (skips mmproj encode).
+    pub fn generate_with_vision_patches(
+        &self,
+        prompt: &str,
+        patches: &[f32],
+        n_patches: usize,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+                self.backend_kind,
+                self.config.clone(),
+                Arc::clone(&self.prompt_tokenizer),
+            )?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate_with_vision_patches(prompt, patches, n_patches, max_tokens, sampling)
+    }
 }
 
 impl LlamaExecutor {
@@ -253,29 +295,36 @@ impl ModelExecutor for LlamaExecutor {
         };
         let t_enc = Instant::now();
         let patches = enc.encode_image_bytes(image_bytes)?;
+        let n_patches = enc.n_patches();
         let encode_vision_ms = t_enc.elapsed().as_millis() as u64;
-        let mut slot = self
-            .runtime
-            .lock()
-            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
-        if slot.is_none() {
-            *slot = Some(LlamaRuntime::load_with_config_and_tokenizer(
-                Arc::clone(&self.gguf),
-                &self.tokenizer_path,
-                self.backend_kind,
-                self.config.clone(),
-                Arc::clone(&self.prompt_tokenizer),
-            )?);
-        }
-        let (text, mut phases) = slot.as_mut().unwrap().generate_with_vision_patches(
+        let (text, mut phases) = ModelExecutor::generate_with_vision_patches(
+            self,
             prompt,
             &patches,
-            enc.n_patches(),
+            n_patches,
             max_tokens,
             sampling,
         )?;
         phases.encode_ms = phases.encode_ms.saturating_add(encode_vision_ms);
         Ok((text, phases))
+    }
+
+    fn generate_with_vision_patches(
+        &self,
+        prompt: &str,
+        patches: &[f32],
+        n_patches: usize,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        LlamaExecutor::generate_with_vision_patches(
+            self,
+            prompt,
+            patches,
+            n_patches,
+            max_tokens,
+            sampling,
+        )
     }
 
     fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {

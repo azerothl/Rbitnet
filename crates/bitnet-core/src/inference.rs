@@ -326,6 +326,40 @@ impl Engine {
         })
     }
 
+    /// Multimodal completion from precomputed `[n_patches × n_embd]` embeddings.
+    ///
+    /// Useful when the mmproj encoder is run out-of-process / dropped before Llama
+    /// prefill to reduce peak RSS on CPU hosts.
+    pub fn complete_with_vision_patches(
+        &self,
+        prompt: &str,
+        patches: &[f32],
+        n_patches: usize,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<InferenceOutput> {
+        sampling.validate_structured_output()?;
+        if self.inner.stub || self.inner.toy.is_some() {
+            return Err(BitNetError::NotImplemented(
+                "vision is not available in stub/toy mode",
+            ));
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let (text, phases) = executor.generate_with_vision_patches(
+            prompt,
+            patches,
+            n_patches,
+            max_tokens,
+            sampling,
+        )?;
+        Ok(InferenceOutput {
+            text,
+            stats: InferenceStats::from_phases(phases, false),
+        })
+    }
+
     pub fn tensor_count(&self) -> Option<usize> {
         self.inner.gguf.as_ref().map(|g| g.tensor_count())
     }

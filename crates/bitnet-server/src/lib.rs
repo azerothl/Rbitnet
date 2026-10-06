@@ -2353,4 +2353,14 @@ mod vision_refuse_tests {
             }
         ])));
     }
+
+    #[test]
+    fn message_content_inserts_image_placeholder() {
+        let s = super::message_content_to_string(&json!([
+            {"type": "text", "text": "what color?"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,aaa"}}
+        ]));
+        assert!(s.contains(bitnet_core::mmproj::IMAGE_PLACEHOLDER));
+        assert!(s.contains("what color?"));
+    }
 }

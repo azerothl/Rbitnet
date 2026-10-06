@@ -16,7 +16,8 @@ mod resolve;
 
 pub use config::{MmprojConfig, VitFfnOp, CLIP_IMAGE_MEAN, CLIP_IMAGE_STD};
 pub use encoder::MmprojEncoder;
-pub use fuse::{expand_prompt_with_patches, PrefillItem, IMAGE_PLACEHOLDER};
+pub use fuse::{PrefillItem, IMAGE_PLACEHOLDER};
+pub(crate) use fuse::expand_prompt_with_patches;
 pub use image_io::{decode_and_normalize, decode_bytes_or_data_url, NormalizedImage};
 pub use info::MmprojInfo;
 pub use resolve::{resolve_mmproj_path, ResolveMmprojOpts};
