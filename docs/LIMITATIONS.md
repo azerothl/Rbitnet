@@ -73,6 +73,8 @@ CUDA and hybrid have measured native GGUF paths; other backends retain the limit
 | Qwen3.5 (`qwen35`, `qwen35moe`) | **Native CPU/CUDA/hybrid** | GDN + gated attention; actual GGUF validation covers dense Qwen3.5-2B text inference. MoE variants are unvalidated. |
 | GPT-OSS (`gpt-oss`, `gptoss`) | **Native CPU/CUDA/hybrid** | GPT-OSS-20B tested; biased attention, sinks, sliding window, YaRN, MXFP4 MoE and Harmony turn boundaries. |
 | Split MLA + MoE (`deepseek2`) | **Native CPU/CUDA/hybrid** | GLM-4.7-Flash tested. Requires `attn_q_a`, `attn_q_b`, `attn_kv_a_mqa`, separate `attn_k_b` / `attn_v_b` tensors; other DeepSeek layouts fail eager validation. |
+| Spark-X2.5 (`spark2_5`) | **Refused** | Explicit load error (not Llama fallback). Loader tracked in [#142](https://github.com/azerothl/Rbitnet/issues/142). |
+| Vision / `mmproj` / `image_url` | **Refused at HTTP** | OpenAI and Anthropic image parts return **HTTP 501** `vision_not_supported` before inference. Native encoder: [#143](https://github.com/azerothl/Rbitnet/issues/143). |
 | Roadmap GLM tag (`glm4moe`) | **Llama-shaped only** | Separate architecture from GLM-4.7-Flash; incompatible tensors still fail at startup. |
 
 When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.

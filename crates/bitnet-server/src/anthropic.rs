@@ -84,6 +84,25 @@ pub async fn messages(
     if let Err(r) = crate::check_auth(&state, &headers) {
         return Ok(*r);
     }
+    if req
+        .messages
+        .iter()
+        .any(|message| crate::json_content_contains_image(&message.content))
+    {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok((
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"type": "error", "error": {
+                "type": "not_implemented_error",
+                "code": crate::VISION_NOT_SUPPORTED_CODE,
+                "message": crate::VISION_NOT_SUPPORTED_MESSAGE
+            }})),
+        )
+            .into_response());
+    }
     let eng = match crate::available_engine(&state, None).await {
         Ok(engine) => engine,
         Err((code, message)) => return Ok((

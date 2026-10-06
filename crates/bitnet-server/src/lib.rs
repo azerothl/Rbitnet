@@ -996,6 +996,54 @@ impl StopSequence {
     }
 }
 
+pub(crate) const VISION_NOT_SUPPORTED_CODE: &str = "vision_not_supported";
+pub(crate) const VISION_NOT_SUPPORTED_MESSAGE: &str = "image inputs are not implemented (no mmproj / vision encoder). See https://github.com/azerothl/Rbitnet/issues/143";
+
+/// True when OpenAI/Anthropic-style content includes an image part.
+///
+/// Text-only strings and `{type:text}` parts are ignored. Used to refuse vision
+/// requests with HTTP 501 instead of dropping `image_url` / `image` silently.
+pub fn json_content_contains_image(content: &serde_json::Value) -> bool {
+    match content {
+        serde_json::Value::Array(parts) => parts.iter().any(json_part_is_image),
+        serde_json::Value::Object(_) => json_part_is_image(content),
+        _ => false,
+    }
+}
+
+fn json_part_is_image(part: &serde_json::Value) -> bool {
+    let Some(obj) = part.as_object() else {
+        return false;
+    };
+    if let Some(ty) = obj.get("type").and_then(|v| v.as_str()) {
+        let t = ty.trim().to_ascii_lowercase();
+        if matches!(t.as_str(), "image_url" | "image" | "input_image") {
+            return true;
+        }
+    }
+    obj.contains_key("image_url") || obj.contains_key("input_image")
+}
+
+fn chat_messages_contain_image(messages: &[ChatMessage]) -> bool {
+    messages
+        .iter()
+        .any(|message| json_content_contains_image(&message.content))
+}
+
+fn vision_not_supported_openai_response() -> Response {
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(json!({
+            "error": {
+                "message": VISION_NOT_SUPPORTED_MESSAGE,
+                "type": "not_implemented_error",
+                "code": VISION_NOT_SUPPORTED_CODE
+            }
+        })),
+    )
+        .into_response()
+}
+
 fn message_content_to_string(content: &serde_json::Value) -> String {
     match content {
         serde_json::Value::String(s) => s.clone(),
@@ -1365,6 +1413,14 @@ async fn chat_completions(
 ) -> Result<Response, Infallible> {
     if let Err(r) = check_auth(&state, &headers) {
         return Ok(*r);
+    }
+
+    if chat_messages_contain_image(&req.messages) {
+        state
+            .metrics
+            .chat_errors_total
+            .fetch_add(1, Ordering::Relaxed);
+        return Ok(vision_not_supported_openai_response());
     }
 
     state
@@ -2126,4 +2182,51 @@ fn validate_request_context(
     engine
         .validate_context_tokens(count, max_tokens)
         .map_err(map_error)
+}
+
+#[cfg(test)]
+mod vision_refuse_tests {
+    use super::{json_content_contains_image, ChatMessage};
+    use serde_json::json;
+
+    #[test]
+    fn text_only_content_is_not_an_image() {
+        assert!(!json_content_contains_image(&json!("hello")));
+        assert!(!json_content_contains_image(&json!([
+            {"type": "text", "text": "hello"}
+        ])));
+        let messages = [ChatMessage {
+            role: "user".into(),
+            content: json!([{"type": "text", "text": "describe this"}]),
+        }];
+        assert!(!super::chat_messages_contain_image(&messages));
+    }
+
+    #[test]
+    fn openai_image_url_and_input_image_are_detected() {
+        assert!(json_content_contains_image(&json!([
+            {"type": "text", "text": "what is in the image?"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,aaa"}}
+        ])));
+        assert!(json_content_contains_image(&json!([
+            {"type": "input_image", "image_url": "https://example.invalid/a.png"}
+        ])));
+        assert!(json_content_contains_image(&json!({
+            "image_url": {"url": "https://example.invalid/a.png"}
+        })));
+    }
+
+    #[test]
+    fn anthropic_image_blocks_are_detected() {
+        assert!(json_content_contains_image(&json!([
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": "aaa"
+                }
+            }
+        ])));
+    }
 }
