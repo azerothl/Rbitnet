@@ -1,0 +1,29 @@
+{
+  "backend": "cpu",
+  "decode_ms": 75.75919999999999,
+  "decode_tps": 26.399433996135123,
+  "device_resident_quant_gemv_calls_after": 0,
+  "device_resident_quant_gemv_calls_before": 0,
+  "device_resident_quant_gemv_calls_delta": 0,
+  "gemv_calls_after": 0,
+  "gemv_calls_before": 0,
+  "generated": 2,
+  "generated_ids": [
+    12366,
+    13
+  ],
+  "load_ms": 0.2697,
+  "matrices": {
+    "cuda_dense_resident": 0,
+    "cuda_dense_total": 0,
+    "cuda_quant_resident": 0,
+    "cuda_quant_total": 0,
+    "dense_f32": 0,
+    "mmap_quant": 114
+  },
+  "prefill_ms": 557.2013000000001,
+  "prompt": "What is the capital of France? Answer in one word.",
+  "prompt_tokens": 13,
+  "residency_after_load": 0,
+  "text": " Paris."
+}

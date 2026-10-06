@@ -1,0 +1,119 @@
+== Build librbitnet_cuda_quant ==
+nvcc: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\nvcc.exe
+cl:   C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\bin\HostX64\x64\cl.exe
+out:  E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.dll
+quant_matvec.cu
+tmpxft_00009670_00000000-7_quant_matvec.compute_75.cudafe1.cpp
+   Création de la bibliothèque E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.lib et de l'objet E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.exp
+Built OK. Add to PATH or set RBITNET_CUDA_QUANT_LIB=E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.dll
+
+
+FullName      : E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.dll
+Length        : 4643840
+LastWriteTime : 06/10/2026 11:57:22
+
+
+
+== CPU golden (always) ==
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+   Compiling onig_sys v69.9.1
+   Compiling sentencepiece-sys v0.11.3
+   Compiling esaxx-rs v0.1.10
+   Compiling sentencepiece v0.11.3
+   Compiling onig v6.5.1
+   Compiling tokenizers v0.21.4
+   Compiling bitnet-core v0.1.0 (E:\devs\Rbitnet\crates\bitnet-core)
+warning: fields `query` and `trim` are never read
+  --> crates\bitnet-core\src\llama\resident.rs:81:5
+   |
+79 | struct Pages {
+   |        ----- fields in this struct
+80 |     limit: u32,
+81 |     query: QueryPages,
+   |     ^^^^^
+82 |     trim: TrimPages,
+   |     ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `page_stats` and `trim_pages` are never used
+   --> crates\bitnet-core\src\llama\resident.rs:398:19
+    |
+174 | impl Resident {
+    | ------------- methods in this implementation
+...
+398 |     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
+    |                   ^^^^^^^^^^
+...
+411 |     pub(crate) fn trim_pages(&mut self) -> Result<()> {
+    |                   ^^^^^^^^^^
+
+warning: error finalizing incremental compilation session directory `\\?\E:\devs\Rbitnet\target\debug\incremental\bitnet_core-34adqelze8v09\s-hmyez0po19-07khh2q-working`: Acc├¿s refus├®. (os error 5)
+
+warning: `bitnet-core` (lib) generated 3 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.66s
+     Running tests\backend_conformance.rs (target\debug\deps\backend_conformance-16ef4f44b0c54a02.exe)
+
+running 7 tests
+test device_resident_gemv_metric_defaults_zero_without_cuda ... ok
+test cpu_matvec_matches_golden_vector ... ok
+test backend_factory_resolves_all_targets ... ok
+test backend_auto_detect_resolves_without_panic ... ok
+test backend_default_is_auto_detect ... ok
+test backend_intel_alias_maps_to_vulkan ... ok
+test backend_numeric_parity_cpu_vs_stubs ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.58s
+
+     Running tests\cuda_quant_residency.rs (target\debug\deps\cuda_quant_residency-d551886b5fe404ef.exe)
+
+running 7 tests
+test cuda_quant_types_match_optional_kernel_abi ... ok
+test device_resident_quant_metric_defaults_zero_without_cuda ... ok
+test opt_in_all_formats_views_batches_and_concurrent_calls ... ok
+test opt_in_concurrent_model_runtime_loading_and_uploads ... ok
+test opt_in_device_resident_quant_kernel_when_lib_present ... ok
+test device_quant_matrix_matches_full_dequant_row_dots ... ok
+test device_quant_matrix_cpu_fallback_matches_payload_golden ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+== Opt-in device-resident quant kernel smoke ==
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+warning: fields `query` and `trim` are never read
+  --> crates\bitnet-core\src\llama\resident.rs:81:5
+   |
+79 | struct Pages {
+   |        ----- fields in this struct
+80 |     limit: u32,
+81 |     query: QueryPages,
+   |     ^^^^^
+82 |     trim: TrimPages,
+   |     ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `page_stats` and `trim_pages` are never used
+   --> crates\bitnet-core\src\llama\resident.rs:398:19
+    |
+174 | impl Resident {
+    | ------------- methods in this implementation
+...
+398 |     pub(crate) fn page_stats(&self) -> Result<Option<PageStats>> {
+    |                   ^^^^^^^^^^
+...
+411 |     pub(crate) fn trim_pages(&mut self) -> Result<()> {
+    |                   ^^^^^^^^^^
+
+warning: error finalizing incremental compilation session directory `\\?\E:\devs\Rbitnet\target\debug\incremental\bitnet_core-34adqelze8v09\s-hmyez0po19-07khh2q-working`: Acc├¿s refus├®. (os error 5)
+
+warning: `bitnet-core` (lib) generated 3 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running tests\cuda_quant_residency.rs (target\debug\deps\cuda_quant_residency-d551886b5fe404ef.exe)
+
+running 1 test
+test opt_in_device_resident_quant_kernel_when_lib_present ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.21s
+
+See docs/GPU_NATIVE_ROADMAP.md Gate E checklist.
