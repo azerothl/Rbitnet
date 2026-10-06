@@ -10,6 +10,7 @@ name = "rbitnet"
 path = "src/main.rs"
 
 [dependencies]
+base64 = { workspace = true }
 bitnet-server = { path = "../bitnet-server" }
 clap = { version = "4", features = ["derive", "env"] }
 hf-hub = "0.5"

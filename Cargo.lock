@@ -2763,6 +2763,7 @@ dependencies = [
 name = "rbitnet-cli"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "bitnet-server",
  "clap",
  "hf-hub",

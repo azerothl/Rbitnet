@@ -144,6 +144,9 @@ struct ChatCmd {
     /// Tokenizer path passed to the managed server.
     #[arg(long, env = "RBITNET_TOKENIZER")]
     tokenizer: Option<PathBuf>,
+    /// mmproj GGUF path passed to the managed server (vision).
+    #[arg(long, env = "RBITNET_MMPROJ")]
+    mmproj: Option<PathBuf>,
     /// Chat format passed to the managed server.
     #[arg(long, env = "RBITNET_CHAT_FORMAT")]
     chat_format: Option<String>,
@@ -176,6 +179,7 @@ impl From<ChatCmd> for chat_tui::ChatOptions {
             server_bin: cmd.server_bin,
             model_path: cmd.model_path,
             tokenizer: cmd.tokenizer,
+            mmproj: cmd.mmproj,
             chat_format: cmd.chat_format,
             max_tokens: cmd.max_tokens,
             temperature: cmd.temperature,

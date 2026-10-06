@@ -358,11 +358,33 @@ cargo run -p rbitnet-cli -- chat --serve `
   --admin-token dev-secret
 ```
 
+Vision (LLaVA-class mmproj): pass `--mmproj` (or `RBITNET_MMPROJ`) so the managed
+server loads the projector, then attach an image in the TUI before sending:
+
+```powershell
+cargo run -p rbitnet-cli -- chat --serve `
+  --model-path C:\models\llava-v1.5-7b.Q4_K_M.gguf `
+  --mmproj C:\models\mmproj-model-f16.gguf `
+  --tokenizer C:\models\tokenizer.json `
+  --chat-format raw
+```
+
+In the prompt pane:
+
+1. `/image C:\path\to\photo.png` (or type the path and press `Ctrl+I`)
+2. Type a question (or leave empty for a default describe prompt)
+3. `Enter` — the request uses OpenAI multimodal `image_url` data-URL parts
+
+`/image` or `/image clear` drops the pending attachment. Remote `http(s)://` image
+URLs are not fetched; only local files (JPEG/PNG/WebP/GIF/BMP) are inlined.
+
 Useful keys in the TUI:
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Send the current prompt. |
+| `Enter` | Send the current prompt (with pending image if any). |
+| `/image PATH` | Attach a local image for the next send. |
+| `Ctrl+I` | Attach the path currently typed in the prompt pane. |
 | `Ctrl+R` | Call `POST /v1/admin/reload`. |
 | `Ctrl+U` | Call `POST /v1/admin/unload`. |
 | `F4` | Fetch `/v1/models` and show model ids in the status bar. |
@@ -371,7 +393,7 @@ Useful keys in the TUI:
 | `Esc` or `Ctrl+C` | Quit. |
 
 Use `--transcript chat.jsonl` to append prompt/reply rows for quick regression
-checks.
+checks (includes an `image` path field when a file was attached).
 
 **Chat completion (non-streaming):**
 
@@ -401,6 +423,7 @@ Do **not** set stub/toy if you want real generation from `RBITNET_MODEL`.
 | `RBITNET_BIND` | Listen address (default `127.0.0.1:8080`). |
 | `RBITNET_MODEL` | Path to a `.gguf` file (must not contain `..` path components). |
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` if not next to the GGUF (must not contain `..`). |
+| `RBITNET_MMPROJ` | Optional LLaVA-class mmproj `.gguf` for vision (`image_url` data-URLs). Also discoverable as a sibling `mmproj-*.gguf` next to the model. |
 | `RBITNET_ARCHITECTURE` | Force the architecture dispatch key (ASCII, case-insensitive); wins over `general.architecture` and `RBITNET_MODEL_FAMILY`. Use to experiment or to force `llama` when a file advertises an unsupported arch (e.g. MoE). |
 | `RBITNET_MODEL_FAMILY` | `llama`, `bitnet`, or `auto` (default): with `auto`, the key is `bitnet` when the GGUF says so, otherwise `general.architecture` (lowercased), else `llama` if that metadata is missing (legacy files). |
 | `RBITNET_CHAT_FORMAT` | Built-in chat prompt format: `raw` (default), `llama3`, or `chatml`. |
