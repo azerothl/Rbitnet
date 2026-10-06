@@ -19,7 +19,7 @@ pub use cuda_graph::{CudaDecodeGraph, DecodeGraphMode};
 pub use kv_storage::{
     KvCache, KvPoolStats, KvQuantFormat, KvStorage, PagedKvPool, PagedSeqKv, SharedPhysKvStore,
 };
-pub use model::{llama_mmap_quant_supported, LlamaModel, LlamaWeightMode};
+pub use model::{llama_mmap_quant_supported, LlamaModel, LlamaWeightMode, MatrixWeights};
 pub(crate) use runtime::llama_encode_add_special_tokens;
 pub use runtime::LlamaRuntime;
 pub use slim_attention::{

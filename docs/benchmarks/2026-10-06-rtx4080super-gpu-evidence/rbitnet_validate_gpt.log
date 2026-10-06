@@ -1,0 +1,42 @@
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 1.60s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 4 tests
+GPT-OSS full F64 oracle passed format 0, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 2, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 6, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 8, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 12, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 13, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 14, graphs/eager, ordinary/split attention
+GPT-OSS full F64 oracle passed format 39, graphs/eager, ordinary/split attention
+test native::graph::gpu_full::tests::full_graph_matches_f64_biases_sinks_windows_rope_gqa_reset_and_output_modes ... ok
+test native::graph::gpu_full::tests::gpt_block_all_positions_modes_tails_f64_and_prefix_continuation ... ok
+test native::graph::gpu_full::tests::router_matches_total_cmp_ties_nan_signed_zero_and_selected_softmax ... ok
+GPT segmented F64 passed format 0: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 2: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 6: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 8: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 12: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 13: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 14: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+GPT segmented F64 passed format 39: fixed/dynamic/CPU/absent MoE, graph/eager, split, prefix and generation identity
+test native::graph::gpu_full::tests::segmented_gpt_f64_dynamic_and_cpu_graphs_prefix_generation_and_cancel ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 146 filtered out; finished in 25.44s
+
+warning: E:\devs\Rbitnet\crates\bitnet-core\Cargo.toml: `default-features` is ignored for tokenizers, since `default-features` was not specified for `workspace.dependencies.tokenizers`, this could become a hard error in the future
+    Finished `release` profile [optimized] target(s) in 0.28s
+     Running unittests src\lib.rs (target\release\deps\bitnet_core-34956e61950cc30e.exe)
+
+running 1 test
+GPT reference resident weights 10659 MiB; fixed expert layers 24/24
+GPT-OSS real teacher-forcing + six generations passed graphs=0, split=0
+GPT-OSS real teacher-forcing + six generations passed graphs=1, split=0
+GPT-OSS real teacher-forcing + six generations passed graphs=1, split=1
+GPT real worst KL=3.465e-12, worst absolute target NLL delta=6.442e-6
+test native::graph::tests::opt_in_gpt_full_real_teacher_forcing_greedy_seed_penalty_and_reset ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 149 filtered out; finished in 1488.09s
+
