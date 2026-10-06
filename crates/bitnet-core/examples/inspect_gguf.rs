@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
+use bitnet_core::mmproj::MmprojInfo;
 use bitnet_core::GgufArchive;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,6 +23,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arch = GgufArchive::mmap_path(path)?;
     println!("{}", arch.summary_line());
     println!("tensor_data_len={} bytes", arch.tensor_data().len());
+
+    // Vision / mmproj sidecars often use clip.* metadata (issue #143).
+    let mm = MmprojInfo::from_gguf(&arch);
+    if mm.projector_type.is_some() || !mm.clip_keys.is_empty() {
+        println!("{}", mm.summary_line());
+        for k in mm.clip_keys.iter().take(16) {
+            if let Some(v) = arch.metadata.get(k) {
+                println!("metadata {k} = {v:?}");
+            }
+        }
+    }
+
+    // Spark-X2.5 dual-RoPE / ISWA keys (issue #142).
+    for k in [
+        "spark2_5.attention.sliding_window",
+        "spark2_5.rope.freq_base",
+        "spark2_5.rope.freq_base_swa",
+        "spark2_5.rope.dimension_count",
+        "spark2_5.rope.dimension_count_swa",
+    ] {
+        if let Some(v) = arch.metadata.get(k) {
+            println!("metadata {k} = {v:?}");
+        }
+    }
 
     let hp = arch.llama_hyper_params();
     println!(

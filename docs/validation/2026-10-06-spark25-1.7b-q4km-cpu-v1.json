@@ -1,0 +1,1 @@
+{"choices":[{"finish_reason":"length","index":0,"message":{"content":"I am just a cognitive intelligence model,","role":"assistant"}}],"created":1791307486,"id":"chatcmpl-1791307486","model":"rbitnet-spark2_5","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":18,"total_tokens":26}}

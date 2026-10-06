@@ -36,8 +36,8 @@ This page sets expectations for performance, formats, and architectures. For com
 | Experimental Qwen3.5 MoE (`qwen35moe`) | **Partial** | Requires `RBITNET_BACKEND=cuda` or `hybrid`; not a general MoE solution. |
 | Roadmap MoE tags (`glm4moe`, `gptoss`, `deepseek2`) | **Llama-shaped only** | Run only when [`LlamaModel::from_gguf`](../crates/bitnet-core/src/llama/model.rs) succeeds; else **startup refuse** via [`roadmap_unsupported.rs`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs). |
 | DeepSeek **MLA** / non-Mixtral MoE graphs | **Not implemented** | No silent stub executor; load fails early. Full DeepSeek MoE/MLA remains follow-up work. |
-| Spark-X2.5 (`spark2_5`) | **Refused** | Explicit load error (not Llama fallback). [#142](https://github.com/azerothl/Rbitnet/issues/142). |
-| Vision / `image_url` | **HTTP 501** | Image parts refused before inference. [#143](https://github.com/azerothl/Rbitnet/issues/143). |
+| Spark-X2.5 (`spark2_5`) | **CPU MVP** | Dense ISWA loader; CUDA follow-up [#142](https://github.com/azerothl/Rbitnet/issues/142). |
+| Vision / `image_url` | **HTTP 501** | Image parts refused; mmproj inspect only. [#143](https://github.com/azerothl/Rbitnet/issues/143). |
 
 When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.
 

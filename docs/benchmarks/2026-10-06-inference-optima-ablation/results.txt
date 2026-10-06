@@ -1,0 +1,10 @@
+=== BASELINE no speculative ===
+/tmp/ablation_base_1.out:ttft_ms=572 encode_ms=0 prefill_ms=572 decode_ms=1485 itl_us=46406 prompt_tokens=7 completion_tokens=32
+/tmp/ablation_base_1.err:engine_smoke: OK
+/tmp/ablation_base_2.out:ttft_ms=316 encode_ms=0 prefill_ms=316 decode_ms=1466 itl_us=45812 prompt_tokens=7 completion_tokens=32
+/tmp/ablation_base_2.err:engine_smoke: OK
+=== SPECULATIVE ngram ===
+/tmp/ablation_spec_1.out:ttft_ms=299 encode_ms=0 prefill_ms=299 decode_ms=1426 itl_us=44562 prompt_tokens=7 completion_tokens=32
+/tmp/ablation_spec_1.err:engine_smoke: OK
+/tmp/ablation_spec_2.out:ttft_ms=314 encode_ms=0 prefill_ms=314 decode_ms=1400 itl_us=43750 prompt_tokens=7 completion_tokens=32
+/tmp/ablation_spec_2.err:engine_smoke: OK
