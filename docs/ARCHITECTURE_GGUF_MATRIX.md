@@ -12,8 +12,8 @@ Reference for Z.ai **GLM**, OpenAI **gpt-oss**, and **DeepSeek** support. Source
 | GLM-4.5 / 4.7 / 5 (MoE exports) | `glm4moe` (verify per release on HF) | [`glm4_moe`](../crates/bitnet-core/src/glm4_moe): **Llama-compatible tensors only** → Llama runtime; else **clear refuse** ([`roadmap_unsupported`](../crates/bitnet-core/src/loaders/roadmap_unsupported.rs)). |
 | OpenAI gpt-oss | `gpt-oss`, alias `gptoss` | Native biased attention, sinks, alternating sliding window, YaRN and MXFP4 routed experts. CPU/CUDA/hybrid; real-model validation covers **GPT-OSS-20B Q4_K_M**. Harmony analysis is hidden until a final channel appears. |
 | GLM-4.7 Flash, MLA + MoE | `deepseek2` | Native compressed MLA cache, split K/V head matrices, sigmoid router with selection bias, routed + shared experts. CPU/CUDA/hybrid; real-model validation covers **GLM-4.7-Flash Q4_K_M**. Other DeepSeek exports, fused MLA tensors, and alternate query projections are not certified. |
-| Spark-X2.5 | `spark2_5` | **Refused** (does not fall through to Llama). Native ISWA + per-head gate loader tracked in [#142](https://github.com/azerothl/Rbitnet/issues/142). |
-| Vision / multimodal (`mmproj`, `qwen2vl`, `gemma3` vision) | sidecar / `qwen2vl` | Text-only. Image parts return HTTP 501 (`vision_not_supported`) rather than a silent drop. Native mmproj tracked in [#143](https://github.com/azerothl/Rbitnet/issues/143). |
+| Spark-X2.5 | `spark2_5` | **CPU MVP** — fused QKV, ISWA (1 full / 3 SWA), head-wise sigmoid gate, GELU FFN. Caps via `RBITNET_MAX_SEQ` (default ≤8192). CUDA follow-up [#142](https://github.com/azerothl/Rbitnet/issues/142). |
+| Vision / multimodal (`mmproj`, `qwen2vl`, `gemma3` vision) | sidecar / `qwen2vl` | Text-only HTTP **501** for image parts. `MmprojInfo` + `RBITNET_MMPROJ` / sibling `mmproj-*.gguf` discovery for inspect; no encoder yet [#143](https://github.com/azerothl/Rbitnet/issues/143). |
 | DeepSeek dense Llama-shaped | `llama`, `mistral`, … | Use existing [`Llama` loader](../crates/bitnet-core/src/loaders/llama.rs) when tensors match. |
 
 ### DeepSeek generations vs MoE slug (verify on your GGUF)

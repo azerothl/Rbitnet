@@ -14,6 +14,7 @@ use super::llama;
 use super::mixtral;
 use super::qwen3;
 use super::qwen35;
+use super::spark25;
 
 use crate::deepseek2;
 use crate::glm4_moe;
@@ -21,11 +22,6 @@ use crate::gpt_oss;
 
 fn unsupported_non_llama_gguf_architecture(key: &str) -> Option<&'static str> {
     match key {
-        "spark2_5" | "spark2-5" | "spark25" | "spark_2_5" => Some(
-            "GGUF `general.architecture` spark2_5 (Spark-X2.5) is not supported. \
-Rbitnet does not load it as Llama. Tracking: https://github.com/azerothl/Rbitnet/issues/142 \
-and docs/ARCHITECTURE_GGUF_MATRIX.md.",
-        ),
         "qwen2" | "qwen2vl" | "qwen2_moe" | "gemma" | "gemma2" | "gemma3" | "phi3" | "phi4"
         | "bloom" | "gpt2" | "t5" | "rwkv" => Some(
             "GGUF `general.architecture` is not supported by Rbitnet's Llama-compatible loader. \
@@ -152,6 +148,19 @@ fn dispatch_gguf_executor_inner(
         }
         return glm4_moe::build_glm4_moe_executor(
             key.as_str(),
+            backend_kind,
+            gguf,
+            model_path,
+            isolated_from_env,
+            tokenizer_override,
+        );
+    }
+
+    if matches!(
+        key.as_str(),
+        "spark2_5" | "spark2-5" | "spark25" | "spark_2_5"
+    ) {
+        return spark25::build_spark25_executor(
             backend_kind,
             gguf,
             model_path,
@@ -401,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_spark2_5_refuses_without_falling_through_to_llama() {
+    fn dispatch_spark2_5_routes_to_spark_builder_not_llama() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");
         std::env::remove_var("RBITNET_ARCHITECTURE");
@@ -411,32 +420,21 @@ mod tests {
         write_minimal_gguf_with_arch(&p, "spark2_5").unwrap();
         let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
         let err = match dispatch_gguf_executor(BackendKind::Cpu, g, &p) {
-            Ok(_) => panic!("expected spark2_5 dispatch to refuse"),
+            Ok(_) => panic!("expected spark2_5 dispatch to fail without tensors/tokenizer"),
             Err(e) => e,
         };
         let msg = format!("{err}");
         let lower = msg.to_ascii_lowercase();
-        assert!(lower.contains("spark2_5"), "msg={msg}");
+        // Spark builder runs (tokenizer or config/tensor path), not Llama token_embd fallthrough.
         assert!(
-            msg.contains("issues/142") || lower.contains("142"),
+            lower.contains("tokenizer")
+                || lower.contains("missing")
+                || lower.contains("spark"),
             "msg={msg}"
         );
         assert!(
-            !lower.contains("token_embd") && !lower.contains("tokenizer"),
-            "must not fall through to Llama tensor/tokenizer errors: {msg}"
-        );
-        let serving = validate_gguf_serving_bundle(
-            &GgufArchive::mmap_path(&p).unwrap(),
-            &p,
-            Some(dir.path()),
-        );
-        let serving_msg = match serving {
-            Ok(()) => panic!("expected spark2_5 serving bundle to refuse"),
-            Err(e) => format!("{e}"),
-        };
-        assert!(
-            serving_msg.to_ascii_lowercase().contains("spark2_5"),
-            "serving={serving_msg}"
+            !lower.contains("issues/142"),
+            "must not hit refuse-only path anymore: {msg}"
         );
     }
 

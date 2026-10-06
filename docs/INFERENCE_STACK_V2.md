@@ -47,7 +47,7 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 ## Phase E — Speculative decode, CPU attention, BitNet kernels
 
 1. **Speculative MVP → production metrics:** verify/accept lossless frame [2211.17192](https://arxiv.org/abs/2211.17192); prefer **prompt-lookup / n-gram** drafts over a second GGUF on CPU.
-2. **Lookahead** [2402.02057](https://arxiv.org/abs/2402.02057): **wontfix for now** after PLD — decision and reopen criteria in [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md).
+2. **Lookahead** [2402.02057](https://arxiv.org/abs/2402.02057): **wontfix for now** after PLD — decision and reopen criteria in [LOOKAHEAD_DECISION.md](LOOKAHEAD_DECISION.md). TinyLlama CPU PLD n-gram ablation 2026-10-06: ~1.04× decode (no default flip) — [research note](research/2026-10-06-inference-optima.md).
 3. **CPU attention:** SlimAttention-style 1D tiling + KV INT8 [2407.07304](https://arxiv.org/abs/2407.07304) — **shipped** (`llama::slim_attention` drift gate; `RBITNET_SLIM_ATTENTION=1` wires tiled path into Llama CPU/hybrid decode); FA 2D-tiling remains a poor CPU fit / deferred.
 4. **BitNet ternary:** inventory Rbitnet kernels vs I2_S/TL2 ([2502.11880](https://arxiv.org/abs/2502.11880), [2410.16144](https://arxiv.org/abs/2410.16144)); **reimplement** LUT/MAD patterns in Rust SIMD — no bitnet.cpp FFI ([NATIVE_FIRST.md](NATIVE_FIRST.md)).
 5. **BitNet b1.58 product contract:** recipes + null-loss criteria ([2402.17764](https://arxiv.org/abs/2402.17764), [2504.12285](https://arxiv.org/abs/2504.12285)); packed GPU kernels = later research.
@@ -61,6 +61,8 @@ This document splits the **long-term** items from [STATUS_AND_ROADMAP.md](STATUS
 | 3 | **PLD / n-gram speculative** in existing scheduler | `draft_accept` + TTFT/decode — `prompt_lookup_draft` + verify/accept; series `rbitnet_core_draft_accept` |
 | 4 | **KV Q8 then KIVI-style asymmetry** | Q8 compact pages + unit gate shipped; live RSS via `bench_kv_q8.sh`; **KIVI no-go** until [KIVI_DECISION.md](KIVI_DECISION.md) |
 | 5 | **BitNet matmul microbench** vs bitnet.cpp I2_S/TL2 patterns (same numerics, Rust SIMD/LUT) | One line in [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) via `scripts/bench_bitnet_kernels.sh` |
+| 6 | **Dense 27B hybrid recipe** on 16 GiB (measure-first; [#144](https://github.com/azerothl/Rbitnet/issues/144)) | HTTP 200 + RSS/VRAM log; no speculative default flip |
+| 7 | **IQ4_NL** mmap GEMV parity with other I-quants ([#144](https://github.com/azerothl/Rbitnet/issues/144) go) | Mixed GSQ-RCO pack loads without UnsupportedGgmlType |
 
 ## Explicitly deferred (serving epic)
 

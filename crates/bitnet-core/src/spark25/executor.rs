@@ -1,0 +1,112 @@
+//! [`crate::model::ModelExecutor`] for dense `general.architecture = spark2_5`.
+
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
+use crate::backend::{BackendKind, ComputeBackend};
+use crate::error::{BitNetError, Result};
+use crate::gguf::GgufArchive;
+use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
+use crate::sampling::SamplingOptions;
+use crate::timings::PhaseTimings;
+
+use super::runtime::Spark25Runtime;
+
+pub struct Spark25Executor {
+    pub backend_kind: BackendKind,
+    #[allow(dead_code)]
+    pub backend_impl: Box<dyn ComputeBackend>,
+    pub gguf: Arc<GgufArchive>,
+    pub tokenizer_path: PathBuf,
+    context_capacity: usize,
+    prompt_tokenizer: Arc<LoadedPromptTokenizer>,
+    runtime: Mutex<Option<Spark25Runtime>>,
+}
+
+impl Spark25Executor {
+    pub fn new(
+        backend_kind: BackendKind,
+        gguf: Arc<GgufArchive>,
+        backend: Box<dyn ComputeBackend>,
+        tokenizer_path: PathBuf,
+    ) -> Result<Self> {
+        if !matches!(backend_kind, BackendKind::Cpu | BackendKind::Hybrid) {
+            return Err(BitNetError::Inference(format!(
+                "Spark-X2.5 GPU backend `{}` is unsupported; use cpu or hybrid (CPU fallback)",
+                backend_kind.as_str()
+            )));
+        }
+        let runtime = Spark25Runtime::load(Arc::clone(&gguf), &tokenizer_path)?;
+        Ok(Self {
+            backend_kind,
+            backend_impl: backend,
+            gguf,
+            tokenizer_path,
+            context_capacity: runtime.context_capacity(),
+            prompt_tokenizer: Arc::clone(&runtime.tokenizer),
+            runtime: Mutex::new(Some(runtime)),
+        })
+    }
+}
+
+impl crate::model::ModelExecutor for Spark25Executor {
+    fn context_capacity(&self) -> Option<usize> {
+        Some(self.context_capacity)
+    }
+    fn family(&self) -> &'static str {
+        "spark2_5"
+    }
+
+    fn backend(&self) -> BackendKind {
+        self.backend_kind
+    }
+
+    fn backend_accelerated(&self) -> bool {
+        false
+    }
+
+    fn is_ready(&self) -> bool {
+        true
+    }
+
+    fn openai_model_id(&self, gguf: Option<&GgufArchive>) -> Option<String> {
+        gguf.map(|g| g.suggested_openai_model_id())
+            .or_else(|| Some("rbitnet-spark2_5".into()))
+    }
+
+    fn offload_metadata(&self) -> Option<String> {
+        (self.backend_kind == BackendKind::Hybrid)
+            .then(|| "hybrid selected; Spark-X2.5 currently uses CPU fallback".into())
+    }
+
+    fn count_prompt_tokens(&self, prompt: &str) -> Result<u32> {
+        let tok = &self.prompt_tokenizer;
+        Ok(tok.encode_ids(prompt, true)?.len() as u32)
+    }
+
+    fn generate_with_timings(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        if self.backend_kind == BackendKind::Hybrid {
+            tracing::info!(
+                "spark2_5 hybrid selected; using CPU runtime until Spark offload is wired"
+            );
+        }
+        let mut slot = self
+            .runtime
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("executor lock poisoned: {e}")))?;
+        if slot.is_none() {
+            *slot = Some(Spark25Runtime::load(
+                Arc::clone(&self.gguf),
+                &self.tokenizer_path,
+            )?);
+        }
+        slot.as_mut()
+            .unwrap()
+            .generate_with_timings(prompt, max_tokens, sampling)
+    }
+}

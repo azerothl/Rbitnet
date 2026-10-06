@@ -11,6 +11,7 @@ mod mixtral;
 pub(crate) mod prompt_tokenizer;
 mod qwen3;
 mod qwen35;
+mod spark25;
 mod registry;
 pub(crate) mod roadmap_unsupported;
 #[cfg(test)]

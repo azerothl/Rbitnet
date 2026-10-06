@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HTTP **501** `vision_not_supported` when OpenAI/Anthropic requests include `image_url` / `image` / `input_image` (issue #143 phase 0 — no silent text drop).
 - Explicit GGUF refuse for `spark2_5` / Spark-X2.5 (issue #142) so those files no longer fall through to the Llama loader.
+- CPU MVP loader for Spark-X2.5 (`spark2_5`): fused QKV, ISWA, head-wise sigmoid gate, GELU FFN; 1.7B Q4_K_M `/v1` smoke (issue #142).
+- `MmprojInfo` + `RBITNET_MMPROJ` / sibling `mmproj-*.gguf` discovery for inspect-only vision sidecars (issue #143; encoder still TODO).
+- Research note [`docs/research/2026-10-06-inference-optima.md`](docs/research/2026-10-06-inference-optima.md) + TinyLlama PLD ablation (issue #144).
 
 - GGML I-quant mmap GEMV + `tensor_to_f32` for **IQ2_XXS / IQ2_XS / IQ2_S / IQ3_XXS / IQ3_S / IQ1_S / IQ1_M / IQ4_XS** (issue #138; GSQ-RCO mixed packs). `inspect_gguf` prints type names and decode flags. **Q2_K** mmap GEMV so mixed GSQ-RCO rows that use type 10 actually decode.
 - [CHANGELOG.md](CHANGELOG.md) (this file), [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md), [docs/profiling/](docs/profiling/README.md), [docs/INFERENCE_STACK_V2.md](docs/INFERENCE_STACK_V2.md).
