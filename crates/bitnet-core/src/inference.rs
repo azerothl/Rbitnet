@@ -288,6 +288,78 @@ impl Engine {
         self.inner.gguf.is_some()
     }
 
+    /// True when the loaded executor has a native mmproj vision encoder.
+    pub fn supports_vision(&self) -> bool {
+        self.inner
+            .executor
+            .as_ref()
+            .is_some_and(|e| e.supports_vision())
+    }
+
+    /// Multimodal completion: encode one image and inject patches at `<image>`.
+    pub fn complete_with_vision(
+        &self,
+        prompt: &str,
+        image_bytes: &[u8],
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<InferenceOutput> {
+        sampling.validate_structured_output()?;
+        if self.inner.stub || self.inner.toy.is_some() {
+            return Err(BitNetError::NotImplemented(
+                "vision is not available in stub/toy mode",
+            ));
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        if !executor.supports_vision() {
+            return Err(BitNetError::NotImplemented(
+                "image inputs require a loaded mmproj vision encoder (set RBITNET_MMPROJ or place mmproj-*.gguf next to the model)",
+            ));
+        }
+        let (text, phases) =
+            executor.generate_with_vision(prompt, image_bytes, max_tokens, sampling)?;
+        Ok(InferenceOutput {
+            text,
+            stats: InferenceStats::from_phases(phases, false),
+        })
+    }
+
+    /// Multimodal completion from precomputed `[n_patches × n_embd]` embeddings.
+    ///
+    /// Useful when the mmproj encoder is run out-of-process / dropped before Llama
+    /// prefill to reduce peak RSS on CPU hosts.
+    pub fn complete_with_vision_patches(
+        &self,
+        prompt: &str,
+        patches: &[f32],
+        n_patches: usize,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<InferenceOutput> {
+        sampling.validate_structured_output()?;
+        if self.inner.stub || self.inner.toy.is_some() {
+            return Err(BitNetError::NotImplemented(
+                "vision is not available in stub/toy mode",
+            ));
+        }
+        let Some(executor) = self.inner.executor.as_deref() else {
+            return Err(BitNetError::ModelNotLoaded);
+        };
+        let (text, phases) = executor.generate_with_vision_patches(
+            prompt,
+            patches,
+            n_patches,
+            max_tokens,
+            sampling,
+        )?;
+        Ok(InferenceOutput {
+            text,
+            stats: InferenceStats::from_phases(phases, false),
+        })
+    }
+
     pub fn tensor_count(&self) -> Option<usize> {
         self.inner.gguf.as_ref().map(|g| g.tensor_count())
     }

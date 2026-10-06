@@ -84,25 +84,10 @@ pub async fn messages(
     if let Err(r) = crate::check_auth(&state, &headers) {
         return Ok(*r);
     }
-    if req
+    let has_image = req
         .messages
         .iter()
-        .any(|message| crate::json_content_contains_image(&message.content))
-    {
-        state
-            .metrics
-            .chat_errors_total
-            .fetch_add(1, Ordering::Relaxed);
-        return Ok((
-            StatusCode::NOT_IMPLEMENTED,
-            Json(json!({"type": "error", "error": {
-                "type": "not_implemented_error",
-                "code": crate::VISION_NOT_SUPPORTED_CODE,
-                "message": crate::VISION_NOT_SUPPORTED_MESSAGE
-            }})),
-        )
-            .into_response());
-    }
+        .any(|message| crate::json_content_contains_image(&message.content));
     let eng = match crate::available_engine(&state, None).await {
         Ok(engine) => engine,
         Err((code, message)) => return Ok((
@@ -112,6 +97,47 @@ pub async fn messages(
             ),
         )
             .into_response()),
+    };
+    let vision_image_bytes = if has_image {
+        if !eng.supports_vision() {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::NOT_IMPLEMENTED,
+                Json(json!({"type": "error", "error": {
+                    "type": "not_implemented_error",
+                    "code": crate::VISION_NOT_SUPPORTED_CODE,
+                    "message": crate::VISION_NOT_SUPPORTED_MESSAGE
+                }})),
+            )
+                .into_response());
+        }
+        match crate::extract_first_image_bytes(
+            &req.messages
+                .iter()
+                .map(|m| crate::ChatMessage {
+                    role: m.role.clone(),
+                    content: m.content.clone(),
+                })
+                .collect::<Vec<_>>(),
+        ) {
+            Ok(b) => Some(b),
+            Err(message) => {
+                state
+                    .metrics
+                    .chat_errors_total
+                    .fetch_add(1, Ordering::Relaxed);
+                return Ok((
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"type":"error","error":{"type":"invalid_request_error","message":message}})),
+                )
+                    .into_response());
+            }
+        }
+    } else {
+        None
     };
 
     let prompt = anthropic_messages_to_prompt(&req.messages);
@@ -174,6 +200,21 @@ pub async fn messages(
     let id = format!("msg_{}", uuid::Uuid::new_v4());
 
     if req.stream == Some(true) {
+        if vision_image_bytes.is_some() {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::NOT_IMPLEMENTED,
+                Json(json!({"type": "error", "error": {
+                    "type": "not_implemented_error",
+                    "code": "vision_stream_not_supported",
+                    "message": "streaming is not supported for vision requests yet; omit stream or set stream=false"
+                }})),
+            )
+                .into_response());
+        }
         return Ok(live_stream_messages(
             state,
             headers,
@@ -187,7 +228,11 @@ pub async fn messages(
         .await);
     }
 
-    let output = match eng.complete_detailed_with_options(&prompt, req.max_tokens, sampling) {
+    let output = match if let Some(image_bytes) = vision_image_bytes {
+        eng.complete_with_vision(&prompt, &image_bytes, req.max_tokens, sampling)
+    } else {
+        eng.complete_detailed_with_options(&prompt, req.max_tokens, sampling)
+    } {
         Ok(o) => o,
         Err(e) => {
             return Ok((
@@ -412,11 +457,19 @@ pub fn anthropic_messages_to_prompt(messages: &[AnthropicMessage]) -> String {
     for m in messages {
         let text = match &m.content {
             Value::String(s) => s.clone(),
-            Value::Array(arr) => arr
-                .iter()
-                .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
-                .collect::<Vec<_>>()
-                .join("\n"),
+            Value::Array(arr) => {
+                let mut parts = Vec::new();
+                for b in arr {
+                    if crate::json_content_contains_image(b) {
+                        parts.push(bitnet_core::mmproj::IMAGE_PLACEHOLDER.to_string());
+                        continue;
+                    }
+                    if let Some(t) = b.get("text").and_then(|t| t.as_str()) {
+                        parts.push(t.to_string());
+                    }
+                }
+                parts.join("\n")
+            }
             other => other.to_string(),
         };
         if !out.is_empty() {

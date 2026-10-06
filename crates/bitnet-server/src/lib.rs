@@ -997,12 +997,13 @@ impl StopSequence {
 }
 
 pub(crate) const VISION_NOT_SUPPORTED_CODE: &str = "vision_not_supported";
-pub(crate) const VISION_NOT_SUPPORTED_MESSAGE: &str = "image inputs are not implemented (no mmproj / vision encoder). See https://github.com/azerothl/Rbitnet/issues/143";
+pub(crate) const VISION_NOT_SUPPORTED_MESSAGE: &str = "image inputs require a loaded mmproj vision encoder (set RBITNET_MMPROJ or place mmproj-*.gguf next to the model). See https://github.com/azerothl/Rbitnet/issues/143";
 
 /// True when OpenAI/Anthropic-style content includes an image part.
 ///
 /// Text-only strings and `{type:text}` parts are ignored. Used to refuse vision
-/// requests with HTTP 501 instead of dropping `image_url` / `image` silently.
+/// requests with HTTP 501 when no mmproj encoder is loaded, instead of dropping
+/// `image_url` / `image` silently.
 pub fn json_content_contains_image(content: &serde_json::Value) -> bool {
     match content {
         serde_json::Value::Array(parts) => parts.iter().any(json_part_is_image),
@@ -1044,12 +1045,94 @@ fn vision_not_supported_openai_response() -> Response {
         .into_response()
 }
 
+/// Extract the first OpenAI/Anthropic image payload as raw bytes or a data-URL string.
+///
+/// Phase-1 supports a single inline data-URL / base64 image (no remote HTTP fetch).
+pub(crate) fn extract_first_image_bytes(messages: &[ChatMessage]) -> Result<Vec<u8>, String> {
+    let mut found = 0usize;
+    let mut bytes: Option<Vec<u8>> = None;
+    for message in messages {
+        collect_images_from_content(&message.content, &mut found, &mut bytes)?;
+    }
+    if found == 0 {
+        return Err("no image content found".into());
+    }
+    if found > 1 {
+        return Err("phase-1 vision supports a single image per request".into());
+    }
+    bytes.ok_or_else(|| "image payload missing".into())
+}
+
+fn collect_images_from_content(
+    content: &serde_json::Value,
+    found: &mut usize,
+    bytes: &mut Option<Vec<u8>>,
+) -> Result<(), String> {
+    match content {
+        serde_json::Value::Array(parts) => {
+            for p in parts {
+                collect_images_from_content(p, found, bytes)?;
+            }
+            Ok(())
+        }
+        serde_json::Value::Object(obj) => {
+            if !json_part_is_image(content) {
+                return Ok(());
+            }
+            *found += 1;
+            if *found > 1 {
+                return Ok(());
+            }
+            // OpenAI: {type:image_url, image_url:{url}} or image_url string
+            if let Some(url) = obj
+                .get("image_url")
+                .and_then(|v| v.get("url"))
+                .and_then(|v| v.as_str())
+                .or_else(|| obj.get("image_url").and_then(|v| v.as_str()))
+            {
+                let url = url.trim();
+                if url.starts_with("data:") {
+                    *bytes = Some(url.as_bytes().to_vec());
+                    return Ok(());
+                }
+                return Err(
+                    "remote image_url fetch is not supported; use a data:image/...;base64 URL"
+                        .into(),
+                );
+            }
+            // Anthropic: {type:image, source:{type:base64, media_type, data}}
+            if let Some(source) = obj.get("source").and_then(|v| v.as_object()) {
+                let media = source
+                    .get("media_type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("image/png");
+                let data = source
+                    .get("data")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| "anthropic image source.data missing".to_string())?;
+                let data_url = format!("data:{media};base64,{data}");
+                *bytes = Some(data_url.into_bytes());
+                return Ok(());
+            }
+            Err("unsupported image part shape".into())
+        }
+        _ => Ok(()),
+    }
+}
+
 fn message_content_to_string(content: &serde_json::Value) -> String {
     match content {
         serde_json::Value::String(s) => s.clone(),
         serde_json::Value::Array(parts) => {
             let mut out = String::new();
             for p in parts {
+                if json_part_is_image(p) {
+                    if !out.is_empty() {
+                        out.push(' ');
+                    }
+                    out.push_str(bitnet_core::mmproj::IMAGE_PLACEHOLDER);
+                    continue;
+                }
                 if let Some(t) = p.get("text").and_then(|v| v.as_str()) {
                     if !out.is_empty() {
                         out.push(' ');
@@ -1415,13 +1498,7 @@ async fn chat_completions(
         return Ok(*r);
     }
 
-    if chat_messages_contain_image(&req.messages) {
-        state
-            .metrics
-            .chat_errors_total
-            .fetch_add(1, Ordering::Relaxed);
-        return Ok(vision_not_supported_openai_response());
-    }
+    let has_image = chat_messages_contain_image(&req.messages);
 
     state
         .metrics
@@ -1502,6 +1579,31 @@ async fn chat_completions(
             )
                 .into_response());
         }
+    };
+    let vision_image_bytes = if has_image {
+        if !engine.supports_vision() {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok(vision_not_supported_openai_response());
+        }
+        match extract_first_image_bytes(&req.messages) {
+            Ok(b) => Some(b),
+            Err(message) => {
+                state
+                    .metrics
+                    .chat_errors_total
+                    .fetch_add(1, Ordering::Relaxed);
+                return Ok((
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"error":{"message":message,"type":"invalid_request_error"}})),
+                )
+                    .into_response());
+            }
+        }
+    } else {
+        None
     };
     let tokenizer_chat_template = engine.tokenizer_chat_template();
     let prompt = match try_build_prompt_from_messages_with_tokenizer_template(
@@ -1639,6 +1741,23 @@ async fn chat_completions(
     clear_inference_cancel();
 
     if req.stream == Some(true) {
+        if vision_image_bytes.is_some() {
+            state
+                .metrics
+                .chat_errors_total
+                .fetch_add(1, Ordering::Relaxed);
+            return Ok((
+                StatusCode::NOT_IMPLEMENTED,
+                Json(json!({
+                    "error": {
+                        "message": "streaming is not supported for vision requests yet; omit stream or set stream=false",
+                        "type": "not_implemented_error",
+                        "code": "vision_stream_not_supported"
+                    }
+                })),
+            )
+                .into_response());
+        }
         return Ok(live_stream_chat_completion(
             state,
             headers,
@@ -1665,6 +1784,7 @@ async fn chat_completions(
     let prompt_owned = prompt;
     let prompt_chars = prompt_chars as u64;
     let continuous_batching = engine.continuous_batching_enabled();
+    let vision = vision_image_bytes.is_some();
     tracing::info!(
         request_id = %request_id,
         model = %request_model,
@@ -1679,11 +1799,15 @@ async fn chat_completions(
         stop = req.stop.is_some(),
         prompt_chars = prompt_chars,
         continuous_batching = continuous_batching,
+        vision = vision,
         timeout_secs = timeout_dur.as_secs(),
         "inference start"
     );
     let mut join = tokio::task::spawn_blocking(move || {
         let _permit = permit;
+        if let Some(image_bytes) = vision_image_bytes {
+            return engine.complete_with_vision(&prompt_owned, &image_bytes, max_tokens, sampling);
+        }
         if continuous_batching {
             let req = InferenceRequest {
                 prompt: prompt_owned.clone(),
@@ -2228,5 +2352,15 @@ mod vision_refuse_tests {
                 }
             }
         ])));
+    }
+
+    #[test]
+    fn message_content_inserts_image_placeholder() {
+        let s = super::message_content_to_string(&json!([
+            {"type": "text", "text": "what color?"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,aaa"}}
+        ]));
+        assert!(s.contains(bitnet_core::mmproj::IMAGE_PLACEHOLDER));
+        assert!(s.contains("what color?"));
     }
 }
