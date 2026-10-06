@@ -1071,6 +1071,15 @@ impl CudaDeviceQuantMatrix {
         self.device.is_some()
     }
 
+    /// Snapshot of the shared device runtime counters backing this matrix.
+    ///
+    /// All matrices built from one model load share a single `CudaRuntime`,
+    /// so any resident matrix reports the same process for that load.
+    /// Returns `None` for CPU-only matrices without a device runtime.
+    pub fn runtime_metrics(&self) -> Option<CudaRuntimeMetrics> {
+        self.rt.as_ref().map(|rt| rt.metrics_snapshot())
+    }
+
     pub(crate) fn device_address(&self) -> Option<usize> {
         self.device.as_ref().map(|buffer| buffer.ptr)
     }
