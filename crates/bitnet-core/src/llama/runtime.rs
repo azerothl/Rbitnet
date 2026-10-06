@@ -217,6 +217,136 @@ impl LlamaRuntime {
             .map(|_| ())
     }
 
+    /// CPU multimodal generate: expand `<image>` placeholders to patch embeddings
+    /// and prefill a mixed token/embedding sequence.
+    ///
+    /// Phase-1 scope: host CPU path only (CUDA resident residency is bypassed).
+    pub fn generate_with_vision_patches(
+        &mut self,
+        prompt: &str,
+        patches: &[f32],
+        n_patches: usize,
+        max_tokens: u32,
+        sampling: SamplingOptions,
+    ) -> Result<(String, PhaseTimings)> {
+        sampling.validate_structured_output()?;
+        self.last_speculative_attempted = false;
+        if inference_cancelled() {
+            return Err(BitNetError::Inference("inference cancelled".into()));
+        }
+        let n_embd = self.model.cfg.n_embd;
+        if n_patches == 0 || patches.len() != n_patches.saturating_mul(n_embd) {
+            return Err(BitNetError::Inference(format!(
+                "vision patches len {} != n_patches ({n_patches}) * n_embd ({n_embd})",
+                patches.len()
+            )));
+        }
+
+        // Vision fusion is host-KV only for phase 1.
+        self.kv.clear();
+        kv_pool::record_pool_metrics();
+
+        let t_enc = Instant::now();
+        let items = crate::mmproj::expand_prompt_with_patches(
+            self.tokenizer.as_ref(),
+            prompt,
+            n_patches,
+            llama_encode_add_special_tokens(),
+        )?;
+        let encode_ms = t_enc.elapsed().as_millis() as u64;
+        crate::context_capacity::check_request(
+            items.len(),
+            max_tokens,
+            self.model.cfg.max_seq,
+        )?;
+
+        let t_pf = Instant::now();
+        let mut logits = Vec::new();
+        for (idx, item) in items.iter().enumerate() {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let logits_required = idx + 1 == items.len();
+            logits = match item {
+                crate::mmproj::PrefillItem::Token(tid) => self.model.forward_step(
+                    &mut self.kv,
+                    *tid,
+                    idx,
+                    self.backend.as_ref(),
+                    &mut self.scratch,
+                    logits_required,
+                )?,
+                crate::mmproj::PrefillItem::Patch(p) => {
+                    let row = &patches[*p * n_embd..(*p + 1) * n_embd];
+                    let mut x = self.scratch.take(n_embd);
+                    x.copy_from_slice(row);
+                    self.model.forward_from_embedding(
+                        &mut self.kv,
+                        x,
+                        idx,
+                        self.backend.as_ref(),
+                        &mut self.scratch,
+                        logits_required,
+                    )?
+                }
+            };
+        }
+        let prefill_ms = t_pf.elapsed().as_millis() as u64;
+        if logits.is_empty() {
+            return Err(BitNetError::Inference(
+                "vision prefill produced empty logits".into(),
+            ));
+        }
+
+        let eos_ids = self.tokenizer.eos_token_ids();
+        let t_dec = Instant::now();
+        let mut rng = seeded_rng(sampling.seed);
+        let mut gen: Vec<u32> = Vec::new();
+        let mut pos = items.len();
+        let mut finish_reason = crate::timings::GenerationFinishReason::Length;
+        // Temporarily detach CUDA residency so decode stays on the host KV
+        // written during vision prefill.
+        let mut resident = self.resident.take();
+        for step in 0..max_tokens {
+            if inference_cancelled() {
+                self.resident = resident.take();
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let next = sample_token(&logits, &sampling, &gen, &mut rng);
+            if eos_ids.contains(&next) {
+                finish_reason = crate::timings::GenerationFinishReason::Stop;
+                break;
+            }
+            gen.push(next);
+            if step + 1 < max_tokens {
+                logits = self.model.forward_with_backend_and_scratch(
+                    &mut self.kv,
+                    next,
+                    pos,
+                    self.backend.as_ref(),
+                    &mut self.scratch,
+                )?;
+            }
+            pos += 1;
+        }
+        self.resident = resident.take();
+        let decode_ms = t_dec.elapsed().as_millis() as u64;
+        let text = self
+            .tokenizer
+            .decode_ids(&gen, llama_decode_skip_special_tokens())?;
+        Ok((
+            text,
+            PhaseTimings {
+                encode_ms,
+                prefill_ms,
+                decode_ms,
+                prompt_tokens: items.len() as u32,
+                completion_tokens: gen.len() as u32,
+                finish_reason,
+            },
+        ))
+    }
+
     fn generate_inner(
         &mut self,
         prompt: &str,

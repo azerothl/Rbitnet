@@ -1558,12 +1558,40 @@ impl LlamaModel {
             return Err(BitNetError::Inference("token id out of range".into()));
         }
 
-        ggml_bridge::warn_if_ggml_env_without_bridge();
-
         let n_embd = cfg.n_embd;
         let mut x = scratch.take(n_embd);
         self.token_embd
             .embed_row(tok, n_embd, cfg.n_vocab, &mut x)?;
+        self.forward_from_embedding(kv, x, pos, backend, scratch, logits_required)
+    }
+
+    /// Transformer step starting from a precomputed embedding row (`[n_embd]`).
+    ///
+    /// Used for LLaVA-style vision patch injection during CPU prefill.
+    pub(crate) fn forward_from_embedding(
+        &self,
+        kv: &mut KvStorage,
+        mut x: Vec<f32>,
+        pos: usize,
+        backend: &dyn ComputeBackend,
+        scratch: &mut ScratchArena,
+        logits_required: bool,
+    ) -> Result<Vec<f32>> {
+        let cfg = &self.cfg;
+        if pos >= cfg.max_seq {
+            return Err(BitNetError::Inference(
+                "sequence position >= max_seq".into(),
+            ));
+        }
+        let n_embd = cfg.n_embd;
+        if x.len() != n_embd {
+            return Err(BitNetError::Inference(format!(
+                "embedding len {} != n_embd {n_embd}",
+                x.len()
+            )));
+        }
+
+        ggml_bridge::warn_if_ggml_env_without_bridge();
 
         let n_rep = cfg.n_head / cfg.n_kv;
 
