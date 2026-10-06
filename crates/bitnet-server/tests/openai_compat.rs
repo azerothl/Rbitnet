@@ -1244,6 +1244,88 @@ async fn unsupported_structured_requests_are_json_errors_even_for_sse_and_busy_a
 }
 
 #[tokio::test]
+async fn image_url_requests_refuse_before_inference() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+        ("RBITNET_STRUCTURED_OUTPUT", None),
+    ]);
+    let engine = Arc::new(Engine::from_env().unwrap());
+    let app = create_app_with_config(
+        Arc::clone(&engine),
+        Arc::new(ServerConfig {
+            max_concurrent: 0,
+            ..ServerConfig::test_defaults()
+        }),
+    );
+    let call = |body: serde_json::Value| {
+        Request::builder()
+            .method("POST")
+            .uri("/v1/chat/completions")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    };
+    for streaming in [false, true] {
+        let response = app
+            .clone()
+            .oneshot(call(serde_json::json!({
+                "model": "any",
+                "max_tokens": 8,
+                "stream": streaming,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "what is in the image?"},
+                        {"type": "image_url", "image_url": {"url": "data:image/png;base64,aaa"}}
+                    ]
+                }]
+            })))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), http::StatusCode::NOT_IMPLEMENTED);
+        assert!(response.headers()["content-type"]
+            .to_str()
+            .unwrap()
+            .starts_with("application/json"));
+        let body: serde_json::Value =
+            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(body["error"]["code"], "vision_not_supported");
+        assert!(body["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("issues/143"));
+    }
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(std::str::from_utf8(&bytes)
+        .unwrap()
+        .lines()
+        .any(|line| line == "rbitnet_inference_calls_total 0"));
+    let app = create_app_with_config(engine, Arc::new(ServerConfig::test_defaults()));
+    let text_only = app
+        .oneshot(call(serde_json::json!({
+            "model": "any",
+            "messages": [{"role":"user","content":[{"type":"text","text":"hello"}]}],
+            "max_tokens": 8
+        })))
+        .await
+        .unwrap();
+    assert!(text_only.status().is_success());
+}
+
+#[tokio::test]
 async fn structured_environment_refuses_all_six_routes_before_opening_sse() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[("RBITNET_MODEL", None), ("RBITNET_TOY", None), ("RBITNET_STUB", Some("1")), ("RBITNET_STRUCTURED_OUTPUT", None)]);

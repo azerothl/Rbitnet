@@ -10,7 +10,7 @@ Implementation: [`crates/bitnet-server/src/anthropic.rs`](../crates/bitnet-serve
 | ---------- | ------ | ----- |
 | `POST /v1/messages` non-stream | **Shipped** | Text-only assistant reply; `id` / `type` / `role` / `content[{type,text}]` / `model` / `stop_reason` / `usage` |
 | String message `content` | **Shipped** | Converted to `role: text` prompt lines |
-| Array content blocks with `text` fields | **Partial** | Text parts are joined; non-text block types are ignored |
+| Array content blocks with `text` fields | **Partial** | Text parts are joined; **image** blocks return HTTP 501 `vision_not_supported`; other non-text types (except tools, already 501) are ignored |
 | `max_tokens`, `temperature`, `model` | **Shipped** | Same engine path as OpenAI completions (stub/toy/GGUF) |
 | `stream: true` SSE | **Shipped** | Live deltas from `Engine::complete_streaming` (`message_*` / `content_block_*` events); timeout/cancel aligned with OpenAI SSE |
 | Auth (`RBITNET_API_KEY`) | **Shipped** | Same check as OpenAI routes (`Authorization: Bearer` or `x-api-key`) |
@@ -60,10 +60,11 @@ Use OpenAI for Akasha production paths. Point `ANTHROPIC_BASE_URL` at Rbitnet on
 
 ## Gaps (explicit, out of deferred #43 close)
 
-1. **Tools / tool_use / tool_result** — unimplemented. Tool generation requests and these incoming blocks return HTTP 501 before SSE rather than dropping the tool content. Empty tools or explicit `tool_choice: {"type":"none"}` allow ordinary text; other non-text content remains outside the text-only subset.
-2. **Multi-block fidelity** — image, thinking, and mixed blocks; system prompt field; `stop_sequences`; `top_p` / `metadata`.
-3. **Claude Code polish** — richer `anthropic-version` / error JSON edge cases beyond the shared auth path.
-4. **Docs / website** — optional deeper link from [INTEGRATIONS.md](INTEGRATIONS.md).
+1. **Tools / tool_use / tool_result** — unimplemented. Tool generation requests and these incoming blocks return HTTP 501 before SSE rather than dropping the tool content. Empty tools or explicit `tool_choice: {"type":"none"}` allow ordinary text.
+2. **Images / vision** — `image` / `image_url` blocks return HTTP 501 `vision_not_supported` before inference (no silent drop). Native mmproj: [#143](https://github.com/azerothl/Rbitnet/issues/143).
+3. **Multi-block fidelity** — thinking and mixed non-image blocks; system prompt field; `stop_sequences`; `top_p` / `metadata`.
+4. **Claude Code polish** — richer `anthropic-version` / error JSON edge cases beyond the shared auth path.
+5. **Docs / website** — optional deeper link from [INTEGRATIONS.md](INTEGRATIONS.md).
 
 ## Acceptance vs #43
 

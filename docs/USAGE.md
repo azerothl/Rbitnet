@@ -462,6 +462,8 @@ Rbitnet resolves a **normalized architecture key** from the environment and from
 | `qwen35`, `qwen35moe` | Native GDN + gated GQA graph on CPU/CUDA/hybrid. Quantized projections and tied logits use mmap or resident GPU weights; GDN state updates remain CPU. Qwen3.5-2B dense is validated on real hardware; MoE variants remain unvalidated. Matching tokenizer required; vision and MTP are out of scope. |
 | `gpt-oss`, `gptoss` | Native biased MoE graph on CPU/CUDA/hybrid, with MXFP4 experts, alternating windows, attention sinks and YaRN. Harmony turn ends stop generation; analysis is hidden until the final channel. Tested export: GPT-OSS-20B Q4_K_M. |
 | `deepseek2` | Native split MLA + routed/shared experts on CPU/CUDA/hybrid. Tested export: GLM-4.7-Flash Q4_K_M. Other DeepSeek tensor variants require separate validation; incompatible projections fail eagerly. |
+| `spark2_5` | **Refused** (not loaded as Llama). Native Spark-X2.5 loader: [#142](https://github.com/azerothl/Rbitnet/issues/142). |
+| `qwen2vl`, `gemma3` | **Refused** (Llama-incompatible). Vision HTTP: image parts → 501, [#143](https://github.com/azerothl/Rbitnet/issues/143). |
 
 Extend the match table in [`registry.rs`](../crates/bitnet-core/src/loaders/registry.rs) when adding a new family.
 
