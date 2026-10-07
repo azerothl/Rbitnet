@@ -166,7 +166,9 @@ struct MlaSnapshot {
     float *data=nullptr;
     ~MlaSnapshot() {if(data)cudaFree(data);}
 };
+void mla_block_destroy(void *block);
 struct ResidentMla {
+    void *block=nullptr;
     RbitnetMlaConfig cfg;
     std::vector<RbitnetMlaLayer> layers;
     RbitnetLlamaMatrix head;
@@ -184,6 +186,7 @@ struct ResidentMla {
     cudaStream_t stream=nullptr;
     ~ResidentMla() {
         if(stream)cudaStreamSynchronize(stream);
+        mla_block_destroy(block);
         for(auto p:executable)if(p)cudaGraphExecDestroy(p);
         for(auto p:graphs)if(p)cudaGraphDestroy(p);
         for(auto p:allocations)cudaFree(p);

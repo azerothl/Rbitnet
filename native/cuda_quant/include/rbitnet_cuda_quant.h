@@ -285,6 +285,11 @@ RBITNET_CUDA_API int rbitnet_cuda_mla_restore(void*,const void*,unsigned);
 RBITNET_CUDA_API int rbitnet_cuda_mla_hidden_check(void*,float*);
 RBITNET_CUDA_API int rbitnet_cuda_mla_router_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,float,unsigned*,float*);
 RBITNET_CUDA_API int rbitnet_cuda_mla_attention_check(const float*,const float*,unsigned,unsigned,unsigned,unsigned,float,unsigned,unsigned,float*);
+/* Opt-in fixed-bank MLA block prefill (1..32 tokens). Segmented admission and
+ * CPU-routed fallback keep the serial prepare/finish path. */
+RBITNET_CUDA_API int rbitnet_cuda_mla_configure_prefill(void*,unsigned capacity);
+RBITNET_CUDA_API unsigned rbitnet_cuda_mla_prefill_capacity(void*);
+RBITNET_CUDA_API int rbitnet_cuda_mla_full_prefill(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
 
 /* Diagnostic completion guard; mode1 returns after queueing device work and
  * mode2 abandons a capture. Cleanup waits without inducing a hardware fault. */

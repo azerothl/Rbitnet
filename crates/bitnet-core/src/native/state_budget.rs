@@ -121,6 +121,21 @@ pub(super) fn reserve(a: &GgufArchive, c: &Config) -> Result<usize> {
         } else {
             0
         };
+        let block=if std::env::var("RBITNET_CUDA_MLA_PREFILL").as_deref()==Ok("1") {
+            let count=std::env::var("RBITNET_CUDA_MLA_PREFILL_TOKENS").ok()
+                .and_then(|s|s.parse::<usize>().ok()).unwrap_or(16).clamp(1,32);
+            let mut ffn=0usize;
+            for il in c.dense_layers..c.layers {
+                let tensor=a.tensor_by_name(&format!("blk.{il}.ffn_gate_exps.weight"))
+                    .ok_or_else(||BitNetError::Inference("missing MLA block expert geometry".into()))?;
+                let width=tensor.dimensions.get(1).copied().ok_or_else(overflow)?;
+                ffn=ffn.max(usize::try_from(width).map_err(|_|overflow())?);
+            }
+            let grouped=sum(&[product(&[c.used,sum(&[product(&[2,ffn])?,c.embd,6])?])?,1])?;
+            product(&[count,sum(&[product(&[4,c.embd])?,product(&[2,qrank])?,product(&[c.heads,c.head])?,
+                width,product(&[c.heads,width])?,product(&[c.heads,c.kv_rank])?,product(&[c.heads,c.value])?,
+                product(&[2,shared])?,c.experts,product(&[2,c.used])?,c.vocab,product(&[2,blocks])?,2,split,grouped])?])?
+        }else{0};
         sum(&[
             product(&[c.layers, c.max_seq, width])?,
             norms,
@@ -141,6 +156,7 @@ pub(super) fn reserve(a: &GgufArchive, c: &Config) -> Result<usize> {
             3,
             product(&[c.max_seq, c.rotary])?,
             split,
+            block,
         ])?
     } else {
         0
