@@ -133,9 +133,10 @@ impl Spark25Weights {
         let n_kv = cfg.n_kv * cfg.head_dim;
         let qkv_out = n_q + 2 * n_kv;
 
+        // Token embedding stays host-mmap: row gather has no CudaQuant path yet.
         let tok_embd_w = load_matrix(
             &archive,
-            rt_ref,
+            None,
             &tok_embd,
             cfg.n_embd,
             cfg.n_vocab,

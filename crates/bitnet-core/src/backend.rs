@@ -5,7 +5,7 @@ use libloading::Library;
 use std::ffi::c_void;
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 pub(crate) mod async_upload;
 mod device_memory;
 pub(crate) mod expert_arena;
@@ -233,8 +233,14 @@ impl std::fmt::Debug for CudaRuntime {
 
 impl CudaRuntime {
     /// Try loading CUDA runtime and cuBLAS from the usual system library names for this platform.
+    ///
+    /// Returns a process-wide shared `Arc` so metrics and device allocations stay coherent across
+    /// model loads and probes (`try_load` must not mint a fresh counter set each call).
     pub fn try_load() -> Option<std::sync::Arc<Self>> {
-        Self::load().map(std::sync::Arc::new)
+        static INSTANCE: OnceLock<Option<Arc<CudaRuntime>>> = OnceLock::new();
+        INSTANCE
+            .get_or_init(|| Self::load().map(Arc::new))
+            .clone()
     }
 
     pub fn roundtrip_host_f32(&self, src: &[f32]) -> Option<Vec<f32>> {

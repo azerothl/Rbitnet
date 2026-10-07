@@ -13,7 +13,7 @@ use std::sync::Arc;
 use bitnet_core::backend::BackendKind;
 use bitnet_core::gguf::GgufArchive;
 use bitnet_core::loaders::dispatch_gguf_executor_for_load;
-use bitnet_core::model::ModelExecutor;
+use bitnet_core::model::ModelExecutor as _;
 use bitnet_core::sampling::SamplingOptions;
 
 #[test]
