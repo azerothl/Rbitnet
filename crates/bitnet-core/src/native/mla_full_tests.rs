@@ -884,3 +884,273 @@ fn quantized_full_mla_matches_f64_fixed_dynamic_cpu_fallback_graphs_reset_and_pr
         eprintln!("MLA F64 oracle passed format {ty}: fixed/dynamic/CPU fallback, eager/graphs/split, reset and prefix bounds");
     }
 }
+
+type ConfigureBlock = unsafe extern "C" fn(*mut c_void, u32) -> i32;
+type BlockCapacity = unsafe extern "C" fn(*mut c_void) -> u32;
+type BlockPrefill = unsafe extern "C" fn(
+    *mut c_void,
+    *const f32,
+    u32,
+    u32,
+    u32,
+    *mut f32,
+    *mut u32,
+) -> i32;
+
+unsafe fn serial_last_logits(
+    ptr: *mut c_void,
+    begin: Begin,
+    prepare: Prepare,
+    finish: Finish,
+    end: End,
+    pos: u32,
+    embedding: &[f32],
+) -> Vec<f32> {
+    assert_eq!(begin(ptr, embedding.as_ptr(), pos), 0);
+    for il in 0..2 {
+        let mut ids = vec![0u32; USED];
+        let mut p = vec![0.0f32; USED];
+        assert_eq!(prepare(ptr, il, ids.as_mut_ptr(), p.as_mut_ptr()), 0);
+        assert_eq!(finish(ptr, il, std::ptr::null(), std::ptr::null()), 0);
+    }
+    let mut logits = vec![0.0; 257];
+    assert_eq!(end(ptr, 1, logits.as_mut_ptr(), std::ptr::null_mut()), 0);
+    logits
+}
+
+#[test]
+fn mla_block_prefill_matches_serial_logits_on_fixed_banks() {
+    if !enabled() {
+        return;
+    }
+    let rt = CudaRuntime::try_load().unwrap();
+    let lib = crate::ggml::load_cuda_quant_library().unwrap();
+    let create = unsafe {
+        *lib.get::<Create>(b"rbitnet_cuda_mla_full_create\0")
+            .unwrap()
+    };
+    let destroy = unsafe {
+        *lib.get::<Destroy>(b"rbitnet_cuda_mla_full_destroy\0")
+            .unwrap()
+    };
+    let begin = unsafe { *lib.get::<Begin>(b"rbitnet_cuda_mla_full_begin\0").unwrap() };
+    let prepare = unsafe {
+        *lib.get::<Prepare>(b"rbitnet_cuda_mla_full_prepare\0")
+            .unwrap()
+    };
+    let finish = unsafe {
+        *lib.get::<Finish>(b"rbitnet_cuda_mla_full_finish\0")
+            .unwrap()
+    };
+    let end = unsafe { *lib.get::<End>(b"rbitnet_cuda_mla_full_end\0").unwrap() };
+    let configure = unsafe {
+        *lib.get::<ConfigureBlock>(b"rbitnet_cuda_mla_configure_prefill\0")
+            .unwrap()
+    };
+    let capacity_fn = unsafe {
+        *lib.get::<BlockCapacity>(b"rbitnet_cuda_mla_prefill_capacity\0")
+            .unwrap()
+    };
+    let prefill = unsafe {
+        *lib.get::<BlockPrefill>(b"rbitnet_cuda_mla_full_prefill\0")
+            .unwrap()
+    };
+    let moe_create = unsafe { *lib.get::<MoeCreate>(b"rbitnet_cuda_moe_create\0").unwrap() };
+    let moe_destroy = unsafe { *lib.get::<Destroy>(b"rbitnet_cuda_moe_destroy\0").unwrap() };
+    let norm = vec![1.0; N];
+    let kvnorm = vec![1.0; RANK];
+    let bias = vec![0.25, -0.4, 0.1, 0.35];
+    let phases: Vec<_> = (0..64)
+        .flat_map(|pos| {
+            (0..ROT / 2).flat_map(move |i| {
+                let (s, c) = (pos as f32 * 10000f32.powf(-2.0 * i as f32 / ROT as f32)).sin_cos();
+                [s, c]
+            })
+        })
+        .collect();
+    let ty = 0u32;
+    let mut owned = Vec::new();
+    let mut descriptors = Vec::new();
+    let shapes = [
+        (N, N),
+        (N, HEADS * DIM),
+        (N, RANK + ROT),
+        (N, HEADS * RANK),
+        (RANK, HEADS * N),
+        (HEADS * N, N),
+        (N, EXP),
+        (N, N),
+        (N, N),
+        (N, N),
+        (N, EXP * N),
+        (N, EXP * N),
+        (N, EXP * N),
+        (N, 257),
+    ];
+    for (i, (cols, rows)) in shapes.into_iter().enumerate() {
+        let t = if i == 6 { 0 } else { ty };
+        let p = payload(t, cols, rows, i);
+        let m = CudaDeviceQuantMatrix::from_payload(Some(&rt), t, p, rows, cols).unwrap();
+        descriptors.push(Matrix::device(&m).unwrap());
+        owned.push(m);
+    }
+    let mc = MoeConfig {
+        embd: N as u32,
+        ffn: N as u32,
+        experts: EXP as u32,
+        used: USED as u32,
+        oai: 0,
+    };
+    let banks = [descriptors[10], descriptors[11], descriptors[12]];
+    let moe = Handle {
+        ptr: unsafe {
+            moe_create(
+                &mc,
+                &banks[0],
+                &banks[1],
+                &banks[2],
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        },
+        destroy: moe_destroy,
+    };
+    assert!(!moe.ptr.is_null());
+    let layers: Vec<_> = (0..2)
+        .map(|il| Layer {
+            qa: descriptors[0],
+            qb: descriptors[1],
+            kva: descriptors[2],
+            kb: descriptors[3],
+            vb: descriptors[4],
+            out: descriptors[5],
+            router: descriptors[6],
+            shared_gate: descriptors[7],
+            shared_up: descriptors[8],
+            shared_down: descriptors[9],
+            attn_norm: norm.as_ptr(),
+            qa_norm: norm.as_ptr(),
+            kv_norm: kvnorm.as_ptr(),
+            ffn_norm: norm.as_ptr(),
+            selection_bias: bias.as_ptr(),
+            moe: if il == 0 {
+                std::ptr::null_mut()
+            } else {
+                moe.ptr
+            },
+        })
+        .collect();
+    for (graphs, split) in [(0, 0), (1, 1)] {
+        for block_count in [4usize, 16] {
+            let cfg = NativeConfig {
+                embd: N as u32,
+                vocab: 257,
+                layers: 2,
+                heads: HEADS as u32,
+                head: DIM as u32,
+                value: N as u32,
+                rotary: ROT as u32,
+                rank: RANK as u32,
+                capacity: 64,
+                experts: EXP as u32,
+                used: USED as u32,
+                groups: 2,
+                groups_used: 1,
+                sigmoid: 1,
+                weight_norm: 1,
+                ordered: crate::ggml::f32_accumulator_lanes().unwrap() as u32,
+                graphs,
+                split,
+                dense: 1,
+                epsilon: 1e-5,
+                rope_magnitude: 1.13,
+                weight_scale: 0.7,
+            };
+            let serial = Handle {
+                ptr: unsafe {
+                    create(
+                        &cfg,
+                        layers.as_ptr(),
+                        &descriptors[13],
+                        norm.as_ptr(),
+                        phases.as_ptr(),
+                    )
+                },
+                destroy,
+            };
+            assert!(!serial.ptr.is_null());
+            let block = Handle {
+                ptr: unsafe {
+                    create(
+                        &cfg,
+                        layers.as_ptr(),
+                        &descriptors[13],
+                        norm.as_ptr(),
+                        phases.as_ptr(),
+                    )
+                },
+                destroy,
+            };
+            assert!(!block.ptr.is_null());
+            assert_eq!(unsafe { configure(block.ptr, block_count as u32) }, 0);
+            assert_eq!(unsafe { capacity_fn(block.ptr) } as usize, block_count);
+            let embedding = |pos: usize| {
+                (0..N)
+                    .map(|i| ((i + pos * 3) as f32 * 0.041).cos() * 0.6)
+                    .collect::<Vec<_>>()
+            };
+            let mut pos = 0usize;
+            while pos < 24 {
+                let count = block_count.min(24 - pos);
+                let mut batch = Vec::new();
+                for p in pos..pos + count {
+                    batch.extend(embedding(p));
+                }
+                let mut block_logits = vec![0.0; 257];
+                assert_eq!(
+                    unsafe {
+                        prefill(
+                            block.ptr,
+                            batch.as_ptr(),
+                            pos as u32,
+                            count as u32,
+                            1,
+                            block_logits.as_mut_ptr(),
+                            std::ptr::null_mut(),
+                        )
+                    },
+                    0
+                );
+                for t in pos..pos + count {
+                    let emb = embedding(t);
+                    let serial_logits = unsafe {
+                        serial_last_logits(
+                            serial.ptr,
+                            begin,
+                            prepare,
+                            finish,
+                            end,
+                            t as u32,
+                            &emb,
+                        )
+                    };
+                    if t + 1 == pos + count {
+                        for (a, b) in block_logits.iter().zip(&serial_logits) {
+                            assert!(
+                                (a - b).abs() < 5e-4,
+                                "pos={pos} count={count} graphs={graphs} split={split} delta={}",
+                                (a - b).abs()
+                            );
+                        }
+                    }
+                }
+                pos += count;
+            }
+            drop(block);
+            drop(serial);
+        }
+    }
+    drop(moe);
+    drop(owned);
+}
