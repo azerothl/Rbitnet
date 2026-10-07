@@ -74,7 +74,7 @@ CUDA and hybrid have measured native GGUF paths; other backends retain the limit
 | GPT-OSS (`gpt-oss`, `gptoss`) | **Native CPU/CUDA/hybrid** | GPT-OSS-20B tested; biased attention, sinks, sliding window, YaRN, MXFP4 MoE and Harmony turn boundaries. |
 | Split MLA + MoE (`deepseek2`) | **Native CPU/CUDA/hybrid** | GLM-4.7-Flash tested. Requires `attn_q_a`, `attn_q_b`, `attn_kv_a_mqa`, separate `attn_k_b` / `attn_v_b` tensors; other DeepSeek layouts fail eager validation. |
 | Spark-X2.5 (`spark2_5`) | **CPU MVP** | Dense fused-QKV + ISWA + head gate + GELU. Smoke 1.7B Q4_K_M `/v1` 2026-10-06. CUDA/1M ctx follow-up: [#142](https://github.com/azerothl/Rbitnet/issues/142). |
-| Vision / `mmproj` / `image_url` | **Refused at HTTP** | Image parts → HTTP **501** `vision_not_supported`. Sidecar mmproj can be mmap/inspected (`RBITNET_MMPROJ` / `MmprojInfo`); encoder not implemented. [#143](https://github.com/azerothl/Rbitnet/issues/143). |
+| Vision / `mmproj` / `image_url` | **LLaVA-class opt-in** | Without a loaded mmproj, image parts → HTTP **501** `vision_not_supported`. With `RBITNET_MMPROJ` (or sibling `mmproj-*.gguf`), LLaVA MLP encode + Llama patch inject is supported; remote `http(s)` image URLs are not fetched. Smoke: [2026-10-08-llava-vision-smoke](benchmarks/2026-10-08-llava-vision-smoke/README.md). Qwen-VL / Gemma 3 / other projectors remain out of scope. [#143](https://github.com/azerothl/Rbitnet/issues/143). |
 | Roadmap GLM tag (`glm4moe`) | **Llama-shaped only** | Separate architecture from GLM-4.7-Flash; incompatible tensors still fail at startup. |
 
 When a roadmap slug’s tensors match the Llama loader, inference is real while [`ModelExecutor::family`](../crates/bitnet-core/src/model/executor.rs) still reports the roadmap slug.
