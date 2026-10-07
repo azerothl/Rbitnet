@@ -4,7 +4,7 @@
 //! sequences, but each seq still ran an independent matvec. This module provides a real
 //! weight-stationary batch matvec so N activation rows share one pass over `W`.
 //!
-//! Opt-in scheduler wiring: `RBITNET_FUSED_MULTI_SEQ=1` (CPU only; GPU fused is #22).
+//! Opt-in scheduler wiring: `RBITNET_FUSED_MULTI_SEQ=1` (CUDA Llama uses Native batch decode when resident).
 
 /// True when `RBITNET_FUSED_MULTI_SEQ` is `1` / `true` / `yes`.
 pub fn fused_multi_seq_enabled() -> bool {

@@ -16,7 +16,7 @@
 
 1. **Scheduler** — with `RBITNET_CONTINUOUS_BATCHING=1` and `RBITNET_FUSED_MULTI_SEQ=1`, decode waves call `generate_decode_batch` once (`scheduler.rs` / `decode_wave_fused`).
 2. **Kernel** — `bitnet_core::fused_batch::dense_matvec_multi_seq` is a real weight-stationary batch matvec (N activation rows share one pass over `W`).
-3. **Executors** — default `generate_decode_batch` falls back to sequential `generate_with_timings` per item (`model/executor.rs`). Llama / BitNet / Qwen do **not** yet run a shared multi-seq forward.
+3. **Executors** — with CUDA resident Llama + `RBITNET_FUSED_MULTI_SEQ=1`, `LlamaExecutor::generate_decode_batch` runs Native `llama_batch` shared decode waves (`scheduler_fused.rs`). CPU-only / BitNet / Qwen still fall back to sequential `generate_with_timings`.
 
 ## Why e2e concurrency ≥4 does not speed up (stall)
 
@@ -47,7 +47,7 @@ Expected shape (illustrative; host-dependent): fused kernel faster than N indepe
 |------|-------------|-------------|
 | Stall-free schedule only | `RBITNET_CONTINUOUS_BATCHING=1` | Decode-first waves; no fused claim |
 | Exercise fused hook in CI/tests | `+ RBITNET_FUSED_MULTI_SEQ=1` | Batch API called; still sequential executors |
-| Real multi-seq throughput | Wait for Llama batched forward **or** #22 GPU | Not shipped |
+| Real multi-seq throughput (CUDA decode) | `RBITNET_FUSED_MULTI_SEQ=1` + Sarathi batching | Llama decode rows share GPU projections; prefill still serial; see #96 |
 
 ## Docs sync
 
