@@ -410,6 +410,28 @@ mod tests {
     }
 
     #[test]
+    fn dispatch_spark2_5_cuda_does_not_refuse_gpu_backend() {
+        let _g = env_test_lock();
+        std::env::remove_var("RBITNET_TOKENIZER");
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("spark.gguf");
+        write_minimal_gguf_with_arch(&p, "spark2_5").unwrap();
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        let err = match dispatch_gguf_executor(BackendKind::Cuda, g, &p) {
+            Ok(_) => panic!("expected spark2_5 CUDA dispatch to fail without full model"),
+            Err(e) => e,
+        };
+        let msg = format!("{err}");
+        let lower = msg.to_ascii_lowercase();
+        assert!(
+            !lower.contains("gpu backend") && !lower.contains("unsupported"),
+            "must not refuse CUDA backend at dispatch: {msg}"
+        );
+    }
+
+    #[test]
     fn dispatch_spark2_5_routes_to_spark_builder_not_llama() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");

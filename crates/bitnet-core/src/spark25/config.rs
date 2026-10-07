@@ -258,7 +258,6 @@ impl Spark25Config {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
@@ -308,7 +307,7 @@ mod tests {
         write_u64(w, 0)
     }
 
-    fn write_minimal_spark(path: &Path) -> std::io::Result<()> {
+    pub(crate) fn write_minimal_spark(path: &Path) -> std::io::Result<()> {
         let mut f = File::create(path)?;
         let kvs = 16u64;
         let tensors = 5u64;
@@ -347,6 +346,23 @@ mod tests {
         f.write_all(&vec![0u8; pad])?;
         Ok(())
     }
+
+}
+
+#[cfg(test)]
+pub(crate) mod test_fixtures {
+    use std::path::Path;
+
+    pub fn write_minimal_spark(path: &Path) -> std::io::Result<()> {
+        super::tests::write_minimal_spark(path)
+    }
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::test_fixtures::write_minimal_spark;
+    use super::Spark25Config;
+    use crate::gguf::GgufArchive;
 
     #[test]
     fn spark25_config_reads_iswa_and_dual_rope() {
