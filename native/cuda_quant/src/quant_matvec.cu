@@ -458,6 +458,7 @@ extern "C" int rbitnet_cuda_split_attention_check(const float *k,const float *v,
 #include "grouped_moe.cuh"
 #include "gpt_full.cuh"
 #include "gpt_prefill.cuh"
+#include "gpt_segmented_prefill.cuh"
 #include "mla_full.cuh"
 #include "mla_prefill.cuh"
 #include "native_completion_check.cuh"

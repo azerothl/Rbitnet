@@ -903,6 +903,78 @@ impl Runtime {
         self.gpu_full = Some(full);
         result
     }
+    fn resident_gpt_segmented_block_prefill(
+        &mut self,
+        full: &mut gpu_full::GpuFull,
+        embeddings: &[f32],
+        pos: usize,
+        count: usize,
+        output_logits: bool,
+        gpu_greedy: bool,
+    ) -> Result<(Vec<f32>, Option<u32>)> {
+        let used = self.cfg.used;
+        full.segmented_block_begin(embeddings, pos, count)?;
+        for il in 0..self.cfg.layers {
+            if inference_cancelled() {
+                return Err(BitNetError::Inference("inference cancelled".into()));
+            }
+            let (all_ids, all_probs) = full.segmented_block_prepare(il)?;
+            for t in 0..count {
+                if inference_cancelled() {
+                    return Err(BitNetError::Inference("inference cancelled".into()));
+                }
+                let off = t * used;
+                let ids = all_ids[off..off + used].to_vec();
+                let weights = all_probs[off..off + used].to_vec();
+                let force_cpu = self.choose_moe_cpu(il, &ids)?;
+                let start = Instant::now();
+                let leased = if force_cpu {
+                    None
+                } else if let Some(moe) = &self.gpu_moe[il] {
+                    moe.lease_selected(&ids)?
+                } else {
+                    None
+                };
+                let resident = leased.is_some();
+                if let Some(leased) = leased {
+                    let upload = leased.upload();
+                    full.segmented_block_finish(il, t, leased.pointers(), None)?;
+                    drop(leased);
+                    self.moe_cost[il].observe_gpu(
+                        start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        upload.bytes,
+                        upload.ns,
+                    );
+                } else {
+                    let cpu_start = Instant::now();
+                    let input = full.segmented_block_ffn_input(t)?;
+                    let routed = if self.moe_execution == Execution::Cache {
+                        self.routed_ffn(il, &input, &ids, &weights)?
+                    } else {
+                        self.routed_ffn_cpu(il, &input, &ids, &weights)?
+                    };
+                    full.segmented_block_finish(il, t, None, Some(&routed))?;
+                    if self.moe_execution != Execution::Cache {
+                        self.moe_cost[il].observe_cpu(
+                            cpu_start.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+                        );
+                    }
+                }
+                let elapsed = start.elapsed().as_nanos().min(u64::MAX as u128) as u64;
+                crate::perf::record_native_moe(resident, 1, elapsed);
+                if let Some(metrics) = &self.weights.moe_metrics {
+                    metrics.ffn(il, resident, Some(elapsed));
+                    if resident && self.gpu_moe[il].as_ref().is_some_and(GpuMoe::is_fused) {
+                        metrics.fused_ffn(il);
+                    }
+                }
+            }
+        }
+        let (logits, next_token) =
+            full.segmented_block_end(output_logits, gpu_greedy && output_logits)?;
+        full.record_prefill_block(count, output_logits, gpu_greedy);
+        Ok((logits, next_token))
+    }
     fn resident_mla_forward(
         &mut self,
         x: &[f32],
@@ -1264,12 +1336,15 @@ impl Runtime {
         };
         let gpt_block = self.gpu_full.as_ref().map_or(0, |f| f.prefill_capacity());
         let mla_block = self.gpu_mla.as_ref().map_or(0, |f| f.prefill_capacity());
+        let segmented_block = self
+            .gpu_full
+            .as_ref()
+            .is_some_and(|f| f.is_segmented() && f.prefill_capacity() > 0);
         if gpt_block > 0 || mla_block > 0 {
             let mut gpt = self.gpu_full.take();
             let mut mla = self.gpu_mla.take();
             let block_capacity = gpt_block.max(mla_block);
             let result = (|| {
-                let tensor = self.weights.tensor("token_embd.weight")?;
                 let mut pos = reused;
                 while pos < ids.len() {
                     if inference_cancelled() {
@@ -1277,41 +1352,60 @@ impl Runtime {
                     }
                     let count = block_capacity.min(ids.len() - pos);
                     let mut embeddings = vec![0.0; count * self.cfg.embd];
-                    for (&token, row) in ids[pos..pos + count]
-                        .iter()
-                        .zip(embeddings.chunks_exact_mut(self.cfg.embd))
                     {
-                        if token as usize >= self.cfg.vocab {
-                            return Err(BitNetError::Inference("block token out of bounds".into()));
+                        let tensor = self.weights.tensor("token_embd.weight")?;
+                        for (&token, row) in ids[pos..pos + count]
+                            .iter()
+                            .zip(embeddings.chunks_exact_mut(self.cfg.embd))
+                        {
+                            if token as usize >= self.cfg.vocab {
+                                return Err(BitNetError::Inference("block token out of bounds".into()));
+                            }
+                            crate::ggml::embedding_row_mmap(
+                                &self.weights.archive,
+                                tensor,
+                                token as usize,
+                                self.cfg.embd,
+                                self.cfg.vocab,
+                                row,
+                            )?;
                         }
-                        crate::ggml::embedding_row_mmap(
-                            &self.weights.archive,
-                            tensor,
-                            token as usize,
-                            self.cfg.embd,
-                            self.cfg.vocab,
-                            row,
-                        )?;
                     }
-                    (logits, next_token) = if let Some(full) = gpt.as_mut() {
-                        full.prefill(
+                    if segmented_block {
+                        let full = gpt.as_mut().ok_or_else(|| {
+                            BitNetError::Inference("segmented block prefill unavailable".into())
+                        })?;
+                        (logits, next_token) = self.resident_gpt_segmented_block_prefill(
+                            full,
                             &embeddings,
                             pos,
                             count,
                             pos + count == ids.len(),
                             gpu_greedy,
-                        )?
-                    } else if let Some(full) = mla.as_mut() {
-                        full.prefill(
-                            &embeddings,
-                            pos,
-                            count,
-                            pos + count == ids.len(),
-                            gpu_greedy,
-                        )?
+                        )?;
                     } else {
-                        return Err(BitNetError::Inference("block prefill unavailable".into()));
-                    };
+                        (logits, next_token) = if let Some(full) = gpt.as_mut() {
+                            full.prefill(
+                                &embeddings,
+                                pos,
+                                count,
+                                pos + count == ids.len(),
+                                gpu_greedy,
+                            )?
+                        } else if let Some(full) = mla.as_mut() {
+                            full.prefill(
+                                &embeddings,
+                                pos,
+                                count,
+                                pos + count == ids.len(),
+                                gpu_greedy,
+                            )?
+                        } else {
+                            return Err(BitNetError::Inference(
+                                "block prefill unavailable".into(),
+                            ));
+                        };
+                    }
                     pos += count;
                 }
                 Ok(())

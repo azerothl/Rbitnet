@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Fixed-bank GPT prefill with exact ordered projections and grouped
 // routed FFNs. Include after the GPT token graph, with its block-owner hook.
-// Segmented/cache misses remain a separate, not yet implemented block path.
+// Segmented/cache block prefill lives in gpt_segmented_prefill.cuh.
 namespace {
 __global__ void gpt_block_bias(float *values,const float *bias,unsigned width,unsigned count) {
     const unsigned i=blockIdx.x*blockDim.x+threadIdx.x;
@@ -143,7 +143,7 @@ extern "C" {
 // Configure once before inference. An explicit refusal retains the serial graph.
 int rbitnet_cuda_gpt_configure_prefill(void *context,unsigned capacity,unsigned tile) {
     auto *r=static_cast<ResidentGpt*>(context);
-    if(!r || r->filled || r->token_started || r->block || !capacity || capacity>32 || tile>1)return 1;
+    if(!r || r->segmented || r->filled || r->token_started || r->block || !capacity || capacity>32 || tile>1)return 1;
     auto *b=new(std::nothrow) GptBlockWorkspace;if(!b)return 2;
     if(!b->init(r,capacity,tile)) {delete b;return 2;}
     r->block=b;return 0;

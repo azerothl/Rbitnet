@@ -304,6 +304,17 @@ RBITNET_CUDA_API int rbitnet_cuda_gpt_configure_prefill(void*,unsigned capacity,
 RBITNET_CUDA_API unsigned rbitnet_cuda_gpt_prefill_capacity(void*);
 RBITNET_CUDA_API int rbitnet_cuda_gpt_full_prefill(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
 RBITNET_CUDA_API int rbitnet_cuda_gpt_full_verify(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
+/* Segmented/cache GPT block prefill: batched attention/router, host-admitted FFN.
+ * Capacity 1..32; configure once before inference. tile is reserved (0 only). */
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_configure_prefill(void*,unsigned capacity,unsigned tile);
+RBITNET_CUDA_API unsigned rbitnet_cuda_gpt_segmented_prefill_capacity(void*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_block_begin(void*,const float*,unsigned pos,unsigned count);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_block_prepare(void*,unsigned layer,unsigned*,float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_block_ffn_input(void*,unsigned token,float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_block_finish(void*,unsigned layer,unsigned token,const void *const*,const float*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_block_end(void*,unsigned mode,float*,unsigned*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_prefill(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
+RBITNET_CUDA_API int rbitnet_cuda_gpt_segmented_verify(void*,const float*,unsigned position,unsigned count,unsigned mode,float*,unsigned*);
 /* Numerical/isolated kernel diagnostics take HOST weight/input/output arrays.
  * Not serving paths; their temporary allocations are included in the ledger. */
 RBITNET_CUDA_API int rbitnet_cuda_ordered_gemm_check(unsigned,const void*,size_t,const float*,unsigned,unsigned,unsigned,unsigned,unsigned,float*,float*,float*);
