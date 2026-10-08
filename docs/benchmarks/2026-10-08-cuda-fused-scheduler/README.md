@@ -15,7 +15,8 @@ $env:RBITNET_FUSED_MULTI_SEQ = '1'
 $env:RBITNET_CUDA_FUSED_DECODE_SLOTS = '8'   # optional, default 8
 ```
 
-Do **not** set `RBITNET_CUDA_CONTINUOUS=1` on the same process (HTTP continuous worker path).
+Set `RBITNET_CUDA_CONTINUOUS=0` (or leave it unset). The older continuous
+worker is a separate path and must not be combined with this Sarathi path.
 
 ## Proof hooks
 
@@ -25,10 +26,28 @@ Do **not** set `RBITNET_CUDA_CONTINUOUS=1` on the same process (HTTP continuous 
   `RBITNET_TEST_GGUF` / `RBITNET_TOKENIZER` runs
   `fused_scheduler_batch_shared_projections_exceed_serial`.
 
-## Not in this slice
+## HTTP concurrency harness
 
-- HTTP `/v1` concurrency 1/4/8 publication (see
-  [2026-10-04-continuous-llama](../2026-10-04-continuous-llama/README.md) for the
-  continuous worker path).
+This branch wires non-streaming `/v1/chat/completions` requests into the
+Sarathi batch entry point: requests arriving during a short coalescing window
+with the same loaded engine become one `Engine::complete_batch_detailed` call.
+Run the 1/4/8 matrix on a CUDA host with a Llama GGUF:
+
+```bash
+RBITNET_MODEL=/path/model.gguf RBITNET_TOKENIZER=/path/tokenizer.json \
+./scripts/bench_http_sarathi_fused.sh
+```
+
+The harness prints, but does not persist, wall time, requested aggregate tok/s,
+and deltas for batch-row and batch-wave metrics. Publish the raw output with
+GPU, driver, model quantization, prompt, completion length, and all relevant
+`RBITNET_*` flags. No figures are recorded here because this checkout did not
+run on a verified CUDA model host.
+
+## Remaining gaps toward #96 close
+
 - Shared multi-request **prefill** GEMM.
+- Streaming-request coalescing (the HTTP bridge currently covers non-streaming
+  completions).
+- Adaptive admission/backpressure and broader GPU/model validation.
 - Qwen / GPT / MoE fused forwards.

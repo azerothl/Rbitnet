@@ -5,6 +5,7 @@
 mod anthropic;
 mod chat_template;
 mod config;
+mod continuous_batch;
 mod metrics;
 mod model_registry;
 mod run;
@@ -47,6 +48,7 @@ use uuid::Uuid;
 
 use config::apply_runtime_config_env;
 pub use config::ServerConfig;
+use continuous_batch::ContinuousBatcher;
 use metrics::ServerMetrics;
 pub use model_registry::ModelRegistry;
 
@@ -57,6 +59,8 @@ pub struct AppState {
     pub config: Arc<ServerConfig>,
     pub metrics: Arc<ServerMetrics>,
     pub semaphore: Arc<Semaphore>,
+    /// Coalesces compatible non-streaming HTTP requests into Sarathi waves.
+    pub(crate) continuous_batcher: Arc<ContinuousBatcher>,
     /// When `Some` and [`AppState::registry`] is `None`, `/v1/chat/completions` must use this exact `model` string.
     pub expected_request_model_id: Arc<RwLock<Option<String>>>,
     /// When set, `model` must be a key in this registry and weights are loaded per request id.
@@ -97,6 +101,7 @@ pub fn build_app_state_with_registry(
         config: Arc::clone(&config),
         metrics: Arc::new(ServerMetrics::default()),
         semaphore: Arc::new(Semaphore::new(max_concurrent)),
+        continuous_batcher: Arc::new(ContinuousBatcher::default()),
         expected_request_model_id: Arc::new(RwLock::new(expected_request_model_id)),
         registry: Arc::new(RwLock::new(registry)),
         loaded_registry_model_id: Arc::new(RwLock::new(loaded_registry_model_id)),
@@ -1784,6 +1789,7 @@ async fn chat_completions(
     let prompt_owned = prompt;
     let prompt_chars = prompt_chars as u64;
     let continuous_batching = engine.continuous_batching_enabled();
+    let continuous_batcher = Arc::clone(&state.continuous_batcher);
     let vision = vision_image_bytes.is_some();
     tracing::info!(
         request_id = %request_id,
@@ -1814,9 +1820,7 @@ async fn chat_completions(
                 max_tokens,
                 sampling,
             };
-            let mut rows = engine.complete_batch_detailed(&[req])?;
-            rows.pop()
-                .ok_or_else(|| BitNetError::Inference("empty batch result".into()))
+            continuous_batcher.complete(engine, req)
         } else {
             engine.complete_detailed_with_options(&prompt_owned, max_tokens, sampling)
         }

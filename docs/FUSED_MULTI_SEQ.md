@@ -1,6 +1,8 @@
 # Fused multi-seq CPU forward (#46) — stall decision
 
-**Status:** **Stalled (documented)** for end-to-end concurrency gain. Kernel building block shipped; Llama/BitNet/Qwen full forwards remain per-seq.
+**Status:** CUDA resident Llama has an experimental end-to-end HTTP path; CPU,
+BitNet, and Qwen remain sequential. This document retains the original CPU
+stall decision and records the narrower #96 progress below.
 
 **Issue:** [#46](https://github.com/azerothl/Rbitnet/issues/46) (slice of epic [#24](https://github.com/azerothl/Rbitnet/issues/24)).
 **Spike PR:** [#67](https://github.com/azerothl/Rbitnet/pull/67) — `dense_matvec_multi_seq`, `ModelExecutor::generate_decode_batch`, opt-in `RBITNET_FUSED_MULTI_SEQ=1`.
@@ -20,7 +22,10 @@
 
 ## Why e2e concurrency ≥4 does not speed up (stall)
 
-At concurrency 4–8, Sarathi can admit a decode wave of N sequences, but each sequence still runs an independent native forward. Enabling `RBITNET_FUSED_MULTI_SEQ` only changes the **scheduler call shape** (one batch API call), not the FLOPs schedule inside Llama layers.
+At concurrency 4–8, CPU and non-Llama executors can admit a decode wave of N
+sequences, but each sequence still runs an independent native forward.
+Enabling `RBITNET_FUSED_MULTI_SEQ` only changes the **scheduler call shape**
+(one batch API call), not the FLOPs schedule inside their layers.
 
 Wiring every layer (attention, MLP, residual, KV) to a batched activation tensor is a large invasive change to `llama/runtime.rs` (and BitNet/Qwen mirrors). That work is **deferred**:
 
@@ -46,8 +51,35 @@ Expected shape (illustrative; host-dependent): fused kernel faster than N indepe
 | Goal | What to set | Expectation |
 |------|-------------|-------------|
 | Stall-free schedule only | `RBITNET_CONTINUOUS_BATCHING=1` | Decode-first waves; no fused claim |
-| Exercise fused hook in CI/tests | `+ RBITNET_FUSED_MULTI_SEQ=1` | Batch API called; still sequential executors |
-| Real multi-seq throughput (CUDA decode) | `RBITNET_FUSED_MULTI_SEQ=1` + Sarathi batching | Llama decode rows share GPU projections; prefill still serial; see #96 |
+| Exercise fused hook in CI/tests | `+ RBITNET_FUSED_MULTI_SEQ=1` | Batch API called; CPU/non-Llama executors remain sequential |
+| CUDA Llama HTTP decode | `RBITNET_CONTINUOUS_BATCHING=1` + `RBITNET_FUSED_MULTI_SEQ=1` | HTTP requests are coalesced briefly, then Llama decode rows share GPU projections; prefill remains serial |
+
+## #96 CUDA HTTP progress
+
+For a CUDA-resident Llama with F32 KV, non-streaming `/v1/chat/completions`
+requests are coalesced for a short server-side window and delivered as one
+`Engine::complete_batch_detailed` call. The existing Sarathi scheduler then
+uses `SchedulerFusedLlama` and `rbitnet_cuda_llama_batch_step` for multi-row
+decode waves. This supersedes the older, separate
+`RBITNET_CUDA_CONTINUOUS=1` worker for this configuration: leave that legacy
+flag unset (or `0`).
+
+Measure concurrency 1/4/8 with:
+
+```bash
+RBITNET_MODEL=/path/model.gguf RBITNET_TOKENIZER=/path/tokenizer.json \
+./scripts/bench_http_sarathi_fused.sh
+```
+
+Publish the script's wall time, requested aggregate tok/s, and deltas for
+`rbitnet_core_gpu_llama_batch_rows_total` and
+`rbitnet_core_gpu_llama_batch_waves_total`. Do not publish a throughput claim
+unless the rows delta exceeds the waves delta for the concurrent runs.
+
+Remaining #96 gaps: shared multi-request prefill, streaming-request
+coalescing, CUDA graphs, adaptive admission/backpressure, and validation on
+representative GPU/model matrices. Qwen, GPT, MoE, and CPU paths are explicitly
+outside this Llama-first slice.
 
 ## Docs sync
 
