@@ -2129,10 +2129,19 @@ async fn live_stream_chat_completion(
     let continuous_batcher = Arc::clone(&state.continuous_batcher);
 
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel::<Result<StreamEvent, String>>(64);
-    let prompt_for_stop = prompt.clone();
+    // The HTTP consumer discovers text stop strings after the producer emitted
+    // a token delta. Make the next callback retire just this owned live-mux
+    // request, rather than allowing its remaining token budget to occupy a row.
+    let stop_preempted = Arc::new(AtomicBool::new(false));
+    let producer_stop_preempted = Arc::clone(&stop_preempted);
     let mut join = tokio::task::spawn_blocking(move || {
         let handle = tokio::runtime::Handle::current();
         let mut on_event = |ev: StreamEvent| -> bitnet_core::Result<()> {
+            if producer_stop_preempted.load(Ordering::Acquire) {
+                return Err(BitNetError::Inference(
+                    "HTTP stop sequence preempted streaming request".into(),
+                ));
+            }
             handle
                 .block_on(event_tx.send(Ok(ev)))
                 .map_err(|e| BitNetError::Inference(format!("stream send failed: {e}")))?;
@@ -2196,6 +2205,38 @@ async fn live_stream_chat_completion(
             }
             Poll::Ready(Some(Ok(StreamEvent::Delta { text }))) => {
                 let piece = stop_filter.push(&text);
+                if stop_filter.stopped() {
+                    stop_preempted.store(true, Ordering::Release);
+                    finished = true;
+                    let finish = json!({
+                        "id": id_sse.as_str(),
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model_sse.as_str(),
+                        "choices": [{
+                            "index": 0,
+                            "delta": {},
+                            "finish_reason": "stop"
+                        }]
+                    });
+                    let mut packet = String::new();
+                    if !piece.is_empty() {
+                        let delta = json!({
+                            "id": id_sse.as_str(),
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model_sse.as_str(),
+                            "choices": [{
+                                "index": 0,
+                                "delta": { "content": piece },
+                                "finish_reason": serde_json::Value::Null
+                            }]
+                        });
+                        packet.push_str(&format!("data: {}\n\n", delta));
+                    }
+                    packet.push_str(&format!("data: {}\n\ndata: [DONE]\n\n", finish));
+                    return Poll::Ready(Some(Ok(packet)));
+                }
                 if piece.is_empty() {
                     cx.waker().wake_by_ref();
                     return Poll::Pending;
@@ -2289,7 +2330,6 @@ async fn live_stream_chat_completion(
         }
     });
 
-    let _ = prompt_for_stop;
     Response::builder()
         .status(StatusCode::OK)
         .header("content-type", "text/event-stream; charset=utf-8")

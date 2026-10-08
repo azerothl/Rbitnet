@@ -63,8 +63,17 @@ also enables the live-mux Sarathi flags. A callback simulates a stream deadline
 after two token deltas, then a heterogeneous replacement is admitted while the
 survivor is still live. It proves request-local deadline/disconnect cancellation,
 replacement overlap, exact survivor/replacement outputs, and shared Native
-projections with dense and paged KV. It does not prove HTTP stop-string
-preemption; the server's UTF-8 stop filter remains covered separately.
+projections with dense and paged KV. HTTP stop strings use that same
+request-local retirement path: once the UTF-8 stream filter recognizes a stop,
+the endpoint sends its terminal `finish_reason: "stop"` and `[DONE]` packet,
+then rejects the producer's next callback. The owned live-mux request is
+therefore retired before its next token can join a wave; other owners continue.
+`streaming_stop_preempts_the_producer_and_finishes_immediately` covers the HTTP
+boundary with the deterministic stub stream.
+`optional_actual_cuda_live_mux_http_stop_preempts_heterogeneous_wave` is the
+CUDA-gated end-to-end proof: it derives a real stop string from a greedy
+completion, stops one HTTP SSE owner, then verifies that a heterogeneous
+survivor and replacement both complete through the live-mux configuration.
 
 An example PowerShell configuration for eight active requests:
 

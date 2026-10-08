@@ -680,6 +680,162 @@ async fn streaming_stop_flushes_pending_text_and_terminates_with_done() {
 }
 
 #[tokio::test]
+async fn streaming_stop_preempts_the_producer_and_finishes_immediately() {
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", Some("1")),
+    ]);
+    let app = create_app_with_config(
+        Arc::new(Engine::from_env().unwrap()),
+        Arc::new(ServerConfig::test_defaults()),
+    );
+    let body = serde_json::json!({
+        "model": "any",
+        "messages": [{ "role": "user", "content": "hello" }],
+        "max_tokens": 32,
+        "stop": ["Stub"],
+        "stream": true,
+    });
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let raw = String::from_utf8(
+        response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(raw.contains(r#""finish_reason":"stop""#), "{raw}");
+    assert!(raw.contains("data: [DONE]"), "{raw}");
+    assert!(
+        !raw.contains(r#""content":"Stub"#),
+        "stop text must not reach the client: {raw}"
+    );
+}
+
+#[tokio::test]
+async fn optional_actual_cuda_live_mux_http_stop_preempts_heterogeneous_wave() {
+    if std::env::var("RBITNET_LLAMA_CONTINUOUS_TEST").as_deref() != Ok("1") {
+        return;
+    }
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_STUB", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_MAX_SEQ", Some("1024")),
+        ("RBITNET_CUDA_PREFILL", Some("1")),
+        ("RBITNET_CUDA_PREFILL_TOKENS", Some("128")),
+        ("RBITNET_CUDA_PREFILL_TF32X3", Some("0")),
+        ("RBITNET_CUDA_SPLIT_KV", Some("0")),
+        ("RBITNET_PREFIX_KV", Some("0")),
+        ("RBITNET_CUDA_KV_FORMAT", Some("f32")),
+        ("RBITNET_CUDA_RESIDENT_GRAPH", Some("1")),
+        ("RBITNET_CUDA_CONTINUOUS", Some("1")),
+        ("RBITNET_CUDA_LIVE_SSE_MUX", Some("1")),
+        ("RBITNET_CUDA_CONTINUOUS_ADMISSION", Some("adaptive")),
+        ("RBITNET_CONTINUOUS_BATCHING", Some("1")),
+        ("RBITNET_FUSED_MULTI_SEQ", Some("1")),
+        ("RBITNET_CUDA_KV_PAGE_LIMIT", None),
+    ]);
+    let engine = Arc::new(Engine::from_env().expect("real CUDA Llama engine"));
+    let stop_prompt = "Give a short answer about rivers.";
+    let reference = engine
+        .complete_detailed(stop_prompt, 32, 0.0)
+        .expect("reference completion");
+    let stop = reference
+        .text
+        .chars()
+        .next()
+        .expect("reference completion must be non-empty")
+        .to_string();
+    let mut config = ServerConfig::test_defaults();
+    config.max_concurrent = 4;
+    let app = create_app_with_config(engine, Arc::new(config));
+    let request = |body: serde_json::Value| {
+        Request::builder()
+            .method("POST")
+            .uri("/v1/chat/completions")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    };
+    let stop_response = app
+        .clone()
+        .oneshot(request(serde_json::json!({
+            "model": "any",
+            "messages": [{ "role": "user", "content": stop_prompt }],
+            "max_tokens": 64,
+            "temperature": 0.0,
+            "stop": [stop],
+            "stream": true,
+        })))
+        .await
+        .expect("stop request");
+    let survivor_response = app
+        .clone()
+        .oneshot(request(serde_json::json!({
+            "model": "any",
+            "messages": [{ "role": "user", "content": "Explain a bridge in one sentence." }],
+            "max_tokens": 64,
+            "temperature": 0.0,
+            "stream": true,
+        })))
+        .await
+        .expect("survivor request");
+    let stopped = String::from_utf8(
+        stop_response
+            .into_body()
+            .collect()
+            .await
+            .expect("stop SSE body")
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(stopped.contains(r#""finish_reason":"stop""#), "{stopped}");
+    assert!(stopped.contains("data: [DONE]"), "{stopped}");
+
+    let replacement_response = app
+        .oneshot(request(serde_json::json!({
+            "model": "any",
+            "messages": [{ "role": "user", "content": "Name one mountain." }],
+            "max_tokens": 32,
+            "temperature": 0.0,
+            "stream": true,
+        })))
+        .await
+        .expect("replacement request");
+    for response in [survivor_response, replacement_response] {
+        let body = String::from_utf8(
+            response
+                .into_body()
+                .collect()
+                .await
+                .expect("surviving SSE body")
+                .to_bytes()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(body.contains(r#""content":"#), "{body}");
+        assert!(body.contains("data: [DONE]"), "{body}");
+    }
+}
+
+#[tokio::test]
 async fn chat_format_chatml_changes_prompt_rendering() {
     let _lock = ENV_MUTEX.lock().unwrap();
     let _guard = EnvGuard::set(&[
