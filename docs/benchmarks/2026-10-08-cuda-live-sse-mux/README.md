@@ -21,6 +21,17 @@ requires a subsequent two-owner decode wave, and verifies exact independent
 sampling results for both surviving owners. It runs against dense and paged
 Native KV fixtures.
 
+An HTTP `stop` sequence now preempts its live-mux owner after the matched delta:
+the endpoint emits the stop terminal packet and rejects the producer's next
+callback, so the owner cannot contribute another decode row. The deterministic
+HTTP regression is
+`streaming_stop_preempts_the_producer_and_finishes_immediately`; it verifies
+that the stop text is withheld and the client receives `finish_reason: "stop"`
+plus `[DONE]`. The CUDA-gated
+`optional_actual_cuda_live_mux_http_stop_preempts_heterogeneous_wave` derives a
+real greedy stop string, stops that HTTP owner, and verifies that heterogeneous
+survivor and replacement streams both finish under the live-mux flags.
+
 The companion
 `optional_actual_llama_live_mux_heterogeneous_deadline_cancel_and_admit_parity`
 fixture exercises the owned controller selected by the live-mux flags. It

@@ -712,6 +712,7 @@ fn optional_actual_llama_live_mux_heterogeneous_deadline_cancel_and_admit_parity
                     token_budget: 256,
                     pages,
                     ordering: 0,
+                    adaptive_admission: false,
                 },
             )
             .unwrap(),
