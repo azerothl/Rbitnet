@@ -40,6 +40,7 @@ mod integration_options_tests {
             "RBITNET_CUDA_CONTINUOUS_QUEUE",
             "RBITNET_CUDA_CONTINUOUS_TOKEN_BUDGET",
             "RBITNET_CUDA_CONTINUOUS_ORDERING",
+            "RBITNET_CUDA_LIVE_SSE_MUX",
             "RBITNET_PREFIX_KV",
             "RBITNET_SPECULATIVE",
             "RBITNET_SPECULATIVE_PLD",
@@ -85,6 +86,15 @@ mod integration_options_tests {
         }
         std::env::set_var("RBITNET_CONTEXT_TIERS", "0");
         assert!(BatchOptions::configured(backend).unwrap().is_some());
+
+        std::env::set_var("RBITNET_CUDA_LIVE_SSE_MUX", "1");
+        std::env::set_var("RBITNET_CONTINUOUS_BATCHING", "1");
+        std::env::set_var("RBITNET_FUSED_MULTI_SEQ", "1");
+        assert!(BatchOptions::configured(backend).unwrap().is_some());
+
+        std::env::set_var("RBITNET_CUDA_LIVE_SSE_MUX", "0");
+        let error = BatchOptions::configured(backend).unwrap_err().to_string();
+        assert!(error.contains("RBITNET_CONTINUOUS_BATCHING"), "{error}");
     }
 }
 impl BatchOptions {
@@ -102,6 +112,16 @@ impl BatchOptions {
         if !enabled {
             return Ok(None);
         }
+        let live_sse_mux = match std::env::var("RBITNET_CUDA_LIVE_SSE_MUX") {
+            Err(std::env::VarError::NotPresent) => false,
+            Ok(value) if value == "0" => false,
+            Ok(value) if value == "1" => true,
+            _ => {
+                return Err(BitNetError::Inference(
+                    "RBITNET_CUDA_LIVE_SSE_MUX must be 0 or 1".into(),
+                ))
+            }
+        };
         if backend != crate::backend::BackendKind::Cuda {
             return Err(BitNetError::Inference(
                 "RBITNET_CUDA_CONTINUOUS requires the CUDA Llama backend".into(),
@@ -144,8 +164,6 @@ impl BatchOptions {
             "RBITNET_SPECULATIVE_PLD",
             "RBITNET_CUDA_SPLIT_KV",
             "RBITNET_CUDA_PREFILL_TF32X3",
-            "RBITNET_CONTINUOUS_BATCHING",
-            "RBITNET_FUSED_MULTI_SEQ",
         ] {
             if matches!(
                 std::env::var(key).as_deref(),
@@ -154,6 +172,18 @@ impl BatchOptions {
                 return Err(BitNetError::Inference(format!(
                     "{key} is not validated with RBITNET_CUDA_CONTINUOUS"
                 )));
+            }
+        }
+        if !live_sse_mux {
+            for key in ["RBITNET_CONTINUOUS_BATCHING", "RBITNET_FUSED_MULTI_SEQ"] {
+                if matches!(
+                    std::env::var(key).as_deref(),
+                    Ok("1") | Ok("true") | Ok("yes")
+                ) {
+                    return Err(BitNetError::Inference(format!(
+                        "{key} is not validated with RBITNET_CUDA_CONTINUOUS"
+                    )));
+                }
             }
         }
         if std::env::var("RBITNET_MTP_K")

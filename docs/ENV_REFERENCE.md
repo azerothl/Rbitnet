@@ -102,6 +102,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_CUDA_FUSED_DECODE` | off | Explicit enable when not using `RBITNET_FUSED_MULTI_SEQ`; same CUDA batch decode path as above. |
 | `RBITNET_CUDA_FUSED_DECODE_SLOTS` | `8` | Max concurrent KV owners for scheduler fused decode (1–8). |
 | `RBITNET_CUDA_FUSED_DECODE_ORDERING` | `0` | Native batch GEMM layout (`0` ordered, `1` interleaved). |
+| `RBITNET_CUDA_LIVE_SSE_MUX` | off | With `RBITNET_CUDA_CONTINUOUS=1`, permits the Sarathi fused flags and routes CUDA Llama/F32-KV requests through the owned live worker. Per-request SSE token deltas share decode waves; arrival, cancellation, disconnect, sampling, and terminal state remain owner-local. See [CONTINUOUS_LLAMA.md](CONTINUOUS_LLAMA.md). |
 | `RBITNET_ITERATION_TOKEN_BUDGET` | `2×chunk` | Token budget per stall-free iteration (see [USAGE.md](USAGE.md)). |
 | `RBITNET_PREFILL_CHUNK_TOKENS` | `128` | Prefill chunk size for runtime loops and scheduler admission. |
 | `RBITNET_SPECULATIVE`, `RBITNET_SPEC_DRAFT_RATIO_*` | varies | Speculative draft path; see [USAGE.md](USAGE.md). |

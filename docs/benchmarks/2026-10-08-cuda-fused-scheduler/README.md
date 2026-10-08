@@ -15,8 +15,10 @@ $env:RBITNET_FUSED_MULTI_SEQ = '1'
 $env:RBITNET_CUDA_FUSED_DECODE_SLOTS = '8'   # optional, default 8
 ```
 
-Set `RBITNET_CUDA_CONTINUOUS=0` (or leave it unset). The older continuous
-worker is a separate path and must not be combined with this Sarathi path.
+Set `RBITNET_CUDA_CONTINUOUS=0` (or leave it unset) for this buffered HTTP
+probe. The live SSE experiment may instead set
+`RBITNET_CUDA_CONTINUOUS=1` and `RBITNET_CUDA_LIVE_SSE_MUX=1`; that deliberately
+selects the owned per-token worker while retaining the Sarathi fused flags.
 
 ## Proof hooks
 
