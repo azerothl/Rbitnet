@@ -270,7 +270,7 @@ mod tests {
         let engine = Arc::new(stub_engine());
         let (json_tx, json_rx) = mpsc::sync_channel(1);
         let (stream_tx, stream_rx) = mpsc::sync_channel(2);
-        let request = |prompt| InferenceRequest {
+        let request = |prompt: &str| InferenceRequest {
             prompt: prompt.into(),
             max_tokens: 4,
             sampling: SamplingOptions::default(),
