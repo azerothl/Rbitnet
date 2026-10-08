@@ -1,82 +1,61 @@
-# Decision record: #94 cannot close yet
+# Measured Llama session tiers for #94
 
-Date: 2026-10-08
-Revision inspected: `origin/main` at `6373d6c` plus the current worktree.
+Date: 2026-10-08. These are real local HTTP measurements on `origin/main`
+`9eb343efbd5f29fff222c20b4b7bff416c6d55f4` (#163), not extrapolations.
 
-This record corrects an earlier unverified progress draft. In particular, it
-does **not** claim GPT-OSS or GLM/MLA portable context transport. Those ABI
-symbols and their runtime wiring are absent from the inspected source.
+## Result
 
-## What is implemented and bounded
+| path | TTFT samples (ms) | median | sample stdev | whole non-stream request median |
+| --- | --- | ---: | ---: | ---: |
+| cold recompute | 2356, 2367, 2342 | 2356 | 12.530 | 2368.176 ms |
+| RAM restore | 13, 12, 13 | 13 | 0.577 | 35.529 ms |
+| SSD restore | 50, 52, 51 | 51 | 1.000 | 830.376 ms |
 
-`RBITNET_CONTEXT_TIERS` is an opt-in **Llama Native F32 and Qwen3.5 Native
-F32** prefix-checkpoint cache. It has:
+For this 676-token Llama prompt, the instrumented first-token time falls
+**99.45%** from cold recompute to RAM restore and **97.84%** to SSD restore.
+Each restored response was the identical greedy text, `I see`, and restored
+675 prompt tokens. RAM requests each reported one RAM hit; every SSD sample
+used a fresh server process and reported exactly one disk hit.
 
-- an independent VRAM prefix-snapshot path;
-- a RAM host-checkpoint budget and LRU demotion;
-- an optional SSD sealed-object budget, LRU eviction, retention TTL and entry
-  cap;
-- versioned, content-addressed envelopes that bind model, tokenizer, loaded
-  CUDA library, device/runtime configuration and layout;
-- bounded headers and payload geometry; checksums, finite-value checks,
-  compatibility checks and replay on failure;
-- temporary-file synchronization and atomic publication; recovery of generated
-  interrupted writes; and a cooperative cross-namespace SSD quota.
+TTFT is Rbitnet's `rbitnet_inference_ttft_ms_sum` delta: the model was already
+loaded and the HTTP health endpoint ready, so it excludes process startup and
+model loading. The request column is important: this test used non-streaming
+HTTP, and the SSD response's full wall time still includes process-local work
+after the instrumented first-token boundary. It is not a client-observed
+streaming TTFT claim.
 
-The cache takes no SSD I/O in active token decode. A disk restore is read in
-full before prefill resumes and is promoted to the charged RAM tier. These are
-prefix checkpoints, not general conversational session snapshots: the key is
-the token prefix plus compatibility identity, rather than a proxy session ID.
+## Protocol and raw artifacts
 
-## Evidence inspected
+- Llama 3.2 1B Instruct Q4_K_M, SHA-256
+  `3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1`.
+- Matching `tokenizer.json`, Native CUDA, resident graph and a rebuilt server
+  from the revision above; hashes and complete per-request metrics are in
+  [`results.json`](results.json).
+- Prompt: the same 676-token rendered user message; temperature zero; two
+  generated tokens; one excluded short warm-up before cold sampling; three
+  samples per tier.
+- RAM uses the process that captured the checkpoint. SSD preserves the sealed
+  object, stops the writer, then starts a fresh process for each sample.
+- The sealed checkpoint was 44,240,870 bytes. SSD reads measured 33.794,
+  35.433 and 34.288 ms. Process RSS after requests was about 1.89 GiB cold,
+  1.89 GiB RAM and 1.89 GiB SSD; managed CUDA memory was 1,337,361,460 bytes.
+  The OS VRAM metric is unavailable, so the latter is Rbitnet's allocation
+  accounting, not total board usage.
+- [`measure_llama_session_tiers.py`](measure_llama_session_tiers.py) runs the
+  experiment and [`raw/`](raw) preserves requests, metrics and server logs.
 
-- `crates/bitnet-core/src/context_tiers.rs` implements the RAM/disk budgets,
-  retention, LRU, integrity failure fallback and Linux tmpfs ENOSPC fixture.
-- `crates/bitnet-core/src/context_native.rs` only accepts the `llama` and
-  `qwen` transport families and exports the cache/transfer counters.
-- `native/cuda_quant/src/portable_state.cuh` only exports Llama and Qwen
-  `portable_{bytes,export,import}` functions.
-- `crates/bitnet-core/src/native/graph.rs` explicitly rejects context tiers in
-  `NativeExecutor::load`; that is the GPT-OSS/GLM/MLA executor.
-- `crates/bitnet-server/src/run.rs` swaps an idle server to a stub, and
-  `crates/rbitnet-proxy/src/lib.rs` kills and respawns an idle runner. Neither
-  coordinates a session snapshot lifecycle or verifies a restored session.
+## Scope and limitations
 
-The existing two-model Llama/Qwen evidence is
-[`2026-10-04-context-global-quota-fresh`](../2026-10-04-context-global-quota-fresh/README.md).
-It proves bounded persistence and recovery behavior, not a measured resume
-TTFT-versus-recompute result.
+This validates the Llama Native F32 prefix-checkpoint transport only. Qwen was
+not rerun: the available 0.8B GGUF has no colocated tokenizer bundle on this
+host. GPT-OSS and GLM/MLA remain unsupported by the context-tier transport;
+they have no export/import ABI or restore integration.
 
-## Acceptance gaps that prevent closure
+This is a prefix key, not a proxy session identity. It does not prove
+session-isolated promotion/eviction, proxy runner recycling, idle-unload
+restore, HTTP/SSE cancellation or stop-string equivalence. The test also does
+not cover Windows physical ENOSPC or timed write/rename crash recovery.
 
-1. GPT-OSS and GLM/MLA have no RAM/SSD transport, no export/import ABI, and no
-   restore/capture integration. Encoded-KV remains unsupported as documented.
-2. There is no verified proxy/session-to-checkpoint ownership or idle
-   unload/reload integration. Existing idle unload frees the runner; it is not
-   tensor-state restore.
-3. No reproducible same-revision ablation publishes cold/recompute, RAM and SSD
-   resume TTFT; transfer/read/write time; disk size; RSS; VRAM; warm-up;
-   repetitions and dispersion. The expected local benchmark directory
-   `D:\Rbitnet-benchmark-models` was unavailable on this host.
-4. HTTP/SSE cancellation and stop-string equivalence have not been run across
-   the hot/warm/cold restore paths for each supported architecture.
-5. The FlexGen-style weight-streaming decision is not separately recorded.
-   It must remain distinct from session-state caching and be evaluated for
-   throughput-oriented batches, not inferred to benefit interactive decode.
-6. Physical ENOSPC is covered only by the Linux tmpfs fixture; a Windows
-   physical-full and timed write/rename-crash sweep remains absent.
-
-## Closure gate
-
-Do not use `Closes #94` until all of the following are attached to a PR:
-
-1. validated snapshot transports for the claimed model families, including
-   position and recurrent/convolution state where applicable;
-2. session-safe promotion/eviction and idle runner recovery that preserves
-   isolation between proxy sessions;
-3. hot (VRAM), warm (RAM), cold (SSD) and recompute measurements on the same
-   GGUF, tokenizer, device and prompts, with raw artifacts; and
-4. real HTTP/SSE correctness and failure-path evidence.
-
-The correct current disposition is to keep #94 open. This document is a
-decision and evidence boundary, not a completion claim.
+**Disposition: keep #94 open.** The Llama recompute/RAM/SSD latency acceptance
+slice now has reproducible evidence, but the broader session and architecture
+acceptance criteria remain unmet.
