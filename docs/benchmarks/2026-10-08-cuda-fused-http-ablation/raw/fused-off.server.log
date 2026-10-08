@@ -1,0 +1,7 @@
+2026-10-08T11:12:02.320303Z  INFO bitnet_server::run: rbitnet server limits max_body_bytes=1048576 max_prompt_chars=256000 max_prompt_tokens=None max_tokens_cap=8192 max_concurrent=8 inference_timeout_secs=600 api_key_set=false
+2026-10-08T11:12:02.345560Z  INFO bitnet_core::memory_budget: memory budget check OK weights_bytes=799862912 kv_estimate_bytes=8589934592 estimated_load_bytes=9389797504
+2026-10-08T11:12:02.488515Z  INFO bitnet_core::ggml::quant_dot: loaded librbitnet_cuda_quant path=E:\devs\Rbitnet\native\cuda_quant\build\rbitnet_cuda_quant64.dll
+2026-10-08T11:12:02.808820Z  INFO bitnet_server::run: GGUF loaded (full BitNet inference WIP) summary=GGUF v3 arch=llama tensors=147 tensor_data@7831456
+2026-10-08T11:12:02.810464Z  INFO bitnet_server::run: rbitnet-server listening on http://127.0.0.1:18980
+2026-10-08T11:12:03.074034Z  INFO bitnet_core::llama::model: llama device offload plan summary="enabled=true layers=16 output=true estimated_weight_mb=762 reason=cuda auto offload uses actual quantized payload sizes" cuda=true backend="cuda"
+2026-10-08T11:12:03.441885Z  INFO bitnet_core::llama::resident: fully resident Llama CUDA token graph enabled graphs=true split_layers=0

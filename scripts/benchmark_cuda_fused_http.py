@@ -146,9 +146,11 @@ def start_server(args, fused, page_limit, log_path):
             "RBITNET_CUDA_PREFILL": "1",
             "RBITNET_CUDA_KV_FORMAT": "f32",
             "RBITNET_CUDA_KV_PAGE_LIMIT": str(page_limit),
-            # The fused path requires the Sarathi scheduler.  The off control
-            # disables both knobs, so it cannot route through the batcher.
-            "RBITNET_CONTINUOUS_BATCHING": "1" if fused else "0",
+            # Both legs exercise the Sarathi HTTP/SSE bridge.  The only
+            # scheduler variable in the ablation is fused multi-sequence
+            # dispatch; disabling continuous batching here would compare
+            # Sarathi against an unrelated singleton runtime path.
+            "RBITNET_CONTINUOUS_BATCHING": "1",
             "RBITNET_FUSED_MULTI_SEQ": "1" if fused else "0",
             "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
             "RBITNET_CUDA_CONTINUOUS": "0",
