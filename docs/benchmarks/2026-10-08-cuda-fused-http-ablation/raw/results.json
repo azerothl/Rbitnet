@@ -1,0 +1,1974 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-08T11:12:01Z",
+  "command": [
+    "C:\\Users\\azero\\anaconda3\\python.exe",
+    "scripts/benchmark_cuda_fused_http.py",
+    "--model",
+    "models/exported-llama/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    "--tokenizer",
+    "models/exported-llama/tokenizer.json",
+    "--binary",
+    "C:/rbitnet-build-168-sse/release/rbitnet-server.exe",
+    "--library",
+    "native/cuda_quant/build/rbitnet_cuda_quant64.dll",
+    "--output-dir",
+    "docs/benchmarks/2026-10-08-cuda-fused-http-ablation/raw",
+    "--concurrency",
+    "1",
+    "4",
+    "8",
+    "--warmups",
+    "2",
+    "--repetitions",
+    "3",
+    "--max-tokens",
+    "32",
+    "--kv-page-limit",
+    "128",
+    "--capacity-page-limits",
+    "64",
+    "128"
+  ],
+  "source_revision": "cec074e2825c86f88959406bbcecfd8e7bcdd317",
+  "fixture": {
+    "prompt": "Explain continuous batching in one short paragraph.",
+    "max_tokens": 32,
+    "model": "E:\\devs\\Rbitnet\\models\\exported-llama\\Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    "model_sha256": "3f5a22426976ab26cfe84dba63c1d08391717abb1af893e10f1b2968d862dcc1",
+    "tokenizer": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json",
+    "tokenizer_sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+    "binary": "C:\\rbitnet-build-168-sse\\release\\rbitnet-server.exe",
+    "binary_sha256": "20440342b14d0a677330890a2ac93e3356067a7fce46b9091171379fc3765a68",
+    "library": "E:\\devs\\Rbitnet\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+    "library_sha256": "84795a20d85ff59b5a7f276973201b6d59d0fa432eb33e1cc74257d7576ee2a9"
+  },
+  "results": [
+    {
+      "label": "fused-off",
+      "fused": false,
+      "page_limit": 128,
+      "environment": {
+        "RBITNET_BACKEND": "cuda",
+        "RBITNET_BIND": "127.0.0.1:18980",
+        "RBITNET_CONTINUOUS_BATCHING": "1",
+        "RBITNET_CUDA_CONTINUOUS": "0",
+        "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
+        "RBITNET_CUDA_KV_FORMAT": "f32",
+        "RBITNET_CUDA_KV_PAGE_LIMIT": "128",
+        "RBITNET_CUDA_PREFILL": "1",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+        "RBITNET_FUSED_MULTI_SEQ": "0",
+        "RBITNET_HOST": "127.0.0.1",
+        "RBITNET_MAX_CONCURRENT": "8",
+        "RBITNET_MODEL": "E:\\devs\\Rbitnet\\models\\exported-llama\\Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        "RBITNET_PORT": "18980",
+        "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+      },
+      "gpu_before": {
+        "available": true,
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 610.88, 16376 MiB, 2350 MiB, 13696 MiB"
+      },
+      "cases": [
+        {
+          "concurrency": 1,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 1,
+              "wall_ms": 132.3012,
+              "aggregate_requested_tokens_per_sec": 241.87233373544606,
+              "per_request_requested_tokens_per_sec": 241.87233373544606,
+              "samples": [
+                {
+                  "started_ns": 3180640355300,
+                  "ttft_ms": 131.8555,
+                  "total_latency_ms": 132.0216,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 131.8555,
+                  "p50": 131.8555,
+                  "p95": 131.8555,
+                  "max": 131.8555,
+                  "mean": 131.8555,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 132.0216,
+                  "p50": 132.0216,
+                  "p95": 132.0216,
+                  "max": 132.0216,
+                  "mean": 132.0216,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 1,
+              "wall_ms": 120.0905,
+              "aggregate_requested_tokens_per_sec": 266.4657071125526,
+              "per_request_requested_tokens_per_sec": 266.4657071125526,
+              "samples": [
+                {
+                  "started_ns": 3180772762200,
+                  "ttft_ms": 119.6091,
+                  "total_latency_ms": 119.7749,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 119.6091,
+                  "p50": 119.6091,
+                  "p95": 119.6091,
+                  "max": 119.6091,
+                  "mean": 119.6091,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 119.7749,
+                  "p50": 119.7749,
+                  "p95": 119.7749,
+                  "max": 119.7749,
+                  "mean": 119.7749,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 1,
+              "wall_ms": 131.9518,
+              "aggregate_requested_tokens_per_sec": 242.51279633926939,
+              "per_request_requested_tokens_per_sec": 242.51279633926939,
+              "samples": [
+                {
+                  "started_ns": 3180892894800,
+                  "ttft_ms": 131.4814,
+                  "total_latency_ms": 131.6506,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 131.4814,
+                  "p50": 131.4814,
+                  "p95": 131.4814,
+                  "max": 131.4814,
+                  "mean": 131.4814,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 131.6506,
+                  "p50": 131.6506,
+                  "p95": 131.6506,
+                  "max": 131.6506,
+                  "mean": 131.6506,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 0.0,
+            "rbitnet_core_gpu_upload_bytes_total": 802665088.0,
+            "rbitnet_core_gpu_download_bytes_total": 640.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 820941876.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 820941876.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        },
+        {
+          "concurrency": 4,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 4,
+              "wall_ms": 7462.2118,
+              "aggregate_requested_tokens_per_sec": 17.153091259082192,
+              "per_request_requested_tokens_per_sec": 4.288272814770548,
+              "samples": [
+                {
+                  "started_ns": 3195910499800,
+                  "ttft_ms": 7461.1076,
+                  "total_latency_ms": 7461.2523,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3195910784800,
+                  "ttft_ms": 7460.9263,
+                  "total_latency_ms": 7460.9875,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3195910605800,
+                  "ttft_ms": 7460.9213,
+                  "total_latency_ms": 7461.1309,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3195910340900,
+                  "ttft_ms": 7461.1016,
+                  "total_latency_ms": 7461.315,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7460.9213,
+                  "p50": 7461.0139500000005,
+                  "p95": 7461.1067,
+                  "max": 7461.1076,
+                  "mean": 7461.0142,
+                  "sample_stdev": 0.10443361527789644
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7460.9875,
+                  "p50": 7461.1916,
+                  "p95": 7461.305595,
+                  "max": 7461.315,
+                  "mean": 7461.171425,
+                  "sample_stdev": 0.14448209519963154
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 4,
+              "wall_ms": 7491.2983,
+              "aggregate_requested_tokens_per_sec": 17.08649086901265,
+              "per_request_requested_tokens_per_sec": 4.2716227172531624,
+              "samples": [
+                {
+                  "started_ns": 3203372933800,
+                  "ttft_ms": 7490.0151,
+                  "total_latency_ms": 7490.1822,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3203372723500,
+                  "ttft_ms": 7490.3522,
+                  "total_latency_ms": 7490.4985,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3203372817000,
+                  "ttft_ms": 7490.0461,
+                  "total_latency_ms": 7490.1761,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3203372579000,
+                  "ttft_ms": 7490.5761,
+                  "total_latency_ms": 7490.6852,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7490.0151,
+                  "p50": 7490.19915,
+                  "p95": 7490.542515,
+                  "max": 7490.5761,
+                  "mean": 7490.247375,
+                  "sample_stdev": 0.2667781272271979
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7490.1761,
+                  "p50": 7490.34035,
+                  "p95": 7490.657195,
+                  "max": 7490.6852,
+                  "mean": 7490.3855,
+                  "sample_stdev": 0.2501788293733932
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 4,
+              "wall_ms": 7488.9133,
+              "aggregate_requested_tokens_per_sec": 17.091932416950268,
+              "per_request_requested_tokens_per_sec": 4.272983104237567,
+              "samples": [
+                {
+                  "started_ns": 3210864328700,
+                  "ttft_ms": 7487.673,
+                  "total_latency_ms": 7487.9652,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3210864417700,
+                  "ttft_ms": 7487.7258,
+                  "total_latency_ms": 7487.8182,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3210864469200,
+                  "ttft_ms": 7487.6108,
+                  "total_latency_ms": 7487.7229,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3210864191900,
+                  "ttft_ms": 7488.0767,
+                  "total_latency_ms": 7488.1557,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7487.6108,
+                  "p50": 7487.6993999999995,
+                  "p95": 7488.024065,
+                  "max": 7488.0767,
+                  "mean": 7487.771575,
+                  "sample_stdev": 0.20877599438926106
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7487.7229,
+                  "p50": 7487.8917,
+                  "p95": 7488.127125,
+                  "max": 7488.1557,
+                  "mean": 7487.9155,
+                  "sample_stdev": 0.18861617109908432
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 0.0,
+            "rbitnet_core_gpu_upload_bytes_total": 311953920.0,
+            "rbitnet_core_gpu_download_bytes_total": 2560.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 0.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 0.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        },
+        {
+          "concurrency": 8,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 8,
+              "wall_ms": 14990.5929,
+              "aggregate_requested_tokens_per_sec": 17.077376572610415,
+              "per_request_requested_tokens_per_sec": 2.134672071576302,
+              "samples": [
+                {
+                  "started_ns": 3248362868300,
+                  "ttft_ms": 14988.7816,
+                  "total_latency_ms": 14989.098,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248362912400,
+                  "ttft_ms": 14988.9928,
+                  "total_latency_ms": 14989.3362,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248362994100,
+                  "ttft_ms": 14988.8473,
+                  "total_latency_ms": 14989.1451,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248363095700,
+                  "ttft_ms": 14989.069,
+                  "total_latency_ms": 14989.2191,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248363182600,
+                  "ttft_ms": 14989.0322,
+                  "total_latency_ms": 14989.1098,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248363050000,
+                  "ttft_ms": 14988.747,
+                  "total_latency_ms": 14989.0637,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248363236500,
+                  "ttft_ms": 14988.838,
+                  "total_latency_ms": 14989.1114,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3248362736600,
+                  "ttft_ms": 14988.9957,
+                  "total_latency_ms": 14989.2913,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 14988.747,
+                  "p50": 14988.92005,
+                  "p95": 14989.05612,
+                  "max": 14989.069,
+                  "mean": 14988.91295,
+                  "sample_stdev": 0.12335512034072474
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 14989.0637,
+                  "p50": 14989.12825,
+                  "p95": 14989.320485,
+                  "max": 14989.3362,
+                  "mean": 14989.171825,
+                  "sample_stdev": 0.09919821066935798
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 8,
+              "wall_ms": 14989.809,
+              "aggregate_requested_tokens_per_sec": 17.078269643062164,
+              "per_request_requested_tokens_per_sec": 2.1347837053827705,
+              "samples": [
+                {
+                  "started_ns": 3263353535500,
+                  "ttft_ms": 14988.2165,
+                  "total_latency_ms": 14988.563,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353714900,
+                  "ttft_ms": 14988.4324,
+                  "total_latency_ms": 14988.5331,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353626900,
+                  "ttft_ms": 14988.1791,
+                  "total_latency_ms": 14988.4899,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353904100,
+                  "ttft_ms": 14987.6921,
+                  "total_latency_ms": 14987.9996,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353855100,
+                  "ttft_ms": 14987.821,
+                  "total_latency_ms": 14988.2721,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353804800,
+                  "ttft_ms": 14988.0568,
+                  "total_latency_ms": 14988.1424,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263354046000,
+                  "ttft_ms": 14987.9629,
+                  "total_latency_ms": 14988.1348,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3263353403300,
+                  "ttft_ms": 14988.6646,
+                  "total_latency_ms": 14988.8177,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 14987.6921,
+                  "p50": 14988.11795,
+                  "p95": 14988.58333,
+                  "max": 14988.6646,
+                  "mean": 14988.128175,
+                  "sample_stdev": 0.3179459511569262
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 14987.9996,
+                  "p50": 14988.381000000001,
+                  "p95": 14988.728555,
+                  "max": 14988.8177,
+                  "mean": 14988.369075,
+                  "sample_stdev": 0.2758251089265382
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 8,
+              "wall_ms": 14992.4965,
+              "aggregate_requested_tokens_per_sec": 17.075208255009432,
+              "per_request_requested_tokens_per_sec": 2.134401031876179,
+              "samples": [
+                {
+                  "started_ns": 3278343599800,
+                  "ttft_ms": 14990.7785,
+                  "total_latency_ms": 14991.0533,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343663800,
+                  "ttft_ms": 14990.6279,
+                  "total_latency_ms": 14990.9484,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343949500,
+                  "ttft_ms": 14990.6118,
+                  "total_latency_ms": 14990.9075,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343889300,
+                  "ttft_ms": 14991.0331,
+                  "total_latency_ms": 14991.0899,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343743700,
+                  "ttft_ms": 14990.6974,
+                  "total_latency_ms": 14990.9926,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343798100,
+                  "ttft_ms": 14990.8917,
+                  "total_latency_ms": 14991.15,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343845300,
+                  "ttft_ms": 14990.6656,
+                  "total_latency_ms": 14990.9287,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3278343453000,
+                  "ttft_ms": 14991.365,
+                  "total_latency_ms": 14991.5095,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 14990.6118,
+                  "p50": 14990.737949999999,
+                  "p95": 14991.248835,
+                  "max": 14991.365,
+                  "mean": 14990.833875,
+                  "sample_stdev": 0.258257732562998
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 14990.9075,
+                  "p50": 14991.022949999999,
+                  "p95": 14991.383675,
+                  "max": 14991.5095,
+                  "mean": 14991.0724875,
+                  "sample_stdev": 0.1954244131373095
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 0.0,
+            "rbitnet_core_gpu_upload_bytes_total": 623907840.0,
+            "rbitnet_core_gpu_download_bytes_total": 5120.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 0.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 0.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        }
+      ],
+      "gpu_after": {
+        "available": true,
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 610.88, 16376 MiB, 3396 MiB, 12650 MiB"
+      },
+      "server_log": "fused-off.server.log"
+    },
+    {
+      "label": "fused-on",
+      "fused": true,
+      "page_limit": 128,
+      "environment": {
+        "RBITNET_BACKEND": "cuda",
+        "RBITNET_BIND": "127.0.0.1:18980",
+        "RBITNET_CONTINUOUS_BATCHING": "1",
+        "RBITNET_CUDA_CONTINUOUS": "0",
+        "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
+        "RBITNET_CUDA_KV_FORMAT": "f32",
+        "RBITNET_CUDA_KV_PAGE_LIMIT": "128",
+        "RBITNET_CUDA_PREFILL": "1",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+        "RBITNET_FUSED_MULTI_SEQ": "1",
+        "RBITNET_HOST": "127.0.0.1",
+        "RBITNET_MAX_CONCURRENT": "8",
+        "RBITNET_MODEL": "E:\\devs\\Rbitnet\\models\\exported-llama\\Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        "RBITNET_PORT": "18980",
+        "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+      },
+      "gpu_before": {
+        "available": true,
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 610.88, 16376 MiB, 2288 MiB, 13758 MiB"
+      },
+      "cases": [
+        {
+          "concurrency": 1,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 1,
+              "wall_ms": 131.7112,
+              "aggregate_requested_tokens_per_sec": 242.9558002660366,
+              "per_request_requested_tokens_per_sec": 242.9558002660366,
+              "samples": [
+                {
+                  "started_ns": 3294687399800,
+                  "ttft_ms": 131.4369,
+                  "total_latency_ms": 131.5211,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 131.4369,
+                  "p50": 131.4369,
+                  "p95": 131.4369,
+                  "max": 131.4369,
+                  "mean": 131.4369,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 131.5211,
+                  "p50": 131.5211,
+                  "p95": 131.5211,
+                  "max": 131.5211,
+                  "mean": 131.5211,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 1,
+              "wall_ms": 141.3254,
+              "aggregate_requested_tokens_per_sec": 226.42780420221703,
+              "per_request_requested_tokens_per_sec": 226.42780420221703,
+              "samples": [
+                {
+                  "started_ns": 3294819139400,
+                  "ttft_ms": 141.0041,
+                  "total_latency_ms": 141.118,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 141.0041,
+                  "p50": 141.0041,
+                  "p95": 141.0041,
+                  "max": 141.0041,
+                  "mean": 141.0041,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 141.118,
+                  "p50": 141.118,
+                  "p95": 141.118,
+                  "max": 141.118,
+                  "mean": 141.118,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 1,
+              "wall_ms": 139.0965,
+              "aggregate_requested_tokens_per_sec": 230.05611212359767,
+              "per_request_requested_tokens_per_sec": 230.05611212359767,
+              "samples": [
+                {
+                  "started_ns": 3294960522800,
+                  "ttft_ms": 138.7746,
+                  "total_latency_ms": 138.8828,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 1,
+                  "min": 138.7746,
+                  "p50": 138.7746,
+                  "p95": 138.7746,
+                  "max": 138.7746,
+                  "mean": 138.7746,
+                  "sample_stdev": 0.0
+                },
+                "total_latency_ms": {
+                  "n": 1,
+                  "min": 138.8828,
+                  "p50": 138.8828,
+                  "p95": 138.8828,
+                  "max": 138.8828,
+                  "mean": 138.8828,
+                  "sample_stdev": 0.0
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 0.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 0.0,
+            "rbitnet_core_gpu_upload_bytes_total": 802665088.0,
+            "rbitnet_core_gpu_download_bytes_total": 640.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 820941876.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 820941876.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        },
+        {
+          "concurrency": 4,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 4,
+              "wall_ms": 7914.0881,
+              "aggregate_requested_tokens_per_sec": 16.17368904447753,
+              "per_request_requested_tokens_per_sec": 4.043422261119383,
+              "samples": [
+                {
+                  "started_ns": 3311124955100,
+                  "ttft_ms": 7913.1187,
+                  "total_latency_ms": 7913.3318,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3311125000300,
+                  "ttft_ms": 7913.1441,
+                  "total_latency_ms": 7913.3254,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3311125085200,
+                  "ttft_ms": 7912.9116,
+                  "total_latency_ms": 7913.155,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3311124822500,
+                  "ttft_ms": 7913.3723,
+                  "total_latency_ms": 7913.5292,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7912.9116,
+                  "p50": 7913.1314,
+                  "p95": 7913.33807,
+                  "max": 7913.3723,
+                  "mean": 7913.136675,
+                  "sample_stdev": 0.18846407924751574
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7913.155,
+                  "p50": 7913.3286,
+                  "p95": 7913.49959,
+                  "max": 7913.5292,
+                  "mean": 7913.335349999999,
+                  "sample_stdev": 0.1529875267247596
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 4,
+              "wall_ms": 7920.7991,
+              "aggregate_requested_tokens_per_sec": 16.159985676192697,
+              "per_request_requested_tokens_per_sec": 4.039996419048174,
+              "samples": [
+                {
+                  "started_ns": 3319039292500,
+                  "ttft_ms": 7919.7011,
+                  "total_latency_ms": 7919.8175,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3319039384700,
+                  "ttft_ms": 7919.8146,
+                  "total_latency_ms": 7919.9064,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3319039477700,
+                  "ttft_ms": 7919.5853,
+                  "total_latency_ms": 7919.7838,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3319039137800,
+                  "ttft_ms": 7919.7739,
+                  "total_latency_ms": 7920.0268,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7919.5853,
+                  "p50": 7919.7375,
+                  "p95": 7919.808494999999,
+                  "max": 7919.8146,
+                  "mean": 7919.718725,
+                  "sample_stdev": 0.10058026231161708
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7919.7838,
+                  "p50": 7919.86195,
+                  "p95": 7920.008739999999,
+                  "max": 7920.0268,
+                  "mean": 7919.883625,
+                  "sample_stdev": 0.1085592426586274
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 4,
+              "wall_ms": 7891.8916,
+              "aggregate_requested_tokens_per_sec": 16.21917868207921,
+              "per_request_requested_tokens_per_sec": 4.054794670519803,
+              "samples": [
+                {
+                  "started_ns": 3326960207900,
+                  "ttft_ms": 7891.0594,
+                  "total_latency_ms": 7891.1315,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3326960300300,
+                  "ttft_ms": 7890.8263,
+                  "total_latency_ms": 7891.0122,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3326960383700,
+                  "ttft_ms": 7890.6779,
+                  "total_latency_ms": 7890.8499,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3326960058200,
+                  "ttft_ms": 7890.9222,
+                  "total_latency_ms": 7891.1273,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 4,
+                  "min": 7890.6779,
+                  "p50": 7890.87425,
+                  "p95": 7891.03882,
+                  "max": 7891.0594,
+                  "mean": 7890.87145,
+                  "sample_stdev": 0.16062470752262067
+                },
+                "total_latency_ms": {
+                  "n": 4,
+                  "min": 7890.8499,
+                  "p50": 7891.069750000001,
+                  "p95": 7891.13087,
+                  "max": 7891.1315,
+                  "mean": 7891.030225,
+                  "sample_stdev": 0.13231551622295568
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 880.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 220.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 24645.0,
+            "rbitnet_core_gpu_upload_bytes_total": 1111581488.0,
+            "rbitnet_core_gpu_download_bytes_total": 2560.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 804613824.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 890011536.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        },
+        {
+          "concurrency": 8,
+          "warmups": 2,
+          "repetitions": 3,
+          "waves": [
+            {
+              "concurrency": 8,
+              "wall_ms": 15689.1602,
+              "aggregate_requested_tokens_per_sec": 16.316998280124643,
+              "per_request_requested_tokens_per_sec": 2.0396247850155804,
+              "samples": [
+                {
+                  "started_ns": 3366374754500,
+                  "ttft_ms": 15687.0541,
+                  "total_latency_ms": 15687.3112,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374477800,
+                  "ttft_ms": 15687.855,
+                  "total_latency_ms": 15687.9249,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374616700,
+                  "ttft_ms": 15687.1108,
+                  "total_latency_ms": 15687.2387,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374557900,
+                  "ttft_ms": 15687.463,
+                  "total_latency_ms": 15687.547,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374664300,
+                  "ttft_ms": 15687.5343,
+                  "total_latency_ms": 15687.7159,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374705700,
+                  "ttft_ms": 15687.2,
+                  "total_latency_ms": 15687.442,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374850700,
+                  "ttft_ms": 15687.1107,
+                  "total_latency_ms": 15687.3838,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3366374331100,
+                  "ttft_ms": 15687.9565,
+                  "total_latency_ms": 15688.0293,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 15687.0541,
+                  "p50": 15687.3315,
+                  "p95": 15687.920974999999,
+                  "max": 15687.9565,
+                  "mean": 15687.41055,
+                  "sample_stdev": 0.35148872365574696
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 15687.2387,
+                  "p50": 15687.4945,
+                  "p95": 15687.99276,
+                  "max": 15688.0293,
+                  "mean": 15687.5741,
+                  "sample_stdev": 0.2894288464249876
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 8,
+              "wall_ms": 15745.5608,
+              "aggregate_requested_tokens_per_sec": 16.258550791026764,
+              "per_request_requested_tokens_per_sec": 2.0323188488783455,
+              "samples": [
+                {
+                  "started_ns": 3382064202100,
+                  "ttft_ms": 15743.7876,
+                  "total_latency_ms": 15744.0186,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064254500,
+                  "ttft_ms": 15743.5037,
+                  "total_latency_ms": 15743.8362,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064605700,
+                  "ttft_ms": 15743.3279,
+                  "total_latency_ms": 15743.6038,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064538000,
+                  "ttft_ms": 15743.3554,
+                  "total_latency_ms": 15743.6577,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064340600,
+                  "ttft_ms": 15743.3638,
+                  "total_latency_ms": 15743.7,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064400400,
+                  "ttft_ms": 15743.4186,
+                  "total_latency_ms": 15743.7363,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064457800,
+                  "ttft_ms": 15743.1587,
+                  "total_latency_ms": 15743.6637,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3382064066400,
+                  "ttft_ms": 15744.1007,
+                  "total_latency_ms": 15744.2185,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 15743.1587,
+                  "p50": 15743.3912,
+                  "p95": 15743.991115,
+                  "max": 15744.1007,
+                  "mean": 15743.50205,
+                  "sample_stdev": 0.3013597707536314
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 15743.6038,
+                  "p50": 15743.71815,
+                  "p95": 15744.148535,
+                  "max": 15744.2185,
+                  "mean": 15743.80435,
+                  "sample_stdev": 0.21228901458699811
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "concurrency": 8,
+              "wall_ms": 15747.584,
+              "aggregate_requested_tokens_per_sec": 16.25646194362259,
+              "per_request_requested_tokens_per_sec": 2.0320577429528237,
+              "samples": [
+                {
+                  "started_ns": 3397809890700,
+                  "ttft_ms": 15745.5066,
+                  "total_latency_ms": 15745.797,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809580200,
+                  "ttft_ms": 15746.3508,
+                  "total_latency_ms": 15746.4803,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809717000,
+                  "ttft_ms": 15746.0248,
+                  "total_latency_ms": 15746.2501,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809659800,
+                  "ttft_ms": 15745.8893,
+                  "total_latency_ms": 15746.1929,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809852300,
+                  "ttft_ms": 15746.1484,
+                  "total_latency_ms": 15746.2493,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809770100,
+                  "ttft_ms": 15745.7134,
+                  "total_latency_ms": 15745.831,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809811700,
+                  "ttft_ms": 15745.8462,
+                  "total_latency_ms": 15746.089,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                },
+                {
+                  "started_ns": 3397809436100,
+                  "ttft_ms": 15746.3757,
+                  "total_latency_ms": 15746.5953,
+                  "itl_ms": [],
+                  "content_events": 1,
+                  "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+                }
+              ],
+              "aggregate": {
+                "ttft_ms": {
+                  "n": 8,
+                  "min": 15745.5066,
+                  "p50": 15745.95705,
+                  "p95": 15746.366985,
+                  "max": 15746.3757,
+                  "mean": 15745.9819,
+                  "sample_stdev": 0.3037197721583553
+                },
+                "total_latency_ms": {
+                  "n": 8,
+                  "min": 15745.797,
+                  "p50": 15746.221099999999,
+                  "p95": 15746.55505,
+                  "max": 15746.5953,
+                  "mean": 15746.1856125,
+                  "sample_stdev": 0.28006532114329014
+                },
+                "itl_ms": null,
+                "content_events": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ]
+              }
+            }
+          ],
+          "metrics_delta": {
+            "rbitnet_core_gpu_llama_batch_rows_total": 1760.0,
+            "rbitnet_core_gpu_llama_batch_waves_total": 445.0,
+            "rbitnet_core_gpu_llama_batch_projections_total": 49855.0,
+            "rbitnet_core_gpu_upload_bytes_total": 623978080.0,
+            "rbitnet_core_gpu_download_bytes_total": 5120.0,
+            "rbitnet_core_kv_write_bytes_total": 0.0,
+            "rbitnet_core_kv_physical_pages": 0.0,
+            "rbitnet_core_cuda_managed_live_bytes": 0.0,
+            "rbitnet_core_cuda_managed_peak_bytes": 85397712.0,
+            "rbitnet_core_cuda_managed_refusals_total": 0.0
+          }
+        }
+      ],
+      "gpu_after": {
+        "available": true,
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 610.88, 16376 MiB, 4268 MiB, 11778 MiB"
+      },
+      "server_log": "fused-on.server.log"
+    }
+  ],
+  "capacity_probes": [
+    {
+      "page_limit": 64,
+      "status": "success",
+      "environment": {
+        "RBITNET_BACKEND": "cuda",
+        "RBITNET_BIND": "127.0.0.1:18980",
+        "RBITNET_CONTINUOUS_BATCHING": "1",
+        "RBITNET_CUDA_CONTINUOUS": "0",
+        "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
+        "RBITNET_CUDA_KV_FORMAT": "f32",
+        "RBITNET_CUDA_KV_PAGE_LIMIT": "64",
+        "RBITNET_CUDA_PREFILL": "1",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+        "RBITNET_FUSED_MULTI_SEQ": "1",
+        "RBITNET_HOST": "127.0.0.1",
+        "RBITNET_MAX_CONCURRENT": "8",
+        "RBITNET_MODEL": "E:\\devs\\Rbitnet\\models\\exported-llama\\Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        "RBITNET_PORT": "18980",
+        "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+      },
+      "case": {
+        "concurrency": 4,
+        "warmups": 2,
+        "repetitions": 3,
+        "waves": [
+          {
+            "concurrency": 4,
+            "wall_ms": 7855.1435,
+            "aggregate_requested_tokens_per_sec": 16.29505559000927,
+            "per_request_requested_tokens_per_sec": 4.073763897502317,
+            "samples": [
+              {
+                "started_ns": 3428717541600,
+                "ttft_ms": 7854.0387,
+                "total_latency_ms": 7854.2256,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3428717488000,
+                "ttft_ms": 7854.0231,
+                "total_latency_ms": 7854.2476,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3428717409500,
+                "ttft_ms": 7854.235,
+                "total_latency_ms": 7854.3887,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3428717263800,
+                "ttft_ms": 7854.1585,
+                "total_latency_ms": 7854.4233,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7854.0231,
+                "p50": 7854.098599999999,
+                "p95": 7854.223524999999,
+                "max": 7854.235,
+                "mean": 7854.113825,
+                "sample_stdev": 0.10091915493735427
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7854.2256,
+                "p50": 7854.31815,
+                "p95": 7854.4181100000005,
+                "max": 7854.4233,
+                "mean": 7854.3213,
+                "sample_stdev": 0.09922523200649243
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "concurrency": 4,
+            "wall_ms": 7869.5688,
+            "aggregate_requested_tokens_per_sec": 16.2651859654623,
+            "per_request_requested_tokens_per_sec": 4.066296491365575,
+            "samples": [
+              {
+                "started_ns": 3436572850300,
+                "ttft_ms": 7868.5607,
+                "total_latency_ms": 7868.6153,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3436572787600,
+                "ttft_ms": 7868.3505,
+                "total_latency_ms": 7868.5881,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3436572709400,
+                "ttft_ms": 7868.5803,
+                "total_latency_ms": 7868.7305,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3436572560500,
+                "ttft_ms": 7868.664,
+                "total_latency_ms": 7868.7699,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7868.3505,
+                "p50": 7868.5705,
+                "p95": 7868.6514449999995,
+                "max": 7868.664,
+                "mean": 7868.538875,
+                "sample_stdev": 0.13333387604065705
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7868.5881,
+                "p50": 7868.6729,
+                "p95": 7868.76399,
+                "max": 7868.7699,
+                "mean": 7868.67595,
+                "sample_stdev": 0.08793624584506449
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "concurrency": 4,
+            "wall_ms": 7913.308,
+            "aggregate_requested_tokens_per_sec": 16.175283459205684,
+            "per_request_requested_tokens_per_sec": 4.043820864801421,
+            "samples": [
+              {
+                "started_ns": 3444442687100,
+                "ttft_ms": 7911.8995,
+                "total_latency_ms": 7912.0936,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3444442513400,
+                "ttft_ms": 7912.352,
+                "total_latency_ms": 7912.4405,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3444442602700,
+                "ttft_ms": 7912.0625,
+                "total_latency_ms": 7912.2269,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3444442352200,
+                "ttft_ms": 7912.3767,
+                "total_latency_ms": 7912.5751,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7911.8995,
+                "p50": 7912.2072499999995,
+                "p95": 7912.372995,
+                "max": 7912.3767,
+                "mean": 7912.172675,
+                "sample_stdev": 0.23133436659204398
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7912.0936,
+                "p50": 7912.333699999999,
+                "p95": 7912.55491,
+                "max": 7912.5751,
+                "mean": 7912.334025,
+                "sample_stdev": 0.21504575288369565
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        ],
+        "metrics_delta": {
+          "rbitnet_core_gpu_llama_batch_rows_total": 836.0,
+          "rbitnet_core_gpu_llama_batch_waves_total": 220.0,
+          "rbitnet_core_gpu_llama_batch_projections_total": 24645.0,
+          "rbitnet_core_gpu_upload_bytes_total": 1896189012.0,
+          "rbitnet_core_gpu_download_bytes_total": 2560.0,
+          "rbitnet_core_kv_write_bytes_total": 0.0,
+          "rbitnet_core_kv_physical_pages": 0.0,
+          "rbitnet_core_cuda_managed_live_bytes": 1625555700.0,
+          "rbitnet_core_cuda_managed_peak_bytes": 1710953412.0,
+          "rbitnet_core_cuda_managed_refusals_total": 0.0
+        }
+      },
+      "server_log": "capacity-pages-64.server.log"
+    },
+    {
+      "page_limit": 128,
+      "status": "success",
+      "environment": {
+        "RBITNET_BACKEND": "cuda",
+        "RBITNET_BIND": "127.0.0.1:18980",
+        "RBITNET_CONTINUOUS_BATCHING": "1",
+        "RBITNET_CUDA_CONTINUOUS": "0",
+        "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
+        "RBITNET_CUDA_KV_FORMAT": "f32",
+        "RBITNET_CUDA_KV_PAGE_LIMIT": "128",
+        "RBITNET_CUDA_PREFILL": "1",
+        "RBITNET_CUDA_QUANT_LIB": "E:\\devs\\Rbitnet\\native\\cuda_quant\\build\\rbitnet_cuda_quant64.dll",
+        "RBITNET_FUSED_MULTI_SEQ": "1",
+        "RBITNET_HOST": "127.0.0.1",
+        "RBITNET_MAX_CONCURRENT": "8",
+        "RBITNET_MODEL": "E:\\devs\\Rbitnet\\models\\exported-llama\\Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        "RBITNET_PORT": "18980",
+        "RBITNET_TOKENIZER": "E:\\devs\\Rbitnet\\models\\exported-llama\\tokenizer.json"
+      },
+      "case": {
+        "concurrency": 4,
+        "warmups": 2,
+        "repetitions": 3,
+        "waves": [
+          {
+            "concurrency": 4,
+            "wall_ms": 7888.8014,
+            "aggregate_requested_tokens_per_sec": 16.225532056111845,
+            "per_request_requested_tokens_per_sec": 4.056383014027961,
+            "samples": [
+              {
+                "started_ns": 3468500535400,
+                "ttft_ms": 7887.6857,
+                "total_latency_ms": 7887.9657,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3468500677900,
+                "ttft_ms": 7887.6393,
+                "total_latency_ms": 7887.8756,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3468500589600,
+                "ttft_ms": 7887.8638,
+                "total_latency_ms": 7888.0553,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3468500372300,
+                "ttft_ms": 7888.0186,
+                "total_latency_ms": 7888.2191,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7887.6393,
+                "p50": 7887.7747500000005,
+                "p95": 7887.99538,
+                "max": 7888.0186,
+                "mean": 7887.80185,
+                "sample_stdev": 0.17390772457466594
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7887.8756,
+                "p50": 7888.0105,
+                "p95": 7888.19453,
+                "max": 7888.2191,
+                "mean": 7888.0289250000005,
+                "sample_stdev": 0.14647881246109168
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "concurrency": 4,
+            "wall_ms": 7899.4083,
+            "aggregate_requested_tokens_per_sec": 16.20374528558044,
+            "per_request_requested_tokens_per_sec": 4.05093632139511,
+            "samples": [
+              {
+                "started_ns": 3476389502200,
+                "ttft_ms": 7898.3961,
+                "total_latency_ms": 7898.565,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3476389675400,
+                "ttft_ms": 7898.4379,
+                "total_latency_ms": 7898.5046,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3476389586400,
+                "ttft_ms": 7898.3777,
+                "total_latency_ms": 7898.5525,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3476389364900,
+                "ttft_ms": 7898.4503,
+                "total_latency_ms": 7898.6553,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7898.3777,
+                "p50": 7898.4169999999995,
+                "p95": 7898.44844,
+                "max": 7898.4503,
+                "mean": 7898.4155,
+                "sample_stdev": 0.034244220923767284
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7898.5046,
+                "p50": 7898.55875,
+                "p95": 7898.641755000001,
+                "max": 7898.6553,
+                "mean": 7898.56935,
+                "sample_stdev": 0.06293597275550297
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "concurrency": 4,
+            "wall_ms": 7866.1349,
+            "aggregate_requested_tokens_per_sec": 16.272286405868783,
+            "per_request_requested_tokens_per_sec": 4.068071601467196,
+            "samples": [
+              {
+                "started_ns": 3484289134500,
+                "ttft_ms": 7865.102,
+                "total_latency_ms": 7865.2789,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3484289273600,
+                "ttft_ms": 7864.8954,
+                "total_latency_ms": 7865.0127,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3484289188000,
+                "ttft_ms": 7864.8991,
+                "total_latency_ms": 7865.1478,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              },
+              {
+                "started_ns": 3484288993300,
+                "ttft_ms": 7865.3879,
+                "total_latency_ms": 7865.4845,
+                "itl_ms": [],
+                "content_events": 1,
+                "text": "Continuous batching is a data processing technique where data is processed in small batches, rather than in a single, complete batch. This approach allows for more flexibility and scalability"
+              }
+            ],
+            "aggregate": {
+              "ttft_ms": {
+                "n": 4,
+                "min": 7864.8954,
+                "p50": 7865.00055,
+                "p95": 7865.345015,
+                "max": 7865.3879,
+                "mean": 7865.0711,
+                "sample_stdev": 0.23221508707792157
+              },
+              "total_latency_ms": {
+                "n": 4,
+                "min": 7865.0127,
+                "p50": 7865.21335,
+                "p95": 7865.453659999999,
+                "max": 7865.4845,
+                "mean": 7865.230975,
+                "sample_stdev": 0.20094260167168243
+              },
+              "itl_ms": null,
+              "content_events": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        ],
+        "metrics_delta": {
+          "rbitnet_core_gpu_llama_batch_rows_total": 836.0,
+          "rbitnet_core_gpu_llama_batch_waves_total": 220.0,
+          "rbitnet_core_gpu_llama_batch_projections_total": 24645.0,
+          "rbitnet_core_gpu_upload_bytes_total": 1896189012.0,
+          "rbitnet_core_gpu_download_bytes_total": 2560.0,
+          "rbitnet_core_kv_write_bytes_total": 0.0,
+          "rbitnet_core_kv_physical_pages": 0.0,
+          "rbitnet_core_cuda_managed_live_bytes": 1625555700.0,
+          "rbitnet_core_cuda_managed_peak_bytes": 1710953412.0,
+          "rbitnet_core_cuda_managed_refusals_total": 0.0
+        }
+      },
+      "server_log": "capacity-pages-128.server.log"
+    }
+  ]
+}
