@@ -306,6 +306,7 @@ fn sarathi_prefill_decode_queue_starts_prefill_only() {
 /// Executor that records whether [`ModelExecutor::generate_decode_batch`] was used.
 struct BatchAwareEcho {
     batch_calls: std::sync::atomic::AtomicUsize,
+    prefill_rows: std::sync::atomic::AtomicUsize,
     seq_calls: std::sync::atomic::AtomicUsize,
 }
 
@@ -371,6 +372,15 @@ impl ModelExecutor for BatchAwareEcho {
         }
         Ok(out)
     }
+
+    fn generate_prefill_batch(
+        &self,
+        items: &[(u64, String, usize, SamplingOptions)],
+    ) -> Result<()> {
+        self.prefill_rows
+            .fetch_add(items.len(), std::sync::atomic::Ordering::Relaxed);
+        Ok(())
+    }
 }
 
 #[test]
@@ -379,6 +389,7 @@ fn fused_multi_seq_decode_uses_generate_decode_batch() {
     scheduler.fused_multi_seq = true;
     let exec = BatchAwareEcho {
         batch_calls: std::sync::atomic::AtomicUsize::new(0),
+        prefill_rows: std::sync::atomic::AtomicUsize::new(0),
         seq_calls: std::sync::atomic::AtomicUsize::new(0),
     };
     let batch = InferenceBatch {
@@ -407,6 +418,11 @@ fn fused_multi_seq_decode_uses_generate_decode_batch() {
     assert!(
         batch_calls >= 1,
         "fused_multi_seq should call generate_decode_batch (got {batch_calls})"
+    );
+    assert_eq!(
+        exec.prefill_rows.load(std::sync::atomic::Ordering::Relaxed),
+        2,
+        "fused scheduler should admit both prompt rows through generate_prefill_batch"
     );
 }
 

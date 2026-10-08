@@ -5,7 +5,7 @@
 //! serial (128-token partitions); decode rows share projection GEMMs on the GPU.
 
 use super::transient_batch::NativeBatchWorkspace;
-use super::{configured_page_limit, Resident, LlamaModel};
+use super::{configured_page_limit, LlamaModel, Resident};
 use crate::error::{BitNetError, Result};
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::{sample_token, SamplingOptions};
@@ -22,7 +22,9 @@ pub(crate) struct SchedulerFusedOptions {
     pub pages: Option<u32>,
 }
 
-pub(crate) fn configured(backend: crate::backend::BackendKind) -> Result<Option<SchedulerFusedOptions>> {
+pub(crate) fn configured(
+    backend: crate::backend::BackendKind,
+) -> Result<Option<SchedulerFusedOptions>> {
     if backend != crate::backend::BackendKind::Cuda {
         return Ok(None);
     }
@@ -148,8 +150,7 @@ impl SchedulerFusedLlama {
     }
 
     pub(crate) fn begin_batch(&mut self, active_ids: &[u64]) {
-        self.sequences
-            .retain(|id, _| active_ids.contains(id));
+        self.sequences.retain(|id, _| active_ids.contains(id));
     }
 
     pub(crate) fn end_batch(&mut self) {
@@ -160,12 +161,7 @@ impl SchedulerFusedLlama {
         self.workspace.stats()
     }
 
-    fn ensure_sequence(
-        &mut self,
-        id: u64,
-        prompt: &str,
-        sampling: SamplingOptions,
-    ) -> Result<()> {
+    fn ensure_sequence(&mut self, id: u64, prompt: &str, sampling: SamplingOptions) -> Result<()> {
         if self.sequences.contains_key(&id) {
             let seq = self.sequences.get(&id).expect("sequence");
             if seq.prompt_fingerprint != prompt {
@@ -180,18 +176,12 @@ impl SchedulerFusedLlama {
                 "CUDA fused scheduler decode slot limit exceeded".into(),
             ));
         }
-        let ids = self.tokenizer.encode_ids(
-            prompt,
-            crate::llama::llama_encode_add_special_tokens(),
-        )?;
-        let peer = self
-            .sequences
-            .values()
-            .next()
-            .map(|s| &s.resident);
-        let resident = Resident::new_with_pages(&self.model, self.page_limit, peer).ok_or_else(|| {
-            BitNetError::Inference("fused decode KV allocation refused".into())
-        })?;
+        let ids = self
+            .tokenizer
+            .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())?;
+        let peer = self.sequences.values().next().map(|s| &s.resident);
+        let resident = Resident::new_with_pages(&self.model, self.page_limit, peer)
+            .ok_or_else(|| BitNetError::Inference("fused decode KV allocation refused".into()))?;
         let rng = match sampling.seed {
             Some(seed) => StdRng::seed_from_u64(seed),
             None => StdRng::from_entropy(),
@@ -212,6 +202,189 @@ impl SchedulerFusedLlama {
                 prompt_fingerprint: prompt.to_owned(),
             },
         );
+        Ok(())
+    }
+
+    /// Run admitted prompt tokens as shared native waves. A wave contains one
+    /// next token per active request, so its projections are shared even when
+    /// prompt lengths and scheduler chunk sizes differ.
+    pub(crate) fn prefill_wave(
+        &mut self,
+        items: &[(u64, String, usize, SamplingOptions)],
+    ) -> Result<()> {
+        for &(id, ref prompt, _, sampling) in items {
+            self.ensure_sequence(id, prompt, sampling)?;
+        }
+        let mut remaining: BTreeMap<u64, usize> = items
+            .iter()
+            .map(|(id, _, count, _)| (*id, *count))
+            .collect();
+
+        while remaining.values().any(|count| *count > 0) {
+            let mut advance_ids = Vec::new();
+            let mut greedy_last_ids = Vec::new();
+            let mut logits_last_ids = Vec::new();
+            for (&id, count) in &remaining {
+                if *count == 0 {
+                    continue;
+                }
+                let seq = self.sequences.get(&id).ok_or_else(|| {
+                    BitNetError::Inference("fused prefill sequence missing".into())
+                })?;
+                if seq.pending.is_some() || seq.prefill_head.is_some() {
+                    return Err(BitNetError::Inference(
+                        "fused prefill admitted after sequence became decode-ready".into(),
+                    ));
+                }
+                if seq.prefilled >= seq.prompt_ids.len() {
+                    return Err(BitNetError::Inference(
+                        "fused prefill admission exceeds prompt length".into(),
+                    ));
+                }
+                if seq.prefilled + 1 == seq.prompt_ids.len() {
+                    if seq.sampling.device_greedy_eligible() {
+                        greedy_last_ids.push(id);
+                    } else {
+                        logits_last_ids.push(id);
+                    }
+                } else {
+                    advance_ids.push(id);
+                }
+            }
+
+            if !advance_ids.is_empty() {
+                self.prefill_advance_rows(&advance_ids)?;
+            }
+            if !greedy_last_ids.is_empty() {
+                self.prefill_last_greedy_rows(&greedy_last_ids)?;
+            }
+            if !logits_last_ids.is_empty() {
+                self.prefill_last_logits_rows(&logits_last_ids)?;
+            }
+            for id in advance_ids
+                .into_iter()
+                .chain(greedy_last_ids)
+                .chain(logits_last_ids)
+            {
+                *remaining.get_mut(&id).expect("prefill admission") -= 1;
+            }
+        }
+        Ok(())
+    }
+
+    fn prefill_advance_rows(&mut self, ids: &[u64]) -> Result<()> {
+        let mut tokens = Vec::with_capacity(ids.len());
+        let mut positions = Vec::with_capacity(ids.len());
+        for id in ids {
+            let seq = self.sequences.get(id).expect("prefill sequence");
+            tokens.push(seq.prompt_ids[seq.prefilled]);
+            positions.push(seq.prefilled as u32);
+        }
+        let started = Instant::now();
+        let mut owners: Vec<*mut Resident> = ids
+            .iter()
+            .map(|id| {
+                &mut self
+                    .sequences
+                    .get_mut(id)
+                    .expect("prefill sequence")
+                    .resident as *mut Resident
+            })
+            .collect();
+        let mut refs: Vec<&mut Resident> = owners
+            .iter_mut()
+            .map(|owner| unsafe { &mut **owner })
+            .collect();
+        self.workspace.advance(&mut refs, &tokens, &positions)?;
+        let elapsed = started.elapsed().as_millis() as u64;
+        for id in ids {
+            let seq = self.sequences.get_mut(id).expect("prefill sequence");
+            seq.prefilled += 1;
+            seq.prefill_ms = seq.prefill_ms.saturating_add(elapsed);
+        }
+        Ok(())
+    }
+
+    fn prefill_last_greedy_rows(&mut self, ids: &[u64]) -> Result<()> {
+        let mut tokens = Vec::with_capacity(ids.len());
+        let mut positions = Vec::with_capacity(ids.len());
+        for id in ids {
+            let seq = self.sequences.get(id).expect("prefill sequence");
+            tokens.push(seq.prompt_ids[seq.prefilled]);
+            positions.push(seq.prefilled as u32);
+        }
+        let started = Instant::now();
+        let mut owners: Vec<*mut Resident> = ids
+            .iter()
+            .map(|id| {
+                &mut self
+                    .sequences
+                    .get_mut(id)
+                    .expect("prefill sequence")
+                    .resident as *mut Resident
+            })
+            .collect();
+        let mut refs: Vec<&mut Resident> = owners
+            .iter_mut()
+            .map(|owner| unsafe { &mut **owner })
+            .collect();
+        let sampled = self
+            .workspace
+            .greedy_ids(&mut refs, &tokens, &positions)?
+            .to_vec();
+        let elapsed = started.elapsed().as_millis() as u64;
+        for (id, token) in ids.iter().zip(sampled) {
+            let seq = self.sequences.get_mut(id).expect("prefill sequence");
+            seq.prefilled += 1;
+            seq.next_position = seq.prefilled;
+            seq.prefill_head = Some(token);
+            seq.prefill_ms = seq.prefill_ms.saturating_add(elapsed);
+        }
+        Ok(())
+    }
+
+    fn prefill_last_logits_rows(&mut self, ids: &[u64]) -> Result<()> {
+        let mut tokens = Vec::with_capacity(ids.len());
+        let mut positions = Vec::with_capacity(ids.len());
+        for id in ids {
+            let seq = self.sequences.get(id).expect("prefill sequence");
+            tokens.push(seq.prompt_ids[seq.prefilled]);
+            positions.push(seq.prefilled as u32);
+        }
+        let started = Instant::now();
+        let mut owners: Vec<*mut Resident> = ids
+            .iter()
+            .map(|id| {
+                &mut self
+                    .sequences
+                    .get_mut(id)
+                    .expect("prefill sequence")
+                    .resident as *mut Resident
+            })
+            .collect();
+        let mut refs: Vec<&mut Resident> = owners
+            .iter_mut()
+            .map(|owner| unsafe { &mut **owner })
+            .collect();
+        let logits = self
+            .workspace
+            .full_logits(&mut refs, &tokens, &positions)?
+            .to_vec();
+        let elapsed = started.elapsed().as_millis() as u64;
+        let vocab = self.model.cfg.n_vocab;
+        for (row, id) in ids.iter().enumerate() {
+            let seq = self.sequences.get_mut(id).expect("prefill sequence");
+            let token = sample_token(
+                &logits[row * vocab..(row + 1) * vocab],
+                &seq.sampling,
+                &seq.generated,
+                &mut seq.rng,
+            );
+            seq.prefilled += 1;
+            seq.next_position = seq.prefilled;
+            seq.prefill_head = Some(token);
+            seq.prefill_ms = seq.prefill_ms.saturating_add(elapsed);
+        }
         Ok(())
     }
 
@@ -328,11 +501,7 @@ impl SchedulerFusedLlama {
                 .is_some_and(|s| s.prefill_head.is_some())
             {
                 results.insert(id, self.emit_prefill_head(id, max_tokens)?);
-            } else if self
-                .sequences
-                .get(&id)
-                .is_some_and(|s| s.pending.is_some())
-            {
+            } else if self.sequences.get(&id).is_some_and(|s| s.pending.is_some()) {
                 batch_ids.push(id);
             }
         }
@@ -359,7 +528,8 @@ impl SchedulerFusedLlama {
                 } else {
                     let mut owners = [&mut seq.resident];
                     let logits =
-                        self.workspace.full_logits(&mut owners, &wave_tokens, &wave_positions)?;
+                        self.workspace
+                            .full_logits(&mut owners, &wave_tokens, &wave_positions)?;
                     sample_token(
                         &logits[..self.model.cfg.n_vocab],
                         &seq.sampling,
@@ -384,10 +554,8 @@ impl SchedulerFusedLlama {
                                 as *mut Resident
                         })
                         .collect();
-                    let mut refs: Vec<&mut Resident> = owners
-                        .iter_mut()
-                        .map(|p| unsafe { &mut **p })
-                        .collect();
+                    let mut refs: Vec<&mut Resident> =
+                        owners.iter_mut().map(|p| unsafe { &mut **p }).collect();
                     self.workspace
                         .greedy_ids(&mut refs, &wave_tokens, &wave_positions)?
                         .to_vec()
@@ -399,12 +567,11 @@ impl SchedulerFusedLlama {
                                 as *mut Resident
                         })
                         .collect();
-                    let mut refs: Vec<&mut Resident> = owners
-                        .iter_mut()
-                        .map(|p| unsafe { &mut **p })
-                        .collect();
+                    let mut refs: Vec<&mut Resident> =
+                        owners.iter_mut().map(|p| unsafe { &mut **p }).collect();
                     let logits =
-                        self.workspace.full_logits(&mut refs, &wave_tokens, &wave_positions)?;
+                        self.workspace
+                            .full_logits(&mut refs, &wave_tokens, &wave_positions)?;
                     let vocab = self.model.cfg.n_vocab;
                     batch_ids
                         .iter()

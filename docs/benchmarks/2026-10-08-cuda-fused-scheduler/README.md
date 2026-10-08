@@ -1,8 +1,8 @@
-# CUDA fused scheduler decode (#96 progress)
+# CUDA fused scheduler prefill + decode (#96 progress)
 
 This slice wires Sarathi `RBITNET_CONTINUOUS_BATCHING` +
 `RBITNET_FUSED_MULTI_SEQ` to the existing Native `rbitnet_cuda_llama_batch_step`
-kernels (shared projection GEMMs across rows).
+kernels (shared projection GEMMs across prompt-token and decode rows).
 
 ## Enable (CUDA Llama, F32 KV)
 
@@ -21,7 +21,8 @@ worker is a separate path and must not be combined with this Sarathi path.
 ## Proof hooks
 
 - Prometheus: `rbitnet_core_gpu_llama_batch_rows_total` should exceed
-  `rbitnet_core_gpu_llama_batch_waves_total` when a decode wave has 2+ rows.
+  `rbitnet_core_gpu_llama_batch_waves_total` when a prefill or decode wave has
+  2+ rows.
 - Unit (GPU): `RBITNET_LLAMA_FUSED_SCHEDULER_TEST=1` plus the usual
   `RBITNET_TEST_GGUF` / `RBITNET_TOKENIZER` runs
   `fused_scheduler_batch_shared_projections_exceed_serial`.
@@ -46,7 +47,6 @@ run on a verified CUDA model host.
 
 ## Remaining gaps toward #96 close
 
-- Shared multi-request **prefill** GEMM.
 - Streaming-request coalescing (the HTTP bridge currently covers non-streaming
   completions).
 - Adaptive admission/backpressure and broader GPU/model validation.
