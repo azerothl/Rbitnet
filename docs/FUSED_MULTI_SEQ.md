@@ -91,6 +91,8 @@ outside this Llama-first slice.
 
 ## Docs sync
 
+- [FUSED_MULTI_SEQ_DECISION.md](FUSED_MULTI_SEQ_DECISION.md) — accepted Llama
+  CUDA shipping boundary, measured HTTP probe, and why #96 remains open
 - [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md) — #46 marked stalled/closed with this decision
 - [LIMITATIONS.md](LIMITATIONS.md) / [ENV_REFERENCE.md](ENV_REFERENCE.md) / [USAGE.md](USAGE.md)
 - [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) — kernel row + e2e “non mesuré / stalled”
