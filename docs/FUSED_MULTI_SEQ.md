@@ -52,17 +52,25 @@ Expected shape (illustrative; host-dependent): fused kernel faster than N indepe
 |------|-------------|-------------|
 | Stall-free schedule only | `RBITNET_CONTINUOUS_BATCHING=1` | Decode-first waves; no fused claim |
 | Exercise fused hook in CI/tests | `+ RBITNET_FUSED_MULTI_SEQ=1` | Batch API called; CPU/non-Llama executors remain sequential |
-| CUDA Llama HTTP batch | `RBITNET_CONTINUOUS_BATCHING=1` + `RBITNET_FUSED_MULTI_SEQ=1` | HTTP requests are coalesced briefly; Llama prompt-token and decode rows share GPU projections |
+| CUDA Llama HTTP/SSE batch | `RBITNET_CONTINUOUS_BATCHING=1` + `RBITNET_FUSED_MULTI_SEQ=1` | Compatible HTTP and SSE requests are coalesced briefly; Llama prompt-token and decode rows share GPU projections |
 
 ## #96 CUDA HTTP progress
 
-For a CUDA-resident Llama with F32 KV, non-streaming `/v1/chat/completions`
-requests are coalesced for a short server-side window and delivered as one
+For a CUDA-resident Llama with F32 KV, compatible `/v1/chat/completions`
+requests (including `stream: true`) are coalesced for a short server-side window
+and delivered as one
 `Engine::complete_batch_detailed` call. The existing Sarathi scheduler then
 uses `SchedulerFusedLlama` and `rbitnet_cuda_llama_batch_step` for multi-row
 decode waves. This supersedes the older, separate
 `RBITNET_CUDA_CONTINUOUS=1` worker for this configuration: leave that legacy
 flag unset (or `0`).
+
+SSE keeps the OpenAI event framing per request, but this initial bridge emits
+its content delta after that request's fused batch result is ready. It does not
+yet multiplex individual decode-token events from a shared wave, so it improves
+coalescing rather than streaming TTFT.
+This applies to the OpenAI-compatible chat endpoint; Anthropic-shaped SSE
+continues to use its dedicated live path.
 
 Measure concurrency 1/4/8 with:
 
@@ -76,8 +84,8 @@ Publish the script's wall time, requested aggregate tok/s, and deltas for
 `rbitnet_core_gpu_llama_batch_waves_total`. Do not publish a throughput claim
 unless the rows delta exceeds the waves delta for the concurrent runs.
 
-Remaining #96 gaps: streaming-request coalescing, CUDA graphs, adaptive
-admission/backpressure, and validation on
+Remaining #96 gaps: live per-token SSE multiplexing from a shared decode wave,
+CUDA graphs, adaptive admission/backpressure, and validation on
 representative GPU/model matrices. Qwen, GPT, MoE, and CPU paths are explicitly
 outside this Llama-first slice.
 

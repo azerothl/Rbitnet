@@ -2056,6 +2056,8 @@ async fn live_stream_chat_completion(
     let backend_kind = engine.backend_kind().to_string();
     let model_family = engine.model_family().to_string();
     let backend_accelerated = engine.backend_accelerated();
+    let continuous_batching = engine.continuous_batching_enabled();
+    let continuous_batcher = Arc::clone(&state.continuous_batcher);
 
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel::<Result<StreamEvent, String>>(64);
     let prompt_for_stop = prompt.clone();
@@ -2067,7 +2069,20 @@ async fn live_stream_chat_completion(
                 .map_err(|e| BitNetError::Inference(format!("stream send failed: {e}")))?;
             Ok(())
         };
-        match engine.complete_streaming(&prompt, max_tokens, sampling, &mut on_event) {
+        let result = if continuous_batching {
+            continuous_batcher.complete_streaming(
+                Arc::clone(&engine),
+                InferenceRequest {
+                    prompt,
+                    max_tokens,
+                    sampling,
+                },
+                &mut on_event,
+            )
+        } else {
+            engine.complete_streaming(&prompt, max_tokens, sampling, &mut on_event)
+        };
+        match result {
             Ok(()) => Ok(()),
             Err(e) => {
                 let _ = handle.block_on(event_tx.send(Err(e.to_string())));
