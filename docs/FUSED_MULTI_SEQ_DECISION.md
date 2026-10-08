@@ -44,8 +44,10 @@ follow-ups rather than implied by this Llama shipment:
    ablation, TTFT/ITL dispersion, KV page-limit capacity sweep.
 2. [#169](https://github.com/azerothl/Rbitnet/issues/169) — live per-token SSE
    multiplexing and heterogeneous cancel/admit waves.
-3. [#170](https://github.com/azerothl/Rbitnet/issues/170) — Qwen/GPT/MoE fused
-   multi-seq and adaptive admission / CUDA graphs.
+3. [#170](https://github.com/azerothl/Rbitnet/issues/170) — bounded by the
+   Llama adaptive-admission decision; Qwen/GPT/MoE fused multi-seq, the
+   adaptive benchmark gate, and CUDA graphs remain in
+   [its follow-ups](FUSED_MULTI_ARCH_DECISION.md).
 
 This matches the bounded close style used for #94 and #86: ship the measured
 vertical, keep residual work ticketed.
