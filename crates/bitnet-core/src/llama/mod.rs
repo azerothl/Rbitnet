@@ -27,4 +27,7 @@ pub use slim_attention::{
     DEFAULT_TILE_TOKENS,
 };
 
-pub(crate) use resident::{BatchController, BatchOptions};
+pub(crate) use resident::{
+    scheduler_fused_options, BatchController, BatchOptions, SchedulerFusedLlama,
+    SchedulerFusedOptions,
+};

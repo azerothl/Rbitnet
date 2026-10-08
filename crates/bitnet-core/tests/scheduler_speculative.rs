@@ -356,12 +356,12 @@ impl ModelExecutor for BatchAwareEcho {
 
     fn generate_decode_batch(
         &self,
-        items: &[(String, u32, SamplingOptions)],
+        items: &[(u64, String, u32, SamplingOptions)],
     ) -> Result<Vec<(String, PhaseTimings)>> {
         self.batch_calls
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut out = Vec::with_capacity(items.len());
-        for (prompt, max_tokens, sampling) in items {
+        for (_, prompt, max_tokens, sampling) in items {
             // Still use per-item generate (toy) but count the batch entrypoint.
             let (text, phases) = self.generate_with_timings(prompt, *max_tokens, *sampling)?;
             // Undo seq_calls inflation from the above — batch path owns the wave.

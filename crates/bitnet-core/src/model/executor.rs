@@ -120,13 +120,24 @@ pub trait ModelExecutor: Send + Sync {
     /// the CPU matvec building block is [`crate::fused_batch::dense_matvec_multi_seq`].
     fn generate_decode_batch(
         &self,
-        items: &[(String, u32, SamplingOptions)],
+        items: &[(u64, String, u32, SamplingOptions)],
     ) -> Result<Vec<(String, PhaseTimings)>> {
         let mut out = Vec::with_capacity(items.len());
-        for (prompt, max_tokens, sampling) in items {
+        for (_, prompt, max_tokens, sampling) in items {
             out.push(self.generate_with_timings(prompt, *max_tokens, *sampling)?);
         }
         Ok(out)
+    }
+
+    /// Called at the start of [`crate::scheduler::Scheduler::run_batch_waves`] when fused
+    /// multi-seq is enabled. CUDA Llama uses this to scope per-request KV state to one batch.
+    fn fused_scheduler_batch_begin(&self, _request_ids: &[u64]) -> Result<()> {
+        Ok(())
+    }
+
+    /// Called when a fused scheduler batch completes (success or error).
+    fn fused_scheduler_batch_end(&self) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -142,6 +153,8 @@ pub struct LlamaExecutor {
     runtime: Mutex<Option<LlamaRuntime>>,
     batch_options: Option<crate::llama::BatchOptions>,
     batch: Mutex<Option<Arc<crate::llama::BatchController>>>,
+    fused_scheduler_options: Option<crate::llama::SchedulerFusedOptions>,
+    fused_scheduler: Mutex<Option<crate::llama::SchedulerFusedLlama>>,
     mmproj: Option<Arc<crate::mmproj::MmprojEncoder>>,
 }
 
@@ -180,6 +193,8 @@ impl LlamaExecutor {
             runtime: Mutex::new(None),
             batch_options: crate::llama::BatchOptions::configured(backend_kind)?,
             batch: Mutex::new(None),
+            fused_scheduler_options: crate::llama::scheduler_fused_options(backend_kind)?,
+            fused_scheduler: Mutex::new(None),
             mmproj: None,
         })
     }
@@ -248,6 +263,32 @@ impl LlamaExecutor {
             )?));
         }
         Ok(slot.as_ref().cloned())
+    }
+
+    fn with_fused_scheduler<R>(
+        &self,
+        f: impl FnOnce(&mut crate::llama::SchedulerFusedLlama) -> Result<R>,
+    ) -> Result<Option<R>> {
+        let Some(options) = self.fused_scheduler_options else {
+            return Ok(None);
+        };
+        let mut slot = self
+            .fused_scheduler
+            .lock()
+            .map_err(|e| BitNetError::Inference(format!("fused scheduler lock poisoned: {e}")))?;
+        if slot.is_none() {
+            let model = Arc::new(crate::llama::LlamaModel::from_gguf_arc_with_config(
+                Arc::clone(&self.gguf),
+                self.backend_kind,
+                self.config.clone(),
+            )?);
+            *slot = Some(crate::llama::SchedulerFusedLlama::new(
+                model,
+                Arc::clone(&self.prompt_tokenizer),
+                options,
+            )?);
+        }
+        Ok(Some(f(slot.as_mut().unwrap())?))
     }
 }
 impl ModelExecutor for LlamaExecutor {
@@ -439,6 +480,40 @@ impl ModelExecutor for LlamaExecutor {
         slot.as_mut()
             .unwrap()
             .generate_streaming(prompt, max_tokens, sampling, on_event)
+    }
+
+    fn fused_scheduler_batch_begin(&self, request_ids: &[u64]) -> Result<()> {
+        if let Some(()) = self.with_fused_scheduler(|engine| {
+            engine.begin_batch(request_ids);
+            Ok(())
+        })? {
+            return Ok(());
+        }
+        Ok(())
+    }
+
+    fn fused_scheduler_batch_end(&self) -> Result<()> {
+        if let Some(()) = self.with_fused_scheduler(|engine| {
+            engine.end_batch();
+            Ok(())
+        })? {
+            return Ok(());
+        }
+        Ok(())
+    }
+
+    fn generate_decode_batch(
+        &self,
+        items: &[(u64, String, u32, SamplingOptions)],
+    ) -> Result<Vec<(String, PhaseTimings)>> {
+        if let Some(out) = self.with_fused_scheduler(|engine| engine.decode_wave(items))? {
+            return Ok(out);
+        }
+        let mut out = Vec::with_capacity(items.len());
+        for (_, prompt, max_tokens, sampling) in items {
+            out.push(self.generate_with_timings(prompt, *max_tokens, *sampling)?);
+        }
+        Ok(out)
     }
 }
 

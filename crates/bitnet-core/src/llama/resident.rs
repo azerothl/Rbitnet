@@ -1104,7 +1104,12 @@ mod controller;
 mod quantized_long_tests;
 #[path = "resident/transient_batch.rs"]
 mod transient_batch;
+#[path = "resident/scheduler_fused.rs"]
+mod scheduler_fused;
 pub(crate) use controller::{BatchController, BatchOptions};
+pub(crate) use scheduler_fused::{
+    configured as scheduler_fused_options, SchedulerFusedLlama, SchedulerFusedOptions,
+};
 #[cfg(test)]
 #[path = "resident/continuous_tests.rs"]
 mod continuous_tests;
@@ -1116,3 +1121,7 @@ mod context_tests;
 #[cfg(test)]
 #[path = "resident/integration_guard_tests.rs"]
 mod integration_guard_tests;
+
+#[cfg(test)]
+#[path = "resident/scheduler_fused_tests.rs"]
+mod scheduler_fused_tests;

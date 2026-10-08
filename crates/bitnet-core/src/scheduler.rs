@@ -348,6 +348,26 @@ impl ContinuousBatchScheduler {
             }
         }
 
+        if self.fused_multi_seq {
+            let ids: Vec<u64> = batch.requests.iter().map(|r| r.id).collect();
+            executor.fused_scheduler_batch_begin(&ids)?;
+        }
+        struct FusedBatchGuard<'a> {
+            executor: &'a dyn ModelExecutor,
+            active: bool,
+        }
+        impl Drop for FusedBatchGuard<'_> {
+            fn drop(&mut self) {
+                if self.active {
+                    let _ = self.executor.fused_scheduler_batch_end();
+                }
+            }
+        }
+        let _fused_guard = FusedBatchGuard {
+            executor,
+            active: self.fused_multi_seq,
+        };
+
         let mut prefill_remaining: HashMap<u64, usize> = HashMap::new();
         for req in &batch.requests {
             let tokens = executor
@@ -542,7 +562,8 @@ impl ContinuousBatchScheduler {
             return Ok((0, 0));
         }
 
-        let mut items: Vec<(String, u32, SamplingOptions)> = Vec::with_capacity(selected.len());
+        let mut items: Vec<(u64, String, u32, SamplingOptions)> =
+            Vec::with_capacity(selected.len());
         for &id in &selected {
             let orig = batch
                 .requests
@@ -551,7 +572,7 @@ impl ContinuousBatchScheduler {
                 .expect("decode id in batch");
             let entry = acc.get(&id).expect("acc entry");
             let prompt = format!("{}{}", orig.request.prompt, entry.0);
-            items.push((prompt, 1, orig.request.sampling));
+            items.push((id, prompt, 1, orig.request.sampling));
         }
 
         let results = executor.generate_decode_batch(&items)?;
