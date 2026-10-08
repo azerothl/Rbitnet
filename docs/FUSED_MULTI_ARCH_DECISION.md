@@ -37,17 +37,15 @@ this release:
 Operators must not interpret `RBITNET_FUSED_MULTI_SEQ=1` or the Llama adaptive
 flag as support for these architectures.
 
-## Follow-ups
+## Deferred follow-up decision
 
-1. [#178](https://github.com/azerothl/Rbitnet/issues/178) — Qwen GDN/recurrent
-   multi-owner fused decode and prefill.
-2. [#179](https://github.com/azerothl/Rbitnet/issues/179) — GPT-OSS / GLM MoE
-   routing and packed expert work for multi-owner waves.
-3. [#180](https://github.com/azerothl/Rbitnet/issues/180) — Llama adaptive
-   admission benchmark gate and optional multi-sequence CUDA graphs.
-
-Each follow-up requires architecture-specific correctness oracles and benchmark
-evidence before it can be considered shipped.
+The deferred Qwen, MoE, adaptive-admission, and CUDA-graph work is resolved by
+the explicit no-go and reopen criteria in
+[the follow-up decision](FUSED_MULTI_FOLLOWUP_DECISIONS.md), which closes
+[#178](https://github.com/azerothl/Rbitnet/issues/178),
+[#179](https://github.com/azerothl/Rbitnet/issues/179), and
+[#180](https://github.com/azerothl/Rbitnet/issues/180). No architecture is
+considered shipped without its listed correctness oracle and benchmark evidence.
 
 ## Reopen threshold
 
