@@ -84,13 +84,16 @@ Publish the script's wall time, requested aggregate tok/s, and deltas for
 `rbitnet_core_gpu_llama_batch_waves_total`. Do not publish a throughput claim
 unless the rows delta exceeds the waves delta for the concurrent runs.
 
-Remaining #96 gaps: live per-token SSE multiplexing from a shared decode wave,
-CUDA graphs, adaptive admission/backpressure, and validation on
-representative GPU/model matrices. Qwen, GPT, MoE, and CPU paths are explicitly
-outside this Llama-first slice.
+#96 closes on this Llama-first slice. Residual work is tracked separately:
+[#168](https://github.com/azerothl/Rbitnet/issues/168) (ablation / dispersion),
+[#169](https://github.com/azerothl/Rbitnet/issues/169) (live SSE mux / cancel),
+[#170](https://github.com/azerothl/Rbitnet/issues/170) (Qwen/GPT/MoE + adaptive
+admission).
 
 ## Docs sync
 
+- [FUSED_MULTI_SEQ_DECISION.md](FUSED_MULTI_SEQ_DECISION.md) — accepted Llama
+  CUDA shipping boundary, measured HTTP probe, and #96 close with follow-ups
 - [STUBS_AND_MVP_AUDIT.md](STUBS_AND_MVP_AUDIT.md) — #46 marked stalled/closed with this decision
 - [LIMITATIONS.md](LIMITATIONS.md) / [ENV_REFERENCE.md](ENV_REFERENCE.md) / [USAGE.md](USAGE.md)
 - [BENCHMARKS_RESULTS.md](BENCHMARKS_RESULTS.md) — kernel row + e2e “non mesuré / stalled”
