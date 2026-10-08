@@ -377,6 +377,19 @@ async fn restore_idle_single_model(state: &AppState) -> Result<(), (&'static str
     if state.engine.read().await.has_gguf() {
         return Ok(());
     }
+    // Without a configured model path, keep the historical unload contract.
+    let model_configured = std::env::var_os("RBITNET_MODEL")
+        .filter(|v| !v.is_empty())
+        .is_some()
+        || std::env::var_os("RBITNET_TOY")
+            .filter(|v| !v.is_empty())
+            .is_some();
+    if !model_configured {
+        return Err((
+            "ModelUnloaded",
+            "model unloaded; reload a model before requesting inference".into(),
+        ));
+    }
     let started = Instant::now();
     let engine = Engine::from_env().map_err(|error| {
         (
@@ -388,8 +401,8 @@ async fn restore_idle_single_model(state: &AppState) -> Result<(), (&'static str
     })?;
     if !engine.has_gguf() {
         return Err((
-            "IdleRestoreFailed",
-            "idle model restore did not load a GGUF; retry after setting RBITNET_MODEL".into(),
+            "ModelUnloaded",
+            "model unloaded; reload a model before requesting inference".into(),
         ));
     }
     {
