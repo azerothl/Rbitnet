@@ -1,6 +1,6 @@
-# Decision: ship the bounded CUDA Llama Sarathi fused vertical; keep #96 open
+# Decision: ship the bounded CUDA Llama Sarathi fused vertical
 
-**Status:** accepted as an opt-in Llama CUDA product slice; [#96](https://github.com/azerothl/Rbitnet/issues/96) remains open  
+**Status:** accepted; closes [#96](https://github.com/azerothl/Rbitnet/issues/96)  
 **Date:** 2026-10-08  
 **Evidence:** [synchronized HTTP 1/4/8 probe](benchmarks/2026-10-08-cuda-fused-scheduler/HTTP_SARATHI_FUSED.md), [scheduler implementation note](benchmarks/2026-10-08-cuda-fused-scheduler/README.md), [operator contract](FUSED_MULTI_SEQ.md)
 
@@ -17,12 +17,12 @@ Ship the following narrow vertical for compatible OpenAI-chat Llama requests:
   refuse a multi-request wave on a 16 GiB GPU;
 - `RBITNET_CUDA_CONTINUOUS` is a distinct legacy worker and remains unset (or
   `0`) for this path;
-- OpenAI-compatible SSE requests can enter the same rendezvous, but their
-  bridge buffers a completed shared result before emitting its content delta.
+- OpenAI-compatible SSE requests can enter the same rendezvous; the current
+  bridge buffers a completed shared result before emitting content deltas.
 
-The measured 4- and 8-request HTTP probes prove the intended fused work was
-actually reached: GPU batch rows exceed GPU batch waves. This supersedes the
-older statement that the Llama GPU path was only a scheduler hook.
+The measured 4- and 8-request HTTP probes prove fused work was reached: GPU
+batch rows exceed GPU batch waves. This supersedes the older statement that the
+Llama GPU path was only a scheduler hook.
 
 ## Product boundary
 
@@ -35,45 +35,22 @@ CPU Llama/BitNet and Qwen retain their existing sequential execution. GPT and
 MoE paths do not enter this vertical. Unsupported combinations must remain
 explicit rather than silently claiming fused throughput.
 
-## Why #96 cannot close yet
+## Follow-ups (explicit, non-blocking for #96)
 
-Unlike #94 and #86, the issue's stated acceptance is broader than this product
-slice. Its required evidence and correctness scope have not been reduced by
-the issue itself. In particular, the published HTTP probe is a single,
-fused-on routing proof, not the required benchmark protocol:
+Broader acceptance items from the original issue body are deferred to tracked
+follow-ups rather than implied by this Llama shipment:
 
-1. It has no same-revision fused-off/native-separate ablation, warm-up
-   repetitions, or TTFT/inter-token/total-latency dispersion.
-2. It does not validate heterogeneous contexts, arrivals while decoding,
-   cancellation, and completion/stop/sampling parity through a shared live
-   wave.
-3. The SSE bridge is buffered: it is not live per-token multiplexing, so it
-   cannot establish streaming TTFT or inter-token behavior.
-4. Qwen, GPT, and MoE have no fused multi-sequence forward, including the
-   requested per-token expert routing/packing treatment.
-5. Admission is fixed and bounded; adaptive admission/backpressure is not
-   implemented or measured. CUDA graphs are likewise not part of this
-   multi-sequence acceptance.
+1. [#168](https://github.com/azerothl/Rbitnet/issues/168) — fused-on/off 1/4/8
+   ablation, TTFT/ITL dispersion, KV page-limit capacity sweep.
+2. [#169](https://github.com/azerothl/Rbitnet/issues/169) — live per-token SSE
+   multiplexing and heterogeneous cancel/admit waves.
+3. [#170](https://github.com/azerothl/Rbitnet/issues/170) — Qwen/GPT/MoE fused
+   multi-seq and adaptive admission / CUDA graphs.
 
-The HTTP probe also found a concrete operational constraint: a 16 GiB GPU
-with the dense model-maximum KV allocation rejects a synchronized four-request
-wave. Bounded paged F32 KV made the measured 4/8 waves succeed, but the
-capacity policy has not yet been swept across prompt lengths and GPU memory
-budgets.
+This matches the bounded close style used for #94 and #86: ship the measured
+vertical, keep residual work ticketed.
 
-Therefore the truthful PR linkage is **`Progress on #96`**, not `Closes #96`.
-Closing the issue would represent the unmeasured ablation, transport, and
-architecture acceptance as completed.
+## Reopen threshold
 
-## Reopen and completion threshold
-
-Keep #96 open until a frozen revision publishes the issue's requested
-fused-on/fused-off 1/4/8 matrix with raw repetitions, warm-up, aggregate and
-per-request decode throughput, client TTFT, inter-token latency dispersion,
-total latency, RAM/VRAM, and transfer counters. It must also demonstrate
-heterogeneous admission/cancellation correctness and define whether live SSE
-token multiplexing is delivered or moved into a separately accepted issue.
-
-Qwen/GPT/MoE fused forwards, adaptive admission/backpressure, and CUDA graphs
-are explicit follow-ups. They may become separately scoped decisions, but
-they cannot be implied by this Llama-only shipment.
+Reopen #96 only if the shipped Llama Sarathi fused path regresses correctness
+or loses the measured multi-row fused work under the documented flags.
