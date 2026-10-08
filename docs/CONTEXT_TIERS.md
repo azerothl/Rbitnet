@@ -61,6 +61,15 @@ and selected arithmetic settings. The driver API version is not the NVIDIA drive
 build number. Binary or configuration changes can cause intentional cache misses.
 Hashes are computed when initializing the store and add startup work.
 
+With `RBITNET_IDLE_UNLOAD_SECS`, a standalone (non-registry) server reloads its
+configured GGUF on the first later inference request. That reload reopens the
+compatible context-tier store, so an identical conversation prefix can restore
+from RAM or SSD before prefill. `rbitnet_idle_restores_total` and
+`rbitnet_idle_restore_ms_sum` distinguish model reload cost from generation
+TTFT. This is prefix reuse based on the full rendered prompt, not a server-held
+conversation continuation: clients must resend their history, and no generated
+state is shared merely because two requests use the same session header.
+
 The format checks the version, exact byte size, bounded header, expected payload
 geometry, compatibility fields, finite values, SHA-256 checksum and content
 address before Native import. Qwen state is captured only at an exact prefill

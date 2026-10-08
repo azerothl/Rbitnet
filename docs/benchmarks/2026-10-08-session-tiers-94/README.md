@@ -38,9 +38,13 @@ the token prefix plus compatibility identity, rather than a proxy session ID.
   `portable_{bytes,export,import}` functions.
 - `crates/bitnet-core/src/native/graph.rs` explicitly rejects context tiers in
   `NativeExecutor::load`; that is the GPT-OSS/GLM/MLA executor.
-- `crates/bitnet-server/src/run.rs` swaps an idle server to a stub, and
-  `crates/rbitnet-proxy/src/lib.rs` kills and respawns an idle runner. Neither
-  coordinates a session snapshot lifecycle or verifies a restored session.
+- `crates/bitnet-server/src/run.rs` swaps an idle server to a stub. On the
+  next standalone request, `bitnet-server` now reloads its configured GGUF,
+  reopens the compatible tier store, and records reload duration separately.
+  A matching full rendered prompt can therefore restore its Llama/Qwen prefix;
+  this has not yet been validated on a real model in this revision.
+- `crates/rbitnet-proxy/src/lib.rs` still kills and respawns an idle runner
+  without a proxy-level restore verification.
 
 The existing two-model Llama/Qwen evidence is
 [`2026-10-04-context-global-quota-fresh`](../2026-10-04-context-global-quota-fresh/README.md).
@@ -51,9 +55,9 @@ TTFT-versus-recompute result.
 
 1. GPT-OSS and GLM/MLA have no RAM/SSD transport, no export/import ABI, and no
    restore/capture integration. Encoded-KV remains unsupported as documented.
-2. There is no verified proxy/session-to-checkpoint ownership or idle
-   unload/reload integration. Existing idle unload frees the runner; it is not
-   tensor-state restore.
+2. There is no verified proxy/session-to-checkpoint ownership. Standalone idle
+   unload now reloads and reopens compatible checkpoints, but real-model
+   restore correctness and proxy idle-runner restoration remain unverified.
 3. No reproducible same-revision ablation publishes cold/recompute, RAM and SSD
    resume TTFT; transfer/read/write time; disk size; RSS; VRAM; warm-up;
    repetitions and dispersion. The expected local benchmark directory

@@ -32,6 +32,8 @@ pub struct ServerMetrics {
     pub completion_tokens_total: AtomicU64,
     pub native_accelerated_calls_total: AtomicU64,
     pub model_unloads_total: AtomicU64,
+    pub idle_restores_total: AtomicU64,
+    pub idle_restore_ms_total: AtomicU64,
     pub model_reloads_total: AtomicU64,
     pub model_reload_failures_total: AtomicU64,
     pub model_reload_ms_total: AtomicU64,
@@ -71,6 +73,8 @@ impl ServerMetrics {
         let completion_tokens = self.completion_tokens_total.load(Ordering::Relaxed);
         let native_calls = self.native_accelerated_calls_total.load(Ordering::Relaxed);
         let unloads = self.model_unloads_total.load(Ordering::Relaxed);
+        let idle_restores = self.idle_restores_total.load(Ordering::Relaxed);
+        let idle_restore_ms = self.idle_restore_ms_total.load(Ordering::Relaxed);
         let reloads = self.model_reloads_total.load(Ordering::Relaxed);
         let reload_failures = self.model_reload_failures_total.load(Ordering::Relaxed);
         let reload_ms = self.model_reload_ms_total.load(Ordering::Relaxed);
@@ -134,6 +138,22 @@ impl ServerMetrics {
         .unwrap();
         writeln!(s, "# TYPE rbitnet_model_unloads_total counter").unwrap();
         writeln!(s, "rbitnet_model_unloads_total {unloads}").unwrap();
+
+        writeln!(
+            s,
+            "# HELP rbitnet_idle_restores_total First-request model reloads after idle eviction"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_idle_restores_total counter").unwrap();
+        writeln!(s, "rbitnet_idle_restores_total {idle_restores}").unwrap();
+
+        writeln!(
+            s,
+            "# HELP rbitnet_idle_restore_ms_sum Sum of first-request reload wall times after idle eviction"
+        )
+        .unwrap();
+        writeln!(s, "# TYPE rbitnet_idle_restore_ms_sum counter").unwrap();
+        writeln!(s, "rbitnet_idle_restore_ms_sum {idle_restore_ms}").unwrap();
 
         writeln!(
             s,

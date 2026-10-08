@@ -40,7 +40,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::pin::pin;
 use std::task::Poll;
-use tokio::sync::{RwLock, Semaphore};
+use tokio::sync::{Mutex, RwLock, Semaphore};
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use uuid::Uuid;
@@ -69,6 +69,8 @@ pub struct AppState {
     /// Last model load failure (startup or admin reload). Cleared on successful load or unload.
     /// When set with a stub/non-ready engine, `/ready` reports `LoadFailed`.
     pub last_load_error: Arc<RwLock<Option<String>>>,
+    /// Serializes the first request that reloads an engine evicted by idle TTL.
+    pub idle_restore_lock: Arc<Mutex<()>>,
 }
 
 /// Build [`AppState`] for tests or custom embedders.
@@ -103,6 +105,7 @@ pub fn build_app_state_with_registry(
         last_inference_activity_ms: Arc::new(AtomicU64::new(crate::unix_now_ms())),
         requires_loaded_model: Arc::new(AtomicBool::new(requires_loaded_model)),
         last_load_error: Arc::new(RwLock::new(None)),
+        idle_restore_lock: Arc::new(Mutex::new(())),
     }
 }
 
@@ -326,6 +329,9 @@ pub(crate) async fn available_engine(
     state: &AppState,
     selected: Option<Arc<Engine>>,
 ) -> Result<Arc<Engine>, (&'static str, String)> {
+    if selected.is_none() && state.registry.read().await.is_none() {
+        restore_idle_single_model(state).await?;
+    }
     // Pin the validated engine for the entire request, including prompt encoding
     // and SSE. An unload/reload must not turn a pending request into a stub response.
     let shared = state.engine.read().await;
@@ -351,6 +357,56 @@ pub(crate) async fn available_engine(
     } else {
         Ok(engine)
     }
+}
+
+/// Reload an environment-configured model on the first request after idle eviction.
+///
+/// Context-tier stores reopen during `Engine::from_env`. A repeated conversation
+/// therefore resumes through its compatible RAM/SSD prefix checkpoint rather than
+/// requiring a separate session-state transport. Registry requests use their
+/// per-model loader instead and never enter this path.
+async fn restore_idle_single_model(state: &AppState) -> Result<(), (&'static str, String)> {
+    if !state.requires_loaded_model.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+    if state.engine.read().await.has_gguf() {
+        return Ok(());
+    }
+
+    let _restore = state.idle_restore_lock.lock().await;
+    if state.engine.read().await.has_gguf() {
+        return Ok(());
+    }
+    let started = Instant::now();
+    let engine = Engine::from_env().map_err(|error| {
+        (
+            "IdleRestoreFailed",
+            format!(
+                "idle model restore failed; retry after fixing the model configuration: {error:?}"
+            ),
+        )
+    })?;
+    if !engine.has_gguf() {
+        return Err((
+            "IdleRestoreFailed",
+            "idle model restore did not load a GGUF; retry after setting RBITNET_MODEL".into(),
+        ));
+    }
+    {
+        let mut current = state.engine.write().await;
+        *current = Arc::new(engine);
+    }
+    *state.last_load_error.write().await = None;
+    state
+        .metrics
+        .idle_restores_total
+        .fetch_add(1, Ordering::Relaxed);
+    state
+        .metrics
+        .idle_restore_ms_total
+        .fetch_add(started.elapsed().as_millis() as u64, Ordering::Relaxed);
+    tracing::info!("idle model restored; compatible context tiers may restore prompt prefixes");
+    Ok(())
 }
 
 /// Resident working set from the host OS; no synthetic zero for unavailable APIs.
