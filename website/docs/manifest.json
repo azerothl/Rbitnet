@@ -5,10 +5,9 @@
     {
       "title": "Start here",
       "items": [
-        { "slug": "get-started", "title": "Get started", "blurb": "Install, download a model, serve in five minutes." },
-        { "slug": "usage", "title": "Usage", "blurb": "Models, tokenizer, env vars, chat, curl examples." },
-        { "slug": "unsloth-to-rbitnet", "title": "Unsloth / TRL to Rbitnet", "blurb": "Export, check a GGUF, serve and record an HTTP smoke." },
-        { "slug": "integrations", "title": "Integrations", "blurb": "OpenAI clients, LiteLLM, Akasha BitNetProvider." }
+        { "slug": "user-guide", "title": "User guide", "blurb": "Install, download a model, and chat. No GPU required." },
+        { "slug": "advanced-guide", "title": "Advanced guide", "blurb": "CUDA, concurrent requests, prompt restore, metrics, deployment." },
+        { "slug": "changelog", "title": "Changelog", "blurb": "What landed in 0.2.0." }
       ]
     },
     {
@@ -19,7 +18,10 @@
         { "slug": "training-and-compatibility", "title": "Training and export", "blurb": "Train upstream, export GGUF, serve with Rbitnet." },
         { "slug": "bitnet-native", "title": "BitNet native", "blurb": "Native BitNet GGUF path and recipes." },
         { "slug": "limitations", "title": "Limitations", "blurb": "Honest constraints on perf and formats." },
-        { "slug": "changelog", "title": "Changelog", "blurb": "Release-facing changes." }
+        { "slug": "get-started", "title": "Get started (short)", "blurb": "The five-minute command list, also covered by the user guide." },
+        { "slug": "usage", "title": "Usage notes", "blurb": "Models, tokenizer, and runtime notes." },
+        { "slug": "integrations", "title": "Integrations", "blurb": "OpenAI clients and other HTTP callers." },
+        { "slug": "unsloth-to-rbitnet", "title": "Export a GGUF", "blurb": "Train elsewhere, export GGUF, then serve it here." }
       ]
     },
     {

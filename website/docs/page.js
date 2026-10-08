@@ -15,6 +15,8 @@ const SITE_DOCS = new Set([
   "benchmarks",
   "changelog",
   "demarrage-5min",
+  "user-guide",
+  "advanced-guide",
 ]);
 
 const SLUG_ALIASES = {
@@ -56,26 +58,58 @@ const SLUG_ALIASES = {
 };
 
 function normalizeSlug(raw) {
-  if (!raw) return "get-started";
+  if (!raw) return "user-guide";
   const key = decodeURIComponent(raw).trim();
   if (SLUG_ALIASES[key]) return SLUG_ALIASES[key];
   const bare = key.replace(/\.md$/i, "").toLowerCase().replace(/_/g, "-");
   return SLUG_ALIASES[bare] || bare;
 }
 
+const DOC_LABELS = {
+  "user-guide": "user guide",
+  "advanced-guide": "advanced guide",
+  "env-reference": "environment reference",
+  "get-started": "get started",
+  "usage": "usage",
+  "limitations": "limitations",
+  "deployment": "deployment",
+  "native-first": "native-first policy",
+  "training-and-compatibility": "training and export",
+  "status-and-roadmap": "status and roadmap",
+  "bitnet-native": "BitNet native path",
+  "akasha-infer": "Akasha Infer",
+  "integrations": "integrations",
+  "benchmarks": "benchmarks",
+  "changelog": "changelog",
+  "demarrage-5min": "démarrage en 5 minutes",
+  "unsloth-to-rbitnet": "export walkthrough",
+  "brand": "brand",
+};
+
+function docLinkLabel(text, href) {
+  const raw = String(text || "").replace(/[`*]/g, "");
+  if (!/\.md\b/i.test(raw) && !/\.md\b/i.test(String(href || ""))) return text;
+  const slug = normalizeSlug(raw.includes(".md") ? raw : String(href || ""));
+  if (DOC_LABELS[slug]) return DOC_LABELS[slug];
+  if (SITE_DOCS.has(slug)) return slug.replace(/-/g, " ");
+  return "advanced guide";
+}
+
 function rewriteDocHref(href) {
   if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:")) {
     return href;
   }
-  const clean = href.split("#")[0].replace(/^\.\//, "").replace(/^\.\.\//, "");
+  const hash = href.includes("#") ? `#${href.split("#").slice(1).join("#")}` : "";
+  const clean = href.split("#")[0].replace(/^\.\//, "");
   const base = clean.split("/").pop();
   if (!base) return href;
+  const looksLikeDoc = /\.md$/i.test(base) || Object.prototype.hasOwnProperty.call(SLUG_ALIASES, base);
+  if (!looksLikeDoc) return href;
   const slug = normalizeSlug(base);
   if (SITE_DOCS.has(slug)) {
-    const hash = href.includes("#") ? `#${href.split("#")[1]}` : "";
     return `page.html?doc=${encodeURIComponent(slug)}${hash}`;
   }
-  return new URL(href, "https://github.com/azerothl/Rbitnet/blob/main/docs/").href;
+  return "page.html?doc=advanced-guide";
 }
 
 async function loadManifestNav(active) {
@@ -131,7 +165,7 @@ async function loadManifestNav(active) {
           const next = rewriteDocHref(href);
           const titleAttr = title ? ` title="${title}"` : "";
           const ext = next.startsWith("http") ? ' rel="noopener"' : "";
-          return `<a href="${next}"${titleAttr}${ext}>${text}</a>`;
+          return `<a href="${next}"${titleAttr}${ext}>${docLinkLabel(text, href)}</a>`;
         },
       },
     });
@@ -140,7 +174,7 @@ async function loadManifestNav(active) {
     const h1 = article.querySelector("h1");
     document.title = `${h1 ? h1.textContent : slug} — Rbitnet docs`;
     if (sourceEl) {
-      sourceEl.innerHTML = `Synced from repo docs · <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/" rel="noopener">browse full tree</a>`;
+      sourceEl.innerHTML = `<a href="./">All docs</a> · <a href="page.html?doc=user-guide">User guide</a> · <a href="page.html?doc=advanced-guide">Advanced guide</a>`;
     }
 
     if (location.hash) {

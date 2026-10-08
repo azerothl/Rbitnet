@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copy curated English docs into website/docs/content for the Pages site.
+# Copy reference pages into website/docs/content.
+# user-guide.md and advanced-guide.md are written for the site. Do not overwrite them.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DEST="$ROOT/website/docs/content"

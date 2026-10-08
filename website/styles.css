@@ -416,6 +416,30 @@ main,
   color: color-mix(in srgb, var(--ink) 60%, var(--mint));
 }
 
+.news-list {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.news-list li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  background: color-mix(in srgb, var(--white) 72%, transparent);
+}
+
+.news-k {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 55%, var(--amber));
+}
+
 .doc-links {
   list-style: none;
   margin: 1.5rem 0 0;

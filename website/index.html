@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rbitnet — pure Rust GGUF inference, native-first</title>
-  <meta name="description" content="Rbitnet (Rabbit + bit): pure-Rust Llama-compatible GGUF inference and an OpenAI-compatible HTTP server. Native BitNet path. Inference backend for Akasha." />
+  <meta name="description" content="Rbitnet (Rabbit + bit): pure-Rust GGUF inference and an OpenAI-compatible HTTP server. Native BitNet path. Version 0.2.0 adds CUDA Llama serving and session restore." />
   <meta property="og:title" content="Rbitnet" />
   <meta property="og:description" content="Pure Rust GGUF inference, native-first — Rabbit + bit." />
   <meta property="og:image" content="assets/brand/rbitnet-hero-atmosphere.png" />
@@ -25,9 +25,9 @@
       <span>Rbitnet</span>
     </a>
     <nav class="site-nav" aria-label="Primary">
-      <a href="#why">Why</a>
+      <a href="#news">What's new</a>
       <a href="#status">Status</a>
-      <a href="#roadmap">Roadmap</a>
+      <a href="docs/page.html?doc=user-guide">Guide</a>
       <a href="docs/">Docs</a>
       <a href="#install">Install</a>
       <a href="https://github.com/azerothl/Rbitnet" rel="noopener">GitHub</a>
@@ -37,7 +37,7 @@
   <main id="top">
     <section class="hero" aria-labelledby="brand-title">
       <div class="hero-copy">
-        <p class="eyebrow mono">akasha-infer · rabbit + bit</p>
+        <p class="eyebrow mono">v0.2.0 · rabbit + bit</p>
         <h1 id="brand-title" class="brand-title">Rbitnet</h1>
         <p class="lede">
           Pure-Rust GGUF inference — OpenAI-compatible API, native BitNet path, no external engine at runtime.
@@ -61,9 +61,8 @@
     <section id="why" class="section section-why">
       <h2>A warren for bits</h2>
       <p class="section-lede">
-        Rbitnet mmaps the GGUF, dequantizes weights, runs the transformer, and serves tokens —
-        self-contained in Rust, built as the satellite inference backend for Akasha
-        (<code>BitNetProvider</code> on port 8080).
+        Rbitnet memory-maps the GGUF, runs the transformer, and serves tokens
+        over an OpenAI-compatible API on port 8080. The whole runtime is Rust.
       </p>
     </section>
 
@@ -85,11 +84,39 @@
       </ul>
     </section>
 
+    <section id="news" class="section section-news">
+      <h2>What's new in 0.2.0</h2>
+      <p class="section-lede">
+        Released 8 October 2026. The everyday path is unchanged: install, download a GGUF, <code>rbitnet serve</code>.
+        The new pieces are opt-in and aimed at an NVIDIA GPU.
+      </p>
+      <ul class="news-list">
+        <li>
+          <span class="news-k">CUDA Llama serving</span>
+          <span>Several chat requests can share GPU projections. Turn on continuous batching and fused multi-seq. Live per-token streaming is a separate opt-in.</span>
+        </li>
+        <li>
+          <span class="news-k">Prompt restore</span>
+          <span>Llama and Qwen prefixes can sit in RAM, then on disk. A measured Llama 3.2 1B prompt returned in tens of milliseconds instead of a full recompute.</span>
+        </li>
+        <li>
+          <span class="news-k">Block prefill</span>
+          <span>CUDA block prefill for Llama, Qwen, GPT-OSS, and GLM, plus paged KV so a 16&nbsp;GiB GPU can hold more than one Llama request.</span>
+        </li>
+      </ul>
+      <p class="section-more mono">
+        <a href="docs/page.html?doc=changelog">Changelog</a>
+        ·
+        <a href="docs/page.html?doc=advanced-guide">How to enable it</a>
+      </p>
+    </section>
+
     <section id="status" class="section section-status">
       <h2>Status</h2>
       <p class="section-lede">
-        Production-ready is <strong>not claimed</strong> yet — HTTP surface, CI, and core GGUF paths are solid;
-        fused GPU serving and full multi-seq batching remain open.
+        The HTTP server and the main GGUF paths are in daily use.
+        CUDA Llama multi-request serving shipped in 0.2.0 as an opt-in.
+        Other architectures still run one forward at a time.
       </p>
       <div class="status-table-wrap">
         <table class="status-table">
@@ -100,10 +127,10 @@
             <tr><td>OpenAI-shaped HTTP + limits + auth + metrics</td><td><span class="pill pill-done">Done</span></td></tr>
             <tr><td>CI / release binaries on tag</td><td><span class="pill pill-done">Done</span></td></tr>
             <tr><td>GGUF Llama forward + tokenizer + BitNet native path</td><td><span class="pill pill-done">Done</span></td></tr>
-            <tr><td>Paged KV, prefix/radix, Sarathi batching, PLD</td><td><span class="pill pill-opt">Opt-in MVP</span></td></tr>
-            <tr><td>llama.cpp golden parity</td><td><span class="pill pill-opt">Optional</span></td></tr>
-            <tr><td>FlashAttention-class GPU kernels</td><td><span class="pill pill-def">Deferred</span></td></tr>
-            <tr><td>Full “prod ready” exit criteria</td><td><span class="pill pill-open">Open</span></td></tr>
+            <tr><td>CUDA Llama fused prefill and decode</td><td><span class="pill pill-opt">Opt-in, 0.2.0</span></td></tr>
+            <tr><td>Llama / Qwen RAM and SSD prefix restore</td><td><span class="pill pill-opt">Opt-in, 0.2.0</span></td></tr>
+            <tr><td>Qwen, GPT-OSS, GLM shared multi-request forward</td><td><span class="pill pill-def">Not in 0.2.0</span></td></tr>
+            <tr><td>Full production-ready claim</td><td><span class="pill pill-open">Not claimed</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -115,27 +142,25 @@
     <section id="roadmap" class="section section-roadmap">
       <h2>Roadmap focus</h2>
       <p class="section-lede">
-        Native-first CPU remains the default. Research priorities track serving gaps vs vLLM-class stacks
-        without chasing every industry feature.
+        CPU remains the default when no NVIDIA GPU is present.
+        0.2.0 closed the Llama CUDA serving slice. The next work is the same idea on Qwen and MoE models.
       </p>
       <ul class="roadmap-list">
         <li>
           <span class="cap-k">Near term</span>
-          <span>Metrics UX (TTFT, prefix_hit, draft_accept), provenance/SHA, structured output, bench gates vs llama.cpp.</span>
+          <span>Live SSE and adaptive admission are opt-in on Llama CUDA. Publish the same 1/4/8 numbers on your own GPU before you rely on them.</span>
         </li>
         <li>
-          <span class="cap-k">Medium</span>
-          <span>Fused multi-seq continuous batching, SlimAttention-style CPU tiling, K/V asymmetry after KV Q8, tune profiles.</span>
+          <span class="cap-k">Next</span>
+          <span>Shared multi-request decode for Qwen and for GPT-OSS / GLM experts. CUDA graphs stay experimental.</span>
         </li>
         <li>
-          <span class="cap-k">Strategic</span>
-          <span>GPU_NATIVE device KV + fused attention, BitNet packed GPU kernels, optional Metal — after frozen CPU benches.</span>
+          <span class="cap-k">Not in this release</span>
+          <span>Grammar-constrained JSON, image chat, and Vulkan / Metal inference.</span>
         </li>
       </ul>
       <p class="section-more mono">
-        <a href="docs/page.html?doc=status-and-roadmap">Priorities &amp; deferred list →</a>
-        ·
-        <a href="https://github.com/azerothl/Rbitnet/blob/main/docs/INFERENCE_STACK_V2.md" rel="noopener">Inference stack v2 (repo)</a>
+        <a href="docs/page.html?doc=advanced-guide">Advanced guide →</a>
       </p>
     </section>
 
@@ -143,44 +168,28 @@
       <h2>Install</h2>
       <p class="section-lede">One checkout, one binary. Python only if you convert checkpoints to GGUF upstream.</p>
       <pre class="install-block mono" tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
-rbitnet models install tinyllama-1.1b-chat-q4-k-m --dir ./models
-rbitnet up tinyllama-1.1b-chat-q4-k-m --dir ./models
+rbitnet models install tinyllama:q4 --dir ./models
+rbitnet up tinyllama:q4 --dir ./models
 rbitnet serve</code></pre>
       <p class="install-note">
         Windows: <code>.\scripts\install.ps1</code> ·
-        <a href="docs/page.html?doc=get-started">Get started</a> ·
+        <a href="docs/page.html?doc=user-guide">User guide</a> ·
         <a href="docs/page.html?doc=demarrage-5min">FR quickstart</a>
       </p>
     </section>
 
     <section id="docs" class="section section-docs">
-      <h2>Documentation on this site</h2>
+      <h2>Documentation</h2>
       <p class="section-lede">
-        Start with get-started and usage. Pointy specs (kernel notes, deep GPU research) stay in the repo.
+        Two guides cover the product. The user guide is enough to install and chat.
+        The advanced guide has GPU flags, concurrent requests, and deployment.
       </p>
       <ul class="doc-links">
-        <li><a href="docs/page.html?doc=get-started">Get started</a></li>
-        <li><a href="docs/page.html?doc=usage">Usage</a></li>
-        <li><a href="docs/page.html?doc=env-reference">Env reference</a></li>
-        <li><a href="docs/page.html?doc=integrations">Integrations</a></li>
-        <li><a href="docs/page.html?doc=native-first">Native-first</a></li>
+        <li><a href="docs/page.html?doc=user-guide">User guide</a></li>
+        <li><a href="docs/page.html?doc=advanced-guide">Advanced guide</a></li>
+        <li><a href="docs/page.html?doc=changelog">Changelog</a></li>
         <li><a href="docs/">All docs →</a></li>
       </ul>
-    </section>
-
-    <section class="section section-stack">
-      <h2>In the Akasha stack</h2>
-      <p class="section-lede">
-        akasha-os keeps llama.cpp inside the Preview TCB. The Akasha daemon consumes Rbitnet over HTTP
-        on port 8080 — separate roles, frozen <code>/v1</code> + <code>/metrics</code> contract.
-      </p>
-      <p class="stack-links mono">
-        <a href="docs/page.html?doc=akasha-infer">Akasha Infer</a>
-        ·
-        <a href="docs/page.html?doc=native-first">Native-first</a>
-        ·
-        <a href="docs/page.html?doc=brand">Brand</a>
-      </p>
     </section>
   </main>
 
