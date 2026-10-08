@@ -101,6 +101,20 @@ type ConfigureBlock=unsafe extern "C" fn(*mut c_void,u32,u32)->i32;
 type BlockCapacity=unsafe extern "C" fn(*mut c_void)->u32;
 type BlockStep=unsafe extern "C" fn(*mut c_void,*const f32,u32,u32,u32,*mut f32,*mut u32)->i32;
 struct BlockApi {prefill:BlockStep,capacity:usize}
+type SegmentedBlockBegin=unsafe extern "C" fn(*mut c_void,*const f32,u32,u32)->i32;
+type SegmentedBlockPrepare=unsafe extern "C" fn(*mut c_void,u32,*mut u32,*mut f32)->i32;
+type SegmentedBlockFfnInput=unsafe extern "C" fn(*mut c_void,u32,*mut f32)->i32;
+type SegmentedBlockFinish=unsafe extern "C" fn(*mut c_void,u32,u32,*const *const c_void,*const f32)->i32;
+type SegmentedBlockEnd=unsafe extern "C" fn(*mut c_void,u32,*mut f32,*mut u32)->i32;
+struct SegmentedBlockApi {
+    capacity:usize,
+    begin:SegmentedBlockBegin,
+    prepare:SegmentedBlockPrepare,
+    ffn_input:SegmentedBlockFfnInput,
+    finish:SegmentedBlockFinish,
+    end:SegmentedBlockEnd,
+}
+enum BlockKind {Fixed(BlockApi),Segmented(SegmentedBlockApi)}
 struct PrefixApi {
     snapshot: Snapshot,
     destroy: Destroy,
@@ -112,7 +126,7 @@ pub(super) struct GpuFull {
     step: Step,
     segmented: Option<Segmented>,
     prefix_api: Option<PrefixApi>,
-    block: Option<BlockApi>,
+    block: Option<BlockKind>,
     prefix: PrefixStore<Checkpoint>,
     used: usize,
     fused:Vec<bool>,
@@ -393,19 +407,35 @@ impl GpuFull {
         if context == 0 {
             return None;
         }
-        let block=if !segmented && std::env::var("RBITNET_CUDA_GPT_PREFILL").as_deref()==Ok("1") {
+        let block=if std::env::var("RBITNET_CUDA_GPT_PREFILL").as_deref()==Ok("1") {
+            let count=std::env::var("RBITNET_CUDA_GPT_PREFILL_TOKENS").ok()
+                .and_then(|s| s.parse::<usize>().ok()).unwrap_or(16).clamp(1,32);
+            let tile=u32::from(std::env::var("RBITNET_CUDA_GPT_PREFILL_TILE").as_deref()==Ok("1"));
+            if segmented {
+                (|| {
+                    let configure=unsafe{*lib.get::<ConfigureBlock>(b"rbitnet_cuda_gpt_segmented_configure_prefill\0").ok()?};
+                    let capacity=unsafe{*lib.get::<BlockCapacity>(b"rbitnet_cuda_gpt_segmented_prefill_capacity\0").ok()?};
+                    let begin=unsafe{*lib.get::<SegmentedBlockBegin>(b"rbitnet_cuda_gpt_segmented_block_begin\0").ok()?};
+                    let prepare=unsafe{*lib.get::<SegmentedBlockPrepare>(b"rbitnet_cuda_gpt_segmented_block_prepare\0").ok()?};
+                    let ffn_input=unsafe{*lib.get::<SegmentedBlockFfnInput>(b"rbitnet_cuda_gpt_segmented_block_ffn_input\0").ok()?};
+                    let finish=unsafe{*lib.get::<SegmentedBlockFinish>(b"rbitnet_cuda_gpt_segmented_block_finish\0").ok()?};
+                    let end=unsafe{*lib.get::<SegmentedBlockEnd>(b"rbitnet_cuda_gpt_segmented_block_end\0").ok()?};
+                    if unsafe{configure(context as *mut c_void,count as u32,tile)}!=0 {return None;}
+                    let actual=unsafe{capacity(context as *mut c_void)}as usize;
+                    if actual!=count {return None;}
+                    Some(BlockKind::Segmented(SegmentedBlockApi{capacity:actual,begin,prepare,ffn_input,finish,end}))
+                })()
+            } else {
             (|| {
                 let configure=unsafe{*lib.get::<ConfigureBlock>(b"rbitnet_cuda_gpt_configure_prefill\0").ok()?};
                 let capacity=unsafe{*lib.get::<BlockCapacity>(b"rbitnet_cuda_gpt_prefill_capacity\0").ok()?};
                 let prefill=unsafe{*lib.get::<BlockStep>(b"rbitnet_cuda_gpt_full_prefill\0").ok()?};
-                let count=std::env::var("RBITNET_CUDA_GPT_PREFILL_TOKENS").ok()
-                    .and_then(|s|s.parse::<usize>().ok()).unwrap_or(16).clamp(1,32);
-                let tile=u32::from(std::env::var("RBITNET_CUDA_GPT_PREFILL_TILE").as_deref()==Ok("1"));
                 if unsafe{configure(context as *mut c_void,count as u32,tile)}!=0 {return None;}
                 let actual=unsafe{capacity(context as *mut c_void)}as usize;
                 if actual!=count {return None;}
-                Some(BlockApi{prefill,capacity:actual})
+                Some(BlockKind::Fixed(BlockApi{prefill,capacity:actual}))
             })()
+            }
         }else{None};
         Some(Self {
             block,
@@ -499,13 +529,23 @@ impl GpuFull {
         Ok((logits, (mode == 2).then_some(token)))
     }
     pub(super) fn prefill_capacity(&self) -> usize {
-        self.block.as_ref().map_or(0, |b| b.capacity)
+        self.block.as_ref().map_or(0, |b| match b {
+            BlockKind::Fixed(api) => api.capacity,
+            BlockKind::Segmented(api) => api.capacity,
+        })
     }
     pub(super) fn prefill(
         &mut self, input: &[f32], pos: usize, count: usize, output: bool, greedy: bool,
     ) -> Result<(Vec<f32>,Option<u32>)> {
-        let api=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT block ABI not configured".into()))?;
-        if self.is_segmented() || count==0 || count>api.capacity
+        if self.is_segmented() {
+            return Err(BitNetError::Inference(
+                "GPT segmented block prefill requires host MoE admission".into(),
+            ));
+        }
+        let Some(BlockKind::Fixed(api))=self.block.as_ref() else {
+            return Err(BitNetError::Inference("GPT block ABI not configured".into()));
+        };
+        if count==0 || count>api.capacity
             || count.checked_mul(self.embd)!=Some(input.len())
             || pos.checked_add(count).is_none_or(|end|end>self.capacity) {
             return Err(BitNetError::Inference("GPT block input/context mismatch".into()));
@@ -517,25 +557,93 @@ impl GpuFull {
         let mut logits=if mode==1 {vec![0.0;self.vocab]}else{Vec::new()};
         let mut token=0;
         let status=unsafe{(api.prefill)(self.context as *mut c_void,input.as_ptr(),pos as u32,count as u32,mode,logits.as_mut_ptr(),&mut token)};
+        Self::record_block_prefill(self,count,mode,output);
         Self::check(status,"block prefill")?;
-        crate::perf::record_gpu_transfer((input.len()*4+4)as u64,
-            if mode==2 {4}else{(logits.len()*4)as u64},self.layers as u64*8+u64::from(output));
-        crate::perf::record_gpu_prefill(count,self.layers as u64*8+u64::from(output));
-        crate::perf::record_native_moe(true,(self.layers*count)as u64,0);
-        for _ in 0..count {
-            crate::perf::record_gpt_full_token();
-            crate::perf::record_kv_write(self.kv_bytes_per_token);
-            for il in 0..self.layers {
-                crate::perf::record_gpu_attention();
-                if let Some(metrics)=&self.metrics {metrics.ffn(il,true,None);}
-            }
-        }
-        if self.graphs {crate::perf::record_cuda_graph_replay();}
-        if self.split {crate::perf::record_split_attention((self.layers*count)as u64);}
         if crate::cancel::inference_cancelled() {
             return Err(BitNetError::Inference("inference cancelled".into()));
         }
         Ok((logits,(mode==2).then_some(token)))
+    }
+    pub(super) fn segmented_block_begin(&mut self,input:&[f32],pos:usize,count:usize)->Result<()> {
+        let BlockKind::Segmented(api)=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT segmented block ABI not configured".into()))? else {
+            return Err(BitNetError::Inference("GPT segmented block ABI not configured".into()));
+        };
+        if !self.is_segmented() || count==0 || count>api.capacity
+            || count.checked_mul(self.embd)!=Some(input.len())
+            || pos.checked_add(count).is_none_or(|end|end>self.capacity) {
+            return Err(BitNetError::Inference("GPT block input/context mismatch".into()));
+        }
+        Self::check(unsafe{(api.begin)(self.context as *mut c_void,input.as_ptr(),pos as u32,count as u32)},"segmented block begin")?;
+        crate::perf::record_gpu_transfer((input.len()*4+4)as u64,0,0);
+        Ok(())
+    }
+    pub(super) fn segmented_block_prepare(&mut self,layer:usize)->Result<(Vec<usize>,Vec<f32>)> {
+        let BlockKind::Segmented(api)=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT segmented block ABI not configured".into()))? else {
+            return Err(BitNetError::Inference("GPT segmented block ABI not configured".into()));
+        };
+        let count=self.prefill_capacity();
+        let mut all_ids=vec![0u32;count*self.used];
+        let mut all_probs=vec![0.0f32;count*self.used];
+        Self::check(unsafe{(api.prepare)(self.context as *mut c_void,layer as u32,all_ids.as_mut_ptr(),all_probs.as_mut_ptr())},"segmented block prepare")?;
+        crate::perf::record_gpu_transfer(0,(count*self.used*8)as u64,5);
+        crate::perf::record_kv_write(self.kv_bytes_per_token/self.layers);
+        crate::perf::record_gpu_attention();
+        if self.graphs {crate::perf::record_cuda_graph_replay();}
+        if self.split {crate::perf::record_split_attention(1);}
+        Ok((all_ids.into_iter().map(|i|i as usize).collect(),all_probs))
+    }
+    pub(super) fn segmented_block_ffn_input(&mut self,token:usize)->Result<Vec<f32>> {
+        let BlockKind::Segmented(api)=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT segmented block ABI not configured".into()))? else {
+            return Err(BitNetError::Inference("GPT segmented block ABI not configured".into()));
+        };
+        let mut input=vec![0.0;self.embd];
+        Self::check(unsafe{(api.ffn_input)(self.context as *mut c_void,token as u32,input.as_mut_ptr())},"segmented block ffn input")?;
+        crate::perf::record_gpu_transfer(0,(input.len()*4)as u64,0);
+        Ok(input)
+    }
+    pub(super) fn segmented_block_finish(
+        &mut self,layer:usize,token:usize,pointers:Option<&[*const c_void]>,cpu_routed:Option<&[f32]>,
+    )->Result<()> {
+        let BlockKind::Segmented(api)=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT segmented block ABI not configured".into()))? else {
+            return Err(BitNetError::Inference("GPT segmented block ABI not configured".into()));
+        };
+        Self::check(unsafe{(api.finish)(self.context as *mut c_void,layer as u32,token as u32,pointers.map_or(std::ptr::null(),|p|p.as_ptr()),cpu_routed.map_or(std::ptr::null(),|p|p.as_ptr()))},"segmented block finish")?;
+        crate::perf::record_gpu_transfer((pointers.map_or(0,std::mem::size_of_val)+cpu_routed.map_or(0,std::mem::size_of_val))as u64,0,if cpu_routed.is_none(){3}else{0});
+        if self.graphs {crate::perf::record_cuda_graph_replay();}
+        Ok(())
+    }
+    pub(super) fn segmented_block_end(&mut self,logits:bool,greedy:bool)->Result<(Vec<f32>,Option<u32>)> {
+        let BlockKind::Segmented(api)=self.block.as_ref().ok_or_else(||BitNetError::Inference("GPT segmented block ABI not configured".into()))? else {
+            return Err(BitNetError::Inference("GPT segmented block ABI not configured".into()));
+        };
+        let mode=if !logits {0}else if greedy {2}else{1};
+        let mut out=if mode==1 {vec![0.0;self.vocab]}else{Vec::new()};
+        let mut id=0;
+        Self::check(unsafe{(api.end)(self.context as *mut c_void,mode,out.as_mut_ptr(),&mut id)},"segmented block end")?;
+        crate::perf::record_gpu_transfer(0,if mode==2 {4}else{(out.len()*4)as u64},u64::from(logits));
+        if self.graphs {crate::perf::record_cuda_graph_replay();}
+        crate::perf::record_gpt_full_token();
+        Ok((out,(mode==2).then_some(id)))
+    }
+    pub(super) fn record_prefill_block(&self,count:usize,output:bool,greedy:bool) {
+        let mode=if !output {0}else if greedy {2}else{1};
+        Self::record_block_prefill(self,count,mode,output);
+    }
+    fn record_block_prefill(this:&Self,count:usize,mode:u32,output:bool) {
+        crate::perf::record_gpu_transfer((count*this.embd*4+4)as u64,
+            if mode==2 {4}else if mode==1 {(this.vocab*4)as u64}else{0},this.layers as u64*8+u64::from(output));
+        crate::perf::record_gpu_prefill(count,this.layers as u64*8+u64::from(output));
+        crate::perf::record_native_moe(true,(this.layers*count)as u64,0);
+        for _ in 0..count {
+            crate::perf::record_gpt_full_token();
+            crate::perf::record_kv_write(this.kv_bytes_per_token);
+            for il in 0..this.layers {
+                crate::perf::record_gpu_attention();
+                if let Some(metrics)=&this.metrics {metrics.ffn(il,true,None);}
+            }
+        }
+        if this.graphs {crate::perf::record_cuda_graph_replay();}
+        if this.split {crate::perf::record_split_attention((this.layers*count)as u64);}
     }
 
     pub(super) fn is_segmented(&self) -> bool {
@@ -1319,4 +1427,5 @@ mod tests {
     }
     include!("gpt_segmented_tests.rs");
     include!("gpt_block_tests.rs");
+    include!("gpt_segmented_block_tests.rs");
 }

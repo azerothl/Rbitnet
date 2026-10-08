@@ -104,6 +104,7 @@ struct GptSnapshot {
 };
 
 void gpt_block_destroy(void*);
+void gpt_segmented_block_destroy(void*);
 struct ResidentGpt {
     void *block=nullptr;
     RbitnetGptConfig cfg;
@@ -124,7 +125,10 @@ struct ResidentGpt {
     cudaGraph_t graphs[3]={};cudaGraphExec_t executable[3]={};
     ~ResidentGpt() {
         if(stream)cudaStreamSynchronize(stream);
-        gpt_block_destroy(block);
+        if(block) {
+            if(segmented)gpt_segmented_block_destroy(block);
+            else gpt_block_destroy(block);
+        }
         for(auto p:executable)if(p)cudaGraphExecDestroy(p);
         for(auto p:segment_executable)if(p)cudaGraphExecDestroy(p);
         for(auto p:segment_graphs)if(p)cudaGraphDestroy(p);
