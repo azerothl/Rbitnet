@@ -25,7 +25,7 @@ The **dynamic expert VRAM cache** (pool, on-demand load, leases, LRU/LFU/Least-S
 | Gap | Tracking |
 |-----|----------|
 | Compaction / predictor-trained residency | Research / follow-up |
-| Mixed per-expert CPU+GPU (#86) | Still open |
+| Mixed per-expert CPU+GPU (#86) | [Measured no-go; retain bounded opt-in policies](MOE_HYBRID_DECISION.md) |
 | Default-on when always faster | Reopen when ablation proves it |
 | Four-engine parity | #98 |
 
