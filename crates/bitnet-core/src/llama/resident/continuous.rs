@@ -67,6 +67,7 @@ pub(super) struct ContinuousLlama {
     completed: VecDeque<(u64, Result<WaveOutput>)>,
     maximum_queued: usize,
     iteration_budget: usize,
+    adaptive_admission: bool,
     prefill_cursor: usize,
     eos: Vec<u32>,
     skip_special: bool,
@@ -84,6 +85,7 @@ impl ContinuousLlama {
         iteration_budget: usize,
         page_limit: Option<u32>,
         ordering: u32,
+        adaptive_admission: bool,
     ) -> Result<Self> {
         if !(1..=8).contains(&maximum)
             || !(1..=64).contains(&maximum_queued)
@@ -124,6 +126,7 @@ impl ContinuousLlama {
             completed: VecDeque::new(),
             maximum_queued,
             iteration_budget,
+            adaptive_admission,
             prefill_cursor: 0,
             eos,
             skip_special,
@@ -301,6 +304,32 @@ impl ContinuousLlama {
                 self.waiting.push_back(r);
             }
         }
+        // Adaptive admission avoids allocating a new KV owner which cannot
+        // receive its first 128-token prefill partition in this decode-first
+        // iteration. Existing owners reserve their next partition; pending
+        // decode rows reserve one token each. FIFO remains available as the
+        // compatibility policy while the adaptive policy is opt-in.
+        let mut admission_tokens = if self.adaptive_admission {
+            let decode_rows = self
+                .active
+                .iter()
+                .flatten()
+                .filter(|sequence| sequence.pending.is_some())
+                .count();
+            let active_prefill_tokens = self
+                .active
+                .iter()
+                .flatten()
+                .filter(|sequence| {
+                    sequence.pending.is_none() && sequence.prefilled < sequence.request.ids.len()
+                })
+                .map(|sequence| (sequence.request.ids.len() - sequence.prefilled).min(128))
+                .sum::<usize>();
+            self.iteration_budget
+                .saturating_sub(decode_rows.saturating_add(active_prefill_tokens))
+        } else {
+            usize::MAX
+        };
         for index in 0..self.active.len() {
             if self.active[index].is_some() {
                 continue;
@@ -337,6 +366,11 @@ impl ContinuousLlama {
                 ));
                 tick.retired += 1;
                 continue;
+            }
+            let first_prefill = request.ids.len().min(128);
+            if first_prefill > admission_tokens {
+                self.waiting.push_front(request);
+                break;
             }
             let peer = if self.page_limit.is_some() {
                 self.active.iter().flatten().next().map(|s| &s.resident)
@@ -377,6 +411,7 @@ impl ContinuousLlama {
                 inter_token_us: Vec::new(),
             });
             tick.admitted += 1;
+            admission_tokens = admission_tokens.saturating_sub(first_prefill);
         }
     }
     pub(super) fn tick(&mut self) -> Result<WaveTick> {

@@ -21,6 +21,9 @@ pub(crate) struct BatchOptions {
     pub token_budget: usize,
     pub pages: Option<u32>,
     pub ordering: u32,
+    /// Keep newly admitted prompt work within the current decode-first budget.
+    /// Disabled by default while this serving policy is validated.
+    pub adaptive_admission: bool,
 }
 
 #[cfg(test)]
@@ -40,6 +43,7 @@ mod integration_options_tests {
             "RBITNET_CUDA_CONTINUOUS_QUEUE",
             "RBITNET_CUDA_CONTINUOUS_TOKEN_BUDGET",
             "RBITNET_CUDA_CONTINUOUS_ORDERING",
+            "RBITNET_CUDA_CONTINUOUS_ADMISSION",
             "RBITNET_CUDA_LIVE_SSE_MUX",
             "RBITNET_PREFIX_KV",
             "RBITNET_SPECULATIVE",
@@ -86,6 +90,21 @@ mod integration_options_tests {
         }
         std::env::set_var("RBITNET_CONTEXT_TIERS", "0");
         assert!(BatchOptions::configured(backend).unwrap().is_some());
+
+        std::env::set_var("RBITNET_CUDA_CONTINUOUS_ADMISSION", "adaptive");
+        assert!(
+            BatchOptions::configured(backend)
+                .unwrap()
+                .expect("continuous options")
+                .adaptive_admission
+        );
+        std::env::set_var("RBITNET_CUDA_CONTINUOUS_ADMISSION", "invalid");
+        let error = BatchOptions::configured(backend).unwrap_err().to_string();
+        assert!(
+            error.contains("ADMISSION must be fifo or adaptive"),
+            "{error}"
+        );
+        std::env::set_var("RBITNET_CUDA_CONTINUOUS_ADMISSION", "fifo");
 
         std::env::set_var("RBITNET_CUDA_LIVE_SSE_MUX", "1");
         std::env::set_var("RBITNET_CONTINUOUS_BATCHING", "1");
@@ -158,6 +177,16 @@ impl BatchOptions {
             4096,
         )?;
         let ordering = parse("RBITNET_CUDA_CONTINUOUS_ORDERING", 0, 0, 1)? as u32;
+        let adaptive_admission = match std::env::var("RBITNET_CUDA_CONTINUOUS_ADMISSION") {
+            Err(std::env::VarError::NotPresent) => false,
+            Ok(value) if value == "fifo" => false,
+            Ok(value) if value == "adaptive" => true,
+            _ => {
+                return Err(BitNetError::Inference(
+                    "RBITNET_CUDA_CONTINUOUS_ADMISSION must be fifo or adaptive".into(),
+                ))
+            }
+        };
         for key in [
             "RBITNET_PREFIX_KV",
             "RBITNET_SPECULATIVE",
@@ -214,6 +243,7 @@ impl BatchOptions {
             token_budget,
             pages: super::configured_page_limit()?,
             ordering,
+            adaptive_admission,
         }))
     }
 }
@@ -276,6 +306,7 @@ impl BatchController {
                     options.token_budget,
                     options.pages,
                     options.ordering,
+                    options.adaptive_admission,
                 ) {
                     Ok(driver) => driver,
                     Err(e) => {
