@@ -15,6 +15,20 @@ The queue defaults to 32 (`RBITNET_CUDA_CONTINUOUS_QUEUE`, maximum 64).
 decode rows. `RBITNET_MAX_CONCURRENT` must admit enough HTTP clients to make
 batching useful.
 
+## Adaptive admission (opt-in)
+
+Set `RBITNET_CUDA_CONTINUOUS_ADMISSION=adaptive` to apply backpressure before
+allocating a new request-local KV owner. In each decode-first iteration, active
+decode rows reserve one token each and active prefill owners reserve their next
+128-token partition. Only the remaining iteration budget can admit waiting
+owners. This prevents a burst from consuming resident KV slots when its first
+prefill partition cannot run in that iteration.
+
+The default `fifo` policy preserves the earlier eager slot-filling behavior.
+`adaptive` is an experimental Llama-only policy: it does not add a Qwen,
+GPT-OSS, GLM, or MoE multi-sequence forward, and it has no throughput claim
+until its CUDA benchmark gate is published.
+
 ## Live SSE mux for fused Sarathi flags
 
 The default #96 HTTP bridge coalesces compatible SSE requests but returns their
@@ -55,6 +69,7 @@ $env:RBITNET_CUDA_PREFILL_TF32X3 = '0'
 $env:RBITNET_PREFIX_KV = '0'
 $env:RBITNET_CUDA_CONTINUOUS = '1'
 $env:RBITNET_CUDA_CONTINUOUS_SLOTS = '8'
+$env:RBITNET_CUDA_CONTINUOUS_ADMISSION = 'adaptive'
 $env:RBITNET_MAX_CONCURRENT = '16'
 ```
 

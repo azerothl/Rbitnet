@@ -184,6 +184,7 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
                         256,
                         pages,
                         ordering,
+                        true,
                     )
                     .unwrap();
                     let workspace = crate::backend::cuda_managed_memory_stats()
@@ -317,6 +318,7 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
             256,
             pages,
             0,
+            true,
         )
         .unwrap();
         let mut controls = BTreeMap::new();
@@ -397,7 +399,8 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
                 queued,
                 budget,
                 None,
-                0
+                0,
+                true,
             )
             .is_err());
         }
@@ -409,7 +412,8 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
             2,
             256,
             None,
-            0
+            0,
+            true,
         )
         .is_err());
         std::env::set_var("RBITNET_CUDA_KV_FORMAT", "f32");
@@ -425,6 +429,7 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
             256,
             None,
             0,
+            true,
         )
         .unwrap();
         let memory_before_refusal = crate::backend::cuda_managed_memory_stats().unwrap().live;
@@ -563,6 +568,7 @@ fn optional_actual_llama_continuous_heterogeneous_mid_wave_cancel_and_admit() {
             256,
             pages,
             0,
+            true,
         )
         .unwrap();
         let cancelled_job = &jobs[2];
@@ -690,6 +696,7 @@ fn optional_actual_llama_continuous_thread_controller_owned_disconnect_and_shutd
                     token_budget: 256,
                     pages,
                     ordering: 0,
+                    adaptive_admission: true,
                 },
             )
             .unwrap(),
