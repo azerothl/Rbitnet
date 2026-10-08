@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
 ### Added
 
+- CUDA Llama serving slice: Sarathi fused multi-seq decode and shared prefill (`RBITNET_CONTINUOUS_BATCHING` + `RBITNET_FUSED_MULTI_SEQ`), HTTP coalescing, and opt-in live SSE mux with measured 1/4/8 TTFT/ITL.
+- Hierarchical session tiers for Llama/Qwen: RAM and SSD prefix restore, idle reload, and a measured Llama 3.2 1B CUDA TTFT (cold recompute vs RAM vs SSD).
+- Opt-in adaptive admission for the CUDA Llama live worker (`RBITNET_CUDA_CONTINUOUS_ADMISSION=adaptive`).
+- CUDA block prefill for Llama, Qwen, GPT-OSS, and GLM MLA, plus resident/paged KV decision records.
 - HTTP **501** `vision_not_supported` when OpenAI/Anthropic requests include `image_url` / `image` / `input_image` (issue #143 phase 0 — no silent text drop).
 - Explicit GGUF refuse for `spark2_5` / Spark-X2.5 (issue #142) so those files no longer fall through to the Llama loader.
 - CPU MVP loader for Spark-X2.5 (`spark2_5`): fused QKV, ISWA, head-wise sigmoid gate, GELU FFN; 1.7B Q4_K_M `/v1` smoke (issue #142).

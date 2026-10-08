@@ -3,7 +3,7 @@
 
 [project]
 name = "rbitnet-training"
-version = "0.1.0"
+version = "0.2.0"
 description = "Optional LoRA/SFT recipes; outputs Safetensors for GGUF conversion upstream of Rbitnet."
 readme = "README.md"
 requires-python = ">=3.10"

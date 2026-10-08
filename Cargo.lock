@@ -297,7 +297,7 @@ checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 
 [[package]]
 name = "bitnet-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "criterion",
@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "bitnet-core",
@@ -2761,7 +2761,7 @@ dependencies = [
 
 [[package]]
 name = "rbitnet-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "bitnet-server",
@@ -2781,7 +2781,7 @@ dependencies = [
 
 [[package]]
 name = "rbitnet-proxy"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "http",
@@ -2800,7 +2800,7 @@ dependencies = [
 
 [[package]]
 name = "rbitnet-runner"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bitnet-server",
  "tokio",
