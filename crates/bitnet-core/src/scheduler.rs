@@ -444,6 +444,7 @@ impl ContinuousBatchScheduler {
 
             // --- Phase 2: admit prefill chunks into remaining budget ---
             let prefill_passes = queue.prefill_seq_ids.len();
+            let mut admitted_prefills = Vec::new();
             for _ in 0..prefill_passes {
                 if budget == 0 || queue.prefill_seq_ids.is_empty() {
                     break;
@@ -464,9 +465,25 @@ impl ContinuousBatchScheduler {
                 prefill_remaining.insert(id, left);
                 budget = budget.saturating_sub(take);
                 prefill_chunks = prefill_chunks.saturating_add(1);
+                if self.fused_multi_seq {
+                    let orig = batch
+                        .requests
+                        .iter()
+                        .find(|r| r.id == id)
+                        .expect("prefill id in batch");
+                    admitted_prefills.push((
+                        id,
+                        orig.request.prompt.clone(),
+                        take,
+                        orig.request.sampling,
+                    ));
+                }
                 if left == 0 {
                     queue.promote_to_decode(id);
                 }
+            }
+            if !admitted_prefills.is_empty() {
+                executor.generate_prefill_batch(&admitted_prefills)?;
             }
 
             if decode_steps > 0 {

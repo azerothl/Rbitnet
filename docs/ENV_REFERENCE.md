@@ -98,7 +98,7 @@ Single index for **`rbitnet-server`** / **`rbitnet serve`** and **`bitnet-core`*
 | `RBITNET_INFERENCE_TIMEOUT_SECS` | (server) | Same name used by server for HTTP timeout; core cancellation hooks align with server layer. |
 | `RBITNET_MAX_WEIGHT_BYTES`, `RBITNET_MAX_LOAD_BYTES`, `RBITNET_MAX_VRAM_MB`, `RBITNET_BUDGET_MAX_SEQ` | (none) | Load guardrails; see [LIMITATIONS.md](LIMITATIONS.md). |
 | `RBITNET_CONTINUOUS_BATCHING` | off | Enable Sarathi-style stall-free batching (`run_batch_waves`); decode-first + chunked prefill. |
-| `RBITNET_FUSED_MULTI_SEQ` | off | Sarathi decode waves call `generate_decode_batch`. CUDA resident Llama runs Native shared batch decode (#96); CPU/BitNet/Qwen stay sequential. See [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md). |
+| `RBITNET_FUSED_MULTI_SEQ` | off | Sarathi admits prompt chunks through `generate_prefill_batch` and sends decode waves to `generate_decode_batch`. CUDA resident Llama runs Native shared batch prefill + decode (#96); CPU/BitNet/Qwen stay sequential. See [FUSED_MULTI_SEQ.md](FUSED_MULTI_SEQ.md). |
 | `RBITNET_CUDA_FUSED_DECODE` | off | Explicit enable when not using `RBITNET_FUSED_MULTI_SEQ`; same CUDA batch decode path as above. |
 | `RBITNET_CUDA_FUSED_DECODE_SLOTS` | `8` | Max concurrent KV owners for scheduler fused decode (1–8). |
 | `RBITNET_CUDA_FUSED_DECODE_ORDERING` | `0` | Native batch GEMM layout (`0` ordered, `1` interleaved). |

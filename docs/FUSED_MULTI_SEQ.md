@@ -16,9 +16,9 @@ stall decision and records the narrower #96 progress below.
 
 ## What exists
 
-1. **Scheduler** — with `RBITNET_CONTINUOUS_BATCHING=1` and `RBITNET_FUSED_MULTI_SEQ=1`, decode waves call `generate_decode_batch` once (`scheduler.rs` / `decode_wave_fused`).
+1. **Scheduler** — with `RBITNET_CONTINUOUS_BATCHING=1` and `RBITNET_FUSED_MULTI_SEQ=1`, admitted prompt chunks call `generate_prefill_batch` and decode waves call `generate_decode_batch` once (`scheduler.rs`).
 2. **Kernel** — `bitnet_core::fused_batch::dense_matvec_multi_seq` is a real weight-stationary batch matvec (N activation rows share one pass over `W`).
-3. **Executors** — with CUDA resident Llama + `RBITNET_FUSED_MULTI_SEQ=1`, `LlamaExecutor::generate_decode_batch` runs Native `llama_batch` shared decode waves (`scheduler_fused.rs`). CPU-only / BitNet / Qwen still fall back to sequential `generate_with_timings`.
+3. **Executors** — with CUDA resident Llama + `RBITNET_FUSED_MULTI_SEQ=1`, `LlamaExecutor` runs Native `llama_batch` shared prompt-token and decode waves (`scheduler_fused.rs`). CPU-only / BitNet / Qwen retain logical prefill admission and sequential generation.
 
 ## Why e2e concurrency ≥4 does not speed up (stall)
 
@@ -52,7 +52,7 @@ Expected shape (illustrative; host-dependent): fused kernel faster than N indepe
 |------|-------------|-------------|
 | Stall-free schedule only | `RBITNET_CONTINUOUS_BATCHING=1` | Decode-first waves; no fused claim |
 | Exercise fused hook in CI/tests | `+ RBITNET_FUSED_MULTI_SEQ=1` | Batch API called; CPU/non-Llama executors remain sequential |
-| CUDA Llama HTTP decode | `RBITNET_CONTINUOUS_BATCHING=1` + `RBITNET_FUSED_MULTI_SEQ=1` | HTTP requests are coalesced briefly, then Llama decode rows share GPU projections; prefill remains serial |
+| CUDA Llama HTTP batch | `RBITNET_CONTINUOUS_BATCHING=1` + `RBITNET_FUSED_MULTI_SEQ=1` | HTTP requests are coalesced briefly; Llama prompt-token and decode rows share GPU projections |
 
 ## #96 CUDA HTTP progress
 
@@ -76,8 +76,8 @@ Publish the script's wall time, requested aggregate tok/s, and deltas for
 `rbitnet_core_gpu_llama_batch_waves_total`. Do not publish a throughput claim
 unless the rows delta exceeds the waves delta for the concurrent runs.
 
-Remaining #96 gaps: shared multi-request prefill, streaming-request
-coalescing, CUDA graphs, adaptive admission/backpressure, and validation on
+Remaining #96 gaps: streaming-request coalescing, CUDA graphs, adaptive
+admission/backpressure, and validation on
 representative GPU/model matrices. Qwen, GPT, MoE, and CPU paths are explicitly
 outside this Llama-first slice.
 

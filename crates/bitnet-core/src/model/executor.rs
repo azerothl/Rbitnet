@@ -129,6 +129,18 @@ pub trait ModelExecutor: Send + Sync {
         Ok(out)
     }
 
+    /// Admit prompt-token chunks for a fused scheduler wave.
+    ///
+    /// Implementations which own persistent per-request state can use this to
+    /// share prompt prefill across ready requests. The default preserves the
+    /// scheduler's logical admission behavior for executors without that path.
+    fn generate_prefill_batch(
+        &self,
+        _items: &[(u64, String, usize, SamplingOptions)],
+    ) -> Result<()> {
+        Ok(())
+    }
+
     /// Called at the start of [`crate::scheduler::Scheduler::run_batch_waves`] when fused
     /// multi-seq is enabled. CUDA Llama uses this to scope per-request KV state to one batch.
     fn fused_scheduler_batch_begin(&self, _request_ids: &[u64]) -> Result<()> {
@@ -339,12 +351,7 @@ impl ModelExecutor for LlamaExecutor {
         let n_patches = enc.n_patches();
         let encode_vision_ms = t_enc.elapsed().as_millis() as u64;
         let (text, mut phases) = ModelExecutor::generate_with_vision_patches(
-            self,
-            prompt,
-            &patches,
-            n_patches,
-            max_tokens,
-            sampling,
+            self, prompt, &patches, n_patches, max_tokens, sampling,
         )?;
         phases.encode_ms = phases.encode_ms.saturating_add(encode_vision_ms);
         Ok((text, phases))
@@ -359,12 +366,7 @@ impl ModelExecutor for LlamaExecutor {
         sampling: SamplingOptions,
     ) -> Result<(String, PhaseTimings)> {
         LlamaExecutor::generate_with_vision_patches(
-            self,
-            prompt,
-            patches,
-            n_patches,
-            max_tokens,
-            sampling,
+            self, prompt, patches, n_patches, max_tokens, sampling,
         )
     }
 
@@ -514,6 +516,16 @@ impl ModelExecutor for LlamaExecutor {
             out.push(self.generate_with_timings(prompt, *max_tokens, *sampling)?);
         }
         Ok(out)
+    }
+
+    fn generate_prefill_batch(
+        &self,
+        items: &[(u64, String, usize, SamplingOptions)],
+    ) -> Result<()> {
+        if let Some(()) = self.with_fused_scheduler(|engine| engine.prefill_wave(items))? {
+            return Ok(());
+        }
+        Ok(())
     }
 }
 

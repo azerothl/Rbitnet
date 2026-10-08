@@ -1,5 +1,5 @@
 //! CUDA fused scheduler decode: shared batch stats vs serial owners.
-use super::scheduler_fused::{configured, SchedulerFusedLlama, SchedulerFusedOptions};
+use super::scheduler_fused::{configured, SchedulerFusedLlama};
 use super::*;
 use crate::loaders::prompt_tokenizer::LoadedPromptTokenizer;
 use crate::sampling::SamplingOptions;
@@ -39,13 +39,32 @@ fn fused_scheduler_batch_shared_projections_exceed_serial() {
         .unwrap()
         .expect("fused scheduler options");
     let (model, tokenizer) = load();
-    let mut engine = SchedulerFusedLlama::new(model, tokenizer, options).unwrap();
+    let mut engine = SchedulerFusedLlama::new(model, Arc::clone(&tokenizer), options).unwrap();
     let prompt = "The capital of France is";
     let sampling = SamplingOptions {
         temperature: 0.,
         ..Default::default()
     };
     engine.begin_batch(&[1, 2]);
+    let prompt_tokens = tokenizer
+        .encode_ids(prompt, crate::llama::llama_encode_add_special_tokens())
+        .unwrap()
+        .len();
+    engine
+        .prefill_wave(&[
+            (1, prompt.to_owned(), prompt_tokens, sampling),
+            (2, prompt.to_owned(), prompt_tokens, sampling),
+        ])
+        .unwrap();
+    let prefill_stats = engine.native_stats().unwrap();
+    assert!(
+        prefill_stats[1] >= (prompt_tokens * 2) as u64,
+        "shared prefill rows: {prefill_stats:?}"
+    );
+    assert!(
+        prefill_stats[2] > prefill_stats[0],
+        "shared prefill should use shared GEMMs: {prefill_stats:?}"
+    );
     let wave1 = engine
         .decode_wave(&[
             (1, prompt.to_owned(), 4, sampling),

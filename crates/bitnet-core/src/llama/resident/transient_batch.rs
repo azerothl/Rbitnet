@@ -173,7 +173,9 @@ impl NativeBatchWorkspace {
             count,
             (7 * self.model.cfg.n_layer + usize::from(mode != 0)) as u64,
         );
-        crate::perf::record_scheduler_decode_wave(1);
+        if mode != 0 {
+            crate::perf::record_scheduler_decode_wave(1);
+        }
         crate::perf::record_gpu_transfer(
             (count * (self.model.cfg.n_embd * 4 + 4 * std::mem::size_of::<*mut c_void>() + 8))
                 as u64,
@@ -209,6 +211,14 @@ impl NativeBatchWorkspace {
     ) -> Result<&[u32]> {
         self.execute(contexts, ids, positions, 2)?;
         Ok(&self.tokens[..contexts.len()])
+    }
+    pub(super) fn advance(
+        &mut self,
+        contexts: &mut [&mut Resident],
+        ids: &[u32],
+        positions: &[u32],
+    ) -> Result<()> {
+        self.execute(contexts, ids, positions, 0)
     }
     pub(super) fn stats(&self) -> Result<[u64; 3]> {
         let mut out = [0; 3];
