@@ -52,11 +52,30 @@ def parse_args():
     parser.add_argument("--max-tokens", type=int, default=32)
     parser.add_argument("--kv-page-limit", type=int, default=128)
     parser.add_argument(
+        "--live-sse-mux",
+        action="store_true",
+        help=(
+            "Measure the opt-in owned CUDA live SSE worker instead of the "
+            "default buffered Sarathi bridge. This runs fused-on plus a "
+            "fused-off live-worker control and requires observable deltas."
+        ),
+    )
+    parser.add_argument(
         "--capacity-page-limits",
         type=int,
         nargs="*",
         default=[],
         help="Optional page limits probed at concurrency 4 after the matrix.",
+    )
+    parser.add_argument(
+        "--capacity-prompt-words",
+        type=int,
+        nargs="*",
+        default=[],
+        help=(
+            "Prompt word counts for every capacity page limit. Supply multiple "
+            "values to run a prompt-length sweep."
+        ),
     )
     parser.add_argument("--prompt", default=PROMPT)
     return parser.parse_args()
@@ -146,14 +165,15 @@ def start_server(args, fused, page_limit, log_path):
             "RBITNET_CUDA_PREFILL": "1",
             "RBITNET_CUDA_KV_FORMAT": "f32",
             "RBITNET_CUDA_KV_PAGE_LIMIT": str(page_limit),
-            # Both legs exercise the Sarathi HTTP/SSE bridge.  The only
-            # scheduler variable in the ablation is fused multi-sequence
-            # dispatch; disabling continuous batching here would compare
-            # Sarathi against an unrelated singleton runtime path.
+            # The default mode compares the two Sarathi bridge scheduler
+            # legs. Live-mux mode deliberately selects its own owned worker,
+            # while retaining the Sarathi fused flags as an explicit opt-in.
             "RBITNET_CONTINUOUS_BATCHING": "1",
             "RBITNET_FUSED_MULTI_SEQ": "1" if fused else "0",
             "RBITNET_CUDA_FUSED_DECODE_SLOTS": "8",
-            "RBITNET_CUDA_CONTINUOUS": "0",
+            "RBITNET_CUDA_CONTINUOUS": "1" if args.live_sse_mux else "0",
+            "RBITNET_CUDA_LIVE_SSE_MUX": "1" if args.live_sse_mux else "0",
+            "RBITNET_CUDA_CONTINUOUS_SLOTS": "8",
             "RBITNET_MAX_CONCURRENT": "8",
         }
     )
@@ -224,10 +244,10 @@ def stream_request(base_url, body, gate):
     }
 
 
-def run_wave(base_url, args, concurrency):
+def run_wave(base_url, args, concurrency, prompt=None):
     body = {
         "model": "local",
-        "messages": [{"role": "user", "content": args.prompt}],
+        "messages": [{"role": "user", "content": prompt or args.prompt}],
         "max_tokens": args.max_tokens,
         "temperature": 0,
         "stream": True,
@@ -242,6 +262,10 @@ def run_wave(base_url, args, concurrency):
         raise RuntimeError(f"{len(failures)} streaming requests failed: {failures}")
     if any(not sample["text"] for sample in samples):
         raise RuntimeError("a streaming request returned empty content")
+    if args.live_sse_mux and any(sample["content_events"] < 2 for sample in samples):
+        raise RuntimeError(
+            "live SSE mux did not expose multiple content deltas per request"
+        )
     return {
         "concurrency": concurrency,
         "wall_ms": wall_ms,
@@ -264,13 +288,13 @@ def append_aggregate(wave):
     }
 
 
-def run_matrix_case(base_url, args, concurrency):
+def run_matrix_case(base_url, args, concurrency, prompt=None):
     before = metrics(base_url)
     waves = []
     for _ in range(args.warmups):
-        run_wave(base_url, args, concurrency)
+        run_wave(base_url, args, concurrency, prompt)
     for _ in range(args.repetitions):
-        wave = run_wave(base_url, args, concurrency)
+        wave = run_wave(base_url, args, concurrency, prompt)
         append_aggregate(wave)
         waves.append(wave)
     after = metrics(base_url)
@@ -302,15 +326,22 @@ def execute_configuration(args, fused, page_limit, label):
         stop_server(process, log)
 
 
-def execute_capacity_probe(args, page_limit):
-    label = f"capacity-pages-{page_limit}"
+def capacity_prompt(word_count):
+    return " ".join(["capacity"] * word_count)
+
+
+def execute_capacity_probe(args, page_limit, word_count):
+    label = f"capacity-pages-{page_limit}-words-{word_count}"
     log_path = args.output_dir / f"{label}.server.log"
     process = log = None
     try:
         process, log, base_url, environment = start_server(args, True, page_limit, log_path)
-        case = run_matrix_case(base_url, args, 4)
+        prompt = capacity_prompt(word_count)
+        case = run_matrix_case(base_url, args, 4, prompt)
         return {
             "page_limit": page_limit,
+            "prompt_words": word_count,
+            "prompt_characters": len(prompt),
             "status": "success",
             "environment": {key: environment[key] for key in sorted(environment) if key.startswith("RBITNET_")},
             "case": case,
@@ -336,12 +367,23 @@ def main():
         raise SystemExit("warmups must be non-negative; repetitions >= 1; max-tokens >= 2")
     if any(value < 1 or value > 8 for value in args.concurrency):
         raise SystemExit("concurrency values must be in 1..8")
+    if any(value < 1 for value in args.capacity_page_limits):
+        raise SystemExit("capacity page limits must be positive")
+    if any(value < 1 for value in args.capacity_prompt_words):
+        raise SystemExit("capacity prompt word counts must be positive")
+    if args.capacity_page_limits and not args.capacity_prompt_words:
+        raise SystemExit(
+            "--capacity-page-limits requires --capacity-prompt-words for a prompt-length sweep"
+        )
+    if args.capacity_prompt_words and not args.capacity_page_limits:
+        raise SystemExit("--capacity-prompt-words requires --capacity-page-limits")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     report = {
-        "schema": 1,
+        "schema": 2,
         "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "command": [sys.executable, *sys.argv],
         "source_revision": run_command(["git", "rev-parse", "HEAD"]),
+        "live_sse_mux": args.live_sse_mux,
         "fixture": {
             "prompt": args.prompt,
             "max_tokens": args.max_tokens,
@@ -357,14 +399,19 @@ def main():
         "results": [],
         "capacity_probes": [],
     }
-    for fused in (False, True):
-        label = "fused-on" if fused else "fused-off"
+    configurations = [(False, "fused-off"), (True, "fused-on")]
+    for fused, label in configurations:
         result = execute_configuration(args, fused, args.kv_page_limit, label)
         report["results"].append(result)
         (args.output_dir / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     for page_limit in args.capacity_page_limits:
-        report["capacity_probes"].append(execute_capacity_probe(args, page_limit))
-        (args.output_dir / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        for word_count in args.capacity_prompt_words:
+            report["capacity_probes"].append(
+                execute_capacity_probe(args, page_limit, word_count)
+            )
+            (args.output_dir / "results.json").write_text(
+                json.dumps(report, indent=2) + "\n", encoding="utf-8"
+            )
     print(json.dumps(report, indent=2))
 
 
