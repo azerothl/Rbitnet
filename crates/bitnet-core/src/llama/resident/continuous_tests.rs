@@ -527,6 +527,132 @@ fn optional_actual_llama_continuous_arrivals_departures_sampling_and_request_loc
 }
 
 #[test]
+fn optional_actual_llama_continuous_heterogeneous_mid_wave_cancel_and_admit() {
+    if std::env::var("RBITNET_LLAMA_CONTINUOUS_TEST").as_deref() != Ok("1") {
+        return;
+    }
+    std::env::set_var("RBITNET_MAX_SEQ", "1024");
+    std::env::set_var("RBITNET_CUDA_PREFILL", "1");
+    std::env::set_var("RBITNET_CUDA_PREFILL_TOKENS", "128");
+    std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", "0");
+    std::env::set_var("RBITNET_CUDA_SPLIT_KV", "0");
+    std::env::set_var("RBITNET_PREFIX_KV", "0");
+    std::env::set_var("RBITNET_CUDA_KV_FORMAT", "f32");
+    std::env::set_var("RBITNET_CUDA_RESIDENT_GRAPH", "1");
+    let (model, tokenizer) = load();
+    let jobs = jobs();
+
+    for pages in [None, Some(256)] {
+        let cancel = Arc::new(AtomicBool::new(false));
+        let cancellation = Arc::clone(&cancel);
+        let mut cancelled_deltas = 0;
+        let cancel_callback: StreamCallback = Box::new(move |event| {
+            if matches!(event, StreamEvent::Delta { .. }) {
+                cancelled_deltas += 1;
+                if cancelled_deltas == 2 {
+                    cancellation.store(true, Ordering::Release);
+                }
+            }
+            Ok(())
+        });
+        let mut driver = ContinuousLlama::new(
+            Arc::clone(&model),
+            Arc::clone(&tokenizer),
+            2,
+            8,
+            256,
+            pages,
+            0,
+        )
+        .unwrap();
+        let cancelled_job = &jobs[2];
+        let survivor = &jobs[1];
+        let replacement = &jobs[0];
+        let survivor_expected = serial(&model, &tokenizer, survivor);
+        let replacement_expected = serial(&model, &tokenizer, replacement);
+        driver
+            .submit(
+                301,
+                &cancelled_job.prompt,
+                65,
+                cancelled_job.sampling,
+                Arc::clone(&cancel),
+                Some(cancel_callback),
+            )
+            .unwrap();
+        driver
+            .submit(
+                302,
+                &survivor.prompt,
+                survivor.maximum,
+                survivor.sampling,
+                Arc::new(AtomicBool::new(false)),
+                None,
+            )
+            .unwrap();
+
+        let mut replacement_submitted = false;
+        let mut shared_decode_after_replacement = false;
+        let mut completed = BTreeMap::new();
+        for tick in 0..2000 {
+            let wave = driver.tick().unwrap();
+            completed.extend(driver.take_completed());
+            if cancel.load(Ordering::Acquire) && !replacement_submitted {
+                driver
+                    .submit(
+                        303,
+                        &replacement.prompt,
+                        replacement.maximum,
+                        replacement.sampling,
+                        Arc::new(AtomicBool::new(false)),
+                        None,
+                    )
+                    .unwrap();
+                replacement_submitted = true;
+            }
+            shared_decode_after_replacement |= replacement_submitted && wave.decode_rows == 2;
+            if driver.is_idle() {
+                break;
+            }
+            assert!(tick + 1 < 2000, "heterogeneous wave did not drain");
+        }
+        completed.extend(driver.take_completed());
+        assert!(
+            replacement_submitted,
+            "mid-wave cancellation never occurred"
+        );
+        assert!(
+            shared_decode_after_replacement,
+            "replacement owner never joined its survivor in a shared decode wave"
+        );
+        assert_eq!(completed.len(), 3);
+        assert!(completed.remove(&301).unwrap().is_err());
+        let survivor_output = completed.remove(&302).unwrap().unwrap();
+        assert_eq!(survivor_output.ids, survivor_expected.0);
+        assert_eq!(survivor_output.text, survivor_expected.1);
+        assert_eq!(survivor_output.phases.finish_reason, survivor_expected.2);
+        let replacement_output = completed.remove(&303).unwrap().unwrap();
+        assert_eq!(replacement_output.ids, replacement_expected.0);
+        assert_eq!(replacement_output.text, replacement_expected.1);
+        assert_eq!(
+            replacement_output.phases.finish_reason,
+            replacement_expected.2
+        );
+        assert!(driver.is_idle());
+        eprintln!(
+            "LLAMA_CONTINUOUS_HETEROGENEOUS {}",
+            serde_json::json!({
+                "pages": pages,
+                "cancelled_owner": 301,
+                "survivor_owner": 302,
+                "replacement_owner": 303,
+                "replacement_shared_decode": shared_decode_after_replacement,
+            })
+        );
+    }
+}
+
+#[test]
 fn optional_actual_llama_continuous_thread_controller_owned_disconnect_and_shutdown() {
     if std::env::var("RBITNET_LLAMA_CONTINUOUS_TEST").as_deref() != Ok("1") {
         return;
