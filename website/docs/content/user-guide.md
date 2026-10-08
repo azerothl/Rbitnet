@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/insta
 **Windows (PowerShell)**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 ```
 
 Git and Rust are required. From a clone of this repository, `.\scripts\install.ps1` at the repository root does the same thing.

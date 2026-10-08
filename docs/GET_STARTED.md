@@ -20,7 +20,7 @@ For the full runtime guide see [USAGE.md](USAGE.md). Env index: [ENV_REFERENCE.m
    Windows (PowerShell):
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+   irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
    ```
 
    Git and Rust are required. From a clone, `.\scripts\install.ps1` at the repository root does the same thing.

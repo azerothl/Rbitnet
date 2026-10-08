@@ -58,13 +58,14 @@ Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF 
 From any directory (downloads the installer; Git and Rust are required):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 ```
 
 From an existing checkout, at the repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\install.ps1
 ```
 
 Tagged releases publish Windows zip assets named like `rbitnet-server-vX.Y.Z-windows-x86_64.zip` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). The zip contains both `rbitnet.exe` and `rbitnet-server.exe`.
@@ -192,7 +193,7 @@ Stable tags are listed in `data/compatible_models.json` (`bitnet:2b`, `tinyllama
 For Windows quick install:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 

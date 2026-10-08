@@ -1,10 +1,11 @@
 # Install the rbitnet CLI from this checkout, or clone the repo when the script
 # is not already inside one (same behavior as scripts/install.sh).
 #
-# From any directory:
-#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+# From any PowerShell window (do not nest powershell.exe; some sessions deny it):
+#   irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 # From the repository root:
-#   powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+#   Set-ExecutionPolicy -Scope Process Bypass
+#   .\scripts\install.ps1
 
 param(
     [switch] $NoLocked
