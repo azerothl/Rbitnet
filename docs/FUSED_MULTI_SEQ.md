@@ -72,6 +72,15 @@ coalescing rather than streaming TTFT.
 This applies to the OpenAI-compatible chat endpoint; Anthropic-shaped SSE
 continues to use its dedicated live path.
 
+For the experimental live-mux variant, additionally set
+`RBITNET_CUDA_CONTINUOUS=1` and `RBITNET_CUDA_LIVE_SSE_MUX=1`. That selects the
+owned CUDA Llama wave worker: it emits per-owner token events while admitting
+new work and retiring a cancelled/disconnected owner between shared decode
+waves. Its constraints and GPU parity fixture are documented in
+[CONTINUOUS_LLAMA.md](CONTINUOUS_LLAMA.md). It is a separate implementation
+from the default coalescing bridge, not evidence that its published #96
+TTFT/ITL measurement has been performed.
+
 Measure concurrency 1/4/8 with:
 
 ```bash
