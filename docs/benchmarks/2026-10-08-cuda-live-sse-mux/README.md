@@ -21,6 +21,15 @@ requires a subsequent two-owner decode wave, and verifies exact independent
 sampling results for both surviving owners. It runs against dense and paged
 Native KV fixtures.
 
+The companion
+`optional_actual_llama_live_mux_heterogeneous_deadline_cancel_and_admit_parity`
+fixture exercises the owned controller selected by the live-mux flags. It
+simulates a stream deadline after two deltas, admits a heterogeneous replacement
+before the survivor completes, and checks exact terminal output plus shared
+Native projection counters. This establishes deadline/disconnect cancellation
+parity for a live heterogeneous wave; explicit HTTP stop-string preemption is
+still not established.
+
 ## Measurement command
 
 On a CUDA host with a compatible Llama GGUF, build the server from the exact

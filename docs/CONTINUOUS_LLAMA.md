@@ -44,6 +44,14 @@ sampling parity, token-event reconstruction, and survivor completion. It needs
 the real CUDA GGUF/tokenizer fixture; it is intentionally skipped on ordinary
 CI hosts.
 
+`optional_actual_llama_live_mux_heterogeneous_deadline_cancel_and_admit_parity`
+also enables the live-mux Sarathi flags. A callback simulates a stream deadline
+after two token deltas, then a heterogeneous replacement is admitted while the
+survivor is still live. It proves request-local deadline/disconnect cancellation,
+replacement overlap, exact survivor/replacement outputs, and shared Native
+projections with dense and paged KV. It does not prove HTTP stop-string
+preemption; the server's UTF-8 stop filter remains covered separately.
+
 An example PowerShell configuration for eight active requests:
 
 ```powershell
@@ -68,9 +76,10 @@ or scheduler for Qwen/GPT/GLM.
 The worker bounds admission and sends events through owned request channels.
 Dropping a stream or failing its callback cancels that owner, while other
 requests continue. Shutdown retires pending owners and releases Native contexts
-and scratch memory. Unary timeout or an explicit stop string can leave bounded
-remaining work before retirement; immediate cancellation of every such path
-has not been established. Real subword JSON/tool grammar is refused.
+and scratch memory. The live CUDA fixture establishes the bounded
+deadline/disconnect cancellation path; explicit HTTP stop strings can still
+leave bounded remaining work before retirement, since immediate stop-string
+preemption has not been established. Real subword JSON/tool grammar is refused.
 
 Native counters distinguish successful shared waves, rows, matrix projections
 and maximum rows from virtual scheduler activity. The public evidence is in

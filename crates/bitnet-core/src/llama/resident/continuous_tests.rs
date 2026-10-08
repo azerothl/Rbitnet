@@ -653,6 +653,205 @@ fn optional_actual_llama_continuous_heterogeneous_mid_wave_cancel_and_admit() {
 }
 
 #[test]
+fn optional_actual_llama_live_mux_heterogeneous_deadline_cancel_and_admit_parity() {
+    if std::env::var("RBITNET_LLAMA_CONTINUOUS_TEST").as_deref() != Ok("1") {
+        return;
+    }
+    use super::controller::{BatchController, BatchOptions};
+    std::env::set_var("RBITNET_MAX_SEQ", "1024");
+    std::env::set_var("RBITNET_CUDA_PREFILL", "1");
+    std::env::set_var("RBITNET_CUDA_PREFILL_TOKENS", "128");
+    std::env::set_var("RBITNET_CUDA_PREFILL_TF32X3", "0");
+    std::env::set_var("RBITNET_CUDA_SPLIT_KV", "0");
+    std::env::set_var("RBITNET_PREFIX_KV", "0");
+    std::env::set_var("RBITNET_CUDA_KV_FORMAT", "f32");
+    std::env::set_var("RBITNET_CUDA_RESIDENT_GRAPH", "1");
+    std::env::set_var("RBITNET_CUDA_CONTINUOUS", "1");
+    std::env::set_var("RBITNET_CUDA_LIVE_SSE_MUX", "1");
+    std::env::set_var("RBITNET_CONTINUOUS_BATCHING", "1");
+    std::env::set_var("RBITNET_FUSED_MULTI_SEQ", "1");
+    std::env::remove_var("RBITNET_CUDA_KV_PAGE_LIMIT");
+    assert!(BatchOptions::configured(crate::backend::BackendKind::Cuda)
+        .unwrap()
+        .is_some());
+
+    let (model, tokenizer) = load();
+    let jobs = jobs();
+    let deadline = Job {
+        id: 401,
+        maximum: 65,
+        ..jobs[2].clone()
+    };
+    let survivor = Job {
+        id: 402,
+        maximum: 65,
+        ..jobs[1].clone()
+    };
+    let replacement = Job {
+        id: 403,
+        maximum: 33,
+        ..jobs[0].clone()
+    };
+    let survivor_expected = serial(&model, &tokenizer, &survivor);
+    let replacement_expected = serial(&model, &tokenizer, &replacement);
+
+    for pages in [None, Some(256)] {
+        let controller = Arc::new(
+            BatchController::start(
+                Arc::clone(&model),
+                Arc::clone(&tokenizer),
+                BatchOptions {
+                    slots: 2,
+                    queued: 8,
+                    token_budget: 256,
+                    pages,
+                    ordering: 0,
+                },
+            )
+            .unwrap(),
+        );
+        let start = Arc::new(std::sync::Barrier::new(2));
+        let deadline_fired = Arc::new(AtomicBool::new(false));
+        let survivor_done = Arc::new(AtomicBool::new(false));
+
+        let deadline_engine = Arc::clone(&controller);
+        let deadline_start = Arc::clone(&start);
+        let deadline_signal = Arc::clone(&deadline_fired);
+        let deadline_job = deadline.clone();
+        let deadline_handle = std::thread::spawn(move || {
+            deadline_start.wait();
+            let mut deltas = 0;
+            let result = deadline_engine.generate_streaming(
+                &deadline_job.prompt,
+                deadline_job.maximum,
+                deadline_job.sampling,
+                &mut |event| {
+                    if matches!(event, StreamEvent::Delta { .. }) {
+                        deltas += 1;
+                        if deltas == 2 {
+                            deadline_signal.store(true, Ordering::Release);
+                            return Err(BitNetError::Inference(
+                                "simulated streaming deadline".into(),
+                            ));
+                        }
+                    }
+                    Ok(())
+                },
+            );
+            (result, deltas)
+        });
+
+        let survivor_engine = Arc::clone(&controller);
+        let survivor_start = Arc::clone(&start);
+        let survivor_finished = Arc::clone(&survivor_done);
+        let survivor_job = survivor.clone();
+        let survivor_handle = std::thread::spawn(move || {
+            survivor_start.wait();
+            let mut events = Vec::new();
+            let result = survivor_engine.generate_streaming(
+                &survivor_job.prompt,
+                survivor_job.maximum,
+                survivor_job.sampling,
+                &mut |event| {
+                    events.push(event);
+                    Ok(())
+                },
+            );
+            survivor_finished.store(true, Ordering::Release);
+            (result, events)
+        });
+
+        for _ in 0..10_000 {
+            if deadline_fired.load(Ordering::Acquire) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        assert!(
+            deadline_fired.load(Ordering::Acquire),
+            "deadline owner never received two live token deltas"
+        );
+
+        let replacement_overlapped = Arc::new(AtomicBool::new(false));
+        let replacement_engine = Arc::clone(&controller);
+        let survivor_finished = Arc::clone(&survivor_done);
+        let replacement_overlap = Arc::clone(&replacement_overlapped);
+        let replacement_job = replacement.clone();
+        let replacement_handle = std::thread::spawn(move || {
+            let mut events = Vec::new();
+            let result = replacement_engine.generate_streaming(
+                &replacement_job.prompt,
+                replacement_job.maximum,
+                replacement_job.sampling,
+                &mut |event| {
+                    if matches!(
+                        event,
+                        StreamEvent::FirstToken { .. } | StreamEvent::Delta { .. }
+                    ) && !survivor_finished.load(Ordering::Acquire)
+                    {
+                        replacement_overlap.store(true, Ordering::Release);
+                    }
+                    events.push(event);
+                    Ok(())
+                },
+            );
+            (result, events)
+        });
+
+        let (deadline_result, deadline_deltas) = deadline_handle.join().unwrap();
+        assert!(deadline_result.is_err());
+        assert_eq!(deadline_deltas, 2);
+        let (survivor_result, survivor_events) = survivor_handle.join().unwrap();
+        survivor_result.unwrap();
+        let (replacement_result, replacement_events) = replacement_handle.join().unwrap();
+        replacement_result.unwrap();
+        assert!(
+            replacement_overlapped.load(Ordering::Acquire),
+            "replacement did not emit before its heterogeneous survivor completed"
+        );
+
+        for (events, expected) in [
+            (&survivor_events, &survivor_expected),
+            (&replacement_events, &replacement_expected),
+        ] {
+            let output = events
+                .iter()
+                .find_map(|event| match event {
+                    StreamEvent::Done(output) => Some(output),
+                    _ => None,
+                })
+                .expect("live owner must receive one terminal event");
+            let deltas: String = events
+                .iter()
+                .filter_map(|event| match event {
+                    StreamEvent::Delta { text } => Some(text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(deltas, output.text);
+            assert_eq!(output.text, expected.1);
+            assert_eq!(output.stats.finish_reason, expected.2);
+        }
+        let stats = controller.native_stats().unwrap();
+        assert!(
+            stats[0] > 0 && stats[1] > stats[0],
+            "live mux must execute shared multi-owner projections: {stats:?}"
+        );
+        eprintln!(
+            "LLAMA_LIVE_MUX_DEADLINE_CASE {}",
+            serde_json::json!({
+                "pages": pages,
+                "deadline_owner": deadline.id,
+                "survivor_owner": survivor.id,
+                "replacement_owner": replacement.id,
+                "replacement_overlapped": replacement_overlapped.load(Ordering::Acquire),
+                "native_stats": stats,
+            })
+        );
+    }
+}
+
+#[test]
 fn optional_actual_llama_continuous_thread_controller_owned_disconnect_and_shutdown() {
     if std::env::var("RBITNET_LLAMA_CONTINUOUS_TEST").as_deref() != Ok("1") {
         return;
