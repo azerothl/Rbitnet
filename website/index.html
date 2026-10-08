@@ -167,12 +167,17 @@
     <section id="install" class="section section-install">
       <h2>Install</h2>
       <p class="section-lede">One checkout, one binary. Python only if you convert checkpoints to GGUF upstream.</p>
+      <p class="install-note">Linux and macOS:</p>
       <pre class="install-block mono" tabindex="0"><code>curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
 rbitnet models install tinyllama:q4 --dir ./models
 rbitnet up tinyllama:q4 --dir ./models
 rbitnet serve</code></pre>
+      <p class="install-note">Windows (PowerShell):</p>
+      <pre class="install-block mono" tabindex="0"><code>powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+rbitnet models install tinyllama:q4 --dir ./models
+rbitnet up tinyllama:q4 --dir ./models
+rbitnet serve</code></pre>
       <p class="install-note">
-        Windows: <code>.\scripts\install.ps1</code> ·
         <a href="docs/page.html?doc=user-guide">User guide</a> ·
         <a href="docs/page.html?doc=demarrage-5min">FR quickstart</a>
       </p>

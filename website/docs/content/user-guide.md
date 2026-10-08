@@ -15,8 +15,10 @@ curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/insta
 **Windows (PowerShell)**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
 ```
+
+Git and Rust are required. From a clone of this repository, `.\scripts\install.ps1` at the repository root does the same thing.
 
 You can also download `rbitnet.exe` and `rbitnet-server.exe` from the [GitHub releases](https://github.com/azerothl/Rbitnet/releases) page (tag `v0.2.0` and later).
 

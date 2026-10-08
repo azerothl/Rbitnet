@@ -55,7 +55,13 @@ Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF 
 
 ### Windows
 
-Build from a checkout:
+From any directory (downloads the installer; Git and Rust are required):
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
+```
+
+From an existing checkout, at the repository root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
@@ -186,7 +192,7 @@ Stable tags are listed in `data/compatible_models.json` (`bitnet:2b`, `tinyllama
 For Windows quick install:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex"
 rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
