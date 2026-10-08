@@ -5,8 +5,9 @@ Qwen3.5. A matching checkpoint avoids recomputing that prefix. It can reduce
 latency before the first output token on repeated prompts; it does not avoid
 reading model weights during decoding or establish an increase in decode tokens/s.
 
-Implementation and serving validation are in progress. Do not treat the presence
-of this document as a completed benchmark or support for other architectures.
+The accepted product boundary and measured Llama restore result are recorded in
+[the session-tier decision](SESSION_TIERS_DECISION.md). This document does not
+claim a completed benchmark for Qwen or support for other architectures.
 
 Compatibility also records prefill partition sizes, ordered Qwen block mode,
 prefix checkpoint boundaries and Native page geometry. Changing these options
@@ -86,7 +87,7 @@ attempt can retain a valid RAM checkpoint. Corruption cannot supply tensor data
 to CUDA. No cache operation is permitted to make another active lease exceed the
 host payload budget.
 
-## Evidence required before adoption
+## Validation evidence and remaining limits
 
 ### Cooperative global SSD admission (Windows validation passed)
 
@@ -117,15 +118,15 @@ Fresh compilation, all 19 store tests and actual Llama/Qwen HTTP/proxy execution
 346 workspace tests pass with one ignored. See the [raw validation report](benchmarks/2026-10-04-context-global-quota-fresh/README.md).
 This does not claim a physical ENOSPC or timed process-crash recovery sweep.
 
-The validation must cover actual Llama and Qwen prompt outputs, seeded sampling,
-RAM hits, RAM eviction to disk, a separate server-process restart, corruption
-replay, stop strings and disconnected streams. It must also cover two model
-runners through the proxy with session affinity and idle runner recycling.
-Report startup hashing, transfers, sealed storage, RSS, VRAM and first-token
-latency separately. A successful unit test is not evidence of faster serving.
+The published validation covers actual Llama/Qwen prompt outputs, seeded
+sampling, RAM hits, RAM eviction to disk, separate server-process restart,
+corruption replay, and two-model proxy execution. The accepted product does
+not claim proxy session affinity/recycling or a Qwen TTFT benchmark; those,
+stop/disconnect coverage across all tiers, and expanded failure-mode sweeps
+remain follow-ups listed in the [decision](SESSION_TIERS_DECISION.md).
 
 Simulated interrupted files and an insufficient configured disk quota do not
-demonstrate recovery from a physical disk-full condition. Crash timing, physical
-disk-full recovery and combined cache performance remain unverified.
-Cross-process ownership/restart and real two-model admission are now covered
-by the published captures; this does not cover a timed write/rename crash sweep.
+demonstrate recovery from a physical disk-full condition. Linux tmpfs covers
+physical ENOSPC, but crash timing, Windows disk-full recovery and a timed
+write/rename-crash sweep remain unverified. Cross-process ownership/restart and
+real two-model admission are covered by the published captures.
