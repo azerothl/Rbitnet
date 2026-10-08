@@ -7,7 +7,10 @@
 
 use bitnet_core::inference::Engine;
 use bitnet_core::scheduler::{InferenceOutput, InferenceRequest};
+use bitnet_core::stream::StreamEvent;
 use bitnet_core::{BitNetError, Result};
+#[cfg(test)]
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
@@ -18,10 +21,15 @@ const MAX_FUSED_ROWS: usize = 8;
 struct Pending {
     engine: Arc<Engine>,
     request: InferenceRequest,
-    reply: mpsc::SyncSender<Result<InferenceOutput>>,
+    reply: Reply,
 }
 
-/// Process-wide per-server collection point for non-streaming HTTP requests.
+enum Reply {
+    Complete(mpsc::SyncSender<Result<InferenceOutput>>),
+    Stream(mpsc::SyncSender<std::result::Result<StreamEvent, String>>),
+}
+
+/// Process-wide per-server collection point for compatible HTTP requests.
 ///
 /// Requests are only coalesced with the same loaded `Engine`; registry-backed
 /// requests for another model retain their own batch and KV ownership.
@@ -29,6 +37,8 @@ struct Pending {
 pub(crate) struct ContinuousBatcher {
     pending: Mutex<Vec<Pending>>,
     dispatch_scheduled: AtomicBool,
+    #[cfg(test)]
+    dispatches: AtomicUsize,
 }
 
 impl ContinuousBatcher {
@@ -46,7 +56,7 @@ impl ContinuousBatcher {
             pending.push(Pending {
                 engine,
                 request,
-                reply,
+                reply: Reply::Complete(reply),
             });
         }
 
@@ -72,7 +82,62 @@ impl ContinuousBatcher {
             .map_err(|_| BitNetError::Inference("continuous batch worker stopped".into()))?
     }
 
+    /// Execute an SSE request in the same Sarathi batch as compatible JSON
+    /// requests. A batch result becomes its content delta and terminal event.
+    pub(crate) fn complete_streaming(
+        self: &Arc<Self>,
+        engine: Arc<Engine>,
+        request: InferenceRequest,
+        on_event: &mut (dyn FnMut(StreamEvent) -> Result<()> + Send),
+    ) -> Result<()> {
+        let (reply, receive) = mpsc::sync_channel(4);
+        {
+            let mut pending = self
+                .pending
+                .lock()
+                .map_err(|_| BitNetError::Inference("continuous batch queue poisoned".into()))?;
+            pending.push(Pending {
+                engine,
+                request,
+                reply: Reply::Stream(reply),
+            });
+        }
+
+        if self
+            .dispatch_scheduled
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            let batcher = Arc::clone(self);
+            std::thread::Builder::new()
+                .name("rbitnet-http-sarathi".into())
+                .spawn(move || {
+                    std::thread::sleep(COALESCE_WINDOW);
+                    batcher.dispatch();
+                })
+                .map_err(|e| {
+                    BitNetError::Inference(format!("start continuous batch worker: {e}"))
+                })?;
+        }
+
+        loop {
+            match receive
+                .recv()
+                .map_err(|_| BitNetError::Inference("continuous batch worker stopped".into()))?
+            {
+                Ok(StreamEvent::Done(output)) => {
+                    on_event(StreamEvent::Done(output))?;
+                    return Ok(());
+                }
+                Ok(event) => on_event(event)?,
+                Err(message) => return Err(BitNetError::Inference(message)),
+            }
+        }
+    }
+
     fn dispatch(&self) {
+        #[cfg(test)]
+        self.dispatches.fetch_add(1, Ordering::Relaxed);
         let pending = {
             let mut queued = match self.pending.lock() {
                 Ok(queued) => queued,
@@ -108,7 +173,7 @@ impl ContinuousBatcher {
         match engine.complete_batch_detailed(&requests) {
             Ok(outputs) if outputs.len() == members.len() => {
                 for (entry, output) in members.into_iter().zip(outputs) {
-                    let _ = entry.reply.send(Ok(output));
+                    Self::reply_output(entry.reply, output);
                 }
             }
             Ok(outputs) => {
@@ -118,20 +183,48 @@ impl ContinuousBatcher {
                     members.len()
                 );
                 for entry in members {
-                    let _ = entry
-                        .reply
-                        .send(Err(BitNetError::Inference(message.clone())));
+                    Self::reply_error(entry.reply, message.clone());
                 }
             }
             Err(error) => {
                 let message = error.to_string();
                 for entry in members {
-                    let _ = entry
-                        .reply
-                        .send(Err(BitNetError::Inference(message.clone())));
+                    Self::reply_error(entry.reply, message.clone());
                 }
             }
         }
+    }
+
+    fn reply_output(reply: Reply, output: InferenceOutput) {
+        match reply {
+            Reply::Complete(tx) => {
+                let _ = tx.send(Ok(output));
+            }
+            Reply::Stream(tx) => {
+                if !output.text.is_empty() {
+                    let _ = tx.send(Ok(StreamEvent::Delta {
+                        text: output.text.clone(),
+                    }));
+                }
+                let _ = tx.send(Ok(StreamEvent::Done(output)));
+            }
+        }
+    }
+
+    fn reply_error(reply: Reply, message: String) {
+        match reply {
+            Reply::Complete(tx) => {
+                let _ = tx.send(Err(BitNetError::Inference(message)));
+            }
+            Reply::Stream(tx) => {
+                let _ = tx.send(Err(message));
+            }
+        }
+    }
+
+    #[cfg(test)]
+    fn dispatch_count(&self) -> usize {
+        self.dispatches.load(Ordering::Relaxed)
     }
 }
 
@@ -141,4 +234,71 @@ fn fused_row_capacity() -> usize {
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|&value| (1..=MAX_FUSED_ROWS).contains(&value))
         .unwrap_or(MAX_FUSED_ROWS)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitnet_core::inference::stub_engine;
+    use bitnet_core::sampling::SamplingOptions;
+    use std::sync::mpsc;
+
+    #[test]
+    fn streaming_member_receives_its_delta_and_terminal_event() {
+        let batcher = Arc::new(ContinuousBatcher::default());
+        let request = InferenceRequest {
+            prompt: "stream this response".into(),
+            max_tokens: 4,
+            sampling: SamplingOptions::default(),
+        };
+        let mut events = Vec::new();
+
+        batcher
+            .complete_streaming(Arc::new(stub_engine()), request, &mut |event| {
+                events.push(event);
+                Ok(())
+            })
+            .unwrap();
+
+        assert!(matches!(events.first(), Some(StreamEvent::Delta { text }) if !text.is_empty()));
+        assert!(matches!(events.last(), Some(StreamEvent::Done(_))));
+    }
+
+    #[test]
+    fn streaming_and_json_members_share_one_dispatch() {
+        let batcher = Arc::new(ContinuousBatcher::default());
+        let engine = Arc::new(stub_engine());
+        let (json_tx, json_rx) = mpsc::sync_channel(1);
+        let (stream_tx, stream_rx) = mpsc::sync_channel(2);
+        let request = |prompt: &str| InferenceRequest {
+            prompt: prompt.into(),
+            max_tokens: 4,
+            sampling: SamplingOptions::default(),
+        };
+        batcher.pending.lock().unwrap().extend([
+            Pending {
+                engine: Arc::clone(&engine),
+                request: request("json member"),
+                reply: Reply::Complete(json_tx),
+            },
+            Pending {
+                engine,
+                request: request("stream member"),
+                reply: Reply::Stream(stream_tx),
+            },
+        ]);
+
+        batcher.dispatch();
+
+        assert!(!json_rx.recv().unwrap().unwrap().text.is_empty());
+        assert!(matches!(
+            stream_rx.recv().unwrap().unwrap(),
+            StreamEvent::Delta { .. }
+        ));
+        assert!(matches!(
+            stream_rx.recv().unwrap().unwrap(),
+            StreamEvent::Done(_)
+        ));
+        assert_eq!(batcher.dispatch_count(), 1);
+    }
 }
