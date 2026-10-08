@@ -482,6 +482,13 @@ async fn load_failed_ready_exposes_error_and_reload_recovers() {
 async fn unloaded_model_does_not_become_a_completion_stub() {
     // The retained intent is independent of model-match validation, whose id is
     // cleared by single-model idle eviction. Simulate that post-eviction state.
+    // Clear model env so idle auto-restore cannot accidentally load a host GGUF.
+    let _lock = ENV_MUTEX.lock().unwrap();
+    let _guard = EnvGuard::set(&[
+        ("RBITNET_MODEL", None),
+        ("RBITNET_TOY", None),
+        ("RBITNET_STUB", None),
+    ]);
     let engine = Arc::new(bitnet_core::inference::stub_engine());
     let (app, state) =
         create_app_with_expected_model(engine, Arc::new(ServerConfig::test_defaults()), None);
