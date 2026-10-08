@@ -56,6 +56,7 @@ session-isolated promotion/eviction, proxy runner recycling, idle-unload
 restore, HTTP/SSE cancellation or stop-string equivalence. The test also does
 not cover Windows physical ENOSPC or timed write/rename crash recovery.
 
-**Disposition: keep #94 open.** The Llama recompute/RAM/SSD latency acceptance
-slice now has reproducible evidence, but the broader session and architecture
-acceptance criteria remain unmet.
+The measured Llama recompute/RAM/SSD latency slice is one input to the
+accepted bounded Llama/Qwen product decision. Its unsupported architecture,
+proxy, Qwen-rerun and failure-mode limits remain explicit in
+[the decision](../../SESSION_TIERS_DECISION.md).
