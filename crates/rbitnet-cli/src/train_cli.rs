@@ -85,39 +85,33 @@ fn resolve_python() -> Result<PathBuf, String> {
     )
 }
 
-/// Print a compact checklist for HF checkpoint → GGUF → Rbitnet.
-pub fn print_export_gguf_hint(checkpoint: Option<&Path>) {
-    eprintln!(
-        "Rbitnet consumes supported GGUF architectures. Export Llama-family Safetensors checkpoints with"
+/// Compact checklist for HF checkpoint → GGUF → Rbitnet.
+pub fn export_gguf_hint(checkpoint: Option<&Path>) -> String {
+    let mut out = String::from(
+        "Rbitnet consumes supported GGUF architectures. Export Llama-family Safetensors checkpoints with the llama.cpp tools for your revision.\n\
+Upstream: https://github.com/ggml-org/llama.cpp\n\
+Walkthrough: docs/UNSLOTH_TO_RBITNET.md\n\
+Compatibility: docs/TRAINING_AND_COMPATIBILITY.md\n",
     );
-    eprintln!(
-        "the **llama.cpp** tools for your revision (script names change over time). Upstream:"
-    );
-    eprintln!("  https://github.com/ggml-org/llama.cpp");
-    eprintln!();
-    eprintln!("Walkthrough: docs/UNSLOTH_TO_RBITNET.md");
-    eprintln!("Compatibility: docs/TRAINING_AND_COMPATIBILITY.md");
     if let Some(p) = checkpoint {
         if !p.exists() {
-            eprintln!(
-                "warning: --checkpoint path does not exist yet: {}",
+            out.push_str(&format!(
+                "warning: --checkpoint path does not exist yet: {}\n",
                 p.display()
-            );
+            ));
         }
-        println!();
-        println!("Checkpoint directory: {}", p.display());
-        println!();
-        println!("Typical flow (verify against your llama.cpp checkout):");
-        println!(
-            "  1. python convert_hf_to_gguf.py \"{}\" --outfile model-f16.gguf",
+        out.push_str(&format!(
+            "\nCheckpoint directory: {}\n\n\
+Typical flow (verify against your llama.cpp checkout):\n\
+  1. python convert_hf_to_gguf.py \"{}\" --outfile model-f16.gguf\n\
+  2. Optional: run the llama.cpp quantize tool for Q4_K_M or similar.\n\
+  3. Copy tokenizer.json beside the .gguf or set RBITNET_TOKENIZER.\n\
+  4. Set RBITNET_MODEL to the absolute .gguf path.\n\
+  5. rbitnet serve\n",
+            p.display(),
             p.display()
-        );
-        println!("  2. Optional: run the llama.cpp quantize tool for Q4_K_M or similar.");
-        println!("  3. Copy tokenizer.json beside the .gguf or set RBITNET_TOKENIZER.");
-        println!("  4. export RBITNET_MODEL=/absolute/path/to/model.gguf");
-        println!("  5. rbitnet serve   # or rbitnet-server");
-    } else {
-        println!();
-        println!("Pass --checkpoint DIR for a concrete convert_hf_to_gguf.py example line.");
+        ));
     }
+    out
 }
+
