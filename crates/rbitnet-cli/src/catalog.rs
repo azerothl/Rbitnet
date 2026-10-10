@@ -92,11 +92,53 @@ pub fn fetch_catalog(url: &str) -> Result<Catalog, String> {
     serde_json::from_str(&body).map_err(|e| format!("parse catalog JSON: {e}"))
 }
 
-/// Load the in-tree curated catalog when present (offline-friendly).
+/// Catalog compiled into the binary. A checkout or an install directory can override it.
+pub fn load_bundled_catalog() -> Catalog {
+    serde_json::from_str(include_str!("../../../data/compatible_models.json"))
+        .expect("embedded data/compatible_models.json")
+}
+
+fn catalog_override_paths() -> Vec<std::path::PathBuf> {
+    let mut paths = vec![std::path::PathBuf::from("data/compatible_models.json")];
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            paths.push(dir.join("compatible_models.json"));
+            paths.push(dir.join("data").join("compatible_models.json"));
+        }
+    }
+    paths
+}
+
+/// Checkout file, then the file beside the executable, then the embedded catalog.
 pub fn load_local_catalog() -> Option<Catalog> {
-    let local = std::path::Path::new("data/compatible_models.json");
-    let text = std::fs::read_to_string(local).ok()?;
-    serde_json::from_str(&text).ok()
+    for path in catalog_override_paths() {
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        if let Ok(catalog) = serde_json::from_str(&text) {
+            return Some(catalog);
+        }
+    }
+    Some(load_bundled_catalog())
+}
+
+/// `org/name` is a Hub repo. A catalog tag such as `bitnet:2b` is not.
+#[cfg(test)]
+#[must_use]
+fn looks_like_hub_repo(refer: &str) -> bool {
+    let key = refer.trim();
+    let mut parts = key.split('/');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(org), Some(name), None) => {
+            !org.is_empty()
+                && !name.is_empty()
+                && !org.contains(':')
+                && !name.contains(':')
+                && !org.contains(' ')
+                && !name.contains(' ')
+        }
+        _ => false,
+    }
 }
 
 /// Resolve a user ref: catalog `id`, stable `tag`, or return `None` (treat as Hub repo id).
@@ -177,6 +219,16 @@ mod tests {
             "x.Q8_0.gguf".into(),
         ];
         assert_eq!(pick_primary_gguf(&g).as_deref(), Some("x.Q4_K_M.gguf"));
+    }
+
+    #[test]
+    fn embedded_catalog_resolves_bitnet_tag() {
+        let cat = load_bundled_catalog();
+        let model = resolve_catalog_ref(&cat, "bitnet:2b").expect("bitnet:2b");
+        assert_eq!(model.repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+        assert_eq!(model.file.as_deref(), Some("ggml-model-i2_s.gguf"));
+        assert!(!looks_like_hub_repo("bitnet:2b"));
+        assert!(looks_like_hub_repo("microsoft/bitnet-b1.58-2B-4T-gguf"));
     }
 
     #[test]
