@@ -50,9 +50,58 @@ pub fn tensor_to_f32(data: &[u8], ty: u32, dims: &[u64]) -> Result<Vec<f32>> {
         16 | 17 | 18 | 19 | 21 | 22 | 23 | 29 => crate::ggml::iq::dequant_iquant(ty, data, nelements),
         34 => dequant_tq1_0(data, nelements),
         35 => dequant_tq2_0(data, nelements),
+        36 => dequant_i2_s(data, nelements),
         39 => dequant_mxfp4(data, nelements),
         _ => Err(BitNetError::UnsupportedGgmlType(ty)),
     }
+}
+
+/// BitNet `quantize_i2_s` code: `0 → -1`, `1 → 0`, `2 → +1`.
+#[inline]
+pub(crate) fn i2s_trit(code: u8) -> f32 {
+    match code & 3 {
+        0 => -1.0,
+        1 => 0.0,
+        2 => 1.0,
+        _ => 0.0,
+    }
+}
+
+/// Decode one I2_S row. `row` is code bytes only (`ne0 / 4`), no scale trailer.
+pub(crate) fn decode_i2_s_row(row: &[u8], out: &mut [f32]) {
+    let n = out.len();
+    debug_assert!(n % 128 == 0);
+    debug_assert_eq!(row.len(), n / 4);
+    for block in 0..(n / 128) {
+        let base = block * 32;
+        for j in 0..128 {
+            let group = j / 32;
+            let gp = j % 32;
+            let code = row[base + gp] >> (6 - 2 * group);
+            out[block * 128 + j] = i2s_trit(code);
+        }
+    }
+}
+
+fn dequant_i2_s(data: &[u8], nelements: usize) -> Result<Vec<f32>> {
+    if nelements == 0 || nelements % 128 != 0 {
+        return Err(BitNetError::InvalidGguf(
+            "I2_S element count must be a positive multiple of 128".into(),
+        ));
+    }
+    let codes = nelements / 4;
+    if data.len() < codes + 4 {
+        return Err(BitNetError::InvalidGguf(
+            "I2_S payload missing the f32 scale trailer".into(),
+        ));
+    }
+    let scale = f32::from_le_bytes(data[codes..codes + 4].try_into().unwrap());
+    let mut out = vec![0.0f32; nelements];
+    decode_i2_s_row(&data[..codes], &mut out);
+    for value in &mut out {
+        *value *= scale;
+    }
+    Ok(out)
 }
 
 /// E8M0 scale to `f32`, **half** variant (matches `ggml_e8m0_to_fp32_half` in llama.cpp `ggml-impl.h`).
@@ -690,8 +739,11 @@ fn dequant_tq2_0(data: &[u8], n: usize) -> Result<Vec<f32>> {
     let mut y = vec![0.0f32; n];
     for i in 0..nb {
         let o = i * block;
-        let d = fp16_to_f32(u16::from_le_bytes(data[o..o + 2].try_into().unwrap()));
-        let qs = &data[o + 2..o + 2 + QS_LEN];
+        // `block_tq2_0` is `qs[64]` then `ggml_half d`, not a leading scale.
+        let qs = &data[o..o + QS_LEN];
+        let d = fp16_to_f32(u16::from_le_bytes(
+            data[o + QS_LEN..o + QS_LEN + 2].try_into().unwrap(),
+        ));
         let mut yp = i * QK_K;
         for j in (0..QS_LEN).step_by(32) {
             for l in 0..4 {

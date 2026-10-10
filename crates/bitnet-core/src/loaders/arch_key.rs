@@ -32,6 +32,9 @@ pub fn family_override_token(family_normalized: &str) -> Option<&'static str> {
 pub fn resolve_architecture_key(gguf: &GgufArchive) -> String {
     if let Ok(v) = std::env::var("RBITNET_ARCHITECTURE") {
         let t = normalize_architecture_slug(&v);
+        if is_bitnet_architecture(&t) {
+            return "bitnet".to_string();
+        }
         if !t.is_empty() {
             return t;
         }
@@ -41,7 +44,7 @@ pub fn resolve_architecture_key(gguf: &GgufArchive) -> String {
         let fam = normalize_architecture_slug(&f);
         if fam.is_empty() || fam == "auto" {
             // fall through
-        } else if fam == "bitnet" {
+        } else if fam == "bitnet" || fam == "bitnet-b1.58" {
             return "bitnet".to_string();
         } else if let Some(slug) = family_override_token(&fam) {
             return slug.to_string();
@@ -49,15 +52,16 @@ pub fn resolve_architecture_key(gguf: &GgufArchive) -> String {
         // unrecognized family string: treat like auto — use GGUF + fallbacks below
     }
 
-    if gguf
-        .architecture()
-        .is_some_and(|a| a.eq_ignore_ascii_case("bitnet"))
-    {
+    if gguf.architecture().is_some_and(is_bitnet_architecture) {
         return "bitnet".to_string();
     }
 
     gguf.normalized_architecture()
         .unwrap_or_else(|| "llama".to_string())
+}
+
+fn is_bitnet_architecture(arch: &str) -> bool {
+    arch.eq_ignore_ascii_case("bitnet") || arch.eq_ignore_ascii_case("bitnet-b1.58")
 }
 
 /// Resolve architecture for a GGUF loaded in isolation from `RBITNET_ARCHITECTURE` / `RBITNET_MODEL_FAMILY`
@@ -73,15 +77,15 @@ pub fn resolve_architecture_key_for_load(
 ) -> String {
     if let Some(raw) = explicit_override {
         let t = normalize_architecture_slug(raw);
+        if is_bitnet_architecture(&t) {
+            return "bitnet".to_string();
+        }
         if !t.is_empty() {
             return t;
         }
     }
 
-    if gguf
-        .architecture()
-        .is_some_and(|a| a.eq_ignore_ascii_case("bitnet"))
-    {
+    if gguf.architecture().is_some_and(is_bitnet_architecture) {
         return "bitnet".to_string();
     }
 

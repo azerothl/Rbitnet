@@ -301,10 +301,10 @@ impl Qwen35Runtime {
         let context_tier = if crate::context_native::enabled() {
             if gpu_full.is_none()
                 || std::env::var("RBITNET_QWEN_SPECULATIVE").as_deref() == Ok("1")
-                || std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1")
+                || std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() != Ok("0")
                 || cfg.max_seq > 8192
             {
-                return Err(BitNetError::NotImplemented("context tiers require full dense Native Qwen CUDA without TF32/speculative decoding and capacity <= 8192"));
+                return Err(BitNetError::NotImplemented("context tiers require full dense Native Qwen CUDA, RBITNET_CUDA_PREFILL_TF32X3=0, no speculative decoding, and capacity <= 8192"));
             }
             let configuration = format!(
                 "{:?};split={:?};tensor={:?};head={:?}",
@@ -737,7 +737,17 @@ impl Qwen35Runtime {
                 let d1 = usize::try_from(conv.dimensions[1]).unwrap_or(0);
                 let ssm_b = must_tensor(archive, &format!("blk.{il}.ssm_beta.weight"))?;
                 let ssm_al = must_tensor(archive, &format!("blk.{il}.ssm_alpha.weight"))?;
-                let ssm_dt = must_tensor(archive, &format!("blk.{il}.ssm_dt.bias"))?;
+                let ssm_dt = archive
+                    .tensor_first_of(&[
+                        &format!("blk.{il}.ssm_dt.bias"),
+                        &format!("blk.{il}.ssm_dt"),
+                    ])
+                    .cloned()
+                    .ok_or_else(|| {
+                        BitNetError::Inference(format!(
+                            "layer {il}: missing `blk.{il}.ssm_dt.bias` or `blk.{il}.ssm_dt`"
+                        ))
+                    })?;
                 let ssm_a = archive
                     .tensor_first_of(&[
                         &format!("blk.{il}.ssm_a_noscan.weight"),

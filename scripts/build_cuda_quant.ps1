@@ -64,7 +64,7 @@ Write-Host "out:  $OutDll"
     "-gencode=arch=compute_80,code=compute_80" `
     "-gencode=arch=compute_75,code=sm_75" `
     -Xcompiler "/MD /EHsc" `
-    -lcudart
+    -lcudart -lcublas
 
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

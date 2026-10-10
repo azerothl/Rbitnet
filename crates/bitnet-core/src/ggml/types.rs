@@ -9,7 +9,7 @@ pub(crate) fn type_layout(ty: u32) -> Result<(usize, usize)> {
         1 => (1, 2),   // F16
         2 => (32, 18), // Q4_0
         3 => (32, 20), // Q4_1
-        4 | 5 | 31..=33 | 36..=38 => {
+        4 | 5 | 31..=33 | 37 | 38 => {
             return Err(BitNetError::InvalidGguf(format!(
                 "deprecated or removed ggml_type {ty}"
             )));
@@ -41,6 +41,9 @@ pub(crate) fn type_layout(ty: u32) -> Result<(usize, usize)> {
         30 => (1, 2),     // BF16
         34 => (256, 54),  // TQ1_0: half + 4 + 48 (from ggml-common assert)
         35 => (256, 66),  // TQ2_0: half + 64
+        // BitNet I2_S: 128 ternary weights in 32 code bytes. A per-tensor f32
+        // scale sits in a 32-byte trailer after the codes (`quantize_i2_s`).
+        36 => (128, 32),
         39 => (32, 17),   // MXFP4
         40 => (64, 36),   // NVFP4
         41 => (128, 18),  // Q1_0
@@ -73,6 +76,11 @@ pub fn ggml_nbytes(dims: &[u64], ty: u32) -> Result<usize> {
     for &d in &dims[1..] {
         n = n
             .checked_mul(d as usize)
+            .ok_or_else(|| BitNetError::InvalidGguf("tensor nbytes overflow".into()))?;
+    }
+    if ty == 36 {
+        n = n
+            .checked_add(32)
             .ok_or_else(|| BitNetError::InvalidGguf("tensor nbytes overflow".into()))?;
     }
     Ok(n)
@@ -112,6 +120,7 @@ pub fn ggml_type_name(ty: u32) -> &'static str {
         30 => "BF16",
         34 => "TQ1_0",
         35 => "TQ2_0",
+        36 => "I2_S",
         39 => "MXFP4",
         40 => "NVFP4",
         41 => "Q1_0",

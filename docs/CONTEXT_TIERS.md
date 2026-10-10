@@ -29,6 +29,7 @@ a global quota across old namespaces or validate other operating systems.
 ## Configuration
 
 Set `RBITNET_CONTEXT_TIERS=1` and `RBITNET_CONTEXT_DIR` to a local directory.
+Qwen3.5 on CUDA also needs `RBITNET_CUDA_PREFILL_TF32X3=0`: the default prefill uses a TF32 GEMM, and checkpoints require the exact kernel.
 The default payload budget is 256 MiB in RAM and 2048 MiB on disk, with 64 entries
 and a 1800-second retention period. Override these using
 `RBITNET_CONTEXT_RAM_MB`, `RBITNET_CONTEXT_DISK_MB`, `RBITNET_CONTEXT_ENTRIES`

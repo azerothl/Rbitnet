@@ -41,6 +41,19 @@ RBITNET_CUDA_API int rbitnet_cuda_memory_free(void *pointer);
 // input is [tokens, columns], output [tokens, rows]. Synchronizes on return.
 RBITNET_CUDA_API int rbitnet_cuda_quant_gemm_device(unsigned type, const void *weights,
     size_t row_bytes, const float *input, unsigned columns, unsigned rows, unsigned tokens, float *output);
+RBITNET_CUDA_API int rbitnet_cuda_gqa_prefill(const float *k, const float *v, const float *q,
+    unsigned base_pos, unsigned n_tokens, unsigned n_kv, unsigned n_head, unsigned head_dim,
+    float scale, float *y);
+typedef struct RbitnetQwen3Layer {
+    const void *q, *k, *v, *o, *gate, *up, *down;
+    size_t q_bytes, k_bytes, v_bytes, o_bytes, gate_bytes, up_bytes, down_bytes;
+    unsigned q_type, k_type, v_type, o_type, gate_type, up_type, down_type;
+    const float *attn_norm, *q_norm, *k_norm, *ffn_norm;
+    float *k_cache, *v_cache;
+} RbitnetQwen3Layer;
+RBITNET_CUDA_API int rbitnet_cuda_qwen3_chunk(float *xs, RbitnetQwen3Layer *layers, unsigned n_layers,
+    unsigned n_tokens, unsigned base_pos, unsigned hidden, unsigned n_head, unsigned n_kv_head,
+    unsigned head_dim, unsigned n_ff, float eps, float rope_theta);
 
 RBITNET_CUDA_API int rbitnet_cuda_q4_0_matvec(
     const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
@@ -68,6 +81,8 @@ RBITNET_CUDA_API int rbitnet_cuda_q5_k_matvec(const void *w, size_t row_bytes, c
 RBITNET_CUDA_API int rbitnet_cuda_q5_k_matvec_device(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
 RBITNET_CUDA_API int rbitnet_cuda_mxfp4_matvec(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
 RBITNET_CUDA_API int rbitnet_cuda_mxfp4_matvec_device(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
+RBITNET_CUDA_API int rbitnet_cuda_tq2_0_matvec(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
+RBITNET_CUDA_API int rbitnet_cuda_tq2_0_matvec_device(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y);
 
 RBITNET_CUDA_API int rbitnet_cuda_quant_matvec_batch_device(unsigned ty, const void *w, size_t row_bytes,
     const float *x, size_t cols, size_t rows, size_t batches, float *y);
