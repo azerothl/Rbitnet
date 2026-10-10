@@ -13,10 +13,12 @@ pub(crate) use quant_dot::matvec_device_quant_batch_optional;
 pub use quant_dot::{
     cuda_quant_library_available, decode_row_to_f32, dot_row, embedding_row_mmap,
     ggml_type_supported_mmap_matvec, ggml_type_supports_cuda_quant, matvec_device_quant_optional,
-    matvec_embd_out_mmap, matvec_ff_mmap, matvec_payload_quant, QuantKernelBackend,
+    matvec_batch_mmap, matvec_embd_out_mmap, matvec_ff_mmap, matvec_payload_quant,
+    QuantKernelBackend,
     QuantMatvecKernel,
 };
 pub(crate) use quant_dot::{cuda_quant_library_identity, load_cuda_quant_library};
+pub(crate) use quant_dot::{matvec_q8_0_rows, quantize_f16_rows_to_q8_0};
 pub(crate) use quant_simd::f32_accumulator_lanes;
 pub use types::{ggml_nbytes, ggml_row_size, ggml_type_dequant_supported, ggml_type_name};
 

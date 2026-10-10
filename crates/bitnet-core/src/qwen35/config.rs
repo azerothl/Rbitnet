@@ -55,6 +55,20 @@ fn metadata_i64(md: &std::collections::HashMap<String, GgufValue>, key: &str) ->
     })
 }
 
+fn scalar_i64(v: &GgufValue) -> Option<i64> {
+    match v {
+        GgufValue::U8(x) => Some(*x as i64),
+        GgufValue::I8(x) => Some(*x as i64),
+        GgufValue::U16(x) => Some(*x as i64),
+        GgufValue::I16(x) => Some(*x as i64),
+        GgufValue::U32(x) => Some(*x as i64),
+        GgufValue::I32(x) => Some(*x as i64),
+        GgufValue::U64(x) => i64::try_from(*x).ok(),
+        GgufValue::I64(x) => Some(*x),
+        _ => None,
+    }
+}
+
 fn meta_req_i64(
     md: &std::collections::HashMap<String, GgufValue>,
     key: &str,
@@ -65,6 +79,26 @@ fn meta_req_i64(
             "missing or invalid GGUF metadata `{key}` for {label}"
         ))
     })
+}
+
+/// Scalar, or the maximum strictly positive entry of a per-layer array.
+///
+/// Ollama Qwen3.5 stores `attention.head_count_kv` as `[0, 0, 0, 2, …]`:
+/// recurrent layers have no KV heads, full-attention layers have a positive count.
+fn meta_req_positive(
+    md: &std::collections::HashMap<String, GgufValue>,
+    key: &str,
+    label: &str,
+) -> Result<i64> {
+    if let Some(GgufValue::Array(items)) = md.get(key) {
+        let max = items.iter().filter_map(scalar_i64).filter(|n| *n > 0).max();
+        return max.ok_or_else(|| {
+            BitNetError::Inference(format!(
+                "missing or invalid GGUF metadata `{key}` for {label}"
+            ))
+        });
+    }
+    meta_req_i64(md, key, label)
 }
 
 fn meta_opt_f32(md: &std::collections::HashMap<String, GgufValue>, key: &str) -> Option<f32> {
@@ -174,11 +208,8 @@ impl Qwen35Config {
             &format!("{}{}", kv_prefix, "attention.head_count"),
             "heads",
         )?;
-        let n_head_kv_i = meta_req_i64(
-            md,
-            &format!("{}{}", kv_prefix, "attention.head_count_kv"),
-            "kv_heads",
-        )?;
+        let head_count_kv_key = format!("{}{}", kv_prefix, "attention.head_count_kv");
+        let n_head_kv_i = meta_req_positive(md, &head_count_kv_key, "kv_heads")?;
 
         let key_len = meta_opt_f32(md, &format!("{}{}", kv_prefix, "attention.key_length"))
             .map(|v| v as i64)
@@ -236,6 +267,13 @@ impl Qwen35Config {
         let mut recurrent_layers = vec![false; n_layer_us];
         for il in 0..n_layer_us {
             recurrent_layers[il] = ((il + 1) % (full_attn_interval as usize)) != 0;
+        }
+        if let Some(GgufValue::Array(items)) = md.get(&head_count_kv_key) {
+            if items.len() == n_layer_us {
+                for (il, item) in items.iter().enumerate() {
+                    recurrent_layers[il] = scalar_i64(item).unwrap_or(0) <= 0;
+                }
+            }
         }
 
         let norm_eps = meta_opt_f32(
@@ -378,5 +416,63 @@ fn parse_rope_dim_pairs(
         Ok(std::cmp::min(s * 2, (fallback / 2) * 2))
     } else {
         Ok((fallback / 2) * 2)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn head_count_kv_array_uses_max_strictly_positive() {
+        let mut md = HashMap::new();
+        let key = "qwen35.attention.head_count_kv";
+        md.insert(
+            key.to_string(),
+            GgufValue::Array(vec![
+                GgufValue::U32(0),
+                GgufValue::U32(0),
+                GgufValue::U32(0),
+                GgufValue::U32(2),
+            ]),
+        );
+        assert_eq!(meta_req_positive(&md, key, "kv_heads").unwrap(), 2);
+    }
+
+    #[test]
+    fn head_count_kv_scalar_stays_positive() {
+        let mut md = HashMap::new();
+        let key = "qwen35.attention.head_count_kv";
+        md.insert(key.to_string(), GgufValue::U32(2));
+        assert_eq!(meta_req_positive(&md, key, "kv_heads").unwrap(), 2);
+    }
+
+    #[test]
+    fn ollama_qwen35_blob_accepts_kv_array_and_rope_sections() {
+        let Ok(path) = std::env::var("RBITNET_QWEN35_BLOB") else {
+            return;
+        };
+        let archive = crate::gguf::GgufArchive::mmap_path(std::path::Path::new(&path)).unwrap();
+        let cfg = Qwen35Config::from_gguf(&archive).unwrap();
+        assert_eq!(cfg.n_head_kv, 2);
+        assert_eq!(cfg.n_layer, 24);
+        assert!(cfg.is_recurrent_layer(0));
+        assert!(!cfg.is_recurrent_layer(3));
+        assert_eq!(cfg.rope_dim_pairs, 64);
+    }
+
+    #[test]
+    fn rope_dimension_sections_of_length_three_do_not_reject() {
+        let mut md = HashMap::new();
+        md.insert(
+            "qwen35.rope.dimension_sections".into(),
+            GgufValue::Array(vec![
+                GgufValue::U32(11),
+                GgufValue::U32(11),
+                GgufValue::U32(10),
+            ]),
+        );
+        assert_eq!(parse_rope_dim_pairs(&md, "qwen35.", 256).unwrap(), 64);
     }
 }

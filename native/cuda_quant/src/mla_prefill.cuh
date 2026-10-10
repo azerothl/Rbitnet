@@ -346,7 +346,7 @@ struct MlaBlockWorkspace {
             matrix(l.kva, h, kv, count);
             launch_gpt_ordered_norm(kv, l.kv_norm, c.epsilon, c.rank, latent, nullptr, count, stream);
             if (c.rotary) {
-                dim3 rope(((c.heads * (c.rotary / 2) + 255) / 256, count);
+                dim3 rope((c.heads * (c.rotary / 2) + 255) / 256, count);
                 mla_rope_queries_batch<<<rope, 256, 0, stream>>>(q, r->phases, r->position, c.heads, c.head_dim, c.rotary,
                     c.rope_magnitude, count);
             }

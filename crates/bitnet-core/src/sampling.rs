@@ -69,6 +69,11 @@ impl Default for SamplingOptions {
     }
 }
 
+fn logit_top_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("RBITNET_LOGIT_TOP").ok().as_deref() == Some("1"))
+}
+
 /// Sample one token from logits, applying penalties before temperature/top-p.
 /// The ASCII-ID mask is a low-level research fixture; real model entry points
 /// must validate structured-output support before calling this sampler.
@@ -91,6 +96,28 @@ pub fn sample_token(
         options.presence_penalty,
     );
     apply_structured_output_mask(&mut adjusted, prior_tokens, options.structured_json);
+
+    if logit_top_enabled() {
+        let mut top: Vec<(u32, f32)> = Vec::new();
+        for (id, &logit) in adjusted.iter().enumerate() {
+            if top.len() < 5 {
+                top.push((id as u32, logit));
+                top.sort_by(|a, b| b.1.total_cmp(&a.1));
+                continue;
+            }
+            if logit > top[4].1 {
+                top[4] = (id as u32, logit);
+                top.sort_by(|a, b| b.1.total_cmp(&a.1));
+            }
+        }
+        eprintln!(
+            "logit_top {}",
+            top.iter()
+                .map(|(id, logit)| format!("{id}:{logit:.4}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
+    }
 
     if options.temperature <= 0.0 {
         return argmax(&adjusted);

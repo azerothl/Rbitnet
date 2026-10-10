@@ -115,6 +115,16 @@ pub(crate) struct GpuFull {
     split_layers: u64,
     prefill: Option<PrefillApi>,
 }
+
+/// `RBITNET_CUDA_QWEN_FULL` and `RBITNET_CUDA_QWEN_PREFILL` are on unless set to 0.
+/// `rbitnet serve` does not have to export them. A missing CUDA library still skips the path.
+fn env_enabled_by_default(name: &str) -> bool {
+    !matches!(
+        std::env::var(name).ok().as_deref().map(str::trim),
+        Some("0" | "false" | "no" | "off")
+    )
+}
+
 impl GpuFull {
     pub fn new(
         weights: &Weights,
@@ -123,7 +133,7 @@ impl GpuFull {
         head_name: &str,
         backend: BackendKind,
     ) -> Option<Self> {
-        if std::env::var("RBITNET_CUDA_QWEN_FULL").as_deref() != Ok("1")
+        if !env_enabled_by_default("RBITNET_CUDA_QWEN_FULL")
             || backend != BackendKind::Cuda
             || cfg.n_expert != 0
             || cfg.max_seq > 8192
@@ -280,7 +290,7 @@ impl GpuFull {
             lib.get::<SplitLayers>(b"rbitnet_cuda_qwen_split_attention_layers\0")
                 .map_or(0, |query| query(context as *mut c_void) as u64)
         };
-        let prefill = if std::env::var("RBITNET_CUDA_QWEN_PREFILL").as_deref() == Ok("1") {
+        let prefill = if env_enabled_by_default("RBITNET_CUDA_QWEN_PREFILL") {
             type Configure = unsafe extern "C" fn(*mut c_void, u32, u32) -> i32;
             unsafe {
                 (|| {
@@ -296,8 +306,10 @@ impl GpuFull {
                     let run = *lib
                         .get::<Prefill>(b"rbitnet_cuda_qwen_full_prefill\0")
                         .ok()?;
+                    // Qwen CUDA prefill uses one TF32 GEMM unless this is explicitly 0.
+                    // Llama keeps the flag opt-in. Context tiers require the explicit 0.
                     let tensor = u32::from(
-                        std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() == Ok("1"),
+                        std::env::var("RBITNET_CUDA_PREFILL_TF32X3").as_deref() != Ok("0"),
                     );
                     let status = configure(context as *mut c_void, 1, tensor);
                     if status != 0 {

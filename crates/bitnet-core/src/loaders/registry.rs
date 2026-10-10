@@ -120,7 +120,7 @@ fn dispatch_gguf_executor_inner(
         );
     }
 
-    if key == "deepseek2" {
+    if matches!(key.as_str(), "deepseek2" | "glm4moelite") {
         return deepseek2::build_deepseek2_executor(
             backend_kind,
             gguf,
@@ -322,6 +322,23 @@ mod tests {
     }
 
     #[test]
+    fn dispatch_bitnet_b158_alias_requires_tokenizer_not_llama_keys() {
+        let _g = env_test_lock();
+        std::env::remove_var("RBITNET_TOKENIZER");
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("bitnet158.gguf");
+        write_minimal_gguf_with_arch(&p, "bitnet-b1.58").unwrap();
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        match dispatch_gguf_executor(BackendKind::Cpu, g, &p) {
+            Err(BitNetError::TokenizerMissing) => {}
+            Err(e) => panic!("expected BitNet loader, got {e}"),
+            Ok(_) => panic!("expected Err without tokenizer beside GGUF"),
+        }
+    }
+
+    #[test]
     fn dispatch_bitnet_native_requires_tokenizer_not_not_impl() {
         let _g = env_test_lock();
         std::env::remove_var("RBITNET_TOKENIZER");
@@ -390,6 +407,31 @@ mod tests {
         };
         let msg = format!("{err}");
         assert!(msg.to_ascii_lowercase().contains("tokenizer"), "msg={msg}");
+    }
+
+    #[test]
+    fn dispatch_glm4moelite_uses_mla_loader_not_llama() {
+        let _g = env_test_lock();
+        std::env::remove_var("RBITNET_TOKENIZER");
+        std::env::remove_var("RBITNET_ARCHITECTURE");
+        std::env::remove_var("RBITNET_MODEL_FAMILY");
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("glm4moelite.gguf");
+        write_minimal_gguf_with_arch(&p, "glm4moelite").unwrap();
+        let g = Arc::new(GgufArchive::mmap_path(&p).unwrap());
+        let err = match dispatch_gguf_executor(BackendKind::Cuda, g, &p) {
+            Ok(_) => panic!("expected glm4moelite dispatch to fail without a tokenizer"),
+            Err(e) => e,
+        };
+        let msg = format!("{err}");
+        assert!(
+            !msg.contains("llama.embedding_length"),
+            "must not fall through to the Llama loader: {msg}"
+        );
+        assert!(
+            msg.to_ascii_lowercase().contains("tokenizer"),
+            "MLA loader resolves the tokenizer before tensors: {msg}"
+        );
     }
 
     #[test]
