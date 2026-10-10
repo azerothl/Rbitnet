@@ -1,7 +1,5 @@
 //! `rbitnet tune` — apply battery / latency / throughput presets (mistral.rs-style).
 
-use std::io::Write;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TuneProfile {
     Battery,
@@ -97,26 +95,25 @@ pub fn profile_env(profile: TuneProfile) -> &'static [(&'static str, &'static st
     }
 }
 
-pub fn apply_profile(profile: TuneProfile, export_shell: bool) {
+pub fn apply_profile(profile: TuneProfile, export_shell: bool) -> String {
+    let mut out = String::new();
     for (k, v) in profile_env(profile) {
         if export_shell {
             #[cfg(windows)]
-            {
-                let _ = writeln!(std::io::stdout(), "set {k}={v}");
-            }
+            out.push_str(&format!("set {k}={v}\n"));
             #[cfg(not(windows))]
-            {
-                let _ = writeln!(std::io::stdout(), "export {k}={v}");
-            }
+            out.push_str(&format!("export {k}={v}\n"));
         } else {
             std::env::set_var(k, v);
+            out.push_str(&format!("{k}={v}\n"));
         }
     }
-    eprintln!(
-        "Applied tune profile '{}' ({} vars). Start serve with these env vars in the same shell.",
+    out.push_str(&format!(
+        "Profil '{}' ({} variables). Lancez `rbitnet serve` dans ce terminal.",
         profile.as_str(),
         profile_env(profile).len()
-    );
+    ));
+    out
 }
 
 #[cfg(test)]
