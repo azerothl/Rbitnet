@@ -23,7 +23,7 @@ use clap::Parser;
 use tracing::error;
 
 #[derive(Parser)]
-#[command(name = "rbitnet-server")]
+#[command(name = "rbitnet-server", version)]
 struct Cli {
     /// API key for protected routes (only if `RBITNET_API_KEY` is not already set).
     #[arg(long, env = "RBITNET_API_KEY")]

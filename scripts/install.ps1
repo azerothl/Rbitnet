@@ -1,86 +1,151 @@
-# Install the rbitnet CLI from this checkout, or clone the repo when the script
-# is not already inside one (same behavior as scripts/install.sh).
+# Install Rbitnet release binaries. No Rust, Git, or repository checkout.
 #
-# From any PowerShell window (do not nest powershell.exe; some sessions deny it):
+# From any PowerShell window:
 #   irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
-# From the repository root:
-#   Set-ExecutionPolicy -Scope Process Bypass
-#   .\scripts\install.ps1
+# Uninstall:
+#   $env:RBITNET_UNINSTALL=1; irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
+#   .\scripts\install.ps1 -Uninstall
+# A specific tag (without the v prefix, or with it):
+#   .\scripts\install.ps1 -Version 0.2.0
 
 param(
-    [switch] $NoLocked
+    [switch] $Uninstall,
+    [string] $Version = "",
+    [string] $InstallDir = "",
+    [switch] $NoPath
 )
 
 $ErrorActionPreference = "Stop"
-# git clone and cargo write progress to stderr. Do not treat that as a failed install.
 $PSNativeCommandUseErrorActionPreference = $false
 
-function Test-RbitnetCheckout([string] $Path) {
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        return $false
-    }
-    return Test-Path -LiteralPath (Join-Path $Path "crates\rbitnet-cli\Cargo.toml")
+if ($env:RBITNET_UNINSTALL -eq "1") { $Uninstall = $true }
+if ([string]::IsNullOrWhiteSpace($Version) -and $env:RBITNET_INSTALL_VERSION) {
+    $Version = $env:RBITNET_INSTALL_VERSION
 }
 
-function Resolve-RbitnetRoot {
-    if (Test-RbitnetCheckout $env:RBITNET_REPO_ROOT) {
-        return (Resolve-Path -LiteralPath $env:RBITNET_REPO_ROOT).Path
-    }
-    if ($PSScriptRoot -and (Test-RbitnetCheckout (Join-Path $PSScriptRoot ".."))) {
-        return (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
-    }
-    $cwd = (Get-Location).Path
-    if (Test-RbitnetCheckout $cwd) {
-        return (Resolve-Path -LiteralPath $cwd).Path
-    }
-    return $null
+$Repo = "azerothl/Rbitnet"
+if ([string]::IsNullOrWhiteSpace($InstallDir)) {
+    $InstallDir = Join-Path $env:LOCALAPPDATA "Rbitnet"
 }
 
-$CleanupDir = $null
+function Get-UserPathEntries {
+    $raw = [Environment]::GetEnvironmentVariable("Path", "User")
+    if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+    return @($raw -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
+function Set-UserPathEntries([string[]] $Entries) {
+    $clean = @($Entries | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $value = ($clean -join ';')
+    [Environment]::SetEnvironmentVariable("Path", $value, "User")
+}
+
+function Remove-InstallDirFromUserPath([string] $Dir) {
+    $full = [System.IO.Path]::GetFullPath($Dir).TrimEnd('\')
+    $kept = @(Get-UserPathEntries | Where-Object {
+        [System.IO.Path]::GetFullPath($_).TrimEnd('\') -ne $full
+    })
+    Set-UserPathEntries $kept
+}
+
+function Add-InstallDirToUserPath([string] $Dir) {
+    $full = [System.IO.Path]::GetFullPath($Dir).TrimEnd('\')
+    $entries = @(Get-UserPathEntries)
+    $already = $false
+    foreach ($entry in $entries) {
+        if ([System.IO.Path]::GetFullPath($entry).TrimEnd('\') -eq $full) {
+            $already = $true
+            break
+        }
+    }
+    if (-not $already) {
+        $entries = @($full) + $entries
+        Set-UserPathEntries $entries
+    }
+}
+
+$BinaryNames = @(
+    "rbitnet.exe",
+    "rbitnet-server.exe",
+    "rbitnet-runner.exe",
+    "rbitnet-proxy.exe"
+)
+
+if ($Uninstall) {
+    if (Test-Path -LiteralPath $InstallDir) {
+        Remove-Item -LiteralPath $InstallDir -Recurse -Force
+    }
+    if (-not $NoPath) {
+        Remove-InstallDirFromUserPath $InstallDir
+    }
+    Write-Host "Removed $InstallDir"
+    Write-Host "Open a new terminal. rbitnet is no longer on PATH."
+    return
+}
+
+$headers = @{
+    "User-Agent" = "rbitnet-install"
+    "Accept"     = "application/vnd.github+json"
+}
+
+$tag = $Version.Trim()
+if ($tag -ne "" -and -not $tag.StartsWith("v")) {
+    $tag = "v$tag"
+}
+if ($tag -eq "") {
+    $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases/latest"
+} else {
+    $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases/tags/$tag"
+}
+$tag = [string] $release.tag_name
+$assetName = "rbitnet-server-$tag-windows-x86_64.zip"
+$asset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
+if (-not $asset) {
+    Write-Error "Release $tag has no $assetName. Published assets: $($release.assets.name -join ', ')"
+}
+
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+foreach ($name in $BinaryNames) {
+    $existing = Join-Path $InstallDir $name
+    if (Test-Path -LiteralPath $existing) {
+        Remove-Item -LiteralPath $existing -Force
+    }
+}
+
+$zip = Join-Path ([System.IO.Path]::GetTempPath()) ("rbitnet-" + [guid]::NewGuid().ToString("n") + ".zip")
 try {
-    $RootDir = Resolve-RbitnetRoot
-    if (-not $RootDir) {
-        if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-            Write-Error "This script is not running inside a Rbitnet checkout and git was not found. Install git, or run from an existing checkout (repository root: .\scripts\install.ps1), or set `$env:RBITNET_REPO_ROOT to that checkout."
-        }
-        $CleanupDir = Join-Path ([System.IO.Path]::GetTempPath()) ("rbitnet-install-" + [guid]::NewGuid().ToString("n"))
-        New-Item -ItemType Directory -Path $CleanupDir | Out-Null
-        $RootDir = Join-Path $CleanupDir "Rbitnet"
-        Write-Host "No local checkout found; cloning Rbitnet into $RootDir"
-        & git clone --depth 1 https://github.com/azerothl/Rbitnet $RootDir
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "git clone failed (exit $LASTEXITCODE)."
-        }
-    }
-
-    if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-        Write-Error "Rust/Cargo not found. Install rustup first: https://rustup.rs/"
-    }
-
-    Write-Host "Installing rbitnet CLI from $RootDir"
-    $cargoArgs = @("install", "--path", (Join-Path $RootDir "crates\rbitnet-cli"))
-    if (-not $NoLocked) {
-        $cargoArgs += "--locked"
-    }
-    & cargo @cargoArgs
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "cargo install failed (exit $LASTEXITCODE)."
-    }
-
-    Write-Host ""
-    Write-Host "Installed: rbitnet"
-    Write-Host "Local release binaries are built with:"
-    Write-Host "  cargo build -p bitnet-server -p rbitnet-cli --release --locked"
-    Write-Host "  $RootDir\target\release\rbitnet.exe"
-    Write-Host "  $RootDir\target\release\rbitnet-server.exe"
-    Write-Host ""
-    Write-Host "Tagged GitHub releases publish zip assets named:"
-    Write-Host "  rbitnet-server-vX.Y.Z-windows-x86_64.zip"
-    Write-Host "Direct releases: https://github.com/azerothl/Rbitnet/releases"
-    Write-Host "Try: rbitnet quickstart TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF --file tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-    Write-Host "Docs: $RootDir\README.md and $RootDir\docs\USAGE.md"
+    Write-Host "Downloading $($asset.browser_download_url)"
+    Invoke-WebRequest -Headers @{ "User-Agent" = "rbitnet-install" } -Uri $asset.browser_download_url -OutFile $zip
+    Expand-Archive -LiteralPath $zip -DestinationPath $InstallDir -Force
 } finally {
-    if ($CleanupDir -and (Test-Path -LiteralPath $CleanupDir)) {
-        Remove-Item -LiteralPath $CleanupDir -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+}
+
+$catalogUrl = "https://raw.githubusercontent.com/$Repo/$tag/data/compatible_models.json"
+$catalogPath = Join-Path $InstallDir "compatible_models.json"
+Write-Host "Downloading catalog $catalogUrl"
+Invoke-WebRequest -Headers @{ "User-Agent" = "rbitnet-install" } -Uri $catalogUrl -OutFile $catalogPath
+
+foreach ($name in $BinaryNames) {
+    if (-not (Test-Path -LiteralPath (Join-Path $InstallDir $name))) {
+        Write-Error "Archive $assetName did not contain $name"
     }
 }
+
+if (-not $NoPath) {
+    Add-InstallDirToUserPath $InstallDir
+}
+
+Write-Host ""
+Write-Host "Installed $tag into $InstallDir"
+Write-Host "  rbitnet.exe"
+Write-Host "  rbitnet-server.exe"
+Write-Host "  rbitnet-runner.exe"
+Write-Host "  rbitnet-proxy.exe"
+Write-Host "  compatible_models.json"
+if ($NoPath) {
+    Write-Host "PATH was not changed (-NoPath)."
+} else {
+    Write-Host "Added to the user PATH. Open a new terminal, then run: rbitnet --version"
+}
+Write-Host "Uninstall: `$env:RBITNET_UNINSTALL=1; irm https://raw.githubusercontent.com/$Repo/main/scripts/install.ps1 | iex"
