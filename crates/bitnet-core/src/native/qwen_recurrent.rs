@@ -174,7 +174,9 @@ impl GpuRecurrent {
         }
         let attn_norm = weights.dense(&name("attn_norm.weight")).ok()?;
         let ffn_norm = weights.dense(&name("post_attention_norm.weight")).ok()?;
-        let dt = weights.dense(&name("ssm_dt.bias")).ok()?;
+        let dt = ["ssm_dt.bias", "ssm_dt"]
+            .iter()
+            .find_map(|suffix| weights.dense(&name(suffix)).ok())?;
         let a = ["ssm_a_noscan.weight", "ssm_a.weight", "ssm_a"]
             .iter()
             .find_map(|s| weights.dense(&name(s)).ok())?;

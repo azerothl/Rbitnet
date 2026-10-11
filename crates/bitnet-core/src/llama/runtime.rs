@@ -33,6 +33,13 @@ use super::cuda_graph::CudaDecodeGraph;
 use super::kv_storage::KvStorage;
 use super::model::LlamaModel;
 
+fn llama_block_prefill_enabled() -> bool {
+    !matches!(
+        std::env::var("RBITNET_LLAMA_BLOCK_PREFILL").as_deref(),
+        Ok("0") | Ok("false") | Ok("no") | Ok("off")
+    )
+}
+
 pub(crate) fn llama_encode_add_special_tokens() -> bool {
     !matches!(
         std::env::var("RBITNET_LLAMA_ENCODE_ADD_SPECIAL").as_deref(),
@@ -140,8 +147,9 @@ impl LlamaRuntime {
             let resident = resident.as_mut().ok_or(BitNetError::NotImplemented(
                 "context tiers require full Native Llama CUDA residency",
             ))?;
+            let effective_split = u32::from(std::env::var("RBITNET_CUDA_SPLIT_KV").as_deref() != Ok("0"));
             let configuration = format!(
-                "{:?};rope={:?};split={:?};tensor={:?};head={:?}",
+                "{:?};rope={:?};split={:?};tensor={:?};head={:?};effective_split={effective_split}",
                 model.cfg,
                 model.rope_inv_freq,
                 std::env::var("RBITNET_CUDA_SPLIT_KV"),
@@ -655,6 +663,14 @@ impl LlamaRuntime {
             return resident
                 .prefill(&self.model, tokens, base_pos, false)
                 .map(|p| p.0);
+        }
+        // Block prefill is what matches the long-context BitNet text. The
+        // resident graph returns above, so a CUDA model without that graph
+        // (BitNet sub-norms) must take the same chunked prefill as CPU.
+        if tokens.len() > 1 && llama_block_prefill_enabled() {
+            return self
+                .model
+                .prefill_tokens(&mut self.kv, tokens, base_pos, &mut self.scratch);
         }
         let mut logits = Vec::new();
         for (idx, &tid) in tokens.iter().enumerate() {

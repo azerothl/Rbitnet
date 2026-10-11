@@ -30,9 +30,12 @@ impl Qwen3Executor {
         backend: Box<dyn ComputeBackend>,
         tokenizer_path: PathBuf,
     ) -> Result<Self> {
-        if !matches!(backend_kind, BackendKind::Cpu | BackendKind::Hybrid) {
+        if !matches!(
+            backend_kind,
+            BackendKind::Cpu | BackendKind::Hybrid | BackendKind::Cuda
+        ) {
             return Err(BitNetError::Inference(format!(
-                "dense Qwen3 GPU backend `{}` is unsupported; use cpu or hybrid (CPU fallback)",
+                "dense Qwen3 backend `{}` is unsupported; use cpu, cuda, or hybrid",
                 backend_kind.as_str()
             )));
         }
@@ -92,7 +95,7 @@ impl crate::model::ModelExecutor for Qwen3Executor {
     ) -> Result<(String, PhaseTimings)> {
         if self.backend_kind == BackendKind::Hybrid {
             tracing::info!(
-                "dense qwen3 hybrid selected; using CPU runtime until Qwen3 offload is wired"
+                "dense qwen3 hybrid selected; block prefill uses CUDA quant GEMM when the device is present"
             );
         }
         let mut slot = self

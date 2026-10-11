@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Dense Qwen: gated full attention plus all recurrent/attention blocks on one stream.
+#include <cstdlib>
 namespace {
 __global__ void qwen_head_norm(const float *input,const float *weights,unsigned dim,unsigned stride,
     float epsilon,float *out,unsigned heads=0) {
@@ -233,7 +234,11 @@ void *rbitnet_cuda_qwen_full_attention_create(const RbitnetQwenAttentionConfig *
     unsigned cols[]={c->embd,c->embd,c->embd,qs,c->embd,c->embd,c->ffn};
     unsigned rows[]={qs*(1+c->gated),ks,ks,c->embd,c->ffn,c->ffn,c->embd};
     for(unsigned i=0;i<7;i++)if(!qwen_matrix_valid(m[i],cols[i],rows[i]))return nullptr;
-    auto *r=new(std::nothrow) ResidentQwenAttention;if(!r)return nullptr;r->cfg=*c;r->split_kv=split_attention_enabled();
+    auto *r=new(std::nothrow) ResidentQwenAttention;if(!r)return nullptr;r->cfg=*c;
+    // Qwen decode at long context needs the exact split softmax. Unset enables it.
+    // "0" keeps the dense kernel. Llama still reads the global opt-in flag.
+    const char *split_flag=std::getenv("RBITNET_CUDA_SPLIT_KV");
+    r->split_kv=!(split_flag && split_flag[0]=='0' && split_flag[1]=='\0');
     for(unsigned i=0;i<7;i++)r->matrices[i]=m[i];
     if(cudaStreamCreateWithFlags(&r->stream,cudaStreamNonBlocking)!=cudaSuccess
         || !r->alloc(r->x,c->embd) || !r->alloc(r->h,c->embd) || !r->alloc(r->q_full,qs*(1+c->gated))
@@ -342,7 +347,24 @@ int rbitnet_cuda_qwen_configure_prefill(void *p,unsigned enabled,unsigned tensor
     if(!enabled)return 0;
     auto *b=new(std::nothrow) QwenPrefill;if(!b)return 2;
     if(!b->init(r->layers,r->embd)) {delete b;cudaGetLastError();return 2;}
-    r->block=b;r->tf32_prefill=tensor && tf32_prefill_supported();return 0;
+    r->block=b;r->tf32_prefill=tensor && tf32_prefill_supported();
+    if(r->tf32_prefill) {
+        size_t need=0;
+        for(const auto &layer:r->layers) {
+            const RbitnetLlamaMatrix *matrices;
+            unsigned count;
+            if(layer.kind==0) {
+                matrices=static_cast<ResidentQwenRecurrent*>(layer.context)->matrices;
+                count=8;
+            } else {
+                matrices=static_cast<ResidentQwenAttention*>(layer.context)->matrices;
+                count=7;
+            }
+            for(unsigned i=0;i<count;i++) need=std::max(need,size_t(matrices[i].rows)*matrices[i].cols);
+        }
+        if(need && !q4k_f32_workspace(need)) {delete b;r->block=nullptr;return 2;}
+    }
+    return 0;
 }
 int rbitnet_cuda_qwen_configure_ordered_prefill(void *p,unsigned enabled) {
     auto *r=static_cast<ResidentQwenFull*>(p);if(!r || enabled>1 || r->filled || !r->block || (enabled && r->tf32_prefill))return 1;
@@ -402,7 +424,9 @@ int rbitnet_cuda_qwen_full_prefill(void *p,const float *input,unsigned pos,unsig
         const auto *m=layer.kind==0?static_cast<ResidentQwenRecurrent*>(layer.context)->matrices:static_cast<ResidentQwenAttention*>(layer.context)->matrices;
         for(unsigned i=0;i<(layer.kind==0?8u:7u);i++)tensor_calls+=use_tf32_prefill(m[i].cols,m[i].rows,count,r->tf32_prefill);
     }
-    if(r->use_graphs) {
+    // cuBLAS GEMM is not capturable. Eager replay of that prefill is still
+    // faster than the graphed three-product tensor kernel. Decode keeps its graph.
+    if(r->use_graphs && !r->tf32_prefill) {
         if(!r->block->executable[mode][count]) {
             if(cudaStreamBeginCapture(r->stream,cudaStreamCaptureModeThreadLocal)!=cudaSuccess)return 5;
             r->enqueue_block(count,mode);

@@ -58,7 +58,7 @@ impl BackendKind {
         };
         match explicit {
             Some(kind) => kind,
-            None if matches!(architecture, "mixtral" | "qwen3") => Self::Cpu,
+            None if architecture == "mixtral" => Self::Cpu,
             None => detect(),
         }
     }
@@ -189,6 +189,7 @@ pub struct CudaRuntime {
     >,
     cublas_handle: Mutex<Option<usize>>,
     pooled_gemv: Mutex<PooledGemvBufs>,
+    pooled_quant_gemm: Mutex<PooledQuantGemm>,
     upload_bytes: AtomicU64,
     download_bytes: AtomicU64,
     gemv_calls: AtomicU64,
@@ -197,6 +198,27 @@ pub struct CudaRuntime {
     /// Successful quantized GEMVs where **W** stayed on device ([`CudaDeviceQuantMatrix`]).
     device_resident_quant_gemv_calls: AtomicU64,
 }
+
+/// Reusable device activations for quantized prefill GEMM.
+struct PooledQuantGemm {
+    d_x: *mut c_void,
+    d_y: *mut c_void,
+    cap_x: usize,
+    cap_y: usize,
+}
+
+impl Default for PooledQuantGemm {
+    fn default() -> Self {
+        Self {
+            d_x: std::ptr::null_mut(),
+            d_y: std::ptr::null_mut(),
+            cap_x: 0,
+            cap_y: 0,
+        }
+    }
+}
+
+unsafe impl Send for PooledQuantGemm {}
 
 /// Reusable device allocations for the generic `f32` GEMV helper (`matvec_cuda`).
 struct PooledGemvBufs {
@@ -540,6 +562,7 @@ impl CudaRuntime {
                 cublas_sgemv_v2,
                 cublas_handle: Mutex::new(None),
                 pooled_gemv: Mutex::new(PooledGemvBufs::default()),
+                pooled_quant_gemm: Mutex::new(PooledQuantGemm::default()),
                 upload_bytes: AtomicU64::new(0),
                 download_bytes: AtomicU64::new(0),
                 gemv_calls: AtomicU64::new(0),
@@ -648,6 +671,29 @@ impl CudaRuntime {
     }
 
     /// Resize only `d_x` / `d_y` for [`Self::gemv_device_weight_f32`] (weight already on device).
+    fn pooled_ensure_quant_gemm(
+        &self,
+        pool: &mut PooledQuantGemm,
+        x_bytes: usize,
+        y_bytes: usize,
+    ) -> Option<()> {
+        if pool.cap_x < x_bytes {
+            self.free_device(pool.d_x);
+            pool.d_x = null_mut();
+            pool.cap_x = 0;
+            pool.d_x = self.alloc_device(x_bytes)?;
+            pool.cap_x = x_bytes;
+        }
+        if pool.cap_y < y_bytes {
+            self.free_device(pool.d_y);
+            pool.d_y = null_mut();
+            pool.cap_y = 0;
+            pool.d_y = self.alloc_device(y_bytes)?;
+            pool.cap_y = y_bytes;
+        }
+        Some(())
+    }
+
     fn pooled_ensure_xy(
         &self,
         pool: &mut PooledGemvBufs,
@@ -792,6 +838,14 @@ impl Drop for CudaRuntime {
             pool.d_x = null_mut();
             pool.d_y = null_mut();
             pool.cap_w = 0;
+            pool.cap_x = 0;
+            pool.cap_y = 0;
+        }
+        if let Ok(mut pool) = self.pooled_quant_gemm.lock() {
+            self.free_device(pool.d_x);
+            self.free_device(pool.d_y);
+            pool.d_x = null_mut();
+            pool.d_y = null_mut();
             pool.cap_x = 0;
             pool.cap_y = 0;
         }
@@ -989,6 +1043,29 @@ pub struct CudaDeviceQuantMatrix {
     row_bytes: usize,
 }
 
+type QuantGemmDevice = unsafe extern "C" fn(
+    u32,
+    *const c_void,
+    usize,
+    *const f32,
+    u32,
+    u32,
+    u32,
+    *mut f32,
+) -> i32;
+
+fn quant_gemm_device_fn() -> Option<QuantGemmDevice> {
+    static SLOT: OnceLock<Option<QuantGemmDevice>> = OnceLock::new();
+    *SLOT.get_or_init(|| {
+        let lib = crate::ggml::load_cuda_quant_library()?;
+        unsafe {
+            lib.get::<QuantGemmDevice>(b"rbitnet_cuda_quant_gemm_device\0")
+                .ok()
+                .map(|symbol| *symbol)
+        }
+    })
+}
+
 impl CudaDeviceQuantMatrix {
     /// Build a resident quant matrix. Device upload is best-effort (None without CUDA).
     pub fn from_payload(
@@ -1072,6 +1149,10 @@ impl CudaDeviceQuantMatrix {
 
     pub fn in_cols(&self) -> usize {
         self.in_cols
+    }
+
+    pub fn row_bytes(&self) -> usize {
+        self.row_bytes
     }
 
     pub fn host_payload(&self) -> &[u8] {
@@ -1210,6 +1291,72 @@ impl CudaDeviceQuantMatrix {
         }
         self.host = Arc::new(backing);
         Ok(true)
+    }
+
+    /// Several activation rows against resident quantized weights.
+    /// Output is token-major, matching [`crate::ggml::matvec_batch_mmap`].
+    pub fn gemm_tokens(
+        &self,
+        xs: &[f32],
+        n_tokens: usize,
+    ) -> crate::error::Result<Vec<f32>> {
+        if n_tokens == 0 || xs.len() != n_tokens.saturating_mul(self.in_cols) {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm activation shape".into(),
+            ));
+        }
+        let (Some(weights), Some(rt)) = (&self.device, &self.rt) else {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm requires resident weights".into(),
+            ));
+        };
+        let Some(gemm) = quant_gemm_device_fn() else {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm symbol missing".into(),
+            ));
+        };
+        let y_len = n_tokens * self.out_rows;
+        let x_bytes = xs.len() * std::mem::size_of::<f32>();
+        let y_bytes = y_len * std::mem::size_of::<f32>();
+        let mut pool = rt.pooled_quant_gemm.lock().map_err(|err| {
+            crate::error::BitNetError::Inference(format!("quant gemm pool lock: {err}"))
+        })?;
+        if rt.pooled_ensure_quant_gemm(&mut pool, x_bytes, y_bytes).is_none() {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm scratch allocation failed".into(),
+            ));
+        }
+        let d_x = pool.d_x;
+        let d_y = pool.d_y;
+        if !rt.copy_host_to_device(d_x, xs.as_ptr().cast(), x_bytes) {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm activation upload failed".into(),
+            ));
+        }
+        let status = unsafe {
+            gemm(
+                self.ggml_type,
+                weights.as_device_ptr(),
+                self.row_bytes,
+                d_x.cast(),
+                self.in_cols as u32,
+                self.out_rows as u32,
+                n_tokens as u32,
+                d_y.cast(),
+            )
+        };
+        if status != 0 {
+            return Err(crate::error::BitNetError::Inference(format!(
+                "quant gemm failed: {status}"
+            )));
+        }
+        let mut out = vec![0.0f32; y_len];
+        if !rt.copy_device_to_host(out.as_mut_ptr().cast(), d_y, y_bytes) {
+            return Err(crate::error::BitNetError::Inference(
+                "quant gemm download failed".into(),
+            ));
+        }
+        Ok(out)
     }
 
     /// Prefer device-resident CUDA quant kernel; otherwise CPU payload matvec (golden parity).
@@ -1802,10 +1949,8 @@ mod transfer_tests {
                 BackendKind::Cpu
             );
             assert_eq!(
-                BackendKind::select_from_value(raw, "qwen3", || panic!(
-                    "CPU-only architecture must not probe GPU"
-                )),
-                BackendKind::Cpu
+                BackendKind::select_from_value(raw, "qwen3", || BackendKind::Cuda),
+                BackendKind::Cuda
             );
             assert_eq!(
                 BackendKind::select_from_value(raw, "qwen35", || BackendKind::Cuda),
