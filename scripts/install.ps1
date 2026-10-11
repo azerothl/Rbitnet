@@ -79,7 +79,11 @@ if ($Uninstall) {
         Remove-InstallDirFromUserPath $InstallDir
     }
     Write-Host "Removed $InstallDir"
-    Write-Host "Open a new terminal. rbitnet is no longer on PATH."
+    if ($NoPath) {
+        Write-Host "PATH was not changed (-NoPath)."
+    } else {
+        Write-Host "Open a new terminal. rbitnet is no longer on PATH."
+    }
     return
 }
 

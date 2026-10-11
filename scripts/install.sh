@@ -63,7 +63,11 @@ if [ "$UNINSTALL" -eq 1 ]; then
     done
   fi
   echo "Removed $INSTALL_DIR"
-  echo "Open a new terminal. rbitnet is no longer on PATH."
+  if [ "$NO_PATH" -eq 0 ]; then
+    echo "Open a new terminal. rbitnet is no longer on PATH."
+  else
+    echo "PATH was not changed (--no-path)."
+  fi
   exit 0
 fi
 
