@@ -5,7 +5,8 @@ use libloading::Library;
 use rayon::prelude::*;
 use rayon::ThreadPool;
 use std::ffi::c_void;
-use std::sync::OnceLock;
+use std::cell::{RefCell, UnsafeCell};
+use std::sync::{Barrier, Mutex, OnceLock};
 use std::thread;
 use std::time::Instant;
 
@@ -1050,14 +1051,500 @@ fn fill_i2s_f32(payload: &[u8], row_bytes: usize, first: usize, y: &mut [f32], x
     }
 }
 
-fn i2s_f32_preferred() -> bool {
+fn i2s_flag(name: &str) -> bool {
+    matches!(
+        std::env::var(name).ok().as_deref(),
+        Some("1" | "true" | "yes")
+    )
+}
+
+fn i2s_flag_off(name: &str) -> bool {
+    matches!(
+        std::env::var(name).ok().as_deref(),
+        Some("0" | "false" | "no")
+    )
+}
+
+/// bitnet.cpp `quantize_row_i8_s` is the default. `RBITNET_I2S_I8=0` keeps the exact f32 masks.
+/// `RBITNET_I2S_Q8K=1` keeps the Q8_K integer path unless I8 is explicitly requested.
+fn i2s_i8_preferred() -> bool {
     static PREF: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *PREF.get_or_init(|| {
-        !matches!(
-            std::env::var("RBITNET_I2S_Q8K").ok().as_deref(),
-            Some("1" | "true" | "yes")
-        )
+        if i2s_flag("RBITNET_I2S_I8") {
+            return true;
+        }
+        if i2s_flag_off("RBITNET_I2S_I8") || i2s_flag("RBITNET_I2S_Q8K") {
+            return false;
+        }
+        true
     })
+}
+
+fn i2s_f32_preferred() -> bool {
+    static PREF: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *PREF.get_or_init(|| !i2s_i8_preferred() && !i2s_flag("RBITNET_I2S_Q8K"))
+}
+
+/// Ternary GEMV is bandwidth-bound: 4 workers beat 8 and 16 on this decode.
+/// `RBITNET_I2S_THREADS` overrides the cap.
+fn i2s_i8_workers(pool_threads: usize, rows: usize) -> usize {
+    let cap = std::env::var("RBITNET_I2S_THREADS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(4);
+    pool_threads.max(1).min(rows.max(1)).min(cap).max(1)
+}
+
+fn dispatch_i2s_matvec(
+    payload: &[u8],
+    row_bytes: usize,
+    x: &[f32],
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    if i2s_i8_preferred() {
+        matvec_i2s_i8(payload, row_bytes, x, ne1)
+    } else if i2s_f32_preferred() {
+        matvec_i2s_f32(payload, row_bytes, x, ne1)
+    } else {
+        matvec_i2s_q8k(payload, row_bytes, x, ne1)
+    }
+}
+
+struct I2sI8Act {
+    qs: Vec<i8>,
+    sum: i32,
+    /// `amax / 127`, so `(Σ code·q − Σ q) * inv_scale` is the bitnet.cpp dot before the weight scale.
+    inv_scale: f32,
+}
+
+fn quantize_i2s_i8(x: &[f32]) -> I2sI8Act {
+    let mut qs = Vec::new();
+    let (sum, inv_scale) = quantize_i2s_i8_into(x, &mut qs);
+    I2sI8Act { qs, sum, inv_scale }
+}
+
+fn quantize_i2s_i8_scalar(x: &[f32], qs: &mut [i8]) -> (i32, f32) {
+    let mut amax = 0.0f32;
+    for value in x {
+        amax = amax.max(value.abs());
+    }
+    if amax == 0.0 {
+        qs.fill(0);
+        return (0, 0.0);
+    }
+    let scale = 127.0f32 / amax;
+    let mut sum = 0i32;
+    for (slot, value) in qs.iter_mut().zip(x.iter()) {
+        let quantized = (value * scale).round() as i32;
+        let quantized = quantized.clamp(-128, 127);
+        sum += quantized;
+        *slot = quantized as i8;
+    }
+    (sum, amax / 127.0)
+}
+
+fn quantize_i2s_i8_into(x: &[f32], qs: &mut Vec<i8>) -> (i32, f32) {
+    if qs.len() != x.len() {
+        qs.resize(x.len(), 0);
+    }
+    #[cfg(target_arch = "x86_64")]
+    if std::arch::is_x86_feature_detected!("avx2") {
+        return unsafe { quantize_i2s_i8_avx2(x, qs) };
+    }
+    quantize_i2s_i8_scalar(x, qs)
+}
+
+/// `round` half away from zero, then clamp to i8. Matches `(x * scale).round() as i32`.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn quantize_i2s_i8_avx2(x: &[f32], qs: &mut [i8]) -> (i32, f32) {
+    use std::arch::x86_64::*;
+    let mut amax = _mm256_setzero_ps();
+    let mut i = 0usize;
+    while i + 8 <= x.len() {
+        let v = _mm256_loadu_ps(x.as_ptr().add(i));
+        amax = _mm256_max_ps(amax, _mm256_andnot_ps(_mm256_set1_ps(-0.0), v));
+        i += 8;
+    }
+    let hi = _mm256_extractf128_ps(amax, 1);
+    let max128 = _mm_max_ps(_mm256_castps256_ps128(amax), hi);
+    let max64 = _mm_max_ps(max128, _mm_movehl_ps(max128, max128));
+    let max32 = _mm_max_ps(max64, _mm_shuffle_ps(max64, max64, 0x01));
+    let mut tail = _mm_cvtss_f32(max32);
+    for value in &x[i..] {
+        tail = tail.max(value.abs());
+    }
+    if tail == 0.0 {
+        qs.fill(0);
+        return (0, 0.0);
+    }
+    let scale = _mm256_set1_ps(127.0 / tail);
+    let half = _mm256_set1_ps(0.5);
+    let sign_mask = _mm256_set1_ps(-0.0);
+    let lo = _mm256_set1_epi32(-128);
+    let hi = _mm256_set1_epi32(127);
+    let mut sum = 0i32;
+    i = 0;
+    while i + 8 <= x.len() {
+        let v = _mm256_mul_ps(_mm256_loadu_ps(x.as_ptr().add(i)), scale);
+        let abs = _mm256_andnot_ps(sign_mask, v);
+        let trunc = _mm256_round_ps(
+            _mm256_add_ps(abs, half),
+            _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC,
+        );
+        let signed = _mm256_or_ps(trunc, _mm256_and_ps(v, sign_mask));
+        let packed = _mm256_min_epi32(_mm256_max_epi32(_mm256_cvtps_epi32(signed), lo), hi);
+        let mut lane = [0i32; 8];
+        _mm256_storeu_si256(lane.as_mut_ptr().cast(), packed);
+        for (offset, value) in lane.iter().copied().enumerate() {
+            sum += value;
+            qs[i + offset] = value as i8;
+        }
+        i += 8;
+    }
+    let scale_s = 127.0 / tail;
+    for (slot, value) in qs[i..].iter_mut().zip(x[i..].iter()) {
+        let quantized = (value * scale_s).round() as i32;
+        let quantized = quantized.clamp(-128, 127);
+        sum += quantized;
+        *slot = quantized as i8;
+    }
+    (sum, tail / 127.0)
+}
+
+fn dot_i2s_i8_scalar(row: &[u8], act: &I2sI8Act) -> f32 {
+    if act.inv_scale == 0.0 {
+        return 0.0;
+    }
+    let n = act.qs.len();
+    let mut dot = 0i32;
+    for block in 0..(n / 128) {
+        let base = block * 32;
+        let x0 = block * 128;
+        for j in 0..128 {
+            let group = j / 32;
+            let gp = j % 32;
+            let code = i32::from(row[base + gp] >> (6 - 2 * group)) & 3;
+            dot += code * i32::from(act.qs[x0 + j]);
+        }
+    }
+    (dot - act.sum) as f32 * act.inv_scale
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn hsum_i32_8(acc: std::arch::x86_64::__m256i) -> i32 {
+    use std::arch::x86_64::*;
+    let sum128 = _mm_add_epi32(_mm256_castsi256_si128(acc), _mm256_extracti128_si256(acc, 1));
+    let hi64 = _mm_unpackhi_epi64(sum128, sum128);
+    let sum64 = _mm_add_epi32(hi64, sum128);
+    let hi32 = _mm_shuffle_epi32(sum64, 0xB1);
+    _mm_cvtsi128_si32(_mm_add_epi32(sum64, hi32))
+}
+
+/// One weight row, four independent i16 partials.
+///
+/// Each partial sees at most four blocks of a 16-block group (`4 * 2032 = 8128`).
+/// Their sum is the full group (`16 * 2032 = 32512`), which still fits in i16.
+/// A group of 32, as in `ggml_vec_dot_i2_i8_s`, can wrap.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn dot_i2s_i8_avx2(row: *const u8, qs: *const i8, n: usize) -> i32 {
+    use std::arch::x86_64::*;
+    let mask = _mm256_set1_epi8(3);
+    let ones16 = _mm256_set1_epi16(1);
+    let mut acc = _mm256_setzero_si256();
+    let blocks = n / 128;
+    let mut block = 0usize;
+
+    macro_rules! accum {
+        ($part:expr, $at:expr) => {{
+            let py = qs.add($at * 128);
+            let y0 = _mm256_loadu_si256(py.cast());
+            let y1 = _mm256_loadu_si256(py.add(32).cast());
+            let y2 = _mm256_loadu_si256(py.add(64).cast());
+            let y3 = _mm256_loadu_si256(py.add(96).cast());
+            let packed = _mm256_loadu_si256(row.add($at * 32).cast());
+            let a0 = _mm256_and_si256(_mm256_srli_epi16::<6>(packed), mask);
+            let a1 = _mm256_and_si256(_mm256_srli_epi16::<4>(packed), mask);
+            let a2 = _mm256_and_si256(_mm256_srli_epi16::<2>(packed), mask);
+            let a3 = _mm256_and_si256(packed, mask);
+            let d0 = _mm256_maddubs_epi16(a0, y0);
+            let d1 = _mm256_maddubs_epi16(a1, y1);
+            let d2 = _mm256_maddubs_epi16(a2, y2);
+            let d3 = _mm256_maddubs_epi16(a3, y3);
+            $part = _mm256_add_epi16($part, _mm256_add_epi16(d0, d1));
+            $part = _mm256_add_epi16($part, _mm256_add_epi16(d2, d3));
+        }};
+    }
+
+    // Named partials, not an array: indexing `__m256i` in a loop spills to the stack.
+    while block + 16 <= blocks {
+        let mut p0 = _mm256_setzero_si256();
+        let mut p1 = _mm256_setzero_si256();
+        let mut p2 = _mm256_setzero_si256();
+        let mut p3 = _mm256_setzero_si256();
+        macro_rules! quartet {
+            ($b:expr) => {
+                accum!(p0, $b);
+                accum!(p1, $b + 1);
+                accum!(p2, $b + 2);
+                accum!(p3, $b + 3);
+            };
+        }
+        quartet!(block);
+        quartet!(block + 4);
+        quartet!(block + 8);
+        quartet!(block + 12);
+        let sum16 = _mm256_add_epi16(_mm256_add_epi16(p0, p1), _mm256_add_epi16(p2, p3));
+        acc = _mm256_add_epi32(acc, _mm256_madd_epi16(sum16, ones16));
+        block += 16;
+    }
+    if block < blocks {
+        let mut tail = _mm256_setzero_si256();
+        while block < blocks {
+            accum!(tail, block);
+            block += 1;
+        }
+        acc = _mm256_add_epi32(acc, _mm256_madd_epi16(tail, ones16));
+    }
+    hsum_i32_8(acc)
+}
+
+#[cfg(test)]
+fn dot_i2s_i8(row: &[u8], act: &I2sI8Act) -> f32 {
+    if act.inv_scale == 0.0 {
+        return 0.0;
+    }
+    #[cfg(target_arch = "x86_64")]
+    if std::arch::is_x86_feature_detected!("avx2") && act.qs.len().is_multiple_of(128) {
+        let dot = unsafe { dot_i2s_i8_avx2(row.as_ptr(), act.qs.as_ptr(), act.qs.len()) };
+        return (dot - act.sum) as f32 * act.inv_scale;
+    }
+    dot_i2s_i8_scalar(row, act)
+}
+
+fn fill_i2s_i8(payload: &[u8], row_bytes: usize, first: usize, y: &mut [f32], act: &I2sI8Act) {
+    if act.inv_scale == 0.0 {
+        y.fill(0.0);
+        return;
+    }
+    #[cfg(target_arch = "x86_64")]
+    if std::arch::is_x86_feature_detected!("avx2") && act.qs.len().is_multiple_of(128) {
+        unsafe { fill_i2s_i8_avx2(payload, row_bytes, first, y, act) };
+        return;
+    }
+    for (local, slot) in y.iter_mut().enumerate() {
+        let start = (first + local) * row_bytes;
+        *slot = dot_i2s_i8_scalar(&payload[start..start + row_bytes], act);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn fill_i2s_i8_avx2(
+    payload: &[u8],
+    row_bytes: usize,
+    first: usize,
+    y: &mut [f32],
+    act: &I2sI8Act,
+) {
+    let n = act.qs.len();
+    let qs = act.qs.as_ptr();
+    let base = payload.as_ptr();
+    for local in 0..y.len() {
+        let dot = dot_i2s_i8_avx2(base.add((first + local) * row_bytes), qs, n);
+        y[local] = (dot - act.sum) as f32 * act.inv_scale;
+    }
+}
+
+struct I2sSliceJob {
+    payload: *const u8,
+    payload_len: usize,
+    row_bytes: usize,
+    y: *mut f32,
+    rows: usize,
+    act: *const I2sI8Act,
+}
+
+struct I2sShared {
+    threads: usize,
+    job: UnsafeCell<I2sSliceJob>,
+    start: Barrier,
+    done: Barrier,
+}
+
+unsafe impl Sync for I2sShared {}
+
+fn i2s_shared() -> &'static I2sShared {
+    static SHARED: OnceLock<&'static I2sShared> = OnceLock::new();
+    SHARED.get_or_init(|| {
+        let threads = i2s_i8_workers(
+            thread::available_parallelism()
+                .map(|count| count.get())
+                .unwrap_or(1),
+            usize::MAX,
+        )
+        .max(1);
+        let shared = Box::leak(Box::new(I2sShared {
+            threads,
+            job: UnsafeCell::new(I2sSliceJob {
+                payload: std::ptr::null(),
+                payload_len: 0,
+                row_bytes: 0,
+                y: std::ptr::null_mut(),
+                rows: 0,
+                act: std::ptr::null(),
+            }),
+            start: Barrier::new(threads + 1),
+            done: Barrier::new(threads + 1),
+        }));
+        for id in 0..threads {
+            let shared = shared as *const I2sShared as usize;
+            thread::Builder::new()
+                .name(format!("rbitnet-i2s-{id}"))
+                .spawn(move || unsafe { i2s_worker_loop(id, shared as *const I2sShared) })
+                .expect("i2s worker");
+        }
+        shared
+    })
+}
+
+unsafe fn i2s_worker_loop(id: usize, shared: *const I2sShared) {
+    let shared = &*shared;
+    loop {
+        shared.start.wait();
+        let job = &*shared.job.get();
+        if !job.payload.is_null() && !job.y.is_null() && !job.act.is_null() && job.rows > 0 {
+            let chunk = job.rows.div_ceil(shared.threads);
+            let start = id * chunk;
+            if start < job.rows {
+                let len = chunk.min(job.rows - start);
+                let payload = std::slice::from_raw_parts(job.payload, job.payload_len);
+                let rows = std::slice::from_raw_parts_mut(job.y.add(start), len);
+                fill_i2s_i8(payload, job.row_bytes, start, rows, &*job.act);
+            }
+        }
+        shared.done.wait();
+    }
+}
+
+fn fill_i2s_i8_parallel(payload: &[u8], row_bytes: usize, y: &mut [f32], act: &I2sI8Act) {
+    static GATE: Mutex<()> = Mutex::new(());
+    let shared = i2s_shared();
+    if shared.threads <= 1 || y.len() <= 1 {
+        fill_i2s_i8(payload, row_bytes, 0, y, act);
+        return;
+    }
+    let _guard = GATE.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    unsafe {
+        *shared.job.get() = I2sSliceJob {
+            payload: payload.as_ptr(),
+            payload_len: payload.len(),
+            row_bytes,
+            y: y.as_mut_ptr(),
+            rows: y.len(),
+            act: act as *const I2sI8Act,
+        };
+    }
+    shared.start.wait();
+    shared.done.wait();
+}
+
+thread_local! {
+    static I2S_QS: RefCell<Vec<i8>> = const { RefCell::new(Vec::new()) };
+}
+
+fn matvec_i2s_i8(payload: &[u8], row_bytes: usize, x: &[f32], ne1: usize) -> Result<Vec<f32>> {
+    let mut qs = I2S_QS.with(|cell| std::mem::take(&mut *cell.borrow_mut()));
+    let (sum, inv_scale) = quantize_i2s_i8_into(x, &mut qs);
+    let act = I2sI8Act { qs, sum, inv_scale };
+    let mut y = vec![0.0f32; ne1];
+    if ne1 != 0 {
+        fill_i2s_i8_parallel(payload, row_bytes, &mut y, &act);
+    }
+    let I2sI8Act { qs, .. } = act;
+    I2S_QS.with(|cell| {
+        *cell.borrow_mut() = qs;
+    });
+    apply_i2s_scale(36, payload, row_bytes, ne1, &mut y)?;
+    Ok(y)
+}
+
+fn matvec_i2s_i8_batch(
+    payload: &[u8],
+    row_bytes: usize,
+    xs: &[f32],
+    n_tokens: usize,
+    ne0: usize,
+    ne1: usize,
+) -> Result<Vec<f32>> {
+    let acts: Vec<I2sI8Act> = (0..n_tokens)
+        .map(|token| quantize_i2s_i8(&xs[token * ne0..(token + 1) * ne0]))
+        .collect();
+    let mut y = vec![0.0f32; n_tokens.saturating_mul(ne1)];
+    if n_tokens == 0 || ne1 == 0 {
+        return Ok(y);
+    }
+    let pool = quant_matvec_thread_pool();
+    let threads = i2s_i8_workers(pool.current_num_threads(), ne1);
+    if threads <= 1 {
+        let mut column = vec![0.0f32; ne1];
+        for token in 0..n_tokens {
+            fill_i2s_i8(payload, row_bytes, 0, &mut column, &acts[token]);
+            for (row, value) in column.iter().copied().enumerate() {
+                y[token * ne1 + row] = value;
+            }
+        }
+    } else {
+        let chunk_rows = ne1.div_ceil(threads);
+        let chunk_starts: Vec<usize> = (0..ne1).step_by(chunk_rows).collect();
+        let parts: Vec<(usize, Vec<f32>)> = pool.install(|| {
+            chunk_starts
+                .par_iter()
+                .copied()
+                .map(|chunk_start| {
+                    let chunk_end = (chunk_start + chunk_rows).min(ne1);
+                    let rows = chunk_end - chunk_start;
+                    let mut block = vec![0.0f32; rows * n_tokens];
+                    let mut column = vec![0.0f32; rows];
+                    for token in 0..n_tokens {
+                        fill_i2s_i8(
+                            payload,
+                            row_bytes,
+                            chunk_start,
+                            &mut column,
+                            &acts[token],
+                        );
+                        for (local, value) in column.iter().copied().enumerate() {
+                            block[local * n_tokens + token] = value;
+                        }
+                    }
+                    (chunk_start, block)
+                })
+                .collect()
+        });
+        for (chunk_start, block) in parts {
+            let rows = block.len() / n_tokens.max(1);
+            for local in 0..rows {
+                let row = chunk_start + local;
+                for token in 0..n_tokens {
+                    y[token * ne1 + row] = block[local * n_tokens + token];
+                }
+            }
+        }
+    }
+    for token in 0..n_tokens {
+        apply_i2s_scale(
+            36,
+            payload,
+            row_bytes,
+            ne1,
+            &mut y[token * ne1..(token + 1) * ne1],
+        )?;
+    }
+    Ok(y)
 }
 
 fn matvec_i2s_f32(payload: &[u8], row_bytes: usize, x: &[f32], ne1: usize) -> Result<Vec<f32>> {
@@ -1278,7 +1765,9 @@ fn matvec_rows_batch(
         return matvec_tq2_q8k_batch(payload, row_bytes, xs, n_tokens, ne0, ne1);
     }
     if ty == 36 && i2s_q8k_layout(row_bytes, ne0) {
-        return if i2s_f32_preferred() {
+        return if i2s_i8_preferred() {
+            matvec_i2s_i8_batch(payload, row_bytes, xs, n_tokens, ne0, ne1)
+        } else if i2s_f32_preferred() {
             matvec_i2s_f32_batch(payload, row_bytes, xs, n_tokens, ne0, ne1)
         } else {
             matvec_i2s_q8k_batch(payload, row_bytes, xs, n_tokens, ne0, ne1)
@@ -1839,6 +2328,7 @@ pub(crate) fn matvec_q8_0_rows(
     if x.len() % 32 != 0 || row_bytes != (x.len() / 32) * 34 || payload.len() < ne1 * row_bytes {
         return Err(BitNetError::Inference("q8_0 matvec: shape".into()));
     }
+    let started = Instant::now();
     let mut y = vec![0.0f32; ne1];
     if ne1 == 0 {
         return Ok(y);
@@ -1852,14 +2342,22 @@ pub(crate) fn matvec_q8_0_rows(
         let threads = pool.current_num_threads().min(ne1).max(1);
         if threads <= 1 {
             unsafe { fill_q8_0_avx2(payload, row_bytes, 0, &mut y, x) }
-            return Ok(y);
-        }
-        let chunk_rows = ne1.div_ceil(threads);
-        pool.install(|| {
-            y.par_chunks_mut(chunk_rows).enumerate().for_each(|(chunk, rows)| {
-                unsafe { fill_q8_0_avx2(payload, row_bytes, chunk * chunk_rows, rows, x) }
+        } else {
+            let chunk_rows = ne1.div_ceil(threads);
+            pool.install(|| {
+                y.par_chunks_mut(chunk_rows)
+                    .enumerate()
+                    .for_each(|(chunk, rows)| {
+                        unsafe { fill_q8_0_avx2(payload, row_bytes, chunk * chunk_rows, rows, x) }
+                    });
             });
-        });
+        }
+        crate::perf::record_quant_matvec(
+            8,
+            ne1,
+            x.len(),
+            started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        );
         return Ok(y);
     }
     for (row, slot) in y.iter_mut().enumerate() {
@@ -1875,6 +2373,12 @@ pub(crate) fn matvec_q8_0_rows(
         }
         *slot = acc;
     }
+    crate::perf::record_quant_matvec(
+        8,
+        ne1,
+        x.len(),
+        started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+    );
     Ok(y)
 }
 
@@ -1927,11 +2431,7 @@ fn matvec_rows_scalar(
         return matvec_tq2_q8k(payload, row_bytes, x, ne1);
     }
     if ty == 36 && i2s_q8k_layout(row_bytes, x.len()) {
-        return if i2s_f32_preferred() {
-            matvec_i2s_f32(payload, row_bytes, x, ne1)
-        } else {
-            matvec_i2s_q8k(payload, row_bytes, x, ne1)
-        };
+        return dispatch_i2s_matvec(payload, row_bytes, x, ne1);
     }
     let mut y = vec![0.0f32; ne1];
     for o in 0..ne1 {
@@ -1957,11 +2457,7 @@ fn matvec_rows_parallel_original(
         return matvec_tq2_q8k(payload, row_bytes, x, ne1);
     }
     if ty == 36 && i2s_q8k_layout(row_bytes, x.len()) {
-        return if i2s_f32_preferred() {
-            matvec_i2s_f32(payload, row_bytes, x, ne1)
-        } else {
-            matvec_i2s_q8k(payload, row_bytes, x, ne1)
-        };
+        return dispatch_i2s_matvec(payload, row_bytes, x, ne1);
     }
     let pool = quant_matvec_thread_pool();
     let threads = pool.current_num_threads().min(ne1.max(1));
@@ -2638,7 +3134,7 @@ mod tests {
         let dense = tensor_to_f32(&payload, 36, &[n as u64]).unwrap();
         let x: Vec<f32> = (0..n).map(|i| (i as f32) * 0.01 - 0.4).collect();
         let row_bytes = crate::ggml::ggml_row_size(36, n as u64).unwrap();
-        let y = matvec_rows_scalar(36, &payload, row_bytes, &x, 1).unwrap();
+        let y = matvec_i2s_f32(&payload, row_bytes, &x, 1).unwrap();
         let reference: f32 = dense.iter().zip(x.iter()).map(|(w, a)| w * a).sum();
         assert!((y[0] - reference).abs() < 1e-4, "y={} ref={reference}", y[0]);
         assert!((dense[1] - scale).abs() < 1e-5, "first +1 weight {}", dense[1]);
@@ -2698,6 +3194,136 @@ mod tests {
     }
 
     #[test]
+    fn i2s_i8_quantize_matches_round_half_away() {
+        let x = vec![
+            0.0, 0.5, -0.5, 1.5, -1.5, 2.5, -2.5, 0.49, -0.49, 3.2, -0.1, 0.0, 8.0, -8.0, 0.25,
+            -0.75, 0.125,
+        ];
+        let mut got = Vec::new();
+        let (sum, inv) = quantize_i2s_i8_into(&x, &mut got);
+        let mut amax = 0.0f32;
+        for value in &x {
+            amax = amax.max(value.abs());
+        }
+        let scale = 127.0 / amax;
+        let mut expect = Vec::with_capacity(x.len());
+        let mut expect_sum = 0i32;
+        for value in &x {
+            let quantized = (value * scale).round() as i32;
+            let quantized = quantized.clamp(-128, 127);
+            expect_sum += quantized;
+            expect.push(quantized as i8);
+        }
+        assert_eq!(got, expect);
+        assert_eq!(sum, expect_sum);
+        assert!((inv - amax / 127.0).abs() < 1e-6);
+        quantize_i2s_i8_into(&x, &mut got);
+        assert_eq!(got, expect);
+        let wide: Vec<f32> = (0..2560)
+            .map(|i| ((i * 17 % 41) as f32) * 0.03 - 0.4)
+            .collect();
+        let (sum, _) = quantize_i2s_i8_into(&wide, &mut got);
+        let mut amax = 0.0f32;
+        for value in &wide {
+            amax = amax.max(value.abs());
+        }
+        let scale = 127.0 / amax;
+        let mut expect_sum = 0i32;
+        for (index, value) in wide.iter().enumerate() {
+            let quantized = (value * scale).round() as i32;
+            let quantized = quantized.clamp(-128, 127);
+            expect_sum += quantized;
+            assert_eq!(got[index], quantized as i8, "index {index}");
+        }
+        assert_eq!(sum, expect_sum);
+    }
+
+    #[test]
+    fn i2s_i8_matches_bitnet_cpp_row_quant() {
+        let n = 256;
+        let mut codes = vec![0u8; n / 4];
+        let weights: Vec<i8> = (0..n)
+            .map(|i| match i % 5 {
+                0 => 0,
+                1 => 1,
+                2 => -1,
+                3 => 1,
+                _ => 0,
+            })
+            .collect();
+        for block in 0..(n / 128) {
+            for j in 0..128 {
+                let q = match weights[block * 128 + j] {
+                    0 => 1u8,
+                    1 => 2,
+                    _ => 0,
+                };
+                let group = j / 32;
+                let gp = j % 32;
+                codes[block * 32 + gp] |= q << (6 - 2 * group);
+            }
+        }
+        let x: Vec<f32> = (0..n)
+            .map(|i| ((i * 17) % 11) as f32 * 0.07 - 0.3)
+            .collect();
+        let act = quantize_i2s_i8(&x);
+        let amax = x.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        let scale = 127.0 / amax;
+        let mut sum_q = 0i32;
+        let mut dot = 0i32;
+        for (block, codes_block) in codes.chunks_exact(32).enumerate() {
+            for j in 0..128 {
+                let group = j / 32;
+                let gp = j % 32;
+                let code = i32::from(codes_block[gp] >> (6 - 2 * group)) & 3;
+                let q = (x[block * 128 + j] * scale).round() as i32;
+                let q = q.clamp(-128, 127);
+                sum_q += q;
+                dot += code * q;
+            }
+        }
+        let expected = (dot - sum_q) as f32 * (amax / 127.0);
+        let scalar = dot_i2s_i8_scalar(&codes, &act);
+        let fast = dot_i2s_i8(&codes, &act);
+        assert!((scalar - expected).abs() < 1e-4, "scalar={scalar} expected={expected}");
+        assert!((fast - scalar).abs() < 1e-4, "fast={fast} scalar={scalar}");
+        assert_eq!(act.sum, sum_q);
+    }
+
+    #[test]
+    fn i2s_i8_grouped_i16_matches_scalar_at_i16_bound() {
+        // 32 blocks crosses the i16 group of 16. Every code is +1 and every activation
+        // saturates, which is the maddubs lane maximum.
+        let n = 128 * 32;
+        let mut codes = vec![0u8; n / 4];
+        for block in 0..(n / 128) {
+            for gp in 0..32 {
+                codes[block * 32 + gp] = (2 << 6) | (2 << 4) | (2 << 2) | 2;
+            }
+        }
+        let x = vec![1.0f32; n];
+        let act = quantize_i2s_i8(&x);
+        let scalar = dot_i2s_i8_scalar(&codes, &act);
+        let fast = dot_i2s_i8(&codes, &act);
+        assert!((fast - scalar).abs() < 1e-3, "fast={fast} scalar={scalar}");
+
+        let rows = 5usize;
+        let mut payload = vec![0u8; rows * (n / 4) + 32];
+        for row in 0..rows {
+            let start = row * (n / 4);
+            payload[start..start + n / 4].copy_from_slice(&codes);
+        }
+        payload[rows * (n / 4)..rows * (n / 4) + 4].copy_from_slice(&1.0f32.to_le_bytes());
+        let y = matvec_i2s_i8(&payload, n / 4, &x, rows).unwrap();
+        for (row, value) in y.iter().enumerate() {
+            assert!(
+                (value - scalar).abs() < 1e-3,
+                "row {row} y={value} scalar={scalar}"
+            );
+        }
+    }
+
+    #[test]
     fn microsoft_i2s_gguf_uses_per_tensor_f32_scale() {
         let path = std::path::Path::new(
             r"D:\rbitnet-bench\models\bitnet-b158-2b\ggml-model-i2_s.gguf",
@@ -2726,6 +3352,7 @@ mod tests {
             crate::ggml::ggml_nbytes(&tensor.dimensions, 36).unwrap()
         );
     }
+
 }
 
 fn matvec_rows_parallel(
