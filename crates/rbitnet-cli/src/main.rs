@@ -511,19 +511,30 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
     };
 
     // Pull tokenizer sidecars from a separate Hub repo when the catalog says so.
+    // `--no-download` must not ask the Hub which names exist: the closure command
+    // resolves `bitnet:2b` with no request, including none to `bitnet%3A2b`.
     if let Some(tok_repo) = tokenizer_repo.as_deref() {
         if tok_repo != model_id.as_str() {
-            let tok_siblings = hf_search::fetch_model_sibling_paths(tok_repo, cmd.token.as_deref())?;
-            let mut tok_files: Vec<String> = Vec::new();
-            for p in &tok_siblings {
-                let l = p.to_ascii_lowercase();
-                if l.ends_with("tokenizer.json")
-                    || l.ends_with("tokenizer.model")
-                    || l.ends_with("tokenizer_config.json")
-                {
-                    tok_files.push(p.clone());
+            let tok_files: Vec<String> = if cmd.no_download {
+                ["tokenizer.json", "tokenizer_config.json"]
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect()
+            } else {
+                let tok_siblings =
+                    hf_search::fetch_model_sibling_paths(tok_repo, cmd.token.as_deref())?;
+                let mut names = Vec::new();
+                for p in &tok_siblings {
+                    let l = p.to_ascii_lowercase();
+                    if l.ends_with("tokenizer.json")
+                        || l.ends_with("tokenizer.model")
+                        || l.ends_with("tokenizer_config.json")
+                    {
+                        names.push(p.clone());
+                    }
                 }
-            }
+                names
+            };
             if !tok_files.is_empty() {
                 if cmd.no_download {
                     for f in &tok_files {
