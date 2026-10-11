@@ -1,0 +1,52 @@
+# Build the Linux release binary on Ubuntu 22.04 (glibc 2.35) and keep it as an
+# artifact. This does not publish a GitHub Release.
+
+name: Linux glibc build
+
+on:
+  push:
+    branches:
+      - feat/install-release-190
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build packages
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake pkg-config libssl-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: linux-glibc-22.04
+
+      - name: Build release binaries
+        run: cargo build -p bitnet-server -p rbitnet-cli -p rbitnet-runner -p rbitnet-proxy --release --locked
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          cd target/release
+          cp ../../data/compatible_models.json compatible_models.json
+          tar czvf ../../rbitnet-server-ci-linux-x86_64.tar.gz \
+            rbitnet-server rbitnet rbitnet-runner rbitnet-proxy compatible_models.json
+          cd ../..
+          tar tzvf rbitnet-server-ci-linux-x86_64.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-glibc-2.35
+          path: rbitnet-server-ci-linux-x86_64.tar.gz
+          if-no-files-found: error
