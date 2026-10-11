@@ -9,12 +9,15 @@ mod hub_http;
 mod integrity;
 mod interactive_models;
 mod recipes;
+mod shell_tui;
 mod train_cli;
 mod tune;
 
+use std::collections::VecDeque;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Arc, Mutex, Once};
 use std::thread;
 use std::time::Duration;
 
@@ -34,20 +37,25 @@ fn hub_place_mode(symlink: bool) -> HubPlaceMode {
 #[command(
     name = "rbitnet",
     version,
-    about = "Rbitnet CLI: Hugging Face models, download, optional Python train helper, and HTTP server"
+    about = "Open the Rbitnet terminal. A subcommand jumps straight to that screen.",
+    long_about = "Running rbitnet with no arguments opens the terminal: commands, the resolved model, and the next action. \
+Subcommands open the same screen with their result. --plain prints that result as text for scripts and tests."
 )]
 struct Cli {
+    /// Print text for scripts and tests. The terminal screen is the normal interface.
+    #[arg(long, global = true)]
+    plain: bool,
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Download/resolve a GGUF repo and print the exact environment + server/curl commands.
+    /// Resolve a catalog tag and show the GGUF, the tokenizer, and the serve action.
     Quickstart(QuickstartCmd),
-    /// Download/resolve a GGUF repo and write runnable local config defaults.
+    /// Resolve a catalog tag, write the local config, and show the serve action.
     Up(UpCmd),
-    /// Print a short first-run guide (FR) and links to documentation.
+    /// Show the first-run guide.
     Welcome,
     #[command(subcommand, about = "Curated catalog, HF search, and downloads")]
     Models(ModelsCmd),
@@ -61,7 +69,7 @@ enum Commands {
     Ui(UiCmd),
     /// Open a terminal chatbot for quick inference tests.
     Chat(ChatCmd),
-    /// Apply a versioned JSON serve recipe (sets env, then prints `rbitnet serve`).
+    /// Show a versioned JSON serve recipe, then start the server from that screen.
     Recipe(RecipeCmd),
     /// Apply serving env presets (battery / interactive / latency / throughput / bitnet-cpu).
     Tune(TuneCmd),
@@ -423,10 +431,6 @@ fn maybe_write_init_config(init: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn print_welcome_text() {
-    print!("{}", include_str!("../templates/welcome.txt"));
-}
-
 fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
     let rel = Path::new(file);
     for component in rel.components() {
@@ -442,7 +446,15 @@ fn path_for_downloaded_file(dir: &Path, file: &str) -> Result<PathBuf, String> {
     Ok(dir.join(rel))
 }
 
-fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
+struct QuickstartReady {
+    screen: shell_tui::Screen,
+    model: PathBuf,
+    tokenizer: Option<PathBuf>,
+    bind: String,
+    chat_format: Option<String>,
+}
+
+fn print_quickstart(cmd: QuickstartCmd) -> Result<QuickstartReady, String> {
     if let Some(ref recipe_path) = cmd.recipe {
         let recipe = recipes::load_recipe(recipe_path)?;
         recipes::print_recipe_plan(&recipe, recipe_path);
@@ -477,6 +489,8 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
                     std::env::set_var("RBITNET_MODEL_SHA256", sha);
                 }
             }
+        } else if !catalog::looks_like_hub_repo(&model_id) {
+            return Err(catalog::unknown_catalog_ref_message(&cat, &cmd.model_id));
         }
     }
 
@@ -593,50 +607,17 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
             .unwrap_or(false)
     });
 
-    println!("Rbitnet quickstart for {}", cmd.model_id);
-    println!();
-    if cmd.no_download {
-        println!(
-            "(download skipped; paths below assume files are present under {})",
-            cmd.dir.display()
-        );
-        println!();
-    }
-    println!("PowerShell:");
-    println!("  $env:RBITNET_MODEL=\"{}\"", model_path.display());
-    if let Some(tok) = tokenizer_path {
-        println!("  $env:RBITNET_TOKENIZER=\"{}\"", tok.display());
-    }
-    if let Some(fmt) = &cmd.chat_format {
-        println!("  $env:RBITNET_CHAT_FORMAT=\"{}\"", fmt);
-    }
-    println!("  $env:RBITNET_BIND=\"{}\"", cmd.bind);
-    println!("  rbitnet serve");
-    println!();
-    println!("bash/zsh:");
-    println!("  export RBITNET_MODEL=\"{}\"", model_path.display());
-    if let Some(tok) = tokenizer_path {
-        println!("  export RBITNET_TOKENIZER=\"{}\"", tok.display());
-    }
-    if let Some(fmt) = &cmd.chat_format {
-        println!("  export RBITNET_CHAT_FORMAT=\"{}\"", fmt);
-    }
-    println!("  export RBITNET_BIND=\"{}\"", cmd.bind);
-    println!("  rbitnet serve");
-    println!();
-    println!("Local URL: http://{}", cmd.bind);
-    println!("Models:    curl -s http://{}/v1/models", cmd.bind);
-    println!("Chat:");
-    println!(
-        "  curl -s http://{}/v1/chat/completions -H \"Content-Type: application/json\" -d '{{\"model\":\"rbitnet-llama\",\"messages\":[{{\"role\":\"user\",\"content\":\"Hello from Rbitnet\"}}],\"max_tokens\":64,\"temperature\":0.7}}'",
-        cmd.bind
+    let mut screen = shell_tui::quickstart_screen(
+        &cmd.model_id,
+        model_path,
+        tokenizer_path.map(PathBuf::as_path),
+        &cmd.bind,
     );
-    if tokenizer_path.is_none() {
-        println!();
-        println!(
-            "Note: no tokenizer.json/tokenizer.model was found in the resolved repo file list."
-        );
-        println!("Place a tokenizer beside the GGUF or set RBITNET_TOKENIZER before launching.");
+    if cmd.no_download {
+        screen.body.push_str(&format!(
+            "\n\nTéléchargement ignoré. Les chemins supposent les fichiers sous {}.",
+            cmd.dir.display()
+        ));
     }
     if cmd.write_config {
         let path = config_path(&cmd.config, cmd.user_config)?;
@@ -647,14 +628,17 @@ fn print_quickstart(cmd: QuickstartCmd) -> Result<(), String> {
             &cmd.bind,
             cmd.chat_format.as_deref(),
         )?;
-        println!();
-        println!("Wrote config: {}", path.display());
-        println!("Next: rbitnet serve --open-ui");
-    } else {
-        println!();
-        println!("Tip: add --write-config (or use `rbitnet up`) so `rbitnet serve` works without env vars.");
+        screen
+            .body
+            .push_str(&format!("\n\nConfig écrite\n  {}", path.display()));
     }
-    Ok(())
+    Ok(QuickstartReady {
+        screen,
+        model: model_path.clone(),
+        tokenizer: tokenizer_path.cloned(),
+        bind: cmd.bind,
+        chat_format: cmd.chat_format,
+    })
 }
 
 #[derive(Args)]
@@ -798,55 +782,51 @@ enum ModelsCmd {
     },
 }
 
-fn print_catalog_list(url: &str) -> Result<(), String> {
+fn catalog_list_text(url: &str) -> Result<String, String> {
     let cat = catalog::fetch_catalog(url)?;
-    println!("Catalog URL: {url}");
-    println!("Schema version: {}", cat.version);
-    println!();
+    let mut out = format!("Catalog URL: {url}\nSchema version: {}\n\n", cat.version);
     if cat.models.is_empty() {
-        println!("(no curated models in this index)");
-        return Ok(());
+        out.push_str("(no curated models in this index)\n");
+        return Ok(out);
     }
     for m in &cat.models {
-        println!("id: {}", m.id);
-        println!("  repo: {}", m.repo);
-        println!("  description: {}", m.description);
+        out.push_str(&format!("id: {}\n  repo: {}\n  description: {}\n", m.id, m.repo, m.description));
         if let Some(f) = &m.file {
-            println!("  file: {f}");
+            out.push_str(&format!("  file: {f}\n"));
         }
         if !m.files.is_empty() {
-            println!("  files: {}", m.files.join(", "));
+            out.push_str(&format!("  files: {}\n", m.files.join(", ")));
         }
         if let Some(ram) = &m.min_ram {
-            println!("  min_ram: {ram}");
+            out.push_str(&format!("  min_ram: {ram}\n"));
         }
         if let Some(tier) = &m.tier {
-            println!("  tier: {tier}");
+            out.push_str(&format!("  tier: {tier}\n"));
         }
         if !m.use_case.is_empty() {
-            println!("  use_case: {}", m.use_case.join(", "));
+            out.push_str(&format!("  use_case: {}\n", m.use_case.join(", ")));
         }
         if let Some(ram_gb) = m.min_ram_gb {
-            println!("  min_ram_gb: {ram_gb}");
+            out.push_str(&format!("  min_ram_gb: {ram_gb}\n"));
         }
         if let Some(verified) = m.verified {
-            println!("  verified: {verified}");
+            out.push_str(&format!("  verified: {verified}\n"));
         }
         if let Some(notes) = &m.notes {
-            println!("  notes: {notes}");
+            out.push_str(&format!("  notes: {notes}\n"));
         }
         if let Some(tested) = m.tested {
-            println!("  tested: {tested}");
+            out.push_str(&format!("  tested: {tested}\n"));
         }
         if let Some(v) = &m.min_rbitnet_version {
-            println!("  min_rbitnet_version: {v}");
+            out.push_str(&format!("  min_rbitnet_version: {v}\n"));
         }
         if let Some(v) = &m.smoke_test {
-            println!("  smoke_test: {v}");
+            out.push_str(&format!("  smoke_test: {v}\n"));
         }
-        println!();
+        out.push('\n');
     }
-    Ok(())
+    Ok(out)
 }
 
 fn find_named_file(dir: &Path, names: &[&str]) -> Option<PathBuf> {
@@ -950,7 +930,17 @@ fn remove_model_path(path: &Path, yes: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn run_models(cmd: ModelsCmd) -> Result<(), String> {
+fn present_text(title: &str, body: String, action: Option<String>, plain: bool) -> Result<(), String> {
+    let screen = shell_tui::Screen {
+        title: title.to_string(),
+        body,
+        action,
+        error: None,
+    };
+    shell_tui::present(&screen, plain).map(|_| ())
+}
+
+fn run_models(cmd: ModelsCmd, plain: bool) -> Result<(), String> {
     match cmd {
         ModelsCmd::List {
             index_url,
@@ -968,7 +958,8 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     hub_place_mode(symlink),
                 )
             } else {
-                print_catalog_list(&url)
+                let body = catalog_list_text(&url)?;
+                present_text("Catalogue", body, None, plain)
             }
         }
         ModelsCmd::Install {
@@ -998,11 +989,6 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
             symlink,
         } => {
             let strict_bitnet = !all_gguf;
-            eprintln!("{}", hf_search::SEARCH_WARNING);
-            if strict_bitnet {
-                eprintln!("strict-bitnet: enabled (keeps likely/possible BitNet candidates only).");
-            }
-            eprintln!();
             if interactive {
                 interactive_models::run_search_interactive(
                     &query,
@@ -1021,39 +1007,42 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
                     strict_bitnet,
                     token.as_deref(),
                 )?;
+                let mut body = format!("{}\n\n", hf_search::SEARCH_WARNING);
+                if strict_bitnet {
+                    body.push_str("strict-bitnet: likely/possible seulement\n\n");
+                }
                 if hits.is_empty() {
-                    println!(
-                        "No repos with .gguf files found (try --query gguf / TheBloke, or raise --max-inspect / --search-limit)."
+                    body.push_str(
+                        "Aucun dépôt .gguf (essayez --query gguf, ou augmentez --max-inspect / --search-limit).\n",
                     );
-                    return Ok(());
                 }
                 for h in hits {
-                    println!(
-                        "{} [{}:{} rbitnet={}]",
+                    body.push_str(&format!(
+                        "{} [{}:{} rbitnet={}]\n",
                         h.id,
                         h.confidence.label(),
                         h.confidence_score,
                         h.readiness.label()
-                    );
+                    ));
                     for f in &h.gguf_files {
-                        println!("  {f}");
+                        body.push_str(&format!("  {f}\n"));
                     }
                     if let Some(t) = &h.tokenizer_json {
-                        println!("  {t}");
+                        body.push_str(&format!("  {t}\n"));
                     }
                     if let Some(t) = &h.tokenizer_model {
-                        println!("  {t}");
+                        body.push_str(&format!("  {t}\n"));
                     }
                     if h.tokenizer_json.is_none() && h.tokenizer_model.is_none() {
                         if let Some(t) = &h.tokenizer_config_json {
-                            println!("  {t}  (config only — see USAGE tokenizer note)");
+                            body.push_str(&format!("  {t}  (config only)\n"));
                         } else {
-                            println!("  (no tokenizer.json / tokenizer.model in repo file list)");
+                            body.push_str("  (pas de tokenizer.json / tokenizer.model)\n");
                         }
                     }
-                    println!();
+                    body.push('\n');
                 }
-                Ok(())
+                present_text("Recherche", body, None, plain)
             }
         }
         ModelsCmd::Download {
@@ -1227,78 +1216,176 @@ fn run_models(cmd: ModelsCmd) -> Result<(), String> {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
-        )
-        .init();
+fn tracing_filter() -> tracing_subscriber::EnvFilter {
+    tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+}
 
-    let cli = Cli::parse();
-    let result = match cli.command {
-        Commands::Quickstart(cmd) => print_quickstart(cmd),
-        Commands::Up(cmd) => print_quickstart(cmd.into()),
-        Commands::Models(m) => run_models(m),
-        Commands::Train(cmd) => train_cli::run_train(&cmd.repo_root, &cmd.recipe, &cmd.passthrough),
-        Commands::ExportGguf(cmd) => {
-            train_cli::print_export_gguf_hint(cmd.checkpoint.as_deref());
+fn init_text_tracing() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_filter())
+            .init();
+    });
+}
+
+fn init_serve_tracing(log: shell_tui::LogLines) {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_filter())
+            .with_ansi(false)
+            .with_writer(log)
+            .init();
+    });
+}
+
+fn serve_url() -> String {
+    let bind = std::env::var("RBITNET_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into());
+    format!("http://{bind}")
+}
+
+fn apply_quickstart_env(ready: &QuickstartReady) {
+    std::env::set_var("RBITNET_MODEL", &ready.model);
+    if let Some(tok) = &ready.tokenizer {
+        std::env::set_var("RBITNET_TOKENIZER", tok);
+    }
+    if let Some(fmt) = &ready.chat_format {
+        std::env::set_var("RBITNET_CHAT_FORMAT", fmt);
+    }
+    std::env::set_var("RBITNET_BIND", &ready.bind);
+}
+
+fn spawn_serve(lines: Arc<Mutex<VecDeque<String>>>) {
+    thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime");
+        if let Err(e) = rt.block_on(bitnet_server::run_server()) {
+            let mut guard = lines.lock().unwrap_or_else(|p| p.into_inner());
+            guard.push_back(format!("error: {e}"));
+        }
+    });
+}
+
+fn serve_in_terminal() -> Result<(), String> {
+    let lines = Arc::new(Mutex::new(VecDeque::new()));
+    init_serve_tracing(shell_tui::LogLines(Arc::clone(&lines)));
+    let url = serve_url();
+    spawn_serve(Arc::clone(&lines));
+    shell_tui::run_serve("serve", &url, lines)
+}
+
+async fn run_command(command: Option<Commands>, plain: bool) -> Result<(), String> {
+    match command {
+        None => {
+            shell_tui::present(&shell_tui::home_screen(), plain)?;
             Ok(())
         }
-        Commands::Welcome => {
-            print_welcome_text();
-            Ok(())
+        Some(Commands::Quickstart(cmd)) => launch_quickstart(cmd, plain).await,
+        Some(Commands::Up(cmd)) => launch_quickstart(cmd.into(), plain).await,
+        Some(Commands::Models(m)) => run_models(m, plain),
+        Some(Commands::Train(cmd)) => {
+            init_text_tracing();
+            train_cli::run_train(&cmd.repo_root, &cmd.recipe, &cmd.passthrough)
         }
-        Commands::Serve(cmd) => {
+        Some(Commands::ExportGguf(cmd)) => {
+            let body = train_cli::export_gguf_hint(cmd.checkpoint.as_deref());
+            present_text("export-gguf", body, Some("rbitnet serve".into()), plain)
+        }
+        Some(Commands::Welcome) => present_text(
+            "welcome",
+            include_str!("../templates/welcome.txt").to_string(),
+            Some("rbitnet quickstart bitnet:2b".into()),
+            plain,
+        ),
+        Some(Commands::Serve(cmd)) => {
             apply_serve_cli_env(&cmd);
-            if let Err(e) = maybe_write_init_config(cmd.init) {
-                Err(e)
+            maybe_write_init_config(cmd.init)?;
+            if cmd.open_ui {
+                let url = ui_url_from_env();
+                open_url_in_browser_soon(url);
+            }
+            if shell_tui::use_terminal(plain) {
+                serve_in_terminal()
             } else {
-                if cmd.open_ui {
-                    let url = ui_url_from_env();
-                    eprintln!("Opening Rbitnet UI: {url}");
-                    open_url_in_browser_soon(url);
-                }
+                init_text_tracing();
                 eprintln!("Rbitnet UI: {}", ui_url_from_env());
                 bitnet_server::run_server().await.map_err(|e| e.to_string())
             }
         }
-        Commands::Ui(cmd) => {
+        Some(Commands::Ui(cmd)) => {
+            init_text_tracing();
             apply_ui_cli_env(&cmd);
             let url = ui_url_from_env();
             eprintln!("Opening Rbitnet UI: {url}");
             open_url_in_browser_soon(url);
             bitnet_server::run_server().await.map_err(|e| e.to_string())
         }
-        Commands::Chat(cmd) => chat_tui::run_chat_tui(cmd.into()),
-        Commands::Recipe(cmd) => match recipes::load_recipe(&cmd.path) {
-            Ok(recipe) => {
-                recipes::print_recipe_plan(&recipe, &cmd.path);
-                if !cmd.print_only {
-                    recipes::apply_recipe_env(&recipe);
-                    eprintln!("\nEnvironment applied. Starting server…");
-                    bitnet_server::run_server().await.map_err(|e| e.to_string())
-                } else {
-                    Ok(())
-                }
-            }
-            Err(e) => Err(e),
-        },
-        Commands::Tune(cmd) => match tune::TuneProfile::parse(&cmd.profile) {
-            Some(profile) => {
-                tune::apply_profile(profile, cmd.export);
+        Some(Commands::Chat(cmd)) => chat_tui::run_chat_tui(cmd.into()),
+        Some(Commands::Recipe(cmd)) => {
+            let recipe = recipes::load_recipe(&cmd.path)?;
+            let body = recipes::recipe_plan_text(&recipe, &cmd.path);
+            let action = if cmd.print_only {
+                None
+            } else {
+                Some("Entrée : rbitnet serve".into())
+            };
+            let launch = shell_tui::present(
+                &shell_tui::Screen {
+                    title: "recipe".into(),
+                    body,
+                    action,
+                    error: None,
+                },
+                plain,
+            )?;
+            if launch {
+                recipes::apply_recipe_env(&recipe);
+                serve_in_terminal()
+            } else {
                 Ok(())
             }
-            None => Err(format!(
-                "unknown tune profile '{}'; use battery, interactive, latency, throughput, or bitnet-cpu",
-                cmd.profile
-            )),
-        },
-    };
+        }
+        Some(Commands::Tune(cmd)) => {
+            let Some(profile) = tune::TuneProfile::parse(&cmd.profile) else {
+                return Err(format!(
+                    "unknown tune profile '{}'; use battery, interactive, latency, throughput, or bitnet-cpu",
+                    cmd.profile
+                ));
+            };
+            let body = tune::apply_profile(profile, cmd.export);
+            present_text("tune", body, Some("rbitnet serve".into()), plain)
+        }
+    }
+}
 
+async fn launch_quickstart(cmd: QuickstartCmd, plain: bool) -> Result<(), String> {
+    let ready = print_quickstart(cmd)?;
+    let launch = shell_tui::present(&ready.screen, plain)?;
+    if launch {
+        apply_quickstart_env(&ready);
+        serve_in_terminal()
+    } else {
+        Ok(())
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let cli = Cli::parse();
+    if !shell_tui::use_terminal(cli.plain) {
+        init_text_tracing();
+    }
+    let result = run_command(cli.command, cli.plain).await;
     if let Err(e) = result {
-        eprintln!("error: {e}");
+        if shell_tui::use_terminal(cli.plain) {
+            let _ = shell_tui::run(&shell_tui::Screen::error(e));
+        } else {
+            eprintln!("error: {e}");
+        }
         std::process::exit(1);
     }
 }

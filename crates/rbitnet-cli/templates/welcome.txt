@@ -1,7 +1,8 @@
 Bienvenue dans Rbitnet — démarrage express
 =========================================
 
-1) Vérifiez que le binaire `rbitnet` est installé (release GitHub ou `cargo install`).
+1) Installez les binaires de release (sans Rust ni clone) :
+   Windows : irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 
 2) Téléchargez un petit modèle du catalogue :
    rbitnet models install tinyllama-1.1b-chat-q4-k-m --dir ./models
