@@ -24,7 +24,7 @@ Restart=on-failure
 WantedBy=default.target
 ```
 
-Build `rbitnet-server` with `cargo install --path crates/bitnet-server --locked` or copy the release binary.
+Install `rbitnet-server` with the release installer (`scripts/install.ps1` or `scripts/install.sh`), or copy it from the tagged release archive. A checkout can `cargo build -p bitnet-server --release --locked`.
 
 ## Nginx TLS termination (sketch)
 
