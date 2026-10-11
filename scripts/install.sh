@@ -114,7 +114,11 @@ rm -f "$tmp"
 
 catalog="$INSTALL_DIR/compatible_models.json"
 echo "Downloading catalog for $tag"
-if ! curl -fsSL -A "$ua" "https://raw.githubusercontent.com/$REPO/$tag/data/compatible_models.json" -o "$catalog"; then
+tmpcat="$(mktemp)"
+if curl -fsSL -A "$ua" "https://raw.githubusercontent.com/$REPO/$tag/data/compatible_models.json" -o "$tmpcat"; then
+  mv "$tmpcat" "$catalog"
+else
+  rm -f "$tmpcat"
   if [ ! -s "$catalog" ]; then
     echo "Catalog download failed and the archive did not include compatible_models.json" >&2
     exit 1
