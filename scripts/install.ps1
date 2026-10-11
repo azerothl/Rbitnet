@@ -124,7 +124,13 @@ try {
 $catalogUrl = "https://raw.githubusercontent.com/$Repo/$tag/data/compatible_models.json"
 $catalogPath = Join-Path $InstallDir "compatible_models.json"
 Write-Host "Downloading catalog $catalogUrl"
-Invoke-WebRequest -Headers @{ "User-Agent" = "rbitnet-install" } -Uri $catalogUrl -OutFile $catalogPath
+try {
+    Invoke-WebRequest -Headers @{ "User-Agent" = "rbitnet-install" } -Uri $catalogUrl -OutFile $catalogPath
+} catch {
+    $ready = (Test-Path -LiteralPath $catalogPath) -and ((Get-Item -LiteralPath $catalogPath).Length -gt 1)
+    if (-not $ready) { throw }
+    Write-Host "Catalog download failed; using the copy from the archive."
+}
 
 foreach ($name in $BinaryNames) {
     if (-not (Test-Path -LiteralPath (Join-Path $InstallDir $name))) {

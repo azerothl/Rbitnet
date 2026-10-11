@@ -114,7 +114,13 @@ rm -f "$tmp"
 
 catalog="$INSTALL_DIR/compatible_models.json"
 echo "Downloading catalog for $tag"
-curl -fsSL -A "$ua" "https://raw.githubusercontent.com/$REPO/$tag/data/compatible_models.json" -o "$catalog"
+if ! curl -fsSL -A "$ua" "https://raw.githubusercontent.com/$REPO/$tag/data/compatible_models.json" -o "$catalog"; then
+  if [ ! -s "$catalog" ]; then
+    echo "Catalog download failed and the archive did not include compatible_models.json" >&2
+    exit 1
+  fi
+  echo "Catalog download failed; using the copy from the archive."
+fi
 
 for name in rbitnet rbitnet-server rbitnet-runner rbitnet-proxy; do
   if [ ! -x "$INSTALL_DIR/$name" ] && [ ! -f "$INSTALL_DIR/$name" ]; then
