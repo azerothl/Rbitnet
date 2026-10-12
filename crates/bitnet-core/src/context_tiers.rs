@@ -5,8 +5,10 @@ mod global_quota;
 use crate::portable_envelope::{self, Compatibility, HostCheckpoint};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, TryLockError};
 use std::io;
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -178,11 +180,65 @@ pub(crate) struct Stats {
     pub read_ns: u64,
     pub write_ns: u64,
 }
+/// Take an exclusive lock, retrying a contended lock for a few dozen milliseconds.
+/// A holder that outlives the wait produces [`io::ErrorKind::WouldBlock`].
+pub(super) fn lock_exclusive(file: &File, path: &Path) -> io::Result<()> {
+    let mut pause = Duration::from_millis(1);
+    let mut attempt = 0u32;
+    loop {
+        match file.try_lock() {
+            Ok(()) => return Ok(()),
+            Err(TryLockError::Error(error)) => return Err(error),
+            Err(TryLockError::WouldBlock) if attempt == 5 => {
+                return Err(io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    format!(
+                        "lock acquisition failed because the operation would block ({}){}",
+                        path.display(),
+                        lock_holders(path)
+                    ),
+                ));
+            }
+            Err(TryLockError::WouldBlock) => {
+                attempt += 1;
+                std::thread::sleep(pause);
+                pause = (pause * 2).min(Duration::from_millis(8));
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn lock_holders(path: &Path) -> String {
+    let Ok(metadata) = std::fs::metadata(path) else {
+        return String::new();
+    };
+    let needle = format!(":{} ", metadata.ino());
+    let Ok(table) = std::fs::read_to_string("/proc/locks") else {
+        return format!(" inode={}", metadata.ino());
+    };
+    let hits: Vec<&str> = table
+        .lines()
+        .filter(|line| line.contains(&needle))
+        .take(3)
+        .collect();
+    if hits.is_empty() {
+        format!(" inode={}", metadata.ino())
+    } else {
+        format!(" inode={} {}", metadata.ino(), hits.join(" | "))
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn lock_holders(_path: &Path) -> String {
+    String::new()
+}
+
 pub(crate) struct Store {
     key: Compatibility,
     policy: Policy,
     directory: PathBuf,
-    // Exclusive OS lock isolates cooperative runtimes and is released by process exit.
+    // Exclusive OS lock. Drop unlocks it before the descriptor closes.
     _directory_lock: File,
     _managed_directories: [File; 2],
     entries: BTreeMap<String, Entry>,
@@ -190,6 +246,13 @@ pub(crate) struct Store {
     disk_used: usize,
     clock: u64,
     pub stats: Stats,
+}
+impl Drop for Store {
+    fn drop(&mut self) {
+        // LOCK_UN releases this open-file description even when another
+        // descriptor still refers to it. A replacement store can then open.
+        let _ = self._directory_lock.unlock();
+    }
 }
 impl Store {
     pub fn open(key: Compatibility, policy: Policy) -> io::Result<Self> {
@@ -219,13 +282,12 @@ impl Store {
             use std::os::windows::fs::OpenOptionsExt;
             lock_options.share_mode(0x1 | 0x2).custom_flags(0x00200000);
         }
-        let lock = lock_options.open(lock_path)?;
+        let lock = lock_options.open(&lock_path)?;
         let metadata = lock.metadata()?;
         if linked(&metadata) || !metadata.is_file() {
             return Err(invalid("opened checkpoint lock must not redirect"));
         }
-        lock.try_lock()
-            .map_err(|error| io::Error::new(io::ErrorKind::WouldBlock, error.to_string()))?;
+        lock_exclusive(&lock, &lock_path)?;
         let mut store = Self {
             key,
             policy,
