@@ -1337,7 +1337,7 @@ fn write_gqa4_online(
 #[inline(always)]
 fn exp_fast(x: f32) -> f32 {
     const LN2: f32 = 0.69314718246459961;
-    const INV_LN2: f32 = 1.4426950408889634;
+    const INV_LN2: f32 = std::f32::consts::LOG2_E;
     let x = x.clamp(-80.0, 80.0);
     let n = (x * INV_LN2).round();
     let f = x - n * LN2;
