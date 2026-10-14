@@ -927,6 +927,8 @@ fn mask_sliding_window_scores(scores: &mut [f32], window_start: usize) {
 
 /// Dense F32 attention for every query head at one position.
 /// Queries that share a KV head reuse that head's K and V.
+/// Kept for the grouped-attention test. Decode and prefill use [`write_cpu_attention`].
+#[cfg(test)]
 fn attention_dense_grouped(
     k_layer: &[f32],
     v_layer: &[f32],
@@ -970,16 +972,6 @@ fn attention_dense_grouped(
             }
         }
     }
-}
-
-fn pack_kv_head(layer: &[f32], kv_h: usize, head_dim: usize, stride: usize, seq: usize) -> Vec<f32> {
-    let mut packed = vec![0.0f32; seq * head_dim];
-    for p in 0..seq {
-        let src = p * stride + kv_h * head_dim;
-        packed[p * head_dim..(p + 1) * head_dim]
-            .copy_from_slice(&layer[src..src + head_dim]);
-    }
-    packed
 }
 
 /// One query against dense K laid out as `pos * stride + kv_head * head_dim`.
@@ -1345,7 +1337,7 @@ fn write_gqa4_online(
 #[inline(always)]
 fn exp_fast(x: f32) -> f32 {
     const LN2: f32 = 0.69314718246459961;
-    const INV_LN2: f32 = 1.4426950408889634;
+    const INV_LN2: f32 = std::f32::consts::LOG2_E;
     let x = x.clamp(-80.0, 80.0);
     let n = (x * INV_LN2).round();
     let f = x - n * LN2;
@@ -2528,53 +2520,23 @@ impl LlamaModel {
             }
             let mut attn = vec![0.0f32; n * n_embd];
             let kv_ro: &KvStorage = kv;
-            if let KvStorage::Dense(cache) = kv_ro {
-                let n_rep = cfg.n_head / cfg.n_kv;
-                let total = base_pos + n;
-                for kv_h in 0..cfg.n_kv {
-                    let k_pack =
-                        pack_kv_head(&cache.k[il], kv_h, cfg.head_dim, stride, total);
-                    let v_pack =
-                        pack_kv_head(&cache.v[il], kv_h, cfg.head_dim, stride, total);
-                    let qh0 = kv_h * n_rep;
-                    let group = n_rep * cfg.head_dim;
-                    attn.par_chunks_mut(n_embd).enumerate().for_each(|(t, dst)| {
-                        let pos = base_pos + t;
-                        let q = &q_bank[t * n_embd + qh0 * cfg.head_dim..][..group];
-                        attention_dense_grouped(
-                            &k_pack,
-                            &v_pack,
-                            q,
-                            n_rep,
-                            1,
-                            cfg.head_dim,
-                            cfg.head_dim,
-                            pos,
-                            scale,
-                            cfg.sliding_window_key_start(pos),
-                            &mut dst[qh0 * cfg.head_dim..][..group],
-                        );
-                    });
-                }
-            } else {
-                attn.par_chunks_mut(n_embd)
-                    .enumerate()
-                    .for_each(|(t, dst)| {
-                        let pos = base_pos + t;
-                        write_cpu_attention(
-                            kv_ro,
-                            il,
-                            pos,
-                            cfg.n_head,
-                            cfg.n_kv,
-                            cfg.head_dim,
-                            stride,
-                            &q_bank[t * n_embd..(t + 1) * n_embd],
-                            scale,
-                            cfg.sliding_window_key_start(pos),
-                            dst,
-                        );
-                    });
+            // Same attention as decode. The packed grouped path disagreed with it
+            // on I2_S by enough to flip a 0.019 logit tie.
+            for t in 0..n {
+                let pos = base_pos + t;
+                write_cpu_attention(
+                    kv_ro,
+                    il,
+                    pos,
+                    cfg.n_head,
+                    cfg.n_kv,
+                    cfg.head_dim,
+                    stride,
+                    &q_bank[t * n_embd..(t + 1) * n_embd],
+                    scale,
+                    cfg.sliding_window_key_start(pos),
+                    &mut attn[t * n_embd..(t + 1) * n_embd],
+                );
             }
             if let Some(w) = &layer.attn_sub_norm {
                 for t in 0..n {

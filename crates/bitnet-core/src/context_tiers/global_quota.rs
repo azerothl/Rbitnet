@@ -32,9 +32,13 @@ fn lock_file(path: &Path) -> io::Result<File> {
     if linked(&metadata) || !metadata.is_file() {
         return Err(invalid("opened quota ownership file must not redirect"));
     }
-    file.try_lock()
-        .map_err(|error| io::Error::new(io::ErrorKind::WouldBlock, error.to_string()))?;
+    super::lock_exclusive(&file, path)?;
     Ok(file)
+}
+impl Drop for Guard {
+    fn drop(&mut self) {
+        let _ = self._lock.unlock();
+    }
 }
 
 impl Guard {
