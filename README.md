@@ -4,11 +4,11 @@
   <img src="website/assets/brand/rbitnet-icon-128.png" width="96" height="96" alt="Rbitnet pixel rabbit mark" />
 </p>
 
-Pure Rust **Llama-compatible GGUF inference** and an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`).
+Native Rust **GGUF inference** for Llama-family, BitNet, Qwen, Mixtral, GPT-OSS, GLM-4.7-Flash and Spark-X2.5 models, plus an **OpenAI-compatible HTTP server** for [Akasha](https://github.com/loicpeaudecerf/Akasha) (`BitNetProvider`). Support depends on the exact architecture, tensor layout and backend; see the [architecture matrix](docs/ARCHITECTURE_GGUF_MATRIX.md) and [known limits](docs/LIMITATIONS.md).
 
 ## Where Rbitnet fits
 
-Train with [Unsloth](https://unsloth.ai/docs), [TRL](https://huggingface.co/docs/trl/sft_trainer), or Hugging Face, export a supported GGUF, then serve it with Rbitnet. The native Rust engine loads Llama, BitNet, dense Qwen3 and Mixtral exports within the [documented architecture limits](docs/LIMITATIONS.md). Serving needs no Python, PyTorch or llama.cpp inference engine.
+Train with [Unsloth](https://unsloth.ai/docs), [TRL](https://huggingface.co/docs/trl/sft_trainer), or Hugging Face, export a supported GGUF, then serve it with Rbitnet. Native paths cover Llama-family, BitNet, dense Qwen3 and Qwen3.5, Mixtral, GPT-OSS, GLM-4.7-Flash and Spark-X2.5 exports. Real-model validation and backend coverage vary by family; consult the [architecture matrix](docs/ARCHITECTURE_GGUF_MATRIX.md) and [documented limits](docs/LIMITATIONS.md) before choosing a checkpoint. Serving needs no Python, PyTorch or llama.cpp inference engine.
 
 | Stage | Owner |
 |-------|-------|
@@ -103,7 +103,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
 
 ## Status
 
-- **bitnet-core**: GGUF parse, GGML dequantization, Llama/Qwen3-shaped forward paths, native BitNet GGUF path, mmap quantized matvec, CPU parallel quant kernels, scratch arena reuse, paged/quantized KV cache hooks, hybrid CPU/GPU offload planning, structured-output sampling mask, and optional toy LM.
+- **bitnet-core**: GGUF parsing and native paths for Llama-family, BitNet, dense Qwen3/Qwen3.5, Mixtral, GPT-OSS, GLM-4.7-Flash and Spark-X2.5. Optional LLaVA-class image input requires an `mmproj`; model and backend limits are listed in [LIMITATIONS.md](docs/LIMITATIONS.md). The engine also includes quantized CPU matvecs, model-specific CUDA paths, paged/quantized KV options, hybrid placement, speculative hooks and an optional toy LM. Structured JSON/tool generation is not implemented and returns HTTP 501.
 - **bitnet-server** (`rbitnet-server`): OpenAI-compatible API; `GET /health`, `GET /ready`, `GET /metrics`; `GET /`, `GET /ui`, `GET /v1/models`, `POST /v1/chat/completions` (JSON + SSE), `POST /v1/admin/unload`, and `POST /v1/admin/reload`. Supports runtime model reload without stopping the HTTP process.
 - **rbitnet CLI** (`rbitnet`): curated model list/search/download/install, `quickstart`, `up`, `serve`, local web UI launcher, and terminal chatbot TUI via `rbitnet chat`.
 - **Docs (English)**:
@@ -116,15 +116,17 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
   - **[CHANGELOG.md](CHANGELOG.md)** — release-facing changes (Keep a Changelog style)
   - **[docs/STATUS_AND_ROADMAP.md](docs/STATUS_AND_ROADMAP.md)** — what is implemented vs missing, next todos
   - **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — consolidated `RBITNET_`* variables
-  - **[docs/LOCAL_PERFORMANCE_2026-05-12.md](docs/LOCAL_PERFORMANCE_2026-05-12.md)** — local CPU/CUDA/hybrid performance notes and post-optimization comparison
+  - **[docs/ARCHITECTURE_GGUF_MATRIX.md](docs/ARCHITECTURE_GGUF_MATRIX.md)** — architecture dispatch, validation coverage and model-layout limits
+  - **[docs/PERFORMANCE_CACHE_STACK.md](docs/PERFORMANCE_CACHE_STACK.md)** — current cache, CUDA and performance decisions with links to dated ablations
+  - **[docs/LOCAL_PERFORMANCE_2026-05-12.md](docs/LOCAL_PERFORMANCE_2026-05-12.md)** — historical local CPU/CUDA/hybrid snapshot
   - **[docs/NATIVE_FIRST.md](docs/NATIVE_FIRST.md)** — politique native-first: aucun moteur d'inference externe requis
   - **[docs/GPU_NATIVE_ROADMAP.md](docs/GPU_NATIVE_ROADMAP.md)** — feuille de route GPU native dans `bitnet-core`
   - [docs/BITNET_SPEC.md](docs/BITNET_SPEC.md) — format / metadata expectations
   - [docs/GOLDEN_TESTS.md](docs/GOLDEN_TESTS.md) — golden / regression testing
   - [docs/MODEL_TESTING.md](docs/MODEL_TESTING.md) — HF `bitnet_b1_58-large` and GGUF conversion
-  - [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) — curated reference models (TinyLlama Q4 measured; others TBD) + reproduction commands
+  - [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) — curated reference models, their verification status and reproduction commands
   - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — how to record kernel and HTTP benchmarks
-  - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only results (**real TinyLlama CPU row** + stub smokes)
+  - [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) — append-only benchmark history; each row distinguishes real-model measurements from stubs and unit checks
   - [docs/RELEASE_PACKAGING.md](docs/RELEASE_PACKAGING.md) — WinGet/Homebrew release checklist
   - [docs/FUTURE_DIFFERENTIATION.md](docs/FUTURE_DIFFERENTIATION.md) — French future differentiation backlog
   - [docs/PROFILING.md](docs/PROFILING.md) — CPU profiling checklist (Phase 2)
@@ -136,7 +138,7 @@ docker run --rm -e RBITNET_MODEL=/model/model.gguf -e RBITNET_TOKENIZER=/model/t
 
 ## Works Today
 
-Rbitnet runs **Llama-architecture GGUF** models and now has a native BitNet GGUF path for Llama-shaped BitNet b1.58 / ternary exports tagged with `general.architecture=bitnet`. The first curated target is the Microsoft `microsoft-bitnet-b1.58-2b-4t` bundle; see [docs/BITNET_NATIVE.md](docs/BITNET_NATIVE.md) and [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+Rbitnet supports multiple native GGUF architecture paths; it is not limited to Llama-shaped models. The first curated BitNet target is Microsoft's `microsoft-bitnet-b1.58-2b-4t` bundle. Exact tensor layouts, backend availability and real-model validation differ by family, so check [docs/ARCHITECTURE_GGUF_MATRIX.md](docs/ARCHITECTURE_GGUF_MATRIX.md) and [docs/LIMITATIONS.md](docs/LIMITATIONS.md). For BitNet installation and setup, see [docs/BITNET_NATIVE.md](docs/BITNET_NATIVE.md).
 
 Recent inference-engine features include:
 
@@ -146,7 +148,7 @@ Recent inference-engine features include:
 - `RBITNET_PREFILL_CHUNK_TOKENS`, `RBITNET_CONTINUOUS_BATCHING` + `RBITNET_ITERATION_TOKEN_BUDGET` (Sarathi stall-free), speculative draft hooks (`RBITNET_DRAFT_PATH`), and experimental JSON/tool sampler hooks (`RBITNET_STRUCTURED_OUTPUT`); structured generation returns HTTP 501 until a tokenizer-aware grammar is validated.
 - Runtime admin reload through `POST /v1/admin/reload`, useful for switching models/configs while the server stays up.
 
-Concrete public GGUF repos verified through the Hugging Face model API as `gguf.architecture=llama`:
+Examples of public Llama-family GGUF repos checked through the Hugging Face model API (`gguf.architecture=llama`):
 
 - `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` with `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf` (small CPU smoke model).
 - `unsloth/Llama-3.2-1B-Instruct-GGUF` with `Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
@@ -282,7 +284,7 @@ Reload metrics are exposed as `rbitnet_model_reloads_total`, `rbitnet_model_relo
 
 ## Benchmarks
 
-Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for appended rows (including the **2026-09-30 TinyLlama Q4_K_M CPU** throughput/RSS measurement). The helper scripts start a stub server by default for API-overhead smoke checks; for real numbers, start a model yourself and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`, or `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. Reference models: [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md).
+Use [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the procedure and [docs/BENCHMARKS_RESULTS.md](docs/BENCHMARKS_RESULTS.md) for dated results. Rows may cover real GGUF runs, unit checks or stub-only HTTP measurements; read each row's method before comparing. The helper scripts start a stub server by default for API-overhead smoke checks. For real throughput numbers, start a model and run `scripts/bench_matrix.*` with `NO_START_SERVER=1` / `-NoStartServer`, or use `scripts/compare_llamacpp_rbitnet.sh` when `llama-bench` is available. See [docs/MODEL_MATRIX.md](docs/MODEL_MATRIX.md) for reference models.
 
 ## Inspect a GGUF
 
@@ -339,7 +341,7 @@ Rbitnet is the **local OpenAI-compatible** backend in the Akasha multi-reference
 | `RBITNET_TOKENIZER` | Path to `tokenizer.json` or `tokenizer.model` if not beside the GGUF |
 | `RBITNET_STUB` | `1` = stub text (no inference) |
 | `RBITNET_TOY` | `1` = tiny in-process F32 toy LM (no GGUF) |
-| `RBITNET_BACKEND` | default `auto` (CUDA→ROCm→CPU; CPU for Qwen3/Mixtral); explicit `cpu` / `cuda` / `hybrid` / `rocm`. Vulkan/Metal/Intel GPU inference is not implemented and GGUF loading refuses it. |
+| `RBITNET_BACKEND` | `auto` selects an available backend for the architecture; explicit `cpu` / `cuda` / `hybrid` / `rocm` paths have model-specific limits. Vulkan/Metal/Intel GPU inference is not implemented. See [LIMITATIONS.md](docs/LIMITATIONS.md). |
 | `RBITNET_QUANT_KERNEL` | `auto`, `scalar`, or `cuda` quantized matvec backend |
 | `RBITNET_HYBRID_POLICY` | `layers`, `hotcold`, or `auto` layer offload policy |
 | `RBITNET_LLAMA_PAGED_KV` / `RBITNET_KV_QUANT` | Enable paged KV and choose `off`, `q8`, or `q4` KV format |
