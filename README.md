@@ -53,60 +53,42 @@ Optional helper: `[scripts/setup_env.py](scripts/setup_env.py)` — download HF 
 
 ## Installation
 
-### Windows
+The installer downloads the latest tagged release. It does not clone the repository and it does not require Rust.
 
-From any directory (downloads the installer; Git and Rust are required):
+### Windows
 
 ```powershell
 irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 ```
 
-From an existing checkout, at the repository root:
+Binaries and `compatible_models.json` go in `%LOCALAPPDATA%\Rbitnet`, which is added to the user PATH. Open a new terminal, then `rbitnet --version`.
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\scripts\install.ps1
-```
-
-Tagged releases publish Windows zip assets named like `rbitnet-server-vX.Y.Z-windows-x86_64.zip` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). The zip contains both `rbitnet.exe` and `rbitnet-server.exe`.
-
-WinGet is prepared as a submission template at `[packaging/winget/Rbitnet.Rbitnet.yaml](packaging/winget/Rbitnet.Rbitnet.yaml)` (**experimental** until real release SHA-256 values replace placeholders). After replacing `PackageVersion`, `InstallerUrl`, and `InstallerSha256` for a tagged release, install/test locally with WinGet tooling or submit it to `microsoft/winget-pkgs`:
-
-```powershell
-winget install --manifest .\packaging\winget\Rbitnet.Rbitnet.yaml
+.\scripts\install.ps1 -Version 0.2.0
+.\scripts\install.ps1 -Uninstall
 ```
 
 ### macOS / Linux
-
-Build from a checkout:
-
-```bash
-./scripts/install.sh
-```
-
-Or install the CLI from the default branch with a curl script (requires Rust/Cargo and git):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
 ```
 
-Tagged releases publish tarballs named like `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz` (unified **server+CLI** archive). A documented Homebrew tap formula template lives at `[packaging/homebrew/rbitnet.rb](packaging/homebrew/rbitnet.rb)` (**experimental** / not homebrew-core). After replacing the release URLs and `sha256` values:
+Binaries and `compatible_models.json` go in `~/.local/share/rbitnet`. The script appends that directory to `PATH` in `~/.profile`, `~/.bashrc` and `~/.zprofile`. Open a new terminal, then `rbitnet --version`.
 
 ```bash
-brew install --formula ./packaging/homebrew/rbitnet.rb
+./scripts/install.sh --version 0.2.0
+./scripts/install.sh --uninstall
 ```
 
-For a future tap, copy the formula into a tap repo and use:
+Release archives are `rbitnet-server-vX.Y.Z-windows-x86_64.zip`, `rbitnet-server-vX.Y.Z-linux-x86_64.tar.gz` and `rbitnet-server-vX.Y.Z-macos-arm64.tar.gz` on [GitHub Releases](https://github.com/azerothl/Rbitnet/releases). Each archive contains `rbitnet`, `rbitnet-server`, `rbitnet-runner` and `rbitnet-proxy`.
+
+### Build from source
+
+Developers with a checkout can compile the CLI and server:
 
 ```bash
-brew tap <owner>/rbitnet
-brew install rbitnet
-```
-
-Direct install from the working tree remains:
-
-```bash
-cargo install --path crates/rbitnet-cli --locked
+cargo build -p bitnet-server -p rbitnet-cli -p rbitnet-runner -p rbitnet-proxy --release --locked
 ```
 
 ### Docker
@@ -179,10 +161,10 @@ rbitnet recipe recipes/bitnet-b158.recipe.json
 # or: rbitnet tune bitnet-cpu && rbitnet serve
 ```
 
-Install the CLI, pull a tagged starter model, then serve (≤3 commands):
+Install the release, pull a tagged starter model, then serve:
 
 ```bash
-cargo install --path crates/rbitnet-cli
+curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.sh | sh
 rbitnet models install tinyllama:q4 --dir ./models
 rbitnet up tinyllama:q4 --dir ./models
 rbitnet serve

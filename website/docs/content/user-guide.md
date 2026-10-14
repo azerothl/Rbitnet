@@ -18,7 +18,7 @@ curl -fsSL https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/insta
 irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
 ```
 
-Git and Rust are required. From a clone of this repository, `.\scripts\install.ps1` at the repository root does the same thing.
+The installer downloads the latest release. Rust and a git checkout are not required. Open a new terminal after it finishes.
 
 You can also download `rbitnet.exe` and `rbitnet-server.exe` from the [GitHub releases](https://github.com/azerothl/Rbitnet/releases) page (tag `v0.2.0` and later).
 

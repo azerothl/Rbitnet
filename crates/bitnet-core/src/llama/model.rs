@@ -1215,6 +1215,7 @@ thread_local! {
         RefCell::new((Vec::new(), Vec::new(), Vec::new()));
 }
 
+#[cfg(target_arch = "x86_64")]
 fn write_gqa4_online(
     cache: &KvCache,
     il: usize,

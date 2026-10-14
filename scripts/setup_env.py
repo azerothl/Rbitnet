@@ -170,7 +170,7 @@ def cmd_doctor(_: argparse.Namespace) -> None:
     if rbn:
         print(f"rbitnet-server in PATH: {rbn}")
     else:
-        print("rbitnet-server: not in PATH (cargo install or use target/release/)")
+        print("rbitnet-server: not in PATH (release installer, or target/release/ from a checkout)")
 
 
 def main() -> None:

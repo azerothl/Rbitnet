@@ -1,0 +1,71 @@
+# Build the release binaries on the macOS arm64 runner and run the closure checks
+# outside the checkout. This does not publish a GitHub Release.
+
+name: macOS arm64 build
+
+on:
+  push:
+    branches:
+      - feat/install-release-190
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Apple Silicon
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: macos-arm64
+
+      - name: Build release binaries
+        run: cargo build -p bitnet-server -p rbitnet-cli -p rbitnet-runner -p rbitnet-proxy --release --locked
+
+      - name: Smoke outside the checkout
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/rbitnet-smoke"
+          mkdir -p "$dest"
+          cp target/release/rbitnet target/release/rbitnet-server \
+            target/release/rbitnet-runner target/release/rbitnet-proxy \
+            data/compatible_models.json "$dest/"
+          cd /tmp
+          "$dest/rbitnet" --version
+          "$dest/rbitnet-server" --version
+          out="$(HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 ALL_PROXY=http://127.0.0.1:9 \
+            "$dest/rbitnet" quickstart bitnet:2b --no-download --dir "${RUNNER_TEMP}/models" 2>&1)"
+          printf '%s\n' "$out"
+          printf '%s\n' "$out" | grep -F 'microsoft/bitnet-b1.58-2B-4T-gguf'
+          printf '%s\n' "$out" | grep -F 'ggml-model-i2_s.gguf'
+          if printf '%s\n' "$out" | grep -F 'bitnet%3A2b'; then
+            echo "quickstart requested bitnet%3A2b" >&2
+            exit 1
+          fi
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          cd target/release
+          cp ../../data/compatible_models.json compatible_models.json
+          tar czvf ../../rbitnet-server-ci-macos-arm64.tar.gz \
+            rbitnet-server rbitnet rbitnet-runner rbitnet-proxy compatible_models.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: rbitnet-server-ci-macos-arm64.tar.gz
+          if-no-files-found: error

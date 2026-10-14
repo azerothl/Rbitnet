@@ -23,7 +23,7 @@ For the full runtime guide see [USAGE.md](USAGE.md). Env index: [ENV_REFERENCE.m
    irm https://raw.githubusercontent.com/azerothl/Rbitnet/main/scripts/install.ps1 | iex
    ```
 
-   Git and Rust are required. From a clone, `.\scripts\install.ps1` at the repository root does the same thing.
+   The installer downloads the latest release. Rust and a git checkout are not required. Open a new terminal after it finishes.
 
 2. **Download** a starter model (stable tag or catalog id):
 
