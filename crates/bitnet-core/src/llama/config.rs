@@ -17,6 +17,8 @@ pub struct LlamaConfig {
     /// rope_rot_dims` are left unchanged (matches `ggml_compute_forward_rope` when `n_dims < ne0`).
     pub rope_rot_dims: usize,
     pub rope_theta: f32,
+    /// `LLAMA_ROPE_TYPE_NEOX`: pairs are `(i, i + head_dim/2)`. BitNet uses this; Llama uses adjacent pairs.
+    pub rope_neox: bool,
     pub norm_eps: f32,
     pub max_seq: usize,
     /// When set (e.g. Mistral-family GGUF `llama.attention.sliding_window`), attention masks keys
@@ -59,22 +61,57 @@ impl LlamaConfig {
 
         let n_embd = h
             .embedding_length
-            .or_else(|| metadata_u32_any(archive, &["bitnet.embedding_length"]))
-            .ok_or_else(|| BitNetError::Inference("missing llama.embedding_length".into()))?
+            .or_else(|| {
+                metadata_u32_any(
+                    archive,
+                    &["bitnet.embedding_length", "bitnet-b1.58.embedding_length"],
+                )
+            })
+            .ok_or_else(|| {
+                BitNetError::Inference(
+                    "missing embedding_length (llama.* / bitnet.* / bitnet-b1.58.*)".into(),
+                )
+            })?
             as usize;
         let n_layer = h
             .block_count
-            .or_else(|| metadata_u32_any(archive, &["bitnet.block_count"]))
-            .ok_or_else(|| BitNetError::Inference("missing llama.block_count".into()))?
+            .or_else(|| {
+                metadata_u32_any(archive, &["bitnet.block_count", "bitnet-b1.58.block_count"])
+            })
+            .ok_or_else(|| {
+                BitNetError::Inference(
+                    "missing block_count (llama.* / bitnet.* / bitnet-b1.58.*)".into(),
+                )
+            })?
             as usize;
         let n_head = h
             .head_count
-            .or_else(|| metadata_u32_any(archive, &["bitnet.attention.head_count"]))
-            .ok_or_else(|| BitNetError::Inference("missing llama.attention.head_count".into()))?
+            .or_else(|| {
+                metadata_u32_any(
+                    archive,
+                    &[
+                        "bitnet.attention.head_count",
+                        "bitnet-b1.58.attention.head_count",
+                    ],
+                )
+            })
+            .ok_or_else(|| {
+                BitNetError::Inference(
+                    "missing attention.head_count (llama.* / bitnet.* / bitnet-b1.58.*)".into(),
+                )
+            })?
             as usize;
         let n_kv = h
             .head_count_kv
-            .or_else(|| metadata_u32_any(archive, &["bitnet.attention.head_count_kv"]))
+            .or_else(|| {
+                metadata_u32_any(
+                    archive,
+                    &[
+                        "bitnet.attention.head_count_kv",
+                        "bitnet-b1.58.attention.head_count_kv",
+                    ],
+                )
+            })
             .map(|v| v as usize)
             .unwrap_or(n_head);
         if n_head == 0 || n_kv == 0 || n_head % n_kv != 0 {
@@ -94,7 +131,14 @@ impl LlamaConfig {
             ));
         }
 
-        let mut rope_rot_dims = metadata_u32_any(archive, &["llama.rope.dimension_count"])
+        let mut rope_rot_dims = metadata_u32_any(
+            archive,
+            &[
+                "llama.rope.dimension_count",
+                "bitnet.rope.dimension_count",
+                "bitnet-b1.58.rope.dimension_count",
+            ],
+        )
             .map(|v| v as usize)
             .unwrap_or(head_dim)
             .min(head_dim);
@@ -111,13 +155,27 @@ impl LlamaConfig {
         let n_ff = m
             .get("llama.feed_forward_length")
             .and_then(u32_val)
-            .or_else(|| metadata_u32_any(archive, &["bitnet.feed_forward_length"]))
-            .ok_or_else(|| BitNetError::Inference("missing llama.feed_forward_length".into()))?
+            .or_else(|| {
+                metadata_u32_any(
+                    archive,
+                    &[
+                        "bitnet.feed_forward_length",
+                        "bitnet-b1.58.feed_forward_length",
+                    ],
+                )
+            })
+            .ok_or_else(|| {
+                BitNetError::Inference(
+                    "missing feed_forward_length (llama.* / bitnet.* / bitnet-b1.58.*)".into(),
+                )
+            })?
             as usize;
 
         let n_vocab = h
             .vocab_size
-            .or_else(|| metadata_u32_any(archive, &["bitnet.vocab_size"]))
+            .or_else(|| {
+                metadata_u32_any(archive, &["bitnet.vocab_size", "bitnet-b1.58.vocab_size"])
+            })
             .map(|v| v as usize)
             .or_else(|| {
                 archive
@@ -136,7 +194,12 @@ impl LlamaConfig {
         let rope_theta = m
             .get("llama.rope.freq_base")
             .and_then(f32_val)
-            .or_else(|| metadata_f32_any(archive, &["bitnet.rope.freq_base"]))
+            .or_else(|| {
+                metadata_f32_any(
+                    archive,
+                    &["bitnet.rope.freq_base", "bitnet-b1.58.rope.freq_base"],
+                )
+            })
             .unwrap_or(10_000.0);
 
         let norm_eps = m
@@ -148,6 +211,8 @@ impl LlamaConfig {
                     &[
                         "bitnet.attention.layer_norm_rms_epsilon",
                         "bitnet.attention.layer_norm_epsilon",
+                        "bitnet-b1.58.attention.layer_norm_rms_epsilon",
+                        "bitnet-b1.58.attention.layer_norm_epsilon",
                     ],
                 )
             })
@@ -155,7 +220,12 @@ impl LlamaConfig {
 
         let max_seq = crate::context_capacity::capacity_from_env(
             h.context_length
-                .or_else(|| metadata_u32_any(archive, &["bitnet.context_length"]))
+                .or_else(|| {
+                    metadata_u32_any(
+                        archive,
+                        &["bitnet.context_length", "bitnet-b1.58.context_length"],
+                    )
+                })
                 .map(|n| n as usize)
                 .unwrap_or(2048),
             8192,
@@ -165,6 +235,9 @@ impl LlamaConfig {
         let sliding_window = metadata_u32_any(archive, &["llama.attention.sliding_window"])
             .map(|w| w as usize)
             .filter(|&w| w > 0);
+        let rope_neox = archive.normalized_architecture().is_some_and(|arch| {
+            matches!(arch.as_str(), "bitnet" | "bitnet-b1.58")
+        });
 
         Ok(Self {
             n_embd,
@@ -176,6 +249,7 @@ impl LlamaConfig {
             head_dim,
             rope_rot_dims,
             rope_theta,
+            rope_neox,
             norm_eps,
             max_seq,
             sliding_window,

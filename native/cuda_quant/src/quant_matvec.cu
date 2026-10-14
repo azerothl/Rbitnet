@@ -33,7 +33,7 @@ __device__ __forceinline__ void get_scale_min_k4(int j, const uint8_t *q, uint8_
     }
 }
 
-enum class QuantKind { F32, Q4_0, Q5_0, Q8_0, Q4_K, Q5_K, Q6_K, MXFP4 };
+enum class QuantKind { F32, Q4_0, Q5_0, Q8_0, Q4_K, Q5_K, Q6_K, MXFP4, TQ2_0 };
 
 // Each warp cooperates on one output row instead of serializing all columns in one thread.
 template<QuantKind kind>
@@ -189,6 +189,7 @@ void launch_quant_kernel(QuantKind kind, const void *w, size_t row_bytes,
     switch(kind) {
         LAUNCH_QUANT(F32); LAUNCH_QUANT(Q4_0); LAUNCH_QUANT(Q5_0); LAUNCH_QUANT(Q8_0);
         LAUNCH_QUANT(Q4_K); LAUNCH_QUANT(Q5_K); LAUNCH_QUANT(Q6_K); LAUNCH_QUANT(MXFP4);
+        case QuantKind::TQ2_0: break;
     }
 #undef LAUNCH_QUANT
 }
@@ -233,11 +234,115 @@ struct Scratch {
     float *d_x = nullptr;
     float *d_y = nullptr;
     uint8_t *d_w = nullptr;
+    int8_t *d_qs = nullptr;
+    float *d_ad = nullptr;
     size_t cap_x = 0;
     size_t cap_y = 0;
     size_t cap_w = 0;
-    ~Scratch() { if (d_x) cudaFree(d_x); if (d_y) cudaFree(d_y); if (d_w) cudaFree(d_w); }
+    size_t cap_qs = 0;
+    size_t cap_ad = 0;
+    ~Scratch() {
+        if (d_x) cudaFree(d_x);
+        if (d_y) cudaFree(d_y);
+        if (d_w) cudaFree(d_w);
+        if (d_qs) cudaFree(d_qs);
+        if (d_ad) cudaFree(d_ad);
+    }
 };
+
+// llama.cpp nearest_int. The add must stay a separate rounding from the
+// product: nvcc's default FMA contraction changes a code by 1 and moves the
+// BitNet long-4 tie.
+__device__ __forceinline__ int ggml_nearest_int(float fval) {
+    const float shifted = __fadd_rn(fval, 12582912.0f);
+    const int bits = __float_as_int(shifted);
+    return (bits & 0x007fffff) - 0x00400000;
+}
+
+// One thread owns one block of 256 so the signed peak keeps the earliest tie.
+__global__ void quantize_q8k_kernel(const float *x, int8_t *qs, float *d, size_t nb) {
+    size_t i = size_t(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i >= nb) return;
+    const float *xb = x + i * 256;
+    float maxv = 0.0f, amax = 0.0f;
+    for (int k = 0; k < 256; ++k) {
+        float v = xb[k];
+        float a = fabsf(v);
+        if (a > amax) {
+            amax = a;
+            maxv = v;
+        }
+    }
+    int8_t *q = qs + i * 256;
+    if (amax == 0.0f) {
+        d[i] = 0.0f;
+        for (int k = 0; k < 256; ++k) q[k] = 0;
+        return;
+    }
+    float iscale = __fdiv_rn(-127.0f, maxv);
+    for (int k = 0; k < 256; ++k) {
+        int rounded = ggml_nearest_int(__fmul_rn(iscale, xb[k]));
+        if (rounded > 127) rounded = 127;
+        q[k] = static_cast<int8_t>(rounded);
+    }
+    d[i] = __fdiv_rn(1.0f, iscale);
+}
+
+// Match `dot_tq2_q8k_avx2`: eight i32 partials per 256-block, each scaled and
+// added, then the same horizontal tree as `hsum256`. A single int32 sum is
+// exact as an integer and still moves the BitNet long-4 logit tie.
+__global__ void tq2_q8k_matvec_kernel(const uint8_t *w, size_t row_bytes,
+    const int8_t *qs, const float *ad, size_t x_len, size_t ne1,
+    size_t rows_per_batch, float *y) {
+    const size_t row = (size_t(blockIdx.x) * blockDim.x + threadIdx.x) / 32;
+    if (row >= ne1) return;
+    const int lane = threadIdx.x & 31;
+    const size_t batch = row / rows_per_batch;
+    const int8_t *row_q = qs + batch * x_len;
+    const float *row_d = ad + batch * (x_len / 256);
+    const uint8_t *weights = w + row * row_bytes;
+    float sumf = 0.0f;
+    for (size_t block = 0; block < x_len / 256; ++block) {
+        const uint8_t *b = weights + block * 66;
+        const int8_t *q = row_q + block * 256;
+        int acc = 0;
+        int bsum = 0;
+        if (lane < 16) {
+            #pragma unroll
+            for (int half = 0; half < 2; ++half) {
+                const int code_base = half * 32;
+                const int q_base = half * 128;
+                #pragma unroll
+                for (int plane = 0; plane < 4; ++plane) {
+                    const int cb = code_base + 2 * lane;
+                    const int q0 = q_base + plane * 32 + 2 * lane;
+                    const int c0 = (b[cb] >> (plane * 2)) & 3;
+                    const int c1 = (b[cb + 1] >> (plane * 2)) & 3;
+                    acc += c0 * int(q[q0]) + c1 * int(q[q0 + 1]);
+                }
+            }
+            const int qg = lane * 16;
+            #pragma unroll
+            for (int t = 0; t < 16; ++t) bsum += int(q[qg + t]);
+        }
+        const int diff = acc - bsum;
+        const int neighbor = __shfl_sync(0xffffffff, diff, lane < 16 && (lane & 1) == 0 ? lane + 1 : lane);
+        const int paired = diff + neighbor;
+        const int partial = __shfl_sync(0xffffffff, paired, lane < 8 ? lane * 2 : 0);
+        if (lane < 8) {
+            const float wscale = fp16_bits_to_f32(*reinterpret_cast<const uint16_t *>(b + 64));
+            const float scale = __fmul_rn(row_d[block], wscale);
+            sumf = __fadd_rn(sumf, __fmul_rn(float(partial), scale));
+        }
+    }
+    float v = lane < 8 ? sumf : 0.0f;
+    const float hi = __shfl_xor_sync(0xffffffff, v, 4);
+    if (lane < 4) v = __fadd_rn(v, hi);
+    const float hi2 = __shfl_xor_sync(0xffffffff, v, 2);
+    if (lane < 2) v = __fadd_rn(v, hi2);
+    const float hi3 = __shfl_xor_sync(0xffffffff, v, 1);
+    if (lane == 0) y[row] = __fadd_rn(v, hi3);
+}
 
 thread_local Scratch g_scratch;
 
@@ -260,6 +365,22 @@ bool ensure(size_t need, void **ptr, size_t *cap) {
     return true;
 }
 
+int launch_tq2_q8k(const void *d_w, size_t row_bytes, const float *d_x,
+    size_t x_len, size_t rows, size_t rows_per_batch, float *d_y) {
+    if (x_len % 256 != 0 || rows_per_batch == 0 || rows % rows_per_batch != 0) return 12;
+    const size_t batches = rows / rows_per_batch;
+    const size_t nb = (x_len / 256) * batches;
+    if (!ensure(x_len * batches, reinterpret_cast<void **>(&g_scratch.d_qs), &g_scratch.cap_qs)) return 13;
+    if (!ensure(nb * sizeof(float), reinterpret_cast<void **>(&g_scratch.d_ad), &g_scratch.cap_ad)) return 14;
+    quantize_q8k_kernel<<<int(nb), 1>>>(d_x, g_scratch.d_qs, g_scratch.d_ad, nb);
+    const int threads = 256;
+    const int blocks = int((rows + 7) / 8);
+    tq2_q8k_matvec_kernel<<<blocks, threads>>>(
+        static_cast<const uint8_t *>(d_w), row_bytes, g_scratch.d_qs, g_scratch.d_ad,
+        x_len, rows, rows_per_batch, d_y);
+    return 0;
+}
+
 int launch_device_w(
     QuantKind kind,
     const void *d_w,
@@ -280,7 +401,12 @@ int launch_device_w(
     if (cudaMemcpy(g_scratch.d_x, x, x_len * batches * sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess) {
         return 4;
     }
-    launch_quant_kernel(kind,d_w,row_bytes,g_scratch.d_x,x_len,ne1*batches,ne1,g_scratch.d_y);
+    if (kind == QuantKind::TQ2_0) {
+        int status = launch_tq2_q8k(d_w, row_bytes, g_scratch.d_x, x_len, ne1 * batches, ne1, g_scratch.d_y);
+        if (status != 0) return status;
+    } else {
+        launch_quant_kernel(kind,d_w,row_bytes,g_scratch.d_x,x_len,ne1*batches,ne1,g_scratch.d_y);
+    }
     if (cudaGetLastError() != cudaSuccess) {
         return 5;
     }
@@ -376,6 +502,12 @@ int rbitnet_cuda_mxfp4_matvec(const void *w, size_t row_bytes, const float *x, s
 int rbitnet_cuda_mxfp4_matvec_device(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y) {
     return launch_device_w(QuantKind::MXFP4, w, row_bytes, x, x_len, ne1, y);
 }
+int rbitnet_cuda_tq2_0_matvec(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y) {
+    return launch_host_w(QuantKind::TQ2_0, w, row_bytes, x, x_len, ne1, y);
+}
+int rbitnet_cuda_tq2_0_matvec_device(const void *w, size_t row_bytes, const float *x, size_t x_len, size_t ne1, float *y) {
+    return launch_device_w(QuantKind::TQ2_0, w, row_bytes, x, x_len, ne1, y);
+}
 int rbitnet_cuda_quant_matvec_batch_device(unsigned ty, const void *w, size_t row_bytes,
     const float *x, size_t cols, size_t rows, size_t batches, float *y) {
     QuantKind kind;
@@ -384,6 +516,7 @@ int rbitnet_cuda_quant_matvec_batch_device(unsigned ty, const void *w, size_t ro
         case 6: kind=QuantKind::Q5_0;break; case 8: kind=QuantKind::Q8_0;break;
         case 12: kind=QuantKind::Q4_K;break; case 13: kind=QuantKind::Q5_K;break;
         case 14: kind=QuantKind::Q6_K;break; case 39: kind=QuantKind::MXFP4;break;
+        case 35: kind=QuantKind::TQ2_0;break;
         default: return 10;
     }
     if (batches==0) return 11;
@@ -467,7 +600,9 @@ extern "C" int rbitnet_cuda_quant_gemm_device(unsigned type,const void *weights,
     const float *input,unsigned columns,unsigned rows,unsigned tokens,float *output) {
     RbitnetLlamaMatrix m={weights,row_bytes,type,columns,rows};QuantKind kind;
     if(!input || !output || !tokens || !columns || !rows || !qwen_matrix_valid(m,columns,rows) || !resident_kind(type,kind))return 1;
-    launch_prefill_gemm(kind,weights,row_bytes,input,columns,rows,tokens,output,nullptr);
+    const bool tf32 = tf32_prefill_supported() && use_tf32_prefill(columns, rows, tokens, true);
+    if(tf32) launch_prefill_tf32(kind,weights,row_bytes,input,columns,rows,tokens,output,nullptr);
+    else launch_prefill_gemm(kind,weights,row_bytes,input,columns,rows,tokens,output,nullptr,false);
     return cudaGetLastError()==cudaSuccess && cudaDeviceSynchronize()==cudaSuccess ? 0 : 2;
 }
 
@@ -495,6 +630,7 @@ extern "C" int rbitnet_cuda_quant_gemm_check(unsigned type,const void *weights,s
         && cudaStreamSynchronize(buffers.stream)==cudaSuccess ? 0 : 7;
 }
 
+#include "qwen3_chunk.cuh"
 #include "kv_attention_oracle.cuh"
 #include "llama_batch.cuh"
 #include "portable_state.cuh"

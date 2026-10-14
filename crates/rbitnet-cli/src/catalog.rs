@@ -123,9 +123,8 @@ pub fn load_local_catalog() -> Option<Catalog> {
 }
 
 /// `org/name` is a Hub repo. A catalog tag such as `bitnet:2b` is not.
-#[cfg(test)]
 #[must_use]
-fn looks_like_hub_repo(refer: &str) -> bool {
+pub fn looks_like_hub_repo(refer: &str) -> bool {
     let key = refer.trim();
     let mut parts = key.split('/');
     match (parts.next(), parts.next(), parts.next()) {
@@ -139,6 +138,14 @@ fn looks_like_hub_repo(refer: &str) -> bool {
         }
         _ => false,
     }
+}
+
+#[must_use]
+pub fn unknown_catalog_ref_message(catalog: &Catalog, refer: &str) -> String {
+    format!(
+        "unknown model ref '{refer}'. Expected a catalog tag or a Hugging Face repo org/name.\nKnown tags:\n{}",
+        format_stable_tags(catalog)
+    )
 }
 
 /// Resolve a user ref: catalog `id`, stable `tag`, or return `None` (treat as Hub repo id).

@@ -23,7 +23,7 @@ fn cuda_quant_types_match_optional_kernel_abi() {
     assert!(ggml_type_supports_cuda_quant(8));
     assert!(ggml_type_supports_cuda_quant(12));
     assert!(ggml_type_supports_cuda_quant(14));
-    for ty in [0, 6, 13, 39] {
+    for ty in [0, 6, 13, 35, 39] {
         assert!(ggml_type_supports_cuda_quant(ty));
     }
     assert!(!ggml_type_supports_cuda_quant(1));
@@ -234,4 +234,185 @@ fn opt_in_all_formats_views_batches_and_concurrent_calls() {
             }
         });
     }
+}
+
+#[test]
+fn tq2_cuda_q8k_matches_cpu_dot() {
+    if std::env::var("RBITNET_CUDA_QUANT_SMOKE").ok().as_deref() != Some("1") {
+        return;
+    }
+    let rt = bitnet_core::CudaRuntime::try_load().expect("CUDA runtime");
+    for cols in [2560usize, 6912] {
+        let rows = 4;
+        let mut payload = vec![0u8; rows * (cols / 256) * 66];
+        for (i, b) in payload.iter_mut().enumerate() {
+            *b = (i as u8).wrapping_mul(17).wrapping_add(3);
+        }
+        let x: Vec<f32> = (0..cols)
+            .map(|i| ((i * 17) % 101) as f32 / 25.0 - 2.0)
+            .collect();
+        let expected = matvec_payload_quant(35, &payload, &x, cols, rows).expect("cpu tq2");
+        let matrix = CudaDeviceQuantMatrix::from_payload(Some(&rt), 35, payload, rows, cols)
+            .expect("tq2 device matrix");
+        assert!(matrix.is_device_resident());
+        let got = matrix.matvec(&x).expect("cuda tq2");
+        let mut worst = 0.0f32;
+        for (g, e) in got.iter().zip(&expected) {
+            if g.is_nan() && e.is_nan() {
+                continue;
+            }
+            let diff = (g - e).abs();
+            worst = worst.max(diff);
+            assert!(
+                diff <= 1e-3 * (1.0 + e.abs()),
+                "cols={cols} gpu={g} cpu={e}"
+            );
+        }
+        println!("cols={cols} worst abs {worst}");
+    }
+}
+
+#[test]
+fn tq2_cuda_matches_real_bitnet_rows() {
+    if std::env::var("RBITNET_CUDA_QUANT_SMOKE").ok().as_deref() != Some("1") {
+        return;
+    }
+    let path = std::path::Path::new(
+        r"D:\rbitnet-bench\models\bitnet-b158-2b-tq2\bitnet-2b4t-tq2_0.gguf",
+    );
+    if !path.exists() {
+        return;
+    }
+    let archive = bitnet_core::GgufArchive::mmap_path(path).expect("mmap tq2");
+    let rt = bitnet_core::CudaRuntime::try_load().expect("CUDA runtime");
+    for name in [
+        "blk.0.attn_q.weight",
+        "blk.0.ffn_gate.weight",
+        "blk.0.ffn_down.weight",
+    ] {
+        let tensor = archive
+            .tensor_first_of(&[name])
+            .unwrap_or_else(|| panic!("missing {name}"));
+        let cols = tensor.dimensions[0] as usize;
+        let rows = tensor.dimensions[1] as usize;
+        let payload = archive.tensor_payload(tensor).expect("payload").to_vec();
+        let matrix = CudaDeviceQuantMatrix::from_payload(
+            Some(&rt),
+            tensor.ggml_type,
+            payload.clone(),
+            rows,
+            cols,
+        )
+        .expect("device");
+        let mut vectors = vec![
+            (
+                "ramp".to_string(),
+                (0..cols)
+                    .map(|i| ((i * 17) % 101) as f32 / 25.0 - 2.0)
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "neg-peak".to_string(),
+                (0..cols)
+                    .map(|i| if i == 3 { -4.0 } else { ((i % 50) as f32) * 0.02 - 0.5 })
+                    .collect::<Vec<_>>(),
+            ),
+        ];
+        let mut state = 0x1234_5678u32;
+        for n in 0..16 {
+            let x = (0..cols)
+                .map(|_| {
+                    state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+                    let unit = (state >> 8) as f32 / (1u32 << 24) as f32;
+                    (unit * 8.0 - 4.0) * if n % 2 == 0 { 1.0 } else { 0.01 }
+                })
+                .collect();
+            vectors.push((format!("rand-{n}"), x));
+        }
+        for (label, x) in vectors {
+            let expected = matvec_payload_quant(35, &payload, &x, cols, rows).expect("cpu");
+            let before = matrix.runtime_metrics().map(|m| m.device_resident_quant_gemv_calls);
+            let got = matrix.matvec(&x).expect("cuda");
+            let after = matrix.runtime_metrics().map(|m| m.device_resident_quant_gemv_calls);
+            assert!(
+                after > before,
+                "quant kernel did not run on device ({before:?} -> {after:?}); set RBITNET_CUDA_QUANT_LIB"
+            );
+            let mut worst = 0.0f32;
+            let mut worst_row = 0usize;
+            for (row, (g, e)) in got.iter().zip(&expected).enumerate() {
+                if g.is_nan() && e.is_nan() {
+                    continue;
+                }
+                let diff = (g - e).abs();
+                if diff > worst {
+                    worst = diff;
+                    worst_row = row;
+                }
+            }
+            println!(
+                "{name} {label} rows={rows} cols={cols} worst={worst} row={worst_row} gpu={} cpu={}",
+                got[worst_row], expected[worst_row]
+            );
+            assert!(
+                worst == 0.0,
+                "{name} {label} gpu={} cpu={}",
+                got[worst_row], expected[worst_row]
+            );
+        }
+    }
+}
+
+#[test]
+fn tq2_cuda_replays_failed_activation() {
+    if std::env::var("RBITNET_CUDA_QUANT_SMOKE").ok().as_deref() != Some("1") {
+        return;
+    }
+    let x_path = std::path::Path::new(r"E:\devs\Rbitnet\target\tq2-fail.f32");
+    let note = std::fs::read_to_string(r"E:\devs\Rbitnet\target\tq2-fail.txt").ok();
+    if !x_path.exists() || note.is_none() {
+        return;
+    }
+    let note = note.unwrap();
+    let mut lines = note.lines();
+    let name = lines.next().unwrap();
+    let cols: usize = lines.next().unwrap().parse().unwrap();
+    let bytes = std::fs::read(x_path).unwrap();
+    let x: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+        .collect();
+    assert_eq!(x.len(), cols);
+    let archive = bitnet_core::GgufArchive::mmap_path(std::path::Path::new(
+        r"D:\rbitnet-bench\models\bitnet-b158-2b-tq2\bitnet-2b4t-tq2_0.gguf",
+    ))
+    .unwrap();
+    let tensor = archive.tensor_first_of(&[name]).unwrap();
+    let rows = tensor.dimensions[1] as usize;
+    let payload = archive.tensor_payload(tensor).unwrap().to_vec();
+    let rt = bitnet_core::CudaRuntime::try_load().unwrap();
+    let matrix = CudaDeviceQuantMatrix::from_payload(
+        Some(&rt),
+        35,
+        payload.clone(),
+        rows,
+        cols,
+    )
+    .unwrap();
+    let expected = matvec_payload_quant(35, &payload, &x, cols, rows).unwrap();
+    let got = matrix.matvec(&x).unwrap();
+    let mut worst = 0.0f32;
+    let mut row = 0usize;
+    for (i, (g, e)) in got.iter().zip(&expected).enumerate() {
+        let diff = (g - e).abs();
+        if diff > worst {
+            worst = diff;
+            row = i;
+        }
+    }
+    println!(
+        "replay {name} worst={worst} row={row} gpu={} cpu={}",
+        got[row], expected[row]
+    );
+    assert_eq!(worst, 0.0, "replay diverges");
 }

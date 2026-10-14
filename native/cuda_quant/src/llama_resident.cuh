@@ -315,7 +315,10 @@ static void *llama_create_impl(const RbitnetLlamaConfig *cfg,const RbitnetLlamaL
 extern "C" {
 void *rbitnet_cuda_llama_create(const RbitnetLlamaConfig *cfg,const RbitnetLlamaLayer *layers,
     const RbitnetLlamaMatrix *output,const float *norm,const float *freq) {
-    return llama_create_impl(cfg,layers,output,norm,freq,0,nullptr,unsigned(split_attention_enabled())|(unsigned(tf32_prefill_requested())<<1));
+    // Unset enables exact split-KV. "0" keeps the dense attention kernel.
+    const char *split_flag=std::getenv("RBITNET_CUDA_SPLIT_KV");
+    unsigned split=!(split_flag && split_flag[0]=='0' && split_flag[1]=='\0');
+    return llama_create_impl(cfg,layers,output,norm,freq,0,nullptr,split|(unsigned(tf32_prefill_requested())<<1));
 }
 void *rbitnet_cuda_llama_create_paged(const RbitnetLlamaConfig *cfg,const RbitnetLlamaLayer *layers,
     const RbitnetLlamaMatrix *output,const float *norm,const float *freq,unsigned limit,const void *peer,unsigned variants) {

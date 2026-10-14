@@ -311,8 +311,11 @@ fn qwen3_cpu_selection_readiness_and_unsupported_gpu_loads_are_truthful() {
             Some("qwen3"),
         )
     };
+    assert!(
+        load(BackendKind::Cuda).is_ok(),
+        "dense Qwen3 accepts cuda at load"
+    );
     for backend in [
-        BackendKind::Cuda,
         BackendKind::Rocm,
         BackendKind::Vulkan,
         BackendKind::Metal,

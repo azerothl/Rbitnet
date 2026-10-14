@@ -82,11 +82,71 @@ impl KvQuantFormat {
     }
 }
 
+pub(crate) fn pack_f32_to_f16(dst: &mut [u16], src: &[f32]) {
+    let n = dst.len().min(src.len());
+    #[cfg(target_arch = "x86_64")]
+    if n % 8 == 0 && std::arch::is_x86_feature_detected!("f16c") {
+        unsafe { pack_f32_to_f16_f16c(dst, src, n) }
+        return;
+    }
+    for i in 0..n {
+        dst[i] = f32_to_f16_bits(src[i]);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "f16c")]
+unsafe fn pack_f32_to_f16_f16c(dst: &mut [u16], src: &[f32], n: usize) {
+    use std::arch::x86_64::*;
+    let mut i = 0;
+    while i + 8 <= n {
+        let v = _mm256_loadu_ps(src.as_ptr().add(i));
+        let h = _mm256_cvtps_ph(v, _MM_FROUND_TO_NEAREST_INT);
+        _mm_storeu_si128(dst.as_mut_ptr().add(i) as *mut __m128i, h);
+        i += 8;
+    }
+}
+
+fn f32_to_f16_bits(val: f32) -> u16 {
+    let bits = val.to_bits();
+    let sign = ((bits >> 16) & 0x8000) as u16;
+    let mant = bits & 0x7f_ffff;
+    let exp = (bits >> 23) & 0xff;
+    if exp == 0xff {
+        return sign | 0x7c00 | if mant == 0 { 0 } else { 0x200 };
+    }
+    let half_exp = exp as i32 - 127 + 15;
+    if half_exp >= 31 {
+        return sign | 0x7c00;
+    }
+    if half_exp <= 0 {
+        return sign;
+    }
+    let rounded = mant.wrapping_add(0x1000);
+    if rounded & 0x80_0000 != 0 {
+        let bumped = half_exp + 1;
+        if bumped >= 31 {
+            return sign | 0x7c00;
+        }
+        return sign | ((bumped as u16) << 10);
+    }
+    sign | ((half_exp as u16) << 10) | ((rounded >> 13) as u16)
+}
+
 /// Dense per-layer KV buffer (legacy layout).
 pub struct KvCache {
     /// Per layer: flattened `k` / `v` with stride `n_kv * head_dim` per sequence position.
     pub k: Vec<Vec<f32>>,
     pub v: Vec<Vec<f32>>,
+    /// Same bytes, one KV head packed as `[pos, head_dim]` so decode scans it sequentially.
+    pub(crate) k_major: Vec<Vec<f32>>,
+    pub(crate) v_major: Vec<Vec<f32>>,
+    /// f16 copy of `k_major` / `v_major`. Long decode reads these so the KV stream is half as wide.
+    pub(crate) k_f16: Vec<Vec<u16>>,
+    pub(crate) v_f16: Vec<Vec<u16>>,
+    pub(crate) n_kv: usize,
+    pub(crate) head_dim: usize,
+    pub(crate) max_seq: usize,
     cuda_attention: Vec<Option<crate::native::attention::CudaAttention>>,
 }
 
@@ -96,9 +156,20 @@ impl KvCache {
         let len = stride * cfg.max_seq;
         let k = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
         let v = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
+        let k_major = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
+        let v_major = (0..cfg.n_layer).map(|_| vec![0.0f32; len]).collect();
+        let k_f16 = (0..cfg.n_layer).map(|_| vec![0u16; len]).collect();
+        let v_f16 = (0..cfg.n_layer).map(|_| vec![0u16; len]).collect();
         Self {
             k,
             v,
+            k_major,
+            v_major,
+            k_f16,
+            v_f16,
+            n_kv: cfg.n_kv,
+            head_dim: cfg.head_dim,
+            max_seq: cfg.max_seq,
             cuda_attention: (0..cfg.n_layer).map(|_| None).collect(),
         }
     }
@@ -112,6 +183,28 @@ impl KvCache {
         }
         for row in &mut self.v {
             row.fill(0.0);
+        }
+        for row in &mut self.k_major {
+            row.fill(0.0);
+        }
+        for row in &mut self.v_major {
+            row.fill(0.0);
+        }
+        for row in &mut self.k_f16 {
+            row.fill(0);
+        }
+        for row in &mut self.v_f16 {
+            row.fill(0);
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn rebuild_f16_major(&mut self) {
+        for (src, dst) in self.k_major.iter().zip(self.k_f16.iter_mut()) {
+            pack_f32_to_f16(dst, src);
+        }
+        for (src, dst) in self.v_major.iter().zip(self.v_f16.iter_mut()) {
+            pack_f32_to_f16(dst, src);
         }
     }
 }
@@ -726,6 +819,25 @@ impl KvStorage {
                 let off = pos * stride;
                 kv.k[layer][off..off + stride].copy_from_slice(k);
                 kv.v[layer][off..off + stride].copy_from_slice(v);
+                let head_dim = kv.head_dim;
+                if head_dim > 0 && kv.n_kv > 0 && pos < kv.max_seq {
+                    for h in 0..kv.n_kv {
+                        let src = h * head_dim;
+                        let dst = (h * kv.max_seq + pos) * head_dim;
+                        kv.k_major[layer][dst..dst + head_dim]
+                            .copy_from_slice(&k[src..src + head_dim]);
+                        kv.v_major[layer][dst..dst + head_dim]
+                            .copy_from_slice(&v[src..src + head_dim]);
+                        pack_f32_to_f16(
+                            &mut kv.k_f16[layer][dst..dst + head_dim],
+                            &k[src..src + head_dim],
+                        );
+                        pack_f32_to_f16(
+                            &mut kv.v_f16[layer][dst..dst + head_dim],
+                            &v[src..src + head_dim],
+                        );
+                    }
+                }
                 crate::perf::record_kv_write(
                     2usize
                         .saturating_mul(stride)

@@ -56,30 +56,35 @@ pub fn apply_recipe_env(recipe: &ServeRecipe) {
     }
 }
 
-pub fn print_recipe_plan(recipe: &ServeRecipe, path: &Path) {
-    println!("Recipe: {} (v{})", recipe.name, recipe.version);
+pub fn recipe_plan_text(recipe: &ServeRecipe, path: &Path) -> String {
+    let mut out = format!("Recipe: {} (v{})\n", recipe.name, recipe.version);
     if let Some(d) = &recipe.description {
-        println!("  {d}");
+        out.push_str(&format!("  {d}\n"));
     }
-    println!("  file: {}", path.display());
+    out.push_str(&format!("  file: {}\n", path.display()));
     if let Some(model) = &recipe.model {
-        println!("  RBITNET_MODEL={}", model.gguf);
+        out.push_str(&format!("  RBITNET_MODEL={}\n", model.gguf));
         if let Some(tok) = &model.tokenizer {
-            println!("  RBITNET_TOKENIZER={tok}");
+            out.push_str(&format!("  RBITNET_TOKENIZER={tok}\n"));
         }
         if let Some(sha) = &model.sha256 {
-            println!("  RBITNET_MODEL_SHA256={sha}");
+            out.push_str(&format!("  RBITNET_MODEL_SHA256={sha}\n"));
         }
     } else {
-        println!("  (no model paths — set RBITNET_MODEL / tokenizer from manifest)");
+        out.push_str("  (no model paths — set RBITNET_MODEL / tokenizer from manifest)\n");
     }
     for (k, v) in &recipe.env {
-        println!("  {k}={v}");
+        out.push_str(&format!("  {k}={v}\n"));
     }
     if let Some(n) = &recipe.notes {
-        println!("  notes: {n}");
+        out.push_str(&format!("  notes: {n}\n"));
     }
-    println!("\nRun: rbitnet serve");
+    out.push_str("\nAction\n  rbitnet serve\n");
+    out
+}
+
+pub fn print_recipe_plan(recipe: &ServeRecipe, path: &Path) {
+    print!("{}", recipe_plan_text(recipe, path));
 }
 
 #[cfg(test)]

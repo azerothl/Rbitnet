@@ -74,6 +74,8 @@ CPU Llama, BitNet, Qwen, GPT-OSS, and GLM do not share one fused forward today. 
 
 ```bash
 export RBITNET_CONTEXT_TIERS=1
+# Qwen3.5 CUDA only: checkpoints refuse the default TF32 prefill.
+export RBITNET_CUDA_PREFILL_TF32X3=0
 export RBITNET_CONTEXT_DIR=/var/lib/rbitnet/context
 export RBITNET_CONTEXT_RAM_MB=512
 export RBITNET_CONTEXT_DISK_MB=4096
