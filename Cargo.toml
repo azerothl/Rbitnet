@@ -14,6 +14,12 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/azerothl/Rbitnet"
 
+[patch.crates-io]
+# sentencepiece-sys 0.11.3 vendored C++ does not build with GCC >= 15
+# (missing #include <cstdint>); keep a patched local copy until upstream
+# publishes a fixed release. Same version, one-line header fixes.
+sentencepiece-sys = { path = "third_party/sentencepiece-sys" }
+
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
