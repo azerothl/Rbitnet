@@ -1,0 +1,77 @@
+{
+  "label": "avx512-off",
+  "rows": [
+    {
+      "wall_ms": 1713.4,
+      "prefill_ms": 661,
+      "ttft_ms": 661,
+      "prompt_tokens": 61,
+      "completion_tokens": 32,
+      "text_sha256": "6f976d622d2795c6a1c961bee6383c398923b8e01bce993ca05df9948ed674a7",
+      "text": ": 0: cedar box, glass lamp, river stone, copper key.\nItem 2: 0: 0, glass lamp, river stone,",
+      "label": "avx512-off",
+      "fixture": "short",
+      "run": 1
+    },
+    {
+      "wall_ms": 1706.3,
+      "prefill_ms": 628,
+      "ttft_ms": 628,
+      "prompt_tokens": 61,
+      "completion_tokens": 32,
+      "text_sha256": "6f976d622d2795c6a1c961bee6383c398923b8e01bce993ca05df9948ed674a7",
+      "text": ": 0: cedar box, glass lamp, river stone, copper key.\nItem 2: 0: 0, glass lamp, river stone,",
+      "label": "avx512-off",
+      "fixture": "short",
+      "run": 2
+    },
+    {
+      "wall_ms": 1742.5,
+      "prefill_ms": 638,
+      "ttft_ms": 638,
+      "prompt_tokens": 61,
+      "completion_tokens": 32,
+      "text_sha256": "6f976d622d2795c6a1c961bee6383c398923b8e01bce993ca05df9948ed674a7",
+      "text": ": 0: cedar box, glass lamp, river stone, copper key.\nItem 2: 0: 0, glass lamp, river stone,",
+      "label": "avx512-off",
+      "fixture": "short",
+      "run": 3
+    },
+    {
+      "wall_ms": 5418.7,
+      "prefill_ms": 4310,
+      "ttft_ms": 4310,
+      "prompt_tokens": 381,
+      "completion_tokens": 32,
+      "text_sha256": "5513d09cb0c568fc43136394c24ddf6e143f4c2ebc6310572b4f3015d44bcddc",
+      "text": ": cedar box, glass lamp, river stone, copper key.\nItem 7: cedar box, glass lamp, river stone, copper key.\nItem 8",
+      "label": "avx512-off",
+      "fixture": "long",
+      "run": 1
+    },
+    {
+      "wall_ms": 5531.2,
+      "prefill_ms": 4402,
+      "ttft_ms": 4402,
+      "prompt_tokens": 381,
+      "completion_tokens": 32,
+      "text_sha256": "5513d09cb0c568fc43136394c24ddf6e143f4c2ebc6310572b4f3015d44bcddc",
+      "text": ": cedar box, glass lamp, river stone, copper key.\nItem 7: cedar box, glass lamp, river stone, copper key.\nItem 8",
+      "label": "avx512-off",
+      "fixture": "long",
+      "run": 2
+    },
+    {
+      "wall_ms": 5509.1,
+      "prefill_ms": 4390,
+      "ttft_ms": 4390,
+      "prompt_tokens": 381,
+      "completion_tokens": 32,
+      "text_sha256": "5513d09cb0c568fc43136394c24ddf6e143f4c2ebc6310572b4f3015d44bcddc",
+      "text": ": cedar box, glass lamp, river stone, copper key.\nItem 7: cedar box, glass lamp, river stone, copper key.\nItem 8",
+      "label": "avx512-off",
+      "fixture": "long",
+      "run": 3
+    }
+  ]
+}
